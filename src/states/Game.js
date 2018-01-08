@@ -1,7 +1,7 @@
 /* globals __DEV__ */
 import Phaser from 'phaser';
 import Hero from '../sprites/Hero';
-import { sample } from 'lodash';
+import { sample, uniqBy, round, map } from 'lodash';
 
 export default class extends Phaser.State {
   init() {}
@@ -17,6 +17,7 @@ export default class extends Phaser.State {
   create() {
     this.heroes = [];
     this.uncertainty = 0.2;
+    this.game.camera.setPosition(0, 1600);
     this.game.physics.startSystem(Phaser.Physics.ARCADE);
     this.game.time.desiredFps = 30;
     this.game.physics.arcade.gravity.y = 500;
@@ -53,17 +54,19 @@ export default class extends Phaser.State {
 
     this.game.add.existing(this.hero);
     this.heroes.push(this.hero);
-    this.game.camera.follow(this.hero);
-
 
     setInterval(this.triggerUncertainty.bind(this), 1000);
   }
 
   triggerUncertainty() {
     const shouldDuplicate = Math.random() * 100 < this.uncertainty * 100;
-    if(shouldDuplicate) {
-      this.duplicateHero()
+    if (shouldDuplicate) {
+      this.duplicateHero();
     }
+  }
+
+  cleanHeroes() {
+    this.heroes = uniqBy(this.heroes, ({ position }) => round(position.x));
   }
 
   duplicateHero() {
@@ -72,17 +75,55 @@ export default class extends Phaser.State {
     this[newHeroId] = new Hero({
       game: this.game,
       x: clonedHero.position.x + Math.random() * 200 - 100,
-      y: clonedHero.position.y + Math.random() * 200 - 10,
+      y: clonedHero.position.y,
       asset: 'hero',
-      platforms: this.platforms
+      platforms: this.platforms,
+      heroes: this.heroes
     });
 
     this.game.add.existing(this[newHeroId]);
     this.heroes.push(this[newHeroId]);
+    this.cleanHeroes();
+  }
+
+  centerCamera() {
+    this.newPosition = this.heroes.reduce(
+      (acc, current) => {
+        return {
+          x: acc.x + current.x,
+          y: acc.y + current.y
+        };
+      },
+      { x: 0, y: 0 }
+    );
+    this.newPosition.x /= this.heroes.length + 1;
+    this.newPosition.y /= this.heroes.length + 1;
+
+    if (this.game.camera.x + 300 > this.newPosition.x) {
+      this.game.camera.x -= 2;
+    }
+    if (this.game.camera.x + 300 < this.newPosition.x) {
+      this.game.camera.x += 2;
+    }
+
+    if (this.game.camera.y + 50 > this.newPosition.y) {
+      this.game.camera.y -= 2;
+    }
+    if (this.game.camera.y + 50 < this.newPosition.y) {
+      this.game.camera.y += 2;
+    }
   }
 
   render() {
     this.bg.tilePosition.x = -(this.camera.x * 0.2);
+    if (this.heroes.length > 1) {
+      this.centerCamera();
+    } else {
+      this.game.camera.setPosition(
+        this.hero.position.x - 400,
+        this.hero.position.y - 200
+      );
+    }
     if (__DEV__) {
       this.game.debug.spriteInfo(this.hero, 32, 32);
     }
