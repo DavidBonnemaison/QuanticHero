@@ -1,6 +1,7 @@
 /* globals __DEV__ */
 import Phaser from 'phaser';
 import Hero from '../sprites/Hero';
+import { sample } from 'lodash';
 
 export default class extends Phaser.State {
   init() {}
@@ -14,6 +15,8 @@ export default class extends Phaser.State {
   }
 
   create() {
+    this.heroes = [];
+    this.uncertainty = 0.2;
     this.game.physics.startSystem(Phaser.Physics.ARCADE);
     this.game.time.desiredFps = 30;
     this.game.physics.arcade.gravity.y = 500;
@@ -49,7 +52,33 @@ export default class extends Phaser.State {
     });
 
     this.game.add.existing(this.hero);
+    this.heroes.push(this.hero);
     this.game.camera.follow(this.hero);
+
+
+    setInterval(this.triggerUncertainty.bind(this), 1000);
+  }
+
+  triggerUncertainty() {
+    const shouldDuplicate = Math.random() * 100 < this.uncertainty * 100;
+    if(shouldDuplicate) {
+      this.duplicateHero()
+    }
+  }
+
+  duplicateHero() {
+    const newHeroId = `hero${this.heroes.length}`;
+    const clonedHero = sample(this.heroes);
+    this[newHeroId] = new Hero({
+      game: this.game,
+      x: clonedHero.position.x + Math.random() * 200 - 100,
+      y: clonedHero.position.y + Math.random() * 200 - 10,
+      asset: 'hero',
+      platforms: this.platforms
+    });
+
+    this.game.add.existing(this[newHeroId]);
+    this.heroes.push(this[newHeroId]);
   }
 
   render() {
