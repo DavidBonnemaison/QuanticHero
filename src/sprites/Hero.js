@@ -2,12 +2,14 @@ import Phaser from 'phaser';
 import { sample, uniqBy, round, remove, map, groupBy } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({ game, x, y, asset, platforms, id }) {
+  constructor({ game, x, y, asset, platforms, spikes, id }) {
     super(game, x, y, asset);
+    this.game.global.heroes = this.game.global.heroes || [];
     this.anchor.setTo(0.5);
     this.id = id;
     this.game.physics.arcade.enable(this);
     this.platforms = platforms;
+    this.spikes = spikes;
     this.isDuplicating = false;
     this.body.bounce.y = 0.2;
     this.body.collideWorldBounds = true;
@@ -39,6 +41,7 @@ export default class Hero extends Phaser.Sprite {
       y: clonedHero.position.y,
       asset: 'hero',
       platforms: this.platforms,
+      spikes: this.spikes,
       id: Math.random() * 100
     });
 
@@ -48,8 +51,12 @@ export default class Hero extends Phaser.Sprite {
   }
 
   clean() {
-    this.game.global.heroes = uniqBy(this.game.global.heroes, ({ x, y }) =>
-      round(x) + round(y)
+    if (!this.game) {
+      return;
+    }
+    this.game.global.heroes = uniqBy(
+      this.game.global.heroes,
+      ({ x, y }) => round(x) + round(y)
     );
     if (!this.game.global.heroes.includes(this)) {
       this.killHero(this.id);
@@ -65,12 +72,20 @@ export default class Hero extends Phaser.Sprite {
   }
 
   update() {
-    if (this.game.global.heroes.length > 2 && !this.inCamera) {
+    if (this.game.global.heroes.length > 1 && !this.inCamera) {
       this.killHero(this.id);
+      return;
     }
+
     this.body.velocity.x = 0;
 
     this.hitPlatform = this.game.physics.arcade.collide(this, this.platforms);
+    this.hitSpikes = this.game.physics.arcade.collide(this, this.spikes);
+
+    if (this.hitSpikes) {
+      this.killHero(this.id);
+    }
+
     this.isOnGround = this.body.touching.down && this.hitPlatform;
 
     if (this.cursors.up.isDown && this.isOnGround) {
