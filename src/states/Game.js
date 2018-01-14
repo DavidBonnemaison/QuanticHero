@@ -1,22 +1,28 @@
 /* globals __DEV__ */
 import Phaser from 'phaser';
 import Hero from '../sprites/Hero';
-import { sample, uniqBy, round, map } from 'lodash';
 
 export default class extends Phaser.State {
   init() {}
   preload() {}
 
-  createPlatform({ x, y }) {
-    this.ledge = this.platforms.create(x, y, 'platform');
+  createPlatform({ x, y, scale }) {
+    this.ledge = this.platforms.create(
+      x,
+      this.game.world.height - y,
+      'platform'
+    );
     this.ledge.body.immovable = true;
     this.ledge.body.moves = false;
+    if (scale) {
+      this.ledge.scale.setTo(scale.x, scale.y);
+    }
     return this.ledge;
   }
 
   create() {
-    this.heroes = [];
-    this.uncertainty = 0.2;
+    this.game.global = {};
+    this.game.global.heroes = [];
     this.game.camera.setPosition(0, 1600);
     this.game.physics.startSystem(Phaser.Physics.ARCADE);
     this.game.time.desiredFps = 30;
@@ -31,101 +37,60 @@ export default class extends Phaser.State {
 
     this.ground = this.createPlatform({
       x: 0,
-      y: this.game.world.height - 64
+      y: 50
     });
 
     this.ground.scale.setTo(10, 10);
     this.ground.body.immovable = true;
     this.ground.body.moves = false;
 
-    this.createPlatform({ x: 0, y: 700 });
-    this.createPlatform({ x: 500, y: 800 });
-    this.createPlatform({ x: 1000, y: 850 });
-    this.createPlatform({ x: 550, y: 600 });
-    this.createPlatform({ x: 0, y: 700 });
+    this.createPlatform({ x: 300, y: 150 });
+    this.createPlatform({ x: 500, y: 250, scale: { x: 0.5, y: 0.5 } });
+    this.createPlatform({ x: 300, y: 450, scale: { x: 0.05, y: 10 } });
+    // this.createPlatform({ x: 500, y: 800 });
+    // this.createPlatform({ x: 1000, y: 850 });
+    // this.createPlatform({ x: 550, y: 600 });
+    // this.createPlatform({ x: 0, y: 700 });
 
     this.hero = new Hero({
       game: this.game,
-      x: 200,
+      id: 0,
+      x: 36,
       y: 800,
       asset: 'hero',
       platforms: this.platforms
     });
 
+    this.cursors = this.game.input.keyboard.createCursorKeys();
+
     this.game.add.existing(this.hero);
-    this.heroes.push(this.hero);
-
-    setInterval(this.triggerUncertainty.bind(this), 1000);
-  }
-
-  triggerUncertainty() {
-    const shouldDuplicate = Math.random() * 100 < this.uncertainty * 100;
-    if (shouldDuplicate) {
-      this.duplicateHero();
-    }
-  }
-
-  cleanHeroes() {
-    this.heroes = uniqBy(this.heroes, ({ position }) => round(position.x));
-  }
-
-  duplicateHero() {
-    const newHeroId = `hero${this.heroes.length}`;
-    const clonedHero = sample(this.heroes);
-    this[newHeroId] = new Hero({
-      game: this.game,
-      x: clonedHero.position.x + Math.random() * 200 - 100,
-      y: clonedHero.position.y,
-      asset: 'hero',
-      platforms: this.platforms,
-      heroes: this.heroes
-    });
-
-    this.game.add.existing(this[newHeroId]);
-    this.heroes.push(this[newHeroId]);
-    this.cleanHeroes();
+    this.game.global.heroes.push(this.hero);
   }
 
   centerCamera() {
-    this.newPosition = this.heroes.reduce(
-      (acc, current) => {
-        return {
-          x: acc.x + current.x,
-          y: acc.y + current.y
-        };
-      },
+    const idealPosition = this.game.global.heroes.reduce(
+      (acc, current) => ({
+        x: acc.x + current.x,
+        y: acc.y + current.y
+      }),
       { x: 0, y: 0 }
     );
-    this.newPosition.x /= this.heroes.length + 1;
-    this.newPosition.y /= this.heroes.length + 1;
 
-    if (this.game.camera.x + 300 > this.newPosition.x) {
-      this.game.camera.x -= 2;
-    }
-    if (this.game.camera.x + 300 < this.newPosition.x) {
-      this.game.camera.x += 2;
-    }
+    idealPosition.x /= this.game.global.heroes.length;
+    idealPosition.y /= this.game.global.heroes.length;
 
-    if (this.game.camera.y + 50 > this.newPosition.y) {
-      this.game.camera.y -= 2;
-    }
-    if (this.game.camera.y + 50 < this.newPosition.y) {
-      this.game.camera.y += 2;
-    }
+    const newPosition = {
+      x:
+        (idealPosition.x + (this.game.camera.x + this.game.width / 2) * 9) / 10,
+      y:
+        (idealPosition.y + (this.game.camera.y + this.game.height / 2) * 9) / 10
+    };
+
+    this.game.camera.focusOnXY(newPosition.x, newPosition.y);
   }
 
   render() {
     this.bg.tilePosition.x = -(this.camera.x * 0.2);
-    if (this.heroes.length > 1) {
-      this.centerCamera();
-    } else {
-      this.game.camera.setPosition(
-        this.hero.position.x - 400,
-        this.hero.position.y - 200
-      );
-    }
-    if (__DEV__) {
-      this.game.debug.spriteInfo(this.hero, 32, 32);
-    }
+    this.centerCamera();
   }
 }

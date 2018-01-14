@@ -1,5 +1,5 @@
 export default {
-  gameWidth: 800,
-  gameHeight: 400,
+  gameWidth: 360,
+  gameHeight: 640,
   localStorageName: 'quanticherov1'
 };
