@@ -2,11 +2,12 @@ import Phaser from 'phaser';
 import { sample, uniqBy, round, remove, map, groupBy } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({ game, x, y, asset, platforms, spikes, id }) {
+  constructor({ game, x, y, asset, platforms, spikes, heroes, id }) {
     super(game, x, y, asset);
     this.game.global.heroes = this.game.global.heroes || [];
     this.anchor.setTo(0.5);
     this.id = id;
+    this.heroes = heroes;
     this.game.physics.arcade.enable(this);
     this.platforms = platforms;
     this.spikes = spikes;
@@ -42,7 +43,8 @@ export default class Hero extends Phaser.Sprite {
       asset: 'hero',
       platforms: this.platforms,
       spikes: this.spikes,
-      id: Math.random() * 100
+      id: Math.random() * 100,
+      heroes: this.heroes
     });
 
     this.game.add.existing(newHero);
@@ -78,12 +80,12 @@ export default class Hero extends Phaser.Sprite {
     }
 
     this.body.velocity.x = 0;
-
     this.hitPlatform = this.game.physics.arcade.collide(this, this.platforms);
     this.hitSpikes = this.game.physics.arcade.collide(this, this.spikes);
 
     if (this.hitSpikes) {
       this.killHero(this.id);
+      return;
     }
 
     this.isOnGround = this.body.touching.down && this.hitPlatform;

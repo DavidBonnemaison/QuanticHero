@@ -1,10 +1,14 @@
 /* globals __DEV__ */
 import Phaser from 'phaser';
+import { range } from 'lodash';
 import Hero from '../sprites/Hero';
+import Particle from '../sprites/Particle';
+import Molecule from '../sprites/Molecule';
 
 export default class extends Phaser.State {
-  init() {}
-  preload() {}
+  init() {
+this.game.stage.backgroundColor = '#01051f'
+  }
 
   createObject({ x, y, scale, asset, group }) {
     const newObject = group.create(x, this.game.world.height - y, asset);
@@ -44,18 +48,25 @@ export default class extends Phaser.State {
     this.game.physics.arcade.gravity.y = 500;
     this.game.world.setBounds(0, 0, 1600, 1000);
     this.game.camera.setPosition(this.game.world.width / 2 - 180, 1600);
+    this.molecules = this.game.add.group();
+    range(0,100).forEach(()=>{
+      const mol = new Molecule({
+        game: this.game,
+        x: this.game.world.width / 2 - 100,
+        y: 900,
+        asset: ''
+      });
+      this.game.add.existing(mol);
+      this.molecules.add(mol);
+    });
 
-    this.bg = this.game.add.tileSprite(
-      0,
-      40,
-      this.game.world.width,
-      this.game.world.height,
-      'bg'
-    );
-    this.bg.fixedToCamera = true;
 
+    this.heroes = this.game.add.group();
+    this.heroes.enableBody = true;
     this.platforms = this.game.add.group();
     this.spikes = this.game.add.group();
+    this.particles = this.game.add.group();
+    this.particles.enableBody = true;
     this.platforms.enableBody = true;
     this.spikes.enableBody = true;
 
@@ -78,10 +89,6 @@ export default class extends Phaser.State {
     this.createPlatform({ x: 1000, y: 450, scale: { x: 0.5, y: 0.5 } });
     this.createPlatform({ x: 700, y: 350, scale: { x: 0.5, y: 0.5 } });
     this.createPlatform({ x: 300, y: 450, scale: { x: 0.05, y: 10 } });
-    // this.createPlatform({ x: 500, y: 800 });
-    // this.createPlatform({ x: 1000, y: 850 });
-    // this.createPlatform({ x: 550, y: 600 });
-    // this.createPlatform({ x: 0, y: 700 });
 
     this.hero = new Hero({
       game: this.game,
@@ -90,13 +97,44 @@ export default class extends Phaser.State {
       y: 800,
       asset: 'hero',
       platforms: this.platforms,
-      spikes: this.spikes
+      spikes: this.spikes,
+      heroes: this.heroes
+    });
+
+    this.particle1 = new Particle({
+      game: this.game,
+      x: this.game.world.width / 2 + 100,
+      y: 900,
+      asset: 'ball'
     });
 
     this.cursors = this.game.input.keyboard.createCursorKeys();
 
+    this.game.add.existing(this.particle1);
+    this.particles.add(this.particle1);
+    this.particle1.body.immovable = true;
+    this.particle1.body.moves = false;
     this.game.add.existing(this.hero);
+    this.heroes.add(this.hero);
     this.game.global.heroes.push(this.hero);
+    this.game.physics.arcade.overlap(
+      this.heroes,
+      this.particles,
+      this.hittt,
+      null,
+      this
+    );
+    this.game.physics.arcade.overlap(
+      this.heroes,
+      this.platforms,
+      this.hittt,
+      null,
+      this
+    );
+  }
+
+  hittt() {
+    console.log('this', this);
   }
 
   centerCamera() {
@@ -122,7 +160,7 @@ export default class extends Phaser.State {
   }
 
   render() {
-    this.bg.tilePosition.x = -(this.camera.x * 0.2);
+    // this.bg.tilePosition.x = -(this.camera.x * 0.2);
     this.centerCamera();
     if (this.game.global.heroes.length === 0) {
       this.state.start('Game');
