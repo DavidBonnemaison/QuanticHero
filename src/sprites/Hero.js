@@ -2,12 +2,11 @@ import Phaser from 'phaser';
 import { sample, uniqBy, round, remove, map, groupBy } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({ game, x, y, asset, platforms, spikes, heroes, id }) {
+  constructor({ game, x, y, asset, platforms, spikes, id }) {
     super(game, x, y, asset);
     this.game.global.heroes = this.game.global.heroes || [];
     this.anchor.setTo(0.5);
     this.id = id;
-    this.heroes = heroes;
     this.game.physics.arcade.enable(this);
     this.platforms = platforms;
     this.spikes = spikes;

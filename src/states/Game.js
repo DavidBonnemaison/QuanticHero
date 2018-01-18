@@ -4,10 +4,11 @@ import { range } from 'lodash';
 import Hero from '../sprites/Hero';
 import Particle from '../sprites/Particle';
 import Molecule from '../sprites/Molecule';
+import HUD from './../prefabs/Hud';
 
 export default class extends Phaser.State {
   init() {
-this.game.stage.backgroundColor = '#01051f'
+    this.game.stage.backgroundColor = '#01051f';
   }
 
   createObject({ x, y, scale, asset, group }) {
@@ -40,16 +41,28 @@ this.game.stage.backgroundColor = '#01051f'
     });
   }
 
+  createParticle({ x, y }) {
+    const particle = new Particle({
+      game: this.game,
+      x,
+      y: this.game.world.height - y,
+      asset: 'ball',
+      particles: this.particles,
+      HUD: this.HUD
+    });
+    this.game.global.particles.push(particle);
+    this.game.add.existing(particle);
+  }
+
   create() {
     this.game.global = {};
-    this.game.global.heroes = [];
     this.game.physics.startSystem(Phaser.Physics.ARCADE);
     this.game.time.desiredFps = 30;
     this.game.physics.arcade.gravity.y = 500;
     this.game.world.setBounds(0, 0, 1600, 1000);
     this.game.camera.setPosition(this.game.world.width / 2 - 180, 1600);
-    this.molecules = this.game.add.group();
-    range(0,100).forEach(()=>{
+
+    range(0, 100).forEach(() => {
       const mol = new Molecule({
         game: this.game,
         x: this.game.world.width / 2 - 100,
@@ -57,19 +70,15 @@ this.game.stage.backgroundColor = '#01051f'
         asset: ''
       });
       this.game.add.existing(mol);
-      this.molecules.add(mol);
     });
 
+    ['heroes', 'particles', 'platforms', 'spikes'].forEach(group => {
+      this[group] = new Phaser.Group(this.game);
+      this[group].enableBody = true;
+      this.game.global[group] = [];
+    });
 
-    this.heroes = this.game.add.group();
-    this.heroes.enableBody = true;
-    this.platforms = this.game.add.group();
-    this.spikes = this.game.add.group();
-    this.particles = this.game.add.group();
-    this.particles.enableBody = true;
-    this.platforms.enableBody = true;
-    this.spikes.enableBody = true;
-
+    //
     this.ground = this.createPlatform({
       x: 400,
       y: 50,
@@ -90,6 +99,10 @@ this.game.stage.backgroundColor = '#01051f'
     this.createPlatform({ x: 700, y: 350, scale: { x: 0.5, y: 0.5 } });
     this.createPlatform({ x: 300, y: 450, scale: { x: 0.05, y: 10 } });
 
+    this.HUD = new HUD({
+      game: this.game
+    });
+
     this.hero = new Hero({
       game: this.game,
       id: 0,
@@ -97,44 +110,29 @@ this.game.stage.backgroundColor = '#01051f'
       y: 800,
       asset: 'hero',
       platforms: this.platforms,
-      spikes: this.spikes,
-      heroes: this.heroes
+      spikes: this.spikes
     });
 
-    this.particle1 = new Particle({
-      game: this.game,
-      x: this.game.world.width / 2 + 100,
-      y: 900,
-      asset: 'ball'
-    });
+    [
+      {
+        x: 100,
+        y: 120
+      },
+      {
+        x: 650,
+        y: 100
+      },
+      {
+        x: 1100,
+        y: 500
+      }
+    ].forEach(this.createParticle.bind(this));
 
     this.cursors = this.game.input.keyboard.createCursorKeys();
 
-    this.game.add.existing(this.particle1);
-    this.particles.add(this.particle1);
-    this.particle1.body.immovable = true;
-    this.particle1.body.moves = false;
-    this.game.add.existing(this.hero);
     this.heroes.add(this.hero);
+    this.game.add.existing(this.hero);
     this.game.global.heroes.push(this.hero);
-    this.game.physics.arcade.overlap(
-      this.heroes,
-      this.particles,
-      this.hittt,
-      null,
-      this
-    );
-    this.game.physics.arcade.overlap(
-      this.heroes,
-      this.platforms,
-      this.hittt,
-      null,
-      this
-    );
-  }
-
-  hittt() {
-    console.log('this', this);
   }
 
   centerCamera() {
@@ -160,7 +158,6 @@ this.game.stage.backgroundColor = '#01051f'
   }
 
   render() {
-    // this.bg.tilePosition.x = -(this.camera.x * 0.2);
     this.centerCamera();
     if (this.game.global.heroes.length === 0) {
       this.state.start('Game');
