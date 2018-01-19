@@ -1,6 +1,6 @@
 {
   "parser": "babel-eslint",
-  "extends": "standard",
+  "extends": ["standard", "prettier"],
   "parserOptions": {
     "ecmaVersion": 6,
     "sourceType": "module"

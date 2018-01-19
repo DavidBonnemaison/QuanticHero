@@ -13,13 +13,13 @@ export default class Molecule extends Phaser.Sprite {
     this.color = (
       '0x' +
       randomColor({
-        hue: 'blue'
+        hue: this.game.data ? this.game.data.hue : 'monochrome'
       })
     )
       .toUpperCase()
       .replace('#', '');
-    this.x = _.random(0, this.game.world.width);
-    this.y = _.random(0, this.game.world.height);
+    this.x = _.random(-this.size, this.game.world.width + this.size);
+    this.y = _.random(-this.size, this.game.world.height + this.size);
     this.speed = {
       x:
         _.sample([_.random(-10, -5, true), _.random(5, 10, true)]) *

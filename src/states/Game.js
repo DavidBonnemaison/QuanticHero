@@ -1,14 +1,31 @@
-/* globals __DEV__ */
 import Phaser from 'phaser';
 import { range } from 'lodash';
+import './../plugins/joystick';
+import * as levels from '../data/levels';
 import Hero from '../sprites/Hero';
 import Particle from '../sprites/Particle';
 import Molecule from '../sprites/Molecule';
+import Platform from '../sprites/Platform';
 import HUD from './../prefabs/Hud';
+import Overlay from './../prefabs/Overlay';
 
 export default class extends Phaser.State {
   init() {
-    this.game.stage.backgroundColor = '#01051f';
+    try {
+      this.currentLevel = localStorage.getItem('currentLevel');
+    } catch (e) {
+      this.currentLevel = localStorage.setItem('currentLevel', '1');
+    }
+    if (this.currentLevel === null) {
+      this.currentLevel = '1';
+    }
+    this.game.data = levels[`level${this.currentLevel}`];
+    if (this.game.data === undefined) {
+      this.currentLevel = '1';
+      this.game.data = levels.level1;
+      localStorage.setItem('currentLevel', '1');
+    }
+    this.game.stage.backgroundColor = this.game.data.hue;
   }
 
   createObject({ x, y, scale, asset, group }) {
@@ -21,21 +38,14 @@ export default class extends Phaser.State {
     return newObject;
   }
 
-  createPlatform({ x, y, scale }) {
+  createSpike({ x, y }) {
     return this.createObject({
       x,
       y,
-      scale,
-      asset: 'platform',
-      group: this.platforms
-    });
-  }
-
-  createSpike({ x, y, scale }) {
-    return this.createObject({
-      x,
-      y,
-      scale,
+      scale: {
+        x: 0.5,
+        y: 0.5
+      },
       asset: 'spike',
       group: this.spikes
     });
@@ -54,54 +64,86 @@ export default class extends Phaser.State {
     this.game.add.existing(particle);
   }
 
+  createMolecule() {
+    const mol = new Molecule({
+      game: this.game,
+      x: this.game.world.width / 2 - 100,
+      y: 900,
+      asset: ''
+    });
+    this.molecules.add(this.game.add.existing(mol));
+  }
+
+  createPlatform({ x, y, width = 200, height = 20 }) {
+    const bmd = this.game.add.bitmapData(width, height);
+    bmd.ctx.beginPath();
+    bmd.ctx.rect(0, 0, width, height);
+    bmd.ctx.fillStyle = this.game.data.antiHue;
+    bmd.ctx.fill();
+    const platform = new Platform({
+      game: this.game,
+      x,
+      y: this.game.world.height - y,
+      width,
+      height,
+      asset: bmd
+    });
+
+    this.platforms.add(this.game.add.existing(platform));
+  }
+
   create() {
     this.game.global = {};
     this.game.physics.startSystem(Phaser.Physics.ARCADE);
     this.game.time.desiredFps = 30;
     this.game.physics.arcade.gravity.y = 500;
-    this.game.world.setBounds(0, 0, 1600, 1000);
-    this.game.camera.setPosition(this.game.world.width / 2 - 180, 1600);
-
-    range(0, 100).forEach(() => {
-      const mol = new Molecule({
-        game: this.game,
-        x: this.game.world.width / 2 - 100,
-        y: 900,
-        asset: ''
-      });
-      this.game.add.existing(mol);
+    this.game.world.setBounds(
+      0,
+      0,
+      this.game.data.width,
+      this.game.data.height
+    );
+    this.game.camera.setPosition(
+      this.game.world.width / 2 - 400,
+      this.game.world.height
+    );
+    this.overlay = new Overlay({
+      game: this.game,
+      x: 0,
+      y: 0
     });
 
-    ['heroes', 'particles', 'platforms', 'spikes'].forEach(group => {
-      this[group] = new Phaser.Group(this.game);
-      this[group].enableBody = true;
-      this.game.global[group] = [];
-    });
-
-    //
-    this.ground = this.createPlatform({
-      x: 400,
-      y: 50,
-      scale: {
-        x: 2,
-        y: 1
+    ['molecules', 'heroes', 'particles', 'platforms', 'spikes'].forEach(
+      group => {
+        this[group] = new Phaser.Group(this.game);
+        this[group].enableBody = true;
+        this.game.global[group] = [];
       }
-    });
-
-    this.createSpike({ x: 1200, y: 50, scale: { x: 0.5, y: 0.5 } });
-    this.createSpike({ x: 1405, y: 50, scale: { x: 0.5, y: 0.5 } });
-    this.createSpike({ x: 100, y: 50, scale: { x: 0.5, y: 0.5 } });
-    this.createPlatform({ x: 1000, y: 150, scale: { x: 1, y: 0.5 } });
-    this.createPlatform({ x: 650, y: 250, scale: { x: 1, y: 0.5 } });
-    this.createPlatform({ x: 400, y: 350, scale: { x: 0.5, y: 0.5 } });
-    this.createPlatform({ x: 0, y: 100, scale: { x: 0.5, y: 0.5 } });
-    this.createPlatform({ x: 1000, y: 450, scale: { x: 0.5, y: 0.5 } });
-    this.createPlatform({ x: 700, y: 350, scale: { x: 0.5, y: 0.5 } });
-    this.createPlatform({ x: 300, y: 450, scale: { x: 0.05, y: 10 } });
+    );
 
     this.HUD = new HUD({
       game: this.game
     });
+
+    range(0, 100).forEach(this.createMolecule.bind(this));
+    this.game.data.spikes.forEach(this.createSpike.bind(this));
+    this.game.data.platforms.forEach(this.createPlatform.bind(this));
+    this.game.data.particles.forEach(this.createParticle.bind(this));
+
+    const isTouchScreen = navigator.maxTouchPoints > 0;
+    this.gamepad = this.game.plugins.add(Phaser.Plugin.VirtualGamepad);
+    this.joystick = this.gamepad.addJoystick(
+      isTouchScreen ? 65 : -5000,
+      this.game.height - 65,
+      1,
+      'gamepad'
+    );
+    this.button = this.gamepad.addButton(
+      isTouchScreen ? this.game.width - 65 : -5000,
+      this.game.height - 65,
+      1.0,
+      'gamepad'
+    );
 
     this.hero = new Hero({
       game: this.game,
@@ -110,29 +152,20 @@ export default class extends Phaser.State {
       y: 800,
       asset: 'hero',
       platforms: this.platforms,
-      spikes: this.spikes
+      spikes: this.spikes,
+      HUD: this.HUD,
+      button: this.button,
+      joystick: this.joystick
     });
 
-    [
-      {
-        x: 100,
-        y: 120
-      },
-      {
-        x: 650,
-        y: 100
-      },
-      {
-        x: 1100,
-        y: 500
-      }
-    ].forEach(this.createParticle.bind(this));
-
-    this.cursors = this.game.input.keyboard.createCursorKeys();
-
     this.heroes.add(this.hero);
-    this.game.add.existing(this.hero);
     this.game.global.heroes.push(this.hero);
+    setTimeout(() => {
+      this.world.sendToBack(this.molecules);
+      this.game.add.existing(this.hero);
+    }, 2100);
+    this.game.add.existing(this.overlay);
+    this.world.bringToTop(this.molecules);
   }
 
   centerCamera() {
@@ -160,6 +193,10 @@ export default class extends Phaser.State {
   render() {
     this.centerCamera();
     if (this.game.global.heroes.length === 0) {
+      this.state.start('Game');
+    }
+    if (this.game.global.particles.length === 0) {
+      localStorage.setItem('currentLevel', Number(this.currentLevel) + 1);
       this.state.start('Game');
     }
   }

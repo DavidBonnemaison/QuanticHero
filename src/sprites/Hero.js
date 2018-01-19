@@ -1,8 +1,19 @@
 import Phaser from 'phaser';
-import { sample, uniqBy, round, remove, map, groupBy } from 'lodash';
+import { sample, uniqBy, round, remove, min } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({ game, x, y, asset, platforms, spikes, id }) {
+  constructor({
+    game,
+    x,
+    y,
+    asset,
+    platforms,
+    spikes,
+    id,
+    HUD,
+    button,
+    joystick
+  }) {
     super(game, x, y, asset);
     this.game.global.heroes = this.game.global.heroes || [];
     this.anchor.setTo(0.5);
@@ -13,6 +24,10 @@ export default class Hero extends Phaser.Sprite {
     this.isDuplicating = false;
     this.body.bounce.y = 0.2;
     this.body.collideWorldBounds = true;
+    this.HUD = HUD;
+    this.data = this.game.data;
+    this.button = button;
+    this.joystick = joystick;
 
     this.animations.add('left', [6, 7, 8, 9, 10, 11], 30, true);
     this.animations.add('idle', [0, 1, 2, 3], 10, true);
@@ -20,13 +35,15 @@ export default class Hero extends Phaser.Sprite {
     this.animations.add('jump', [13, 14, 15], 3, true);
 
     this.cursors = this.game.input.keyboard.createCursorKeys();
-    this.jumpButton = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
     this.animations.play('jump');
 
     setInterval(this.clean.bind(this), 1000);
   }
 
   duplicate() {
+    if (this.game.global.heroes.length === this.data.uncertainty) {
+      return;
+    }
     const onGoingDuplications = this.game.global.heroes
       .map(hero => hero.isDuplicating)
       .filter(status => status === true);
@@ -43,11 +60,15 @@ export default class Hero extends Phaser.Sprite {
       platforms: this.platforms,
       spikes: this.spikes,
       id: Math.random() * 100,
-      heroes: this.heroes
+      heroes: this.heroes,
+      HUD: this.HUD,
+      button: this.button,
+      joystick: this.joystick
     });
 
     this.game.add.existing(newHero);
     this.game.global.heroes.push(newHero);
+    this.HUD.updateUncertainty(this.game.global.heroes.length);
     setTimeout(() => (this.isDuplicating = false), 1000);
   }
 
@@ -70,6 +91,8 @@ export default class Hero extends Phaser.Sprite {
       this.game.global.heroes,
       hero => hero.id !== id
     );
+    this.HUD.updateUncertainty(this.game.global.heroes.length);
+    this.destroy();
   }
 
   update() {
@@ -89,7 +112,7 @@ export default class Hero extends Phaser.Sprite {
 
     this.isOnGround = this.body.touching.down && this.hitPlatform;
 
-    if (this.cursors.up.isDown && this.isOnGround) {
+    if ((this.cursors.up.isDown || this.button.isDown) && this.isOnGround) {
       this.body.velocity.y = -350;
       this.isOnGround = false;
       this.animations.play('jump');
@@ -103,7 +126,6 @@ export default class Hero extends Phaser.Sprite {
         this.animations.play('left');
       }
       this.scale.x = -1;
-      this.facing = 'left';
     } else if (this.cursors.right.isDown) {
       this.body.velocity.x = 200;
 
@@ -111,12 +133,19 @@ export default class Hero extends Phaser.Sprite {
         this.animations.play('right');
       }
       this.scale.x = 1;
-      this.facing = 'right';
-    } else {
+    } else if (!this.joystick.properties.x) {
       if (this.isOnGround) {
         this.animations.play('idle');
       }
-      this.facing = 'idle';
+    }
+
+    if (this.joystick.properties.x) {
+      this.body.velocity.x = min([this.joystick.properties.x * 3, 200]);
+      if (this.isOnGround) {
+        const direction = this.body.velocity.x > 0 ? 'left' : 'right';
+        this.animations.play(direction);
+        this.scale.x = direction === 'right' ? -1 : 1;
+      }
     }
   }
 }

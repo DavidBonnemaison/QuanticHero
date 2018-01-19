@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { random } from 'lodash';
+import { random, sample } from 'lodash';
 
 export default class Particle extends Phaser.Sprite {
   constructor({ game, x, y, asset, particles, HUD }) {
@@ -30,11 +30,12 @@ export default class Particle extends Phaser.Sprite {
     this.game.global.particles = this.game.global.particles.filter(
       particle => particle !== this
     );
-    this.HUD.updateScore();
+    this.HUD.updateEnergy();
     this.destroy();
   }
 
   update() {
+    this.angle += sample([40, -40]);
     this.game.physics.arcade.overlap(
       this.game.global.heroes,
       this,
