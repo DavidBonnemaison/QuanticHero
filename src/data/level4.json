@@ -1,12 +1,12 @@
 {
-  "id": 2,
-  "symbol": "He",
-  "atom": "Helium",
+  "id": 4,
+  "symbol": "Be",
+  "atom": "Beryllium",
   "uncertainty": 5,
   "width": 1600,
   "height": 1000,
-  "hue": "#336699",
-  "antiHue": "#FFCC66",
+  "hue": "#E18942",
+  "antiHue": "#3D3242",
   "player": {
     "position": {
       "x": 10,

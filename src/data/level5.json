@@ -1,12 +1,12 @@
 {
-  "id": 2,
-  "symbol": "He",
-  "atom": "Helium",
+  "id": 5,
+  "symbol": "B",
+  "atom": "Boron",
   "uncertainty": 5,
   "width": 1600,
   "height": 1000,
-  "hue": "#336699",
-  "antiHue": "#FFCC66",
+  "hue": "#028482",
+  "antiHue": "#7ABA7A",
   "player": {
     "position": {
       "x": 10,

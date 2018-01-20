@@ -1,12 +1,12 @@
 {
-  "id": 2,
-  "symbol": "He",
-  "atom": "Helium",
+  "id": 6,
+  "symbol": "C",
+  "atom": "Carbon",
   "uncertainty": 5,
   "width": 1600,
   "height": 1000,
-  "hue": "#336699",
-  "antiHue": "#FFCC66",
+  "hue": "#000000",
+  "antiHue": "#FF6600",
   "player": {
     "position": {
       "x": 10,

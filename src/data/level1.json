@@ -1,5 +1,6 @@
 {
-  "id": "1",
+  "id": 1,
+  "symbol": "H",
   "atom": "Hydrogen",
   "uncertainty": 5,
   "width": 1600,

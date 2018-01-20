@@ -15,6 +15,8 @@ export default class Hero extends Phaser.Sprite {
     joystick
   }) {
     super(game, x, y, asset);
+    this.game = game;
+    this.game.global = this.game.global || {};
     this.game.global.heroes = this.game.global.heroes || [];
     this.anchor.setTo(0.5);
     this.id = id;
@@ -36,8 +38,7 @@ export default class Hero extends Phaser.Sprite {
 
     this.cursors = this.game.input.keyboard.createCursorKeys();
     this.animations.play('jump');
-
-    setInterval(this.clean.bind(this), 1000);
+    this.game.global.cleanHeroes = setInterval(this.clean.bind(this), 1000);
   }
 
   duplicate() {

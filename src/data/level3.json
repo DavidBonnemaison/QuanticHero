@@ -1,12 +1,12 @@
 {
-  "id": 2,
-  "symbol": "He",
-  "atom": "Helium",
+  "id": 3,
+  "symbol": "Li",
+  "atom": "Lithium",
   "uncertainty": 5,
   "width": 1600,
   "height": 1000,
-  "hue": "#336699",
-  "antiHue": "#FFCC66",
+  "hue": "#7A3E48",
+  "antiHue": "#EECD86",
   "player": {
     "position": {
       "x": 10,

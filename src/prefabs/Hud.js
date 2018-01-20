@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 
 export default class Hud extends Phaser.Group {
-  constructor({ game }) {
+  constructor({ game, goToMenu }) {
     super(game);
     this.game = game;
+    this.goToMenu = goToMenu;
     this.totalParticles = 0;
     this.energy = 0;
     this.energyLabel = 'E : ';
-    this.energyText = new Phaser.Text(this.game, 20, 14, this.getEnergyText(), {
+    this.energyText = new Phaser.Text(this.game, 50, 14, this.getEnergyText(), {
       font: '20px monospace',
       fill: 'white',
       align: 'center'
@@ -27,8 +28,18 @@ export default class Hud extends Phaser.Group {
       }
     );
 
+    const backArrow = new Phaser.Text(this.game, 10, 0, '↩', {
+      font: '40px monospace',
+      fill: 'white',
+      align: 'right'
+    });
+
+    backArrow.inputEnabled = true;
+    backArrow.events.onInputDown.add(this.goToMenu, this);
+
     this.add(this.energyText);
     this.add(this.uncertaintyText);
+    this.add(backArrow);
     this.fixedToCamera = true;
   }
 
@@ -44,6 +55,8 @@ export default class Hud extends Phaser.Group {
       this.game.data.uncertainty
     );
   }
+
+  goToMenu() {}
 
   updateTotalParticles() {
     this.totalParticles += 1;

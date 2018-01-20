@@ -13,6 +13,7 @@ export default class extends Phaser.State {
   init() {
     try {
       this.currentLevel = localStorage.getItem('currentLevel');
+      console.log("this.currentLevel", this.currentLevel);
     } catch (e) {
       this.currentLevel = localStorage.setItem('currentLevel', '1');
     }
@@ -26,6 +27,10 @@ export default class extends Phaser.State {
       localStorage.setItem('currentLevel', '1');
     }
     this.game.stage.backgroundColor = this.game.data.hue;
+  }
+
+  goToMenu() {
+    this.state.start('Menu');
   }
 
   createObject({ x, y, scale, asset, group }) {
@@ -67,8 +72,8 @@ export default class extends Phaser.State {
   createMolecule() {
     const mol = new Molecule({
       game: this.game,
-      x: this.game.world.width / 2 - 100,
-      y: 900,
+      x: 0,
+      y: 0,
       asset: ''
     });
     this.molecules.add(this.game.add.existing(mol));
@@ -122,7 +127,8 @@ export default class extends Phaser.State {
     );
 
     this.HUD = new HUD({
-      game: this.game
+      game: this.game,
+      goToMenu: this.goToMenu.bind(this)
     });
 
     range(0, 100).forEach(this.createMolecule.bind(this));
@@ -158,11 +164,10 @@ export default class extends Phaser.State {
       joystick: this.joystick
     });
 
-    this.heroes.add(this.hero);
     this.game.global.heroes.push(this.hero);
     setTimeout(() => {
       this.world.sendToBack(this.molecules);
-      this.game.add.existing(this.hero);
+      this.heroes.add(this.game.add.existing(this.hero));
     }, 2100);
     this.game.add.existing(this.overlay);
     this.world.bringToTop(this.molecules);
