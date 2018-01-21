@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { sample, uniqBy, round, remove, min } from 'lodash';
+import { sample, uniqBy, round, remove, min, max } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
   constructor({
@@ -141,7 +141,13 @@ export default class Hero extends Phaser.Sprite {
     }
 
     if (this.joystick.properties.x) {
-      this.body.velocity.x = min([this.joystick.properties.x * 3, 200]);
+      const direction = this.body.velocity.x > 0 ? 'left' : 'right';
+      if (direction === 'right') {
+        this.body.velocity.x = max([this.joystick.properties.x * 2]);
+      }
+      if (direction === 'left') {
+        this.body.velocity.x = min([this.joystick.properties.x * 2]);
+      }
       if (this.isOnGround) {
         const direction = this.body.velocity.x > 0 ? 'left' : 'right';
         this.animations.play(direction);

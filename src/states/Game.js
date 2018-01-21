@@ -98,7 +98,7 @@ export default class extends Phaser.State {
   create() {
     this.game.global = {};
     this.game.physics.startSystem(Phaser.Physics.ARCADE);
-    this.game.time.desiredFps = 30;
+    this.game.time.desiredFps = 60;
     this.game.physics.arcade.gravity.y = 500;
     this.game.world.setBounds(
       0,
@@ -133,7 +133,10 @@ export default class extends Phaser.State {
     this.game.data.platforms.forEach(this.createPlatform.bind(this));
     this.game.data.particles.forEach(this.createParticle.bind(this));
 
-    const isTouchScreen = navigator.maxTouchPoints > 0 || 'ontouchstart' in window || navigator.msMaxTouchPoints > 0;
+    const isTouchScreen =
+      navigator.maxTouchPoints > 0 ||
+      'ontouchstart' in window ||
+      navigator.msMaxTouchPoints > 0;
     this.gamepad = this.game.plugins.add(Phaser.Plugin.VirtualGamepad);
     this.joystick = this.gamepad.addJoystick(
       isTouchScreen ? 65 : -5000,
