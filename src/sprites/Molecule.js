@@ -32,9 +32,6 @@ export default class Molecule extends Phaser.Sprite {
     const graphics = this.game.add.graphics(0, 0);
     graphics.beginFill(this.color);
     graphics.drawCircle(0, 0, this.size);
-    this.game.physics.arcade.enable(this);
-    this.body.immovable = true;
-    this.body.moves = false;
     this.addChild(graphics);
   }
 

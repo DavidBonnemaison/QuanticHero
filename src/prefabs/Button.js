@@ -7,7 +7,7 @@ export default class Button extends Phaser.Group {
     this.x = x;
     this.y = y;
     this.width = 100;
-    this.height= 100;
+    this.height = 100;
 
     const textObject = new Phaser.Text(this.game, x, y, text, {
       font: '30px monospace',
@@ -21,7 +21,7 @@ export default class Button extends Phaser.Group {
     textObject.anchor.setTo(0.5);
     textObject.inputEnabled = true;
     textObject.events.onInputDown.add(callback, this);
-    textObject.bringToTop()
+    textObject.bringToTop();
 
     this.add(background);
     this.add(textObject);

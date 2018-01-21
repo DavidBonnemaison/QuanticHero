@@ -27,30 +27,32 @@ export default class extends Phaser.State {
     const spacing = this.game.width / (perLine + 1);
     let line = 0;
     let column = 1;
-    Object.keys(levels).forEach((key, i) => {
-      const { id, hue, antiHue, symbol } = levels[key];
-      column += 1;
-      if (i % perLine === 0) {
-        line += 1;
-        column = 1;
-      }
-      const x = spacing * column;
-      const y = 100 * line;
-      this.game.add.existing(
-        new Button({
-          game: this.game,
-          x,
-          y,
-          text: symbol,
-          callback: this.goToLevel.bind(this, id),
-          hue,
-          antiHue
-        })
-      );
-    });
+    Object.keys(levels)
+      .sort((a, b) => Number(levels[a].id) - Number(levels[b].id))
+      .forEach((key, i) => {
+        const { id, hue, antiHue, symbol } = levels[key];
+        column += 1;
+        if (i % perLine === 0) {
+          line += 1;
+          column = 1;
+        }
+        const x = spacing * column;
+        const y = 100 * line;
+        this.game.add.existing(
+          new Button({
+            game: this.game,
+            x,
+            y,
+            text: symbol,
+            callback: this.goToLevel.bind(this, id),
+            hue,
+            antiHue
+          })
+        );
+      });
 
     this.molecules = this.game.add.group();
-    range(0, 20).forEach(this.createMolecule.bind(this));
+    range(0, 50).forEach(this.createMolecule.bind(this));
   }
 
   newGame() {

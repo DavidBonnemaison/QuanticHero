@@ -14,15 +14,16 @@ export default class Overlay extends Phaser.Group {
       this.game,
       50,
       this.game.height / 2,
-      this.game.data.atom,
+      `${this.game.data.id} - ${this.game.data.atom}`,
       {
-        font: '50px monospace',
+        font: '30px monospace',
         fill: this.game.data.antiHue,
         align: 'center'
       }
     );
     this.levelTitle.alpha = 0;
     this.add(this.levelTitle);
+    this.game.world.bringToTop(this.levelTitle);
   }
 
   createOverlay() {

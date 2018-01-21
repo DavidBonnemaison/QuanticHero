@@ -13,7 +13,7 @@ export default class extends Phaser.State {
   init() {
     try {
       this.currentLevel = localStorage.getItem('currentLevel');
-      console.log("this.currentLevel", this.currentLevel);
+      console.log('this.currentLevel', this.currentLevel);
     } catch (e) {
       this.currentLevel = localStorage.setItem('currentLevel', '1');
     }
@@ -118,20 +118,19 @@ export default class extends Phaser.State {
       y: 0
     });
 
-    ['molecules', 'heroes', 'particles', 'platforms', 'spikes'].forEach(
-      group => {
-        this[group] = new Phaser.Group(this.game);
-        this[group].enableBody = true;
-        this.game.global[group] = [];
-      }
-    );
+    ['heroes', 'particles', 'platforms', 'spikes'].forEach(group => {
+      this[group] = new Phaser.Group(this.game);
+      this[group].enableBody = true;
+      this.game.global[group] = [];
+    });
 
     this.HUD = new HUD({
       game: this.game,
       goToMenu: this.goToMenu.bind(this)
     });
 
-    range(0, 100).forEach(this.createMolecule.bind(this));
+    this.molecules = this.game.add.group();
+    range(0, 200).forEach(this.createMolecule.bind(this));
     this.game.data.spikes.forEach(this.createSpike.bind(this));
     this.game.data.platforms.forEach(this.createPlatform.bind(this));
     this.game.data.particles.forEach(this.createParticle.bind(this));
