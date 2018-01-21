@@ -10,17 +10,17 @@ export default class Button extends Phaser.Group {
     this.height = 100;
 
     const textObject = new Phaser.Text(this.game, x, y, text, {
-      font: '30px monospace',
+      font: '40px VT323',
       fill: antiHue,
       align: 'center'
     });
 
     const background = new Phaser.Graphics(this.game)
       .beginFill('0x' + hue.replace('#', ''))
-      .drawRect(x - 25, y - 30, 50, 50);
+      .drawRect(x - 25, y - 28, 50, 50);
     textObject.anchor.setTo(0.5);
-    textObject.inputEnabled = true;
-    textObject.events.onInputDown.add(callback, this);
+    background.inputEnabled = true;
+    background.events.onInputDown.add(callback, this);
     textObject.bringToTop();
 
     this.add(background);

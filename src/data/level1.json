@@ -5,8 +5,8 @@
   "uncertainty": 5,
   "width": 1600,
   "height": 1000,
-  "hue": "#00bf4c",
-  "antiHue": "#ff40b3",
+  "hue": "#070737",
+  "antiHue": "#c56805",
   "player": { "position": { "x": 10, "y": 55 } },
   "spikes": [
     { "x": 1200, "y": 50 },

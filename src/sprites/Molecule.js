@@ -2,10 +2,9 @@ import Phaser from 'phaser';
 import _ from 'lodash';
 import randomColor from 'randomcolor';
 
-export default class Molecule extends Phaser.Sprite {
-  constructor({ game, x, y, asset }) {
-    super(game, x, y, asset);
-    this.anchor.setTo(0.5);
+export default class Molecule extends Phaser.Group {
+  constructor({ game, x, y }) {
+    super(game, x, y);
     this.game = game;
     this.scale.setTo(0.2, 0.2);
     this.id = _.random(1000, 9999);

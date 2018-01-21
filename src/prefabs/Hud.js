@@ -8,8 +8,8 @@ export default class Hud extends Phaser.Group {
     this.totalParticles = 0;
     this.energy = 0;
     this.energyLabel = 'E : ';
-    this.energyText = new Phaser.Text(this.game, 50, 14, this.getEnergyText(), {
-      font: '20px monospace',
+    this.energyText = new Phaser.Text(this.game, 54, 10, this.getEnergyText(), {
+      font: '28px VT323',
       fill: '#ffffff',
       align: 'center'
     });
@@ -18,18 +18,18 @@ export default class Hud extends Phaser.Group {
     this.uncertaintyLabel = 'Δ : ';
     this.uncertaintyText = new Phaser.Text(
       this.game,
-      this.game.width - 90,
-      14,
+      this.game.width - 100,
+      10,
       this.getUncertaintyText(),
       {
-        font: '20px monospace',
+        font: '28px VT323',
         fill: '#ffffff',
         align: 'right'
       }
     );
 
-    const backArrow = new Phaser.Text(this.game, 10, 0, '↩', {
-      font: '40px monospace',
+    const backArrow = new Phaser.Text(this.game, 5, 7, '↩', {
+      font: '40px VT323',
       fill: '#ffffff',
       align: 'right'
     });
@@ -40,10 +40,10 @@ export default class Hud extends Phaser.Group {
     this.levelTitle = new Phaser.Text(
       this.game,
       this.game.width / 2 + 10,
-      29,
+      25,
       `${this.game.data.atom}`,
       {
-        font: '20px monospace',
+        font: '32px VT323',
         fill: '#ffffff',
         align: 'center'
       }

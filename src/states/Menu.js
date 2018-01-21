@@ -70,8 +70,7 @@ export default class extends Phaser.State {
     const mol = new Molecule({
       game: this.game,
       x: 0,
-      y: 0,
-      asset: ''
+      y: 0
     });
     this.molecules.add(this.game.add.existing(mol));
   }

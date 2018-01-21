@@ -13,7 +13,6 @@ export default class extends Phaser.State {
   init() {
     try {
       this.currentLevel = localStorage.getItem('currentLevel');
-      console.log('this.currentLevel', this.currentLevel);
     } catch (e) {
       this.currentLevel = localStorage.setItem('currentLevel', '1');
     }
@@ -73,8 +72,7 @@ export default class extends Phaser.State {
     const mol = new Molecule({
       game: this.game,
       x: 0,
-      y: 0,
-      asset: ''
+      y: 0
     });
     this.molecules.add(this.game.add.existing(mol));
   }
@@ -135,7 +133,7 @@ export default class extends Phaser.State {
     this.game.data.platforms.forEach(this.createPlatform.bind(this));
     this.game.data.particles.forEach(this.createParticle.bind(this));
 
-    const isTouchScreen = navigator.maxTouchPoints > 0;
+    const isTouchScreen = navigator.maxTouchPoints > 0 || 'ontouchstart' in window || navigator.msMaxTouchPoints > 0;
     this.gamepad = this.game.plugins.add(Phaser.Plugin.VirtualGamepad);
     this.joystick = this.gamepad.addJoystick(
       isTouchScreen ? 65 : -5000,

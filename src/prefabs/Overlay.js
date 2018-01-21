@@ -16,7 +16,7 @@ export default class Overlay extends Phaser.Group {
       this.game.height / 2,
       `${this.game.data.id} - ${this.game.data.atom}`,
       {
-        font: '30px monospace',
+        font: '50px VT323',
         fill: this.game.data.antiHue,
         align: 'center'
       }
