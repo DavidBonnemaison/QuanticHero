@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     preserveAspectRatio="xMidYMid meet" viewBox="0 0 1600 1000" width="1600" height="1000">
+    <defs>
+        <path d="M425 950L1175 950L1175 1000L425 1000L425 950Z" id="btsNt5gbL"></path>
+        <path d="M1000 698.03L1200 698.03L1200 718.03L1000 718.03L1000 698.03Z" id="a12g1pUaq2"></path>
+        <path d="M650 750L850 750L850 770L650 770L650 750Z" id="a3iQlYneUT"></path>
+        <path d="M400 650L600 650L600 670L400 670L400 650Z" id="a6jztnshrp"></path>
+        <path d="M1200 850L1300 850L1300 870L1200 870L1200 850Z" id="cjQtlegvu"></path>
+        <path d="M1400 750L1600 750L1600 770L1400 770L1400 750Z" id="eofiLKX5T"></path>
+    </defs>
+    <g>
+        <g>
+            <g>
+                <use xlink:href="#btsNt5gbL" opacity="1" fill="#10b480" fill-opacity="1"></use>
+            </g>
+            <g>
+                <use xlink:href="#a12g1pUaq2" opacity="1" fill="#cdca5b" fill-opacity="1"></use>
+            </g>
+            <g>
+                <use xlink:href="#a3iQlYneUT" opacity="1" fill="#cdca5b" fill-opacity="1"></use>
+            </g>
+            <g>
+                <use xlink:href="#a6jztnshrp" opacity="1" fill="#cdca5b" fill-opacity="1"></use>
+            </g>
+            <g>
+                <use xlink:href="#cjQtlegvu" opacity="1" fill="#cdca5b" fill-opacity="1"></use>
+            </g>
+            <g>
+                <use xlink:href="#eofiLKX5T" opacity="1" fill="#cdca5b" fill-opacity="1"></use>
+            </g>
+        </g>
+    </g>
+</svg>

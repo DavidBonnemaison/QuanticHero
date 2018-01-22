@@ -86,7 +86,7 @@ export default class extends Phaser.State {
     const platform = new Platform({
       game: this.game,
       x,
-      y: this.game.world.height - y,
+      y,
       width,
       height,
       asset: bmd
@@ -100,16 +100,8 @@ export default class extends Phaser.State {
     this.game.physics.startSystem(Phaser.Physics.ARCADE);
     this.game.time.desiredFps = 60;
     this.game.physics.arcade.gravity.y = 500;
-    this.game.world.setBounds(
-      0,
-      0,
-      this.game.data.width,
-      this.game.data.height
-    );
-    this.game.camera.setPosition(
-      this.game.world.width / 2 - 400,
-      this.game.world.height
-    );
+    this.game.world.setBounds(0, 0, this.game.data.width, this.game.data.height);
+    this.game.camera.setPosition(this.game.world.width / 2 - 400, this.game.world.height);
     this.overlay = new Overlay({
       game: this.game,
       x: 0,
@@ -134,9 +126,7 @@ export default class extends Phaser.State {
     this.game.data.particles.forEach(this.createParticle.bind(this));
 
     const isTouchScreen =
-      navigator.maxTouchPoints > 0 ||
-      'ontouchstart' in window ||
-      navigator.msMaxTouchPoints > 0;
+      navigator.maxTouchPoints > 0 || 'ontouchstart' in window || navigator.msMaxTouchPoints > 0;
     this.gamepad = this.game.plugins.add(Phaser.Plugin.VirtualGamepad);
     this.joystick = this.gamepad.addJoystick(
       isTouchScreen ? 65 : -5000,
@@ -186,10 +176,8 @@ export default class extends Phaser.State {
     idealPosition.y /= this.game.global.heroes.length;
 
     const newPosition = {
-      x:
-        (idealPosition.x + (this.game.camera.x + this.game.width / 2) * 9) / 10,
-      y:
-        (idealPosition.y + (this.game.camera.y + this.game.height / 2) * 9) / 10
+      x: (idealPosition.x + (this.game.camera.x + this.game.width / 2) * 9) / 10,
+      y: (idealPosition.y + (this.game.camera.y + this.game.height / 2) * 9) / 10
     };
 
     this.game.camera.focusOnXY(newPosition.x, newPosition.y);

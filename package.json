@@ -1,5 +1,5 @@
 {
-  "name": "PhaserES6Webpack",
+  "name": "QuantumHeroe",
   "version": "1.0.0",
   "description": "A teeny-tiny game in the quantum world",
   "author": "David Bonnemaison <david.bonnemaison@gmail.com>",
@@ -9,10 +9,12 @@
     "deploy": "webpack --config webpack.production.config.js",
     "cordova": "webpack --config webpack.cordova.config.js",
     "test": "eslint './src/**/*.js'",
-    "prettier": "prettier --write --single-quote src/**/*.js"
+    "prettier": "prettier --write --single-quote src/**/*.js",
+    "generate-level": "node maps/generator.js"
   },
   "license": "MIT",
   "devDependencies": {
+    "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-eslint": "^8.1.2",
     "babel-loader": "^7.1.2",
@@ -20,6 +22,7 @@
     "babel-preset-env": "^1.6.1",
     "browser-sync": "^2.21.0",
     "browser-sync-webpack-plugin": "^1.2.0",
+    "cheerio": "^1.0.0-rc.2",
     "clean-webpack-plugin": "^0.1.17",
     "copy-webpack-plugin": "^4.3.1",
     "cordova": "^8.0.0",
