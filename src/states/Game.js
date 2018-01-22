@@ -198,10 +198,12 @@ export default class extends Phaser.State {
   render() {
     this.centerCamera();
     if (this.game.global.heroes.length === 0) {
+      this.game.state.clearCurrentState();
       this.state.start('Game');
     }
     if (this.game.global.particles.length === 0) {
       localStorage.setItem('currentLevel', Number(this.currentLevel) + 1);
+      this.game.state.clearCurrentState();
       this.state.start('Game');
     }
   }
