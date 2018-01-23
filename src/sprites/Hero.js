@@ -121,14 +121,14 @@ export default class Hero extends Phaser.Sprite {
     }
 
     if (this.cursors.left.isDown) {
-      this.body.velocity.x = -300;
+      this.body.velocity.x = -250;
 
       if (this.isOnGround) {
         this.animations.play('left');
       }
       this.scale.x = -1;
     } else if (this.cursors.right.isDown) {
-      this.body.velocity.x = 300;
+      this.body.velocity.x = 250;
 
       if (this.isOnGround) {
         this.animations.play('right');
@@ -143,10 +143,10 @@ export default class Hero extends Phaser.Sprite {
     if (this.joystick.properties.x) {
       const direction = this.joystick.properties.x > 0 ? 'right' : 'left';
       if (direction === 'right') {
-        this.body.velocity.x = 300;
+        this.body.velocity.x = 250;
       }
       if (direction === 'left') {
-        this.body.velocity.x = -300;
+        this.body.velocity.x = -250;
       }
       if (this.isOnGround) {
         const direction = this.body.velocity.x > 0 ? 'left' : 'right';
