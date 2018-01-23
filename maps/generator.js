@@ -26,7 +26,7 @@ const cb = (err, data) => {
     .map(a => a.d);
 
   const shape = points.map(transformToShape);
-  console.log(JSON.stringify(shape));
+  fs.writeFileSync(`./maps/platforms${level}.json`, JSON.stringify(shape));
 };
 
 fs.readFile(`./maps/level${level}.svg`, 'utf8', cb);

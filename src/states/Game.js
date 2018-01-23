@@ -87,8 +87,8 @@ export default class extends Phaser.State {
       game: this.game,
       x,
       y,
-      width,
-      height,
+      width: Math.abs(width),
+      height: Math.abs(height),
       asset: bmd
     });
 
