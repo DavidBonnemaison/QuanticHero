@@ -87,8 +87,8 @@ export default class extends Phaser.State {
       game: this.game,
       x,
       y,
-      width: Math.abs(width),
-      height: Math.abs(height),
+      width,
+      height,
       asset: bmd
     });
 
@@ -99,7 +99,7 @@ export default class extends Phaser.State {
     this.game.global = {};
     this.game.physics.startSystem(Phaser.Physics.ARCADE);
     this.game.time.desiredFps = 60;
-    this.game.physics.arcade.gravity.y = 500;
+    this.game.physics.arcade.gravity.y = 700;
     this.game.world.setBounds(0, 0, this.game.data.width, this.game.data.height);
     this.game.camera.setPosition(this.game.world.width / 2 - 400, this.game.world.height);
     this.overlay = new Overlay({

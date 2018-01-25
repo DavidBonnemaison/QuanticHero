@@ -8,8 +8,8 @@ const transformToShape = data => {
   const p2 = coordinates[3].split('L');
   const x = Number(coordinates[0].replace('M', ''));
   const y = Number(coordinates[5].replace('Z', ''));
-  const width = Number(p1[1]) - Number(p2[1]);
-  const height = Number(p2[0]) - Number(p1[0]);
+  const width = Math.abs(Number(p1[1]) - Number(p2[1]));
+  const height = Math.abs(Number(p2[0]) - Number(p1[0]));
   return { x, y, width, height };
 };
 
