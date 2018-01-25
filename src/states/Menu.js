@@ -16,7 +16,10 @@ export default class extends Phaser.State {
     this.game.global = {};
     this.game.time.desiredFps = 60;
     this.game.world.setBounds(0, 0, window.innerWidth, window.innerHeight);
-    this.game.camera.setPosition(this.game.world.width / 2 - 400, this.game.world.height);
+    this.game.camera.setPosition(
+      this.game.world.width / 2 - 400,
+      this.game.world.height
+    );
     this.game.stage.backgroundColor = '#111111';
     this.cursors = this.game.input.keyboard.createCursorKeys();
     const perLine = 3;
@@ -26,6 +29,12 @@ export default class extends Phaser.State {
     this.swipe = new Swipe(this.game);
     this.isScrolling = false;
     this.game.input.mouse.mouseWheelCallback = this.mouseWheel.bind(this);
+
+    this.maxLevel = Number(localStorage.getItem('maxLevel'));
+    if (this.maxLevel === 0) {
+      this.game.state.clearCurrentState();
+      this.state.start('Tuto');
+    }
 
     this.buttons = this.game.add.group();
     Object.keys(levels)
@@ -49,7 +58,8 @@ export default class extends Phaser.State {
               text: symbol,
               callback: this.goToLevel.bind(this, id),
               hue,
-              antiHue
+              antiHue,
+              enabled: Number(id) <= this.maxLevel
             })
           )
         );
