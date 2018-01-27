@@ -9,7 +9,7 @@ export default class extends Phaser.State {
       this.game.height * i + this.game.height / 2,
       text,
       {
-        font: '48px VT323',
+        font: '40px VT323',
         fill: '#ffffff',
         align: 'center'
       }
@@ -40,7 +40,7 @@ export default class extends Phaser.State {
     this.currentAdvice = 0;
 
     const text1 = this.makeText(
-      `Oops... Sorry kiddo,
+      `Oops... Sorry kid,
 looks like I shrank 
 you to the size 
 of an atom.`,
