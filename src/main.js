@@ -5,11 +5,7 @@ window.game = new Game();
 if (window.cordova) {
   var app = {
     initialize: function() {
-      document.addEventListener(
-        'deviceready',
-        this.onDeviceReady.bind(this),
-        false
-      );
+      document.addEventListener('deviceready', this.onDeviceReady.bind(this), false);
     },
 
     // deviceready Event Handler

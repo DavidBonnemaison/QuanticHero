@@ -28,4 +28,8 @@ export default class Button extends Phaser.Group {
     this.add(textObject);
     this.fixedToCamera = true;
   }
+
+  remove() {
+    this.game.world.remove(this);
+  }
 }

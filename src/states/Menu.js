@@ -10,16 +10,34 @@ export default class extends Phaser.State {
     if (this.game.global && this.game.global.cleanHeroes) {
       clearInterval(this.game.global.cleanHeroes);
     }
+    this.GoogleAuth = {};
+    this.gapi = window.gapi;
+    this.initClient();
+  }
+
+  initClient() {
+    this.gapi.client
+      .init({
+        apiKey: 'AIzaSyBj7ckpuO0CVTpR11wlj3NJYAd6b5e-RIU',
+        clientId: '285177366558-jmrsjo386l1j6n829g02sgccqkdkbk5k.apps.googleusercontent.com',
+        scope: 'profile',
+        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+      })
+      .then(() => {
+        this.GoogleAuth = this.gapi.auth2.getAuthInstance();
+        this.GoogleAuth.isSignedIn.listen(this.updateSigninStatus);
+      });
+  }
+
+  updateSigninStatus(e) {
+    console.log(e);
   }
 
   create() {
     this.game.global = {};
     this.game.time.desiredFps = 60;
     this.game.world.setBounds(0, 0, window.innerWidth, window.innerHeight);
-    this.game.camera.setPosition(
-      this.game.world.width / 2 - 400,
-      this.game.world.height
-    );
+    this.game.camera.setPosition(this.game.world.width / 2 - 400, this.game.world.height);
     this.game.stage.backgroundColor = '#111111';
     this.cursors = this.game.input.keyboard.createCursorKeys();
     const perLine = 3;
@@ -32,8 +50,7 @@ export default class extends Phaser.State {
 
     this.maxLevel = Number(localStorage.getItem('maxLevel'));
     if (this.maxLevel === 0) {
-      this.game.state.clearCurrentState();
-      this.state.start('Tuto');
+      this.maxLevel = 1;
     }
 
     this.buttons = this.game.add.group();
@@ -69,6 +86,28 @@ export default class extends Phaser.State {
 
     this.molecules = this.game.add.group();
     range(0, 50).forEach(this.createMolecule.bind(this));
+
+    this.signOutButton = new Button({
+      game: this.game,
+      x: this.world.width / 2,
+      y: 40,
+      text: 'Sign out',
+      callback: this.signOut.bind(this),
+      hue: '#000000',
+      antiHue: '#ff0000',
+      enabled: true
+    });
+
+    this.signInButton = new Button({
+      game: this.game,
+      x: this.world.width / 2,
+      y: 40,
+      text: 'Sign in',
+      callback: this.signIn.bind(this),
+      hue: '#000000',
+      antiHue: '#ffffff',
+      enabled: true
+    });
   }
 
   goToLevel(n) {
@@ -92,6 +131,14 @@ export default class extends Phaser.State {
         })
       )
     );
+  }
+
+  signIn() {
+    this.GoogleAuth.signIn();
+  }
+
+  signOut() {
+    this.GoogleAuth.signOut();
   }
 
   mouseWheel() {
@@ -123,6 +170,12 @@ export default class extends Phaser.State {
   }
 
   update() {
+    if (this.GoogleAuth.isSignedIn && this.GoogleAuth.isSignedIn.get()) {
+      this.buttons.add(this.game.add.existing(this.signOutButton));
+      this.signInButton.remove();
+    } else {
+      this.signOutButton.remove();
+    }
     const checkDirection = this.swipe.check();
     if (checkDirection) {
       if (checkDirection.direction === this.swipe.DIRECTION_UP) {

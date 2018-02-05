@@ -23,6 +23,7 @@ export default class extends Phaser.State {
       this.currentAdvice += 1;
       if (this.currentAdvice === this.all.children.length) {
         this.game.state.clearCurrentState();
+        localStorage.setItem('maxLevel', 1);
         this.state.start('Game');
         return;
       }
