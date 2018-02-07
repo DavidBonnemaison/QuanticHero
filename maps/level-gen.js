@@ -19,6 +19,11 @@ class Matrix {
     this.colSpacing = 1;
     this.cells = range(rows).map(row => range(cols).map(col => ' '));
     this.platforms = [];
+    this.reachable = {
+      top: 2,
+      side: 3,
+      bottom: 3
+    };
   }
 
   setCell({ row, col, content }) {
@@ -26,9 +31,6 @@ class Matrix {
   }
 
   insertPlatform({ x = 0, y = 0, width = 2, height = 1 }) {
-    if (x + width > this.cols || y + height > this.rows || x < 1 || y < 1) {
-      return;
-    }
     range(width).forEach(w =>
       range(height).forEach(h => this.setCell({ row: y + h, col: x + w, content: '_' }))
     );
@@ -36,6 +38,14 @@ class Matrix {
   }
 
   insertIfAvailable({ x, y, width, height }) {
+    if (
+      x + width > this.cols ||
+      y + height > this.rows ||
+      x < this.colSpacing ||
+      y < this.rowSpacing
+    ) {
+      return;
+    }
     const available =
       flatten(
         range(width + 2 * this.rowSpacing).map(w =>
@@ -57,8 +67,8 @@ class Matrix {
 
   nextPlatform() {
     const platform = sample(this.platforms);
-    const x = random(platform.x - 4, platform.x + 4);
-    const y = random(platform.x - 4, platform.x + 2);
+    const x = random(platform.x - this.reachable.side, platform.x + this.reachable.side);
+    const y = random(platform.y - this.reachable.bottom, platform.y + this.reachable.top);
     const width = 3;
     const height = 1;
     this.insertIfAvailable({
@@ -67,7 +77,6 @@ class Matrix {
       width,
       height
     });
-    console.log(platform);
   }
 }
 
