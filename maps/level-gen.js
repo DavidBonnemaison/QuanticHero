@@ -19,9 +19,13 @@ class Matrix {
     this.cells = range(rows).map(row => range(cols).map(col => ' '));
     this.platforms = [];
     this.reachable = {
-      top: 8,
-      side: 40,
-      bottom: 40
+      top: 20,
+      side: 60,
+      bottom: 50
+    };
+    this.defaults = {
+      width: 20,
+      height: 1
     };
   }
 
@@ -49,7 +53,7 @@ class Matrix {
 
   insertIfAvailable({ x, y, width, height }) {
     if (
-      x + width + this.colSpacing > this.cols ||
+      x + width > this.cols ||
       y + height + this.rowSpacing > this.rows ||
       x < this.colSpacing ||
       y < this.rowSpacing
@@ -77,13 +81,16 @@ class Matrix {
 
   nextPlatform() {
     const platform = sample(this.platforms);
-    const x = random(
-      platform.x - this.reachable.side,
-      platform.x + platform.width + this.reachable.side
-    );
+    const x = sample([
+      random(platform.x - this.reachable.side, platform.x - this.reachable.side / 2),
+      random(
+        platform.x + platform.width + this.reachable.side / 2,
+        platform.x + platform.width + this.reachable.side
+      )
+    ]);
     const y = random(platform.y - this.reachable.bottom, platform.y + this.reachable.top);
-    const width = 12;
-    const height = 1;
+    const width = this.defaults.width;
+    const height = this.defaults.height;
     this.insertIfAvailable({
       x,
       y,
@@ -93,7 +100,7 @@ class Matrix {
   }
 }
 
-const matrix = new Matrix({ rows: params.world.width / 10, cols: params.world.height / 10 });
+const matrix = new Matrix({ rows: params.world.height / 10, cols: params.world.width / 10 });
 matrix.insertPlatform({ x: 40, y: 99, width: 80, height: 1 });
 range(10000).forEach(() => {
   matrix.nextPlatform();
