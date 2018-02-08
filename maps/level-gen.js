@@ -5,8 +5,8 @@ const level = 4;
 
 const params = {
   world: {
-    width: 1600,
-    height: 1000
+    width: 400 * level,
+    height: 250 * level
   }
 };
 
@@ -14,18 +14,18 @@ class Matrix {
   constructor({ rows, cols }) {
     this.rows = rows;
     this.cols = cols;
-    this.rowSpacing = 8;
-    this.colSpacing = 8;
+    this.rowSpacing = 3;
+    this.colSpacing = 1;
     this.cells = range(rows).map(row => range(cols).map(col => ' '));
     this.platforms = [];
     this.reachable = {
-      top: 20,
-      side: 60,
-      bottom: 50
+      top: 5,
+      side: 10,
+      bottom: 20
     };
     this.defaults = {
       width: 20,
-      height: 1
+      height: 2
     };
   }
 
@@ -52,20 +52,22 @@ class Matrix {
   }
 
   insertIfAvailable({ x, y, width, height }) {
-    if (
-      x + width > this.cols ||
-      y + height + this.rowSpacing > this.rows ||
-      x < this.colSpacing ||
-      y < this.rowSpacing
-    ) {
+    if (x + width > this.cols || y + height > this.rows) {
       return;
     }
     const available =
       flatten(
-        range(width + 2 * this.rowSpacing).map(w =>
-          range(height + 2 * this.colSpacing).map(
-            h => this.cells[y + h - this.rowSpacing][x + w - this.colSpacing] === ' '
-          )
+        range(width + 2 * this.colSpacing).map(w =>
+          range(height + 2 * this.rowSpacing).map(h => {
+            let res = false;
+            let err = false;
+            try {
+              res = this.cells[y + h - this.colSpacing][x + w - this.rowSpacing] === ' ';
+            } catch (e) {
+              err = true;
+            }
+            return err ? false : res;
+          })
         )
       ).filter(a => a === false).length === 0;
     if (available) {
@@ -82,13 +84,18 @@ class Matrix {
   nextPlatform() {
     const platform = sample(this.platforms);
     const x = sample([
-      random(platform.x - this.reachable.side, platform.x - this.reachable.side / 2),
-      random(
-        platform.x + platform.width + this.reachable.side / 2,
-        platform.x + platform.width + this.reachable.side
-      )
+      // random(platform.x - this.reachable.side, platform.x - this.reachable.side / 2),
+      // random(
+      //   platform.x + platform.width + this.reachable.side / 2,
+      //   platform.x + platform.width + this.reachable.side
+      // )
+      platform.x + 5
     ]);
-    const y = random(platform.y - this.reachable.bottom, platform.y + this.reachable.top);
+    const y = sample([
+      // random(platform.y - this.reachable.top, platform.y - this.reachable.top),
+      // random(platform.y + this.reachable.bottom, platform.y + this.reachable.bottom)
+      platform.y - 4
+    ]);
     const width = this.defaults.width;
     const height = this.defaults.height;
     this.insertIfAvailable({
@@ -101,7 +108,20 @@ class Matrix {
 }
 
 const matrix = new Matrix({ rows: params.world.height / 10, cols: params.world.width / 10 });
-matrix.insertPlatform({ x: 40, y: 99, width: 80, height: 1 });
+matrix.insertPlatform({
+  x: matrix.cols / 4,
+  y: matrix.rows - 2,
+  width: matrix.cols / 2,
+  height: 2
+});
+
+matrix.insertPlatform({
+  x: matrix.cols / 4 + 5,
+  y: matrix.rows - 2 - 5,
+  width: 20,
+  height: 2
+});
+
 range(10000).forEach(() => {
   matrix.nextPlatform();
 });
