@@ -5,16 +5,8 @@ export default class extends Phaser.State {
   init() {}
 
   preload() {
-    this.loaderBg = this.add.sprite(
-      this.game.world.centerX,
-      this.game.world.centerY,
-      'loaderBg'
-    );
-    this.loaderBar = this.add.sprite(
-      this.game.world.centerX,
-      this.game.world.centerY,
-      'loaderBar'
-    );
+    this.loaderBg = this.add.sprite(this.game.world.centerX, this.game.world.centerY, 'loaderBg');
+    this.loaderBar = this.add.sprite(this.game.world.centerX, this.game.world.centerY, 'loaderBar');
     centerGameObjects([this.loaderBg, this.loaderBar]);
 
     this.load.setPreloadSprite(this.loaderBar);
@@ -24,12 +16,8 @@ export default class extends Phaser.State {
     this.load.image('spike', 'assets/images/spike.png');
     this.load.image('ball', 'assets/images/ball.png');
     this.load.spritesheet('hero', 'assets/images/hero.png', 64, 64, 30);
-    this.load.spritesheet(
-      'gamepad',
-      'assets/images/gamepad_spritesheet.png',
-      100,
-      100
-    );
+    this.load.spritesheet('door', 'assets/images/door.png', 96, 96, 30);
+    this.load.spritesheet('gamepad', 'assets/images/gamepad_spritesheet.png', 100, 100);
   }
 
   create() {

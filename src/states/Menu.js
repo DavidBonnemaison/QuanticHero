@@ -16,6 +16,9 @@ export default class extends Phaser.State {
   }
 
   initClient() {
+    if (!this.gapi) {
+      return;
+    }
     this.gapi.client
       .init({
         apiKey: 'AIzaSyBj7ckpuO0CVTpR11wlj3NJYAd6b5e-RIU',
@@ -55,6 +58,7 @@ export default class extends Phaser.State {
 
     this.buttons = this.game.add.group();
     Object.keys(levels)
+      .filter(key => key.indexOf('level') !== -1)
       .sort((a, b) => Number(levels[a].id) - Number(levels[b].id))
       .forEach((key, i) => {
         const { id, hue, antiHue, symbol } = levels[key];

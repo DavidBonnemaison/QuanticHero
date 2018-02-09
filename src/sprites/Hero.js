@@ -1,19 +1,8 @@
 import Phaser from 'phaser';
-import { sample, uniqBy, round, remove, min, max } from 'lodash';
+import { sample, uniqBy, round, remove } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({
-    game,
-    x,
-    y,
-    asset,
-    platforms,
-    spikes,
-    id,
-    HUD,
-    button,
-    joystick
-  }) {
+  constructor({ game, x, y, asset, platforms, spikes, id, HUD, button, joystick }) {
     super(game, x, y, asset);
     this.game = game;
     this.game.global = this.game.global || {};
@@ -77,10 +66,7 @@ export default class Hero extends Phaser.Sprite {
     if (!this.game) {
       return;
     }
-    this.game.global.heroes = uniqBy(
-      this.game.global.heroes,
-      ({ x, y }) => round(x) + round(y)
-    );
+    this.game.global.heroes = uniqBy(this.game.global.heroes, ({ x, y }) => round(x) + round(y));
     if (!this.game.global.heroes.includes(this)) {
       this.killHero(this.id);
     }
@@ -88,10 +74,7 @@ export default class Hero extends Phaser.Sprite {
 
   killHero(id) {
     this.kill();
-    this.game.global.heroes = remove(
-      this.game.global.heroes,
-      hero => hero.id !== id
-    );
+    this.game.global.heroes = remove(this.game.global.heroes, hero => hero.id !== id);
     this.HUD.updateUncertainty(this.game.global.heroes.length);
     this.destroy();
   }
