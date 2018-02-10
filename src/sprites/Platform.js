@@ -6,7 +6,7 @@ export default class Platform extends Phaser.Sprite {
     this.game = game;
     this.game.physics.arcade.enable(this);
     this.body.immovable = true;
-    this.body.moves = false;
+    this.body.allowGravity = false;
     this.movesTo = movesTo;
     if (movesTo) {
       this.direction = this.movesTo.x > this.x ? 'right' : 'left';
@@ -16,13 +16,13 @@ export default class Platform extends Phaser.Sprite {
   update() {
     if (this.movesTo) {
       if (this.direction === 'right') {
-        this.x += 1;
+        this.body.velocity.x = 100;
         if (this.x > this.movesTo.x) {
           this.direction = 'left';
         }
       }
       if (this.direction === 'left') {
-        this.x -= 1;
+        this.body.velocity.x = -100;
         if (this.x + this.width < this.movesTo.x) {
           this.direction = 'right';
         }
