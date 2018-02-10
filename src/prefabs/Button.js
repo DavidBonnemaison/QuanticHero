@@ -9,7 +9,6 @@ export default class Button extends Phaser.Group {
     this.width = 100;
     this.height = 100;
     this.hue = enabled ? hue : '#555555';
-    console.log(enabled);
 
     const textObject = new Phaser.Text(this.game, x, y, text, {
       font: '40px VT323',

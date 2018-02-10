@@ -11,6 +11,7 @@ class Matrix {
     this.platforms = [];
     this.particles = [];
     this.spikes = [];
+    this.movement = sample(['x', 'y', 'both']);
     this.bounds = {
       top: null,
       left: null,
@@ -131,8 +132,8 @@ class Matrix {
 
   movesTo({ x, y, width, height }) {
     return {
-      x: sample([x - this.colSpacing, x + width + this.rowSpacing]),
-      y
+      x: this.movement === 'y' ? x : sample([x - this.colSpacing, x + width + this.colSpacing]),
+      y: this.movement === 'x' ? y : sample([y - this.rowSpacing, y + height + this.rowSpacing])
     };
   }
 
