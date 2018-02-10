@@ -77,7 +77,7 @@ export default class extends Phaser.State {
     this.molecules.add(this.game.add.existing(mol));
   }
 
-  createPlatform({ x, y, width = 200, height = 20 }) {
+  createPlatform({ x, y, width = 200, height = 20, movesTo }) {
     const bmd = this.game.add.bitmapData(width, height);
     bmd.ctx.beginPath();
     bmd.ctx.rect(0, 0, width, height);
@@ -89,6 +89,7 @@ export default class extends Phaser.State {
       y,
       width,
       height,
+      movesTo,
       asset: bmd
     });
 

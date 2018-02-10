@@ -28,11 +28,15 @@ class Matrix {
   }
 
   getCoordinates() {
-    return this.platforms.map(({ x, y, width, height }) => ({
+    return this.platforms.map(({ x, y, width, height, movesTo }) => ({
       x: x * 10,
       y: y * 10,
       width: width * 10,
-      height: height * 10
+      height: height * 10,
+      movesTo: movesTo && {
+        x: movesTo.x * 10,
+        y: movesTo.y * 10
+      }
     }));
   }
 
@@ -56,11 +60,11 @@ class Matrix {
     this.cells[row][col] = content;
   }
 
-  insertPlatform({ x = 0, y = 0, width = 8, height = 1 }) {
+  insertPlatform({ x = 0, y = 0, width = 8, height = 1, movesTo }) {
     range(width).forEach(w =>
       range(height).forEach(h => this.setCell({ row: y + h, col: x + w, content: '_' }))
     );
-    this.platforms.push({ x, y, width, height });
+    this.platforms.push({ x, y, width, height, movesTo });
     this.updateBounds();
   }
 
@@ -114,9 +118,22 @@ class Matrix {
           })
         )
       ).filter(a => a === false).length === 0;
-    if (available) {
-      this.insertPlatform({ x, y, width, height });
+    if (!available) {
+      return;
     }
+    const moves = sample([true, undefined]);
+    let movesTo;
+    if (moves) {
+      movesTo = this.movesTo({ x, y, width, height });
+    }
+    this.insertPlatform({ x, y, width, height, movesTo });
+  }
+
+  movesTo({ x, y, width, height }) {
+    return {
+      x: sample([x - this.colSpacing, x + width + this.rowSpacing]),
+      y
+    };
   }
 
   randomPlatform({ width, height }) {
