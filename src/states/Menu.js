@@ -37,6 +37,7 @@ export default class extends Phaser.State {
   }
 
   create() {
+    const isGod = window.location.hash === '#god';
     this.game.global = {};
     this.game.time.desiredFps = 60;
     this.game.world.setBounds(0, 0, window.innerWidth, window.innerHeight);
@@ -80,7 +81,7 @@ export default class extends Phaser.State {
               callback: this.goToLevel.bind(this, id),
               hue,
               antiHue,
-              enabled: Number(id) <= this.maxLevel
+              enabled: isGod || Number(id) <= this.maxLevel
             })
           )
         );
