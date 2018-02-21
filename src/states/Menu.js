@@ -92,27 +92,27 @@ export default class extends Phaser.State {
     this.molecules = this.game.add.group();
     range(0, 50).forEach(this.createMolecule.bind(this));
 
-    this.signOutButton = new Button({
-      game: this.game,
-      x: this.world.width / 2,
-      y: 40,
-      text: 'Sign out',
-      callback: this.signOut.bind(this),
-      hue: '#000000',
-      antiHue: '#ff0000',
-      enabled: true
-    });
+    // this.signOutButton = new Button({
+    //   game: this.game,
+    //   x: this.world.width / 2,
+    //   y: 40,
+    //   text: 'Sign out',
+    //   callback: this.signOut.bind(this),
+    //   hue: '#000000',
+    //   antiHue: '#ff0000',
+    //   enabled: true
+    // });
 
-    this.signInButton = new Button({
-      game: this.game,
-      x: this.world.width / 2,
-      y: 40,
-      text: 'Sign in',
-      callback: this.signIn.bind(this),
-      hue: '#000000',
-      antiHue: '#ffffff',
-      enabled: true
-    });
+    // this.signInButton = new Button({
+    //   game: this.game,
+    //   x: this.world.width / 2,
+    //   y: 40,
+    //   text: 'Sign in',
+    //   callback: this.signIn.bind(this),
+    //   hue: '#000000',
+    //   antiHue: '#ffffff',
+    //   enabled: true
+    // });
   }
 
   goToLevel(n) {
@@ -176,10 +176,10 @@ export default class extends Phaser.State {
 
   update() {
     if (this.GoogleAuth.isSignedIn && this.GoogleAuth.isSignedIn.get()) {
-      this.buttons.add(this.game.add.existing(this.signOutButton));
-      this.signInButton.remove();
+      // this.buttons.add(this.game.add.existing(this.signOutButton));
+      // this.signInButton.remove();
     } else {
-      this.signOutButton.remove();
+      // this.signOutButton.remove();
     }
     const checkDirection = this.swipe.check();
     if (checkDirection) {

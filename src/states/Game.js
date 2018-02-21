@@ -10,6 +10,7 @@ import Spike from '../sprites/Spike';
 import HUD from './../prefabs/Hud';
 import Overlay from './../prefabs/Overlay';
 import Door from '../sprites/Door';
+import Controller from './../prefabs/Controller';
 
 export default class extends Phaser.State {
   init() {
@@ -155,6 +156,20 @@ export default class extends Phaser.State {
       'gamepad'
     );
 
+    this.leftController = new Controller({
+      x: 0,
+      y: 50,
+      game: this.game,
+      callback: () => console.log('going left')
+    });
+
+    this.rightController = new Controller({
+      x: this.game.width / 2,
+      y: 50,
+      game: this.game,
+      callback: () => console.log('going right')
+    });
+
     this.hero = new Hero({
       game: this.game,
       id: 0,
@@ -165,7 +180,11 @@ export default class extends Phaser.State {
       spikes: this.spikes,
       HUD: this.HUD,
       button: this.button,
-      joystick: this.joystick
+      joystick: this.joystick,
+      controllers: {
+        left: this.leftController,
+        right: this.rightController
+      }
     });
 
     this.game.global.heroes.push(this.hero);

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { sample, uniqBy, round, remove } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({ game, x, y, asset, platforms, spikes, id, HUD, button, joystick }) {
+  constructor({ game, x, y, asset, platforms, spikes, id, HUD, button, joystick, controllers }) {
     super(game, x, y, asset);
     this.game = game;
     this.game.global = this.game.global || {};
@@ -19,7 +19,8 @@ export default class Hero extends Phaser.Sprite {
     this.data = this.game.data;
     this.button = button;
     this.joystick = joystick;
-
+    this.leftController = controllers.leftController;
+    this.rightController = controllers.rightController;
     this.animations.add('left', [6, 7, 8, 9, 10, 11], 30, true);
     this.animations.add('idle', [0, 1, 2, 3], 10, true);
     this.animations.add('right', [6, 7, 8, 9, 10, 11], 30, true);
@@ -53,7 +54,11 @@ export default class Hero extends Phaser.Sprite {
       heroes: this.heroes,
       HUD: this.HUD,
       button: this.button,
-      joystick: this.joystick
+      joystick: this.joystick,
+      controllers: {
+        left: this.leftController,
+        right: this.rightController
+      }
     });
 
     this.game.add.existing(newHero);
