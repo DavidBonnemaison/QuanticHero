@@ -2,7 +2,20 @@ import Phaser from 'phaser';
 import { sample, uniqBy, round, remove } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({ game, x, y, asset, platforms, spikes, id, HUD, button, joystick, controllers }) {
+  constructor({
+    game,
+    x,
+    y,
+    asset,
+    platforms,
+    spikes,
+    id,
+    HUD,
+    button,
+    joystick,
+    leftController,
+    rightController
+  }) {
     super(game, x, y, asset);
     this.game = game;
     this.game.global = this.game.global || {};
@@ -19,8 +32,8 @@ export default class Hero extends Phaser.Sprite {
     this.data = this.game.data;
     this.button = button;
     this.joystick = joystick;
-    this.leftController = controllers.leftController;
-    this.rightController = controllers.rightController;
+    this.leftController = leftController;
+    this.rightController = rightController;
     this.animations.add('left', [6, 7, 8, 9, 10, 11], 30, true);
     this.animations.add('idle', [0, 1, 2, 3], 10, true);
     this.animations.add('right', [6, 7, 8, 9, 10, 11], 30, true);
@@ -32,6 +45,7 @@ export default class Hero extends Phaser.Sprite {
   }
 
   duplicate() {
+    console.log(this.leftController);
     if (this.game.global.heroes.length === this.data.uncertainty) {
       return;
     }
@@ -55,10 +69,8 @@ export default class Hero extends Phaser.Sprite {
       HUD: this.HUD,
       button: this.button,
       joystick: this.joystick,
-      controllers: {
-        left: this.leftController,
-        right: this.rightController
-      }
+      leftController: this.leftController,
+      rightController: this.rightController
     });
 
     this.game.add.existing(newHero);
@@ -101,21 +113,26 @@ export default class Hero extends Phaser.Sprite {
 
     this.isOnGround = this.body.touching.down && this.hitPlatform;
 
-    if ((this.cursors.up.isDown || this.button.isDown) && this.isOnGround) {
+    if (
+      (this.cursors.up.isDown ||
+        this.button.isDown ||
+        (this.leftController.down && this.rightController.down)) &&
+      this.isOnGround
+    ) {
       this.body.velocity.y = -400;
       this.isOnGround = false;
       this.animations.play('jump');
       this.duplicate();
     }
 
-    if (this.cursors.left.isDown) {
+    if (this.cursors.left.isDown || this.leftController.down) {
       this.body.velocity.x = -300;
 
       if (this.isOnGround) {
         this.animations.play('left');
       }
       this.scale.x = -1;
-    } else if (this.cursors.right.isDown) {
+    } else if (this.cursors.right.isDown || this.rightController.down) {
       this.body.velocity.x = 300;
 
       if (this.isOnGround) {

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 export default class Controller extends Phaser.Group {
-  constructor({ game, x, y, callback }) {
+  constructor({ game, x, y, onInputDown, onInputUp }) {
     super(game);
     this.game = game;
     this.x = x;
@@ -13,7 +13,8 @@ export default class Controller extends Phaser.Group {
     background.alpha = 0;
 
     background.inputEnabled = true;
-    background.events.onInputDown.add(callback, this);
+    background.events.onInputDown.add(onInputDown, this);
+    background.events.onInputUp.add(onInputUp, this);
 
     this.add(background);
 

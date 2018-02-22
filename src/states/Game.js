@@ -160,14 +160,16 @@ export default class extends Phaser.State {
       x: 0,
       y: 50,
       game: this.game,
-      callback: () => console.log('going left')
+      onInputDown: () => (this.leftController.down = true),
+      onInputUp: () => (this.leftController.down = false)
     });
 
     this.rightController = new Controller({
       x: this.game.width / 2,
       y: 50,
       game: this.game,
-      callback: () => console.log('going right')
+      onInputDown: () => (this.rightController.down = true),
+      onInputUp: () => (this.rightController.down = false)
     });
 
     this.hero = new Hero({
@@ -181,10 +183,8 @@ export default class extends Phaser.State {
       HUD: this.HUD,
       button: this.button,
       joystick: this.joystick,
-      controllers: {
-        left: this.leftController,
-        right: this.rightController
-      }
+      leftController: this.leftController,
+      rightController: this.rightController
     });
 
     this.game.global.heroes.push(this.hero);
