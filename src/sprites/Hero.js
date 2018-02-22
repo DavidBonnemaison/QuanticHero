@@ -79,6 +79,10 @@ export default class Hero extends Phaser.Sprite {
   }
 
   update() {
+    this.goRight = !this.leftController && this.rightController;
+    this.goLeft = !this.rightController && this.leftController;
+    this.jump = this.rightController && this.leftController;
+
     if (this.game.global.heroes.length > 1 && !this.inCamera) {
       this.killHero(this.id);
       return;
@@ -95,24 +99,21 @@ export default class Hero extends Phaser.Sprite {
 
     this.isOnGround = this.body.touching.down && this.hitPlatform;
 
-    if (
-      (this.cursors.up.isDown || (this.leftController.down && this.rightController.down)) &&
-      this.isOnGround
-    ) {
+    if ((this.cursors.up.isDown || this.jump) && this.isOnGround) {
       this.body.velocity.y = -400;
       this.isOnGround = false;
       this.animations.play('jump');
       this.duplicate();
     }
 
-    if (this.cursors.left.isDown || this.leftController.down) {
+    if (this.cursors.left.isDown || this.goLeft) {
       this.body.velocity.x = -300;
 
       if (this.isOnGround) {
         this.animations.play('left');
       }
       this.scale.x = -1;
-    } else if (this.cursors.right.isDown || this.rightController.down) {
+    } else if (this.cursors.right.isDown || this.goRight) {
       this.body.velocity.x = 300;
 
       if (this.isOnGround) {
