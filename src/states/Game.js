@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { range } from 'lodash';
-import './../plugins/joystick';
 import * as levels from '../data/levels';
 import Hero from '../sprites/Hero';
 import Particle from '../sprites/Particle';
@@ -140,22 +139,6 @@ export default class extends Phaser.State {
     });
     this.door.add(this.game.add.existing(this.doorSprite));
 
-    const isTouchScreen =
-      navigator.maxTouchPoints > 0 || 'ontouchstart' in window || navigator.msMaxTouchPoints > 0;
-    this.gamepad = this.game.plugins.add(Phaser.Plugin.VirtualGamepad);
-    this.joystick = this.gamepad.addJoystick(
-      isTouchScreen ? 65 : -5000,
-      this.game.height - 65,
-      1,
-      'gamepad'
-    );
-    this.button = this.gamepad.addButton(
-      isTouchScreen ? this.game.width - 65 : -5000,
-      this.game.height - 65,
-      1.0,
-      'gamepad'
-    );
-
     this.leftController = new Controller({
       x: 0,
       y: 50,
@@ -181,8 +164,6 @@ export default class extends Phaser.State {
       platforms: this.platforms,
       spikes: this.spikes,
       HUD: this.HUD,
-      button: this.button,
-      joystick: this.joystick,
       leftController: this.leftController,
       rightController: this.rightController
     });

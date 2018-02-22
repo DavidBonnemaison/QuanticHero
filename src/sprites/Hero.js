@@ -2,20 +2,7 @@ import Phaser from 'phaser';
 import { sample, uniqBy, round, remove } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({
-    game,
-    x,
-    y,
-    asset,
-    platforms,
-    spikes,
-    id,
-    HUD,
-    button,
-    joystick,
-    leftController,
-    rightController
-  }) {
+  constructor({ game, x, y, asset, platforms, spikes, id, HUD, leftController, rightController }) {
     super(game, x, y, asset);
     this.game = game;
     this.game.global = this.game.global || {};
@@ -30,15 +17,12 @@ export default class Hero extends Phaser.Sprite {
     this.body.collideWorldBounds = true;
     this.HUD = HUD;
     this.data = this.game.data;
-    this.button = button;
-    this.joystick = joystick;
     this.leftController = leftController;
     this.rightController = rightController;
     this.animations.add('left', [6, 7, 8, 9, 10, 11], 30, true);
     this.animations.add('idle', [0, 1, 2, 3], 10, true);
     this.animations.add('right', [6, 7, 8, 9, 10, 11], 30, true);
     this.animations.add('jump', [13, 14, 15], 3, true);
-
     this.cursors = this.game.input.keyboard.createCursorKeys();
     this.animations.play('jump');
     this.game.global.cleanHeroes = setInterval(this.clean.bind(this), 1000);
@@ -67,8 +51,6 @@ export default class Hero extends Phaser.Sprite {
       id: Math.random() * 100,
       heroes: this.heroes,
       HUD: this.HUD,
-      button: this.button,
-      joystick: this.joystick,
       leftController: this.leftController,
       rightController: this.rightController
     });
@@ -114,9 +96,7 @@ export default class Hero extends Phaser.Sprite {
     this.isOnGround = this.body.touching.down && this.hitPlatform;
 
     if (
-      (this.cursors.up.isDown ||
-        this.button.isDown ||
-        (this.leftController.down && this.rightController.down)) &&
+      (this.cursors.up.isDown || (this.leftController.down && this.rightController.down)) &&
       this.isOnGround
     ) {
       this.body.velocity.y = -400;
@@ -139,24 +119,9 @@ export default class Hero extends Phaser.Sprite {
         this.animations.play('right');
       }
       this.scale.x = 1;
-    } else if (!this.joystick.properties.x) {
+    } else {
       if (this.isOnGround) {
         this.animations.play('idle');
-      }
-    }
-
-    if (this.joystick.properties.x) {
-      const direction = this.joystick.properties.x > 0 ? 'right' : 'left';
-      if (direction === 'right') {
-        this.body.velocity.x = 300;
-      }
-      if (direction === 'left') {
-        this.body.velocity.x = -300;
-      }
-      if (this.isOnGround) {
-        const direction = this.body.velocity.x > 0 ? 'left' : 'right';
-        this.animations.play(direction);
-        this.scale.x = direction === 'right' ? -1 : 1;
       }
     }
   }

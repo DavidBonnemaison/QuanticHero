@@ -17,7 +17,6 @@ export default class extends Phaser.State {
     this.load.image('ball', 'assets/images/ball.png');
     this.load.spritesheet('hero', 'assets/images/hero.png', 64, 64, 30);
     this.load.spritesheet('door', 'assets/images/door.png', 96, 96, 30);
-    this.load.spritesheet('gamepad', 'assets/images/gamepad_spritesheet.png', 100, 100);
   }
 
   create() {
