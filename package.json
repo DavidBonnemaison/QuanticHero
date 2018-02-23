@@ -54,7 +54,11 @@
     "webfontloader": "^1.6.28"
   },
   "cordova": {
-    "platforms": ["android", "browser", "ios"],
+    "platforms": [
+      "android",
+      "browser",
+      "ios"
+    ],
     "plugins": {
       "cordova-plugin-whitelist": {}
     }

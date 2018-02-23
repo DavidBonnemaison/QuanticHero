@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { sample, uniqBy, round, remove } from 'lodash';
+import Swipe from 'phaser-swipe';
 
 export default class Hero extends Phaser.Sprite {
   constructor({ game, x, y, asset, platforms, spikes, id, HUD, leftController, rightController }) {
@@ -26,10 +27,12 @@ export default class Hero extends Phaser.Sprite {
     this.cursors = this.game.input.keyboard.createCursorKeys();
     this.animations.play('jump');
     this.game.global.cleanHeroes = setInterval(this.clean.bind(this), 1000);
+    this.swipe = new Swipe(this.game);
+
+    this.action = null;
   }
 
   duplicate() {
-    console.log(this.leftController);
     if (this.game.global.heroes.length === this.data.uncertainty) {
       return;
     }
@@ -52,7 +55,8 @@ export default class Hero extends Phaser.Sprite {
       heroes: this.heroes,
       HUD: this.HUD,
       leftController: this.leftController,
-      rightController: this.rightController
+      rightController: this.rightController,
+      action: this.action
     });
 
     this.game.add.existing(newHero);
@@ -79,9 +83,34 @@ export default class Hero extends Phaser.Sprite {
   }
 
   update() {
-    this.goRight = !this.leftController.down && this.rightController.down;
-    this.goLeft = !this.rightController.down && this.leftController.down;
-    this.jump = this.rightController.down && this.leftController.down;
+    const screenTouched = this.rightController.down || this.leftController.down;
+    const direction = this.swipe.check();
+
+    if (screenTouched && direction !== null) {
+      this.action = direction.direction;
+    }
+
+    if (!screenTouched) {
+      this.action = null;
+    }
+
+    const jump = [
+      this.swipe.DIRECTION_UP,
+      this.swipe.DIRECTION_UP_LEFT,
+      this.swipe.DIRECTION_UP_RIGHT
+    ].includes(this.action);
+
+    const goRight = [
+      this.swipe.DIRECTION_DOWN_RIGHT,
+      this.swipe.DIRECTION_RIGHT,
+      this.swipe.DIRECTION_UP_RIGHT
+    ].includes(this.action);
+
+    const goLeft = [
+      this.swipe.DIRECTION_DOWN_LEFT,
+      this.swipe.DIRECTION_LEFT,
+      this.swipe.DIRECTION_UP_LEFT
+    ].includes(this.action);
 
     if (this.game.global.heroes.length > 1 && !this.inCamera) {
       this.killHero(this.id);
@@ -99,21 +128,21 @@ export default class Hero extends Phaser.Sprite {
 
     this.isOnGround = this.body.touching.down && this.hitPlatform;
 
-    if ((this.cursors.up.isDown || this.jump) && this.isOnGround) {
+    if ((this.cursors.up.isDown || jump) && this.isOnGround) {
       this.body.velocity.y = -400;
       this.isOnGround = false;
       this.animations.play('jump');
       this.duplicate();
     }
 
-    if (this.cursors.left.isDown || this.goLeft) {
+    if (this.cursors.left.isDown || goLeft) {
       this.body.velocity.x = -300;
 
       if (this.isOnGround) {
         this.animations.play('left');
       }
       this.scale.x = -1;
-    } else if (this.cursors.right.isDown || this.goRight) {
+    } else if (this.cursors.right.isDown || goRight) {
       this.body.velocity.x = 300;
 
       if (this.isOnGround) {
