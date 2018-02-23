@@ -1,6 +1,6 @@
 {
-  "name": "QuantumHeroe",
-  "version": "1.0.0",
+  "name": "QuantumHero",
+  "version": "1.1.0",
   "description": "A teeny-tiny game in the quantum world",
   "author": "David Bonnemaison <david.bonnemaison@gmail.com>",
   "main": "index.js",
@@ -54,11 +54,7 @@
     "webfontloader": "^1.6.28"
   },
   "cordova": {
-    "platforms": [
-      "android",
-      "browser",
-      "ios"
-    ],
+    "platforms": ["android", "browser", "ios"],
     "plugins": {
       "cordova-plugin-whitelist": {}
     }

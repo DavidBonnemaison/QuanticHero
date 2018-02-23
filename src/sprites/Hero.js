@@ -79,9 +79,9 @@ export default class Hero extends Phaser.Sprite {
   }
 
   update() {
-    this.goRight = !this.leftController && this.rightController;
-    this.goLeft = !this.rightController && this.leftController;
-    this.jump = this.rightController && this.leftController;
+    this.goRight = !this.leftController.down && this.rightController.down;
+    this.goLeft = !this.rightController.down && this.leftController.down;
+    this.jump = this.rightController.down && this.leftController.down;
 
     if (this.game.global.heroes.length > 1 && !this.inCamera) {
       this.killHero(this.id);
