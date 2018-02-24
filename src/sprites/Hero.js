@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { sample, uniqBy, round, remove } from 'lodash';
 import Swipe from 'phaser-swipe';
+import TouchController from './../tools/TouchController';
 
 export default class Hero extends Phaser.Sprite {
   constructor({ game, x, y, asset, platforms, spikes, id, HUD, leftController, rightController }) {
@@ -28,7 +29,7 @@ export default class Hero extends Phaser.Sprite {
     this.animations.play('jump');
     this.game.global.cleanHeroes = setInterval(this.clean.bind(this), 1000);
     this.swipe = new Swipe(this.game);
-
+    this.touchController = new TouchController(this.game);
     this.action = null;
   }
 
@@ -83,8 +84,10 @@ export default class Hero extends Phaser.Sprite {
   }
 
   update() {
-    const screenTouched = this.rightController.down || this.leftController.down;
+    const screenTouched = true;
     const direction = this.swipe.check();
+
+    const touchCheck = this.touchController.check();
 
     if (screenTouched && direction !== null) {
       this.action = direction.direction;
@@ -94,23 +97,11 @@ export default class Hero extends Phaser.Sprite {
       this.action = null;
     }
 
-    const jump = [
-      this.swipe.DIRECTION_UP,
-      this.swipe.DIRECTION_UP_LEFT,
-      this.swipe.DIRECTION_UP_RIGHT
-    ].includes(this.action);
+    const jump = touchCheck && touchCheck.deltaY > 30;
 
-    const goRight = [
-      this.swipe.DIRECTION_DOWN_RIGHT,
-      this.swipe.DIRECTION_RIGHT,
-      this.swipe.DIRECTION_UP_RIGHT
-    ].includes(this.action);
+    const goRight = touchCheck && touchCheck.deltaX > 30;
 
-    const goLeft = [
-      this.swipe.DIRECTION_DOWN_LEFT,
-      this.swipe.DIRECTION_LEFT,
-      this.swipe.DIRECTION_UP_LEFT
-    ].includes(this.action);
+    const goLeft = touchCheck && touchCheck.deltaY < -30;
 
     if (this.game.global.heroes.length > 1 && !this.inCamera) {
       this.killHero(this.id);
