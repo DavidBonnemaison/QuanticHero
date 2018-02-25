@@ -97,11 +97,12 @@ export default class Hero extends Phaser.Sprite {
       this.action = null;
     }
 
+    console.log(touchCheck);
     const jump = touchCheck && touchCheck.deltaY > 30;
 
     const goRight = touchCheck && touchCheck.deltaX > 30;
 
-    const goLeft = touchCheck && touchCheck.deltaY < -30;
+    const goLeft = touchCheck && touchCheck.deltaX < -30;
 
     if (this.game.global.heroes.length > 1 && !this.inCamera) {
       this.killHero(this.id);
