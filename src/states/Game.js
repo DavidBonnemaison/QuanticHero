@@ -9,7 +9,6 @@ import Spike from '../sprites/Spike';
 import HUD from './../prefabs/Hud';
 import Overlay from './../prefabs/Overlay';
 import Door from '../sprites/Door';
-import Controller from './../prefabs/Controller';
 
 export default class extends Phaser.State {
   init() {
@@ -139,22 +138,6 @@ export default class extends Phaser.State {
     });
     this.door.add(this.game.add.existing(this.doorSprite));
 
-    this.leftController = new Controller({
-      x: 0,
-      y: 50,
-      game: this.game,
-      onInputDown: () => (this.leftController.down = true),
-      onInputUp: () => (this.leftController.down = false)
-    });
-
-    this.rightController = new Controller({
-      x: this.game.width / 2,
-      y: 50,
-      game: this.game,
-      onInputDown: () => (this.rightController.down = true),
-      onInputUp: () => (this.rightController.down = false)
-    });
-
     this.hero = new Hero({
       game: this.game,
       id: 0,
@@ -163,9 +146,7 @@ export default class extends Phaser.State {
       asset: 'hero',
       platforms: this.platforms,
       spikes: this.spikes,
-      HUD: this.HUD,
-      leftController: this.leftController,
-      rightController: this.rightController
+      HUD: this.HUD
     });
 
     this.game.global.heroes.push(this.hero);

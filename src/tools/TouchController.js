@@ -1,4 +1,5 @@
 import Phaser from 'phaser-ce';
+import { max } from 'lodash';
 
 class TouchController {
   constructor(game) {
@@ -6,7 +7,7 @@ class TouchController {
     this.game.input.onDown.add(this.touchBegin.bind(this));
     this.game.input.onUp.add(this.touchEnd.bind(this));
     this.touching = false;
-    this.dragLength = 50;
+    this.dragLength = 100;
     this.lastPosition = {
       x: 0,
       y: 0
@@ -27,16 +28,17 @@ class TouchController {
 
   touchEnd(e) {
     this.touching = false;
+    this.lastMovement = {
+      deltaX: 0,
+      deltaY: 0
+    };
   }
 
   check() {
-    if (!this.touching) {
-      return null;
-    }
-
     if (
+      !this.touching ||
       Phaser.Point.distance(this.game.input.activePointer.position, this.lastPosition) <
-      this.dragLength
+        this.dragLength
     ) {
       return this.lastMovement;
     }
@@ -44,7 +46,7 @@ class TouchController {
     const x = this.game.input.activePointer.position.x;
     const y = this.game.input.activePointer.position.y;
     const deltaX = x - this.lastPosition.x;
-    const deltaY = this.lastPosition.y - y;
+    const deltaY = max([this.lastPosition.y - y, 0]);
 
     this.lastPosition = {
       x,

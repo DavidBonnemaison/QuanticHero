@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { sample, uniqBy, round, remove } from 'lodash';
-import Swipe from 'phaser-swipe';
+import { sample, uniqBy, round, remove, min, max } from 'lodash';
 import TouchController from './../tools/TouchController';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({ game, x, y, asset, platforms, spikes, id, HUD, leftController, rightController }) {
+  constructor({ game, x, y, asset, platforms, spikes, id, HUD, touchCheck }) {
     super(game, x, y, asset);
     this.game = game;
+    this.asset = 'hero';
     this.game.global = this.game.global || {};
     this.game.global.heroes = this.game.global.heroes || [];
     this.anchor.setTo(0.5);
@@ -19,8 +19,6 @@ export default class Hero extends Phaser.Sprite {
     this.body.collideWorldBounds = true;
     this.HUD = HUD;
     this.data = this.game.data;
-    this.leftController = leftController;
-    this.rightController = rightController;
     this.animations.add('left', [6, 7, 8, 9, 10, 11], 30, true);
     this.animations.add('idle', [0, 1, 2, 3], 10, true);
     this.animations.add('right', [6, 7, 8, 9, 10, 11], 30, true);
@@ -28,9 +26,11 @@ export default class Hero extends Phaser.Sprite {
     this.cursors = this.game.input.keyboard.createCursorKeys();
     this.animations.play('jump');
     this.game.global.cleanHeroes = setInterval(this.clean.bind(this), 1000);
-    this.swipe = new Swipe(this.game);
     this.touchController = new TouchController(this.game);
-    this.action = null;
+    this.touchCheck = touchCheck || {
+      deltaX: 0,
+      deltaY: 0
+    };
   }
 
   duplicate() {
@@ -46,18 +46,10 @@ export default class Hero extends Phaser.Sprite {
     this.isDuplicating = true;
     const clonedHero = sample(this.game.global.heroes);
     const newHero = new Hero({
-      game: this.game,
+      ...this,
       x: clonedHero.position.x + Math.random() * 200 - 100,
       y: clonedHero.position.y,
-      asset: 'hero',
-      platforms: this.platforms,
-      spikes: this.spikes,
-      id: Math.random() * 100,
-      heroes: this.heroes,
-      HUD: this.HUD,
-      leftController: this.leftController,
-      rightController: this.rightController,
-      action: this.action
+      id: Math.random() * 100
     });
 
     this.game.add.existing(newHero);
@@ -84,25 +76,16 @@ export default class Hero extends Phaser.Sprite {
   }
 
   update() {
-    const screenTouched = true;
-    const direction = this.swipe.check();
+    this.touchCheck = this.touchController.check();
+    const { deltaX, deltaY } = this.touchCheck;
+    const jump = deltaY > 30;
+    const goRight = deltaX > 50;
+    const goLeft = deltaX < -50;
 
-    const touchCheck = this.touchController.check();
-
-    if (screenTouched && direction !== null) {
-      this.action = direction.direction;
+    if (this.id === 0 && deltaX && deltaY) {
+      console.log('x', deltaX);
+      console.log('y', deltaY);
     }
-
-    if (!screenTouched) {
-      this.action = null;
-    }
-
-    console.log(touchCheck);
-    const jump = touchCheck && touchCheck.deltaY > 30;
-
-    const goRight = touchCheck && touchCheck.deltaX > 30;
-
-    const goLeft = touchCheck && touchCheck.deltaX < -30;
 
     if (this.game.global.heroes.length > 1 && !this.inCamera) {
       this.killHero(this.id);
@@ -128,15 +111,13 @@ export default class Hero extends Phaser.Sprite {
     }
 
     if (this.cursors.left.isDown || goLeft) {
-      this.body.velocity.x = -300;
-
+      this.body.velocity.x = max([(deltaX - 70 - (deltaY || 0)) * 10, -300]);
       if (this.isOnGround) {
         this.animations.play('left');
       }
       this.scale.x = -1;
     } else if (this.cursors.right.isDown || goRight) {
-      this.body.velocity.x = 300;
-
+      this.body.velocity.x = min([(deltaX + 70 + (deltaY || 0)) * 10, 300]);
       if (this.isOnGround) {
         this.animations.play('right');
       }
