@@ -1,4 +1,5 @@
 import Game from './Game';
+import './App';
 
 window.game = new Game();
 
