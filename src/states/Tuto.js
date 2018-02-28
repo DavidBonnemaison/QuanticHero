@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import ActionButton from './../prefabs/ActionButton';
+import store from './../store';
+import * as gameActions from './../actions/game';
 
 export default class extends Phaser.State {
   makeText(text, i) {
@@ -23,7 +25,7 @@ export default class extends Phaser.State {
       this.currentAdvice += 1;
       if (this.currentAdvice === this.all.children.length) {
         this.game.state.clearCurrentState();
-        localStorage.setItem('maxLevel', 1);
+        store.dispatch(gameActions.updateMaxLevel(1));
         this.state.start('Game');
         return;
       }

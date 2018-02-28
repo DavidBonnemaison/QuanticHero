@@ -72,15 +72,8 @@ export default class Hud extends Phaser.Group {
   }
 
   getUncertaintyText() {
-    return (
-      this.uncertaintyLabel +
-      this.uncertainty +
-      '/' +
-      this.game.data.uncertainty
-    );
+    return this.uncertaintyLabel + this.uncertainty + '/' + this.game.data.uncertainty;
   }
-
-  goToMenu() {}
 
   updateTotalParticles() {
     this.totalParticles += 1;

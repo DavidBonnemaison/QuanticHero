@@ -1,7 +1,6 @@
-import Game from './Game';
 import './App';
 
-window.game = new Game();
+// window.game = new Game();
 
 if (window.cordova) {
   var app = {

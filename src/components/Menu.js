@@ -1,22 +1,41 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import * as actions from './../actions/menu';
+import { push } from 'react-router-redux';
+import * as actions from './../actions/game';
+import { Title, Button } from './Menu.styles';
+import Molecules from './../components/Molecules';
 
 class Menu extends React.Component {
+  handleClick = n => e => this.props.updateCurrentLevel(n);
+
   componentDidMount() {
-    this.props.testSync('value1');
-    this.props.testAsync('value2');
+    Molecules.start();
+  }
+
+  componentWillUnmount() {
+    Molecules.end();
   }
 
   render() {
-    return <div>{this.props.menu}</div>;
+    const newGame = () => {
+      this.props.newGame();
+      this.props.goTo('/game');
+    };
+    return (
+      <div>
+        <div id="container" />
+        <Title>Quantum Hero</Title>
+        <Button onClick={newGame}>New game</Button>
+        <Button onClick={() => this.props.goTo('/levels')}>Levels</Button>
+      </div>
+    );
   }
 }
 
-const mapStateToProps = ({ menu }) => ({ menu });
+const mapStateToProps = ({ game }) => ({ game });
 const mapDispatchToProps = dispatch => ({
-  testSync: v => dispatch(actions.testSync(v)),
-  testAsync: v => dispatch(actions.testAsync(v))
+  goTo: l => dispatch(push(l)),
+  newGame: () => dispatch(actions.updateCurrentLevel(1))
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(Menu);

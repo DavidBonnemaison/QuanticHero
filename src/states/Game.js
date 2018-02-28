@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { range } from 'lodash';
+import { push } from 'react-router-redux';
 import * as levels from '../data/levels';
 import Hero from '../sprites/Hero';
 import Particle from '../sprites/Particle';
@@ -9,31 +10,38 @@ import Spike from '../sprites/Spike';
 import HUD from './../prefabs/Hud';
 import Overlay from './../prefabs/Overlay';
 import Door from '../sprites/Door';
+import store from './../store';
+import * as gameActions from './../actions/game';
 
 export default class extends Phaser.State {
   init() {
-    if (Number(localStorage.getItem('maxLevel')) === 0) {
+    this.gameState = store.getState().game;
+    const { currentLevel, maxLevel } = this.gameState;
+    this.currentLevel = currentLevel;
+    this.maxLevel = maxLevel;
+    if (maxLevel === 0) {
       this.state.start('Tuto');
     }
-    try {
-      this.currentLevel = localStorage.getItem('currentLevel');
-    } catch (e) {
-      this.currentLevel = localStorage.setItem('currentLevel', '1');
-    }
-    if (this.currentLevel === null) {
-      this.currentLevel = '1';
-    }
+
     this.game.data = levels[`level${this.currentLevel}`];
     if (this.game.data === undefined) {
-      this.currentLevel = '1';
       this.game.data = levels.level1;
-      localStorage.setItem('currentLevel', '1');
+      store.dispatch(gameActions.updateCurrentLevel(1));
     }
     this.game.stage.backgroundColor = this.game.data.hue;
+    store.subscribe(this.handleStoreChange.bind(this));
   }
 
   goToMenu() {
-    this.state.start('Menu');
+    store.dispatch(push('/'));
+    this.game.destroy();
+  }
+
+  handleStoreChange() {
+    const oldState = this.gameState;
+    this.gameState = store.getState().game;
+    console.log(oldState);
+    console.log(this.gameState);
   }
 
   createSpike({ x, y, width, height }) {
@@ -194,9 +202,9 @@ export default class extends Phaser.State {
       const isAtTheDoor = this.game.physics.arcade.collide(this.game.global.heroes, this.door);
       if (isAtTheDoor) {
         const nextLevel = Number(this.currentLevel) + 1;
-        localStorage.setItem('currentLevel', nextLevel);
-        if (Number(localStorage.getItem('maxLevel')) < nextLevel) {
-          localStorage.setItem('maxLevel', nextLevel);
+        store.dispatch(gameActions.updateCurrentLevel(nextLevel));
+        if (this.maxLevel < nextLevel) {
+          store.dispatch(gameActions.updateMaxLevel(nextLevel));
         }
         this.game.state.clearCurrentState();
         this.state.start('Game');
