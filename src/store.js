@@ -6,11 +6,12 @@ import storage from 'redux-persist/lib/storage';
 import createHistory from 'history/createBrowserHistory';
 import menu from './reducers/menu';
 import game from './reducers/game';
+import score from './reducers/score';
 
 export const history = createHistory();
 const middleware = routerMiddleware(history);
 
-const reducers = combineReducers({ menu, game, routing: routerReducer });
+const reducers = combineReducers({ menu, game, score, routing: routerReducer });
 
 const persistConfig = {
   key: 'root',

@@ -12,6 +12,7 @@ import Overlay from './../prefabs/Overlay';
 import Door from '../sprites/Door';
 import store from './../store';
 import * as gameActions from './../actions/game';
+import TouchController from './../tools/TouchController';
 
 export default class extends Phaser.State {
   init() {
@@ -154,7 +155,8 @@ export default class extends Phaser.State {
       asset: 'hero',
       platforms: this.platforms,
       spikes: this.spikes,
-      HUD: this.HUD
+      HUD: this.HUD,
+      touchController: new TouchController(this.game)
     });
 
     this.game.global.heroes.push(this.hero);
@@ -192,6 +194,7 @@ export default class extends Phaser.State {
 
   render() {
     this.centerCamera();
+    this.HUD.updateTimer();
 
     if (this.game.global.heroes.length === 0) {
       this.game.state.clearCurrentState();
@@ -203,11 +206,13 @@ export default class extends Phaser.State {
       if (isAtTheDoor) {
         const nextLevel = Number(this.currentLevel) + 1;
         store.dispatch(gameActions.updateCurrentLevel(nextLevel));
+        this.HUD.setScore();
         if (this.maxLevel < nextLevel) {
           store.dispatch(gameActions.updateMaxLevel(nextLevel));
         }
         this.game.state.clearCurrentState();
-        this.state.start('Game');
+        this.game.destroy();
+        store.dispatch(push('/done'));
       }
     }
   }

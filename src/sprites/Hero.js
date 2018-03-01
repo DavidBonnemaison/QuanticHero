@@ -1,9 +1,8 @@
 import Phaser from 'phaser';
 import { sample, uniqBy, round, remove, min, max } from 'lodash';
-import TouchController from './../tools/TouchController';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({ game, x, y, asset, platforms, spikes, id, HUD, touchCheck }) {
+  constructor({ game, x, y, asset, platforms, spikes, id, HUD, touchCheck, touchController }) {
     super(game, x, y, asset);
     this.game = game;
     this.asset = 'hero';
@@ -26,7 +25,7 @@ export default class Hero extends Phaser.Sprite {
     this.cursors = this.game.input.keyboard.createCursorKeys();
     this.animations.play('jump');
     this.game.global.cleanHeroes = setInterval(this.clean.bind(this), 1000);
-    this.touchController = new TouchController(this.game);
+    this.touchController = touchController;
     this.touchCheck = touchCheck || {
       deltaX: 0,
       deltaY: 0
@@ -34,6 +33,7 @@ export default class Hero extends Phaser.Sprite {
   }
 
   duplicate() {
+    this.data.uncertainty = 3; // temporary limit at 3
     if (this.game.global.heroes.length === this.data.uncertainty) {
       return;
     }
@@ -48,13 +48,12 @@ export default class Hero extends Phaser.Sprite {
     const newHero = new Hero({
       ...this,
       x: clonedHero.position.x + Math.random() * 200 - 100,
-      y: clonedHero.position.y,
+      y: clonedHero.position.y - 10,
       id: Math.random() * 100
     });
 
     this.game.add.existing(newHero);
     this.game.global.heroes.push(newHero);
-    this.HUD.updateUncertainty(this.game.global.heroes.length);
     setTimeout(() => (this.isDuplicating = false), 1000);
   }
 
@@ -71,59 +70,60 @@ export default class Hero extends Phaser.Sprite {
   killHero(id) {
     this.kill();
     this.game.global.heroes = remove(this.game.global.heroes, hero => hero.id !== id);
-    this.HUD.updateUncertainty(this.game.global.heroes.length);
     this.destroy();
   }
 
   update() {
-    this.touchCheck = this.touchController.check();
-    const { deltaX, deltaY } = this.touchCheck;
-    const jump = deltaY > 30;
-    const goRight = deltaX > 50;
-    const goLeft = deltaX < -50;
-
-    if (this.id === 0 && deltaX && deltaY) {
-      console.log('x', deltaX);
-      console.log('y', deltaY);
-    }
-
     if (this.game.global.heroes.length > 1 && !this.inCamera) {
       this.killHero(this.id);
       return;
     }
 
-    this.body.velocity.x = 0;
-    this.hitPlatform = this.game.physics.arcade.collide(this, this.platforms);
-    this.hitSpikes = this.game.physics.arcade.collide(this, this.spikes);
-
-    if (this.hitSpikes) {
+    if (this.game.physics.arcade.collide(this, this.spikes)) {
       this.killHero(this.id);
       return;
     }
 
-    this.isOnGround = this.body.touching.down && this.hitPlatform;
+    const previousMovement = this.touchCheck;
+    this.touchCheck = this.touchController.check();
+    let { deltaX, deltaY } = this.touchCheck;
+    const lastDeltaX = previousMovement.deltaX;
+    const jump = deltaY > 20;
+    const goRight = deltaX > 20 || lastDeltaX > 20;
+    const goLeft = deltaX < -20 || lastDeltaX < -20;
 
-    if ((this.cursors.up.isDown || jump) && this.isOnGround) {
-      this.body.velocity.y = -400;
-      this.isOnGround = false;
+    this.body.velocity.x = 0;
+    const hitPlatform = this.game.physics.arcade.collide(this, this.platforms);
+
+    let isOnGround = this.body.touching.down && hitPlatform;
+
+    const keepMoving = !hitPlatform && lastDeltaX !== 0 && deltaX === 0;
+    if (keepMoving) {
+      deltaX = lastDeltaX;
+      this.touchCheck.deltaX = previousMovement.deltaX;
+    }
+
+    if ((this.cursors.up.isDown || jump) && isOnGround) {
+      this.body.velocity.y = max([deltaY > 20 ? -12 * deltaY : -450, -450]);
+      isOnGround = false;
       this.animations.play('jump');
       this.duplicate();
     }
 
     if (this.cursors.left.isDown || goLeft) {
-      this.body.velocity.x = max([(deltaX - 70 - (deltaY || 0)) * 10, -300]);
-      if (this.isOnGround) {
+      this.body.velocity.x = max([deltaX < 20 ? 8 * deltaX : -350, -350]);
+      if (isOnGround) {
         this.animations.play('left');
       }
       this.scale.x = -1;
     } else if (this.cursors.right.isDown || goRight) {
-      this.body.velocity.x = min([(deltaX + 70 + (deltaY || 0)) * 10, 300]);
-      if (this.isOnGround) {
+      this.body.velocity.x = min([deltaX > 20 ? 8 * deltaX : 350, 350]);
+      if (isOnGround) {
         this.animations.play('right');
       }
       this.scale.x = 1;
     } else {
-      if (this.isOnGround) {
+      if (isOnGround) {
         this.animations.play('idle');
       }
     }

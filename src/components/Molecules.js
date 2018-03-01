@@ -33,7 +33,7 @@ class Molecule {
       if (leftPosition < this.size * -1) leftPosition = window.innerWidth;
       document.getElementById('' + this.id).style.left = leftPosition + this.speed.x + 'px';
       document.getElementById('' + this.id).style.top = topPosition + this.speed.y + 'px';
-    }, 60);
+    }, 35);
   }
 
   create() {

@@ -9,6 +9,7 @@ import { history, persistor, default as store } from './store';
 import Menu from './components/Menu';
 import Levels from './components/LevelSelection';
 import Game from './Game';
+import LevelFinished from './components/LevelFinished';
 
 render(
   <div>
@@ -19,6 +20,7 @@ render(
             <Route exact path="/" component={Menu} />
             <Route exact path="/levels" component={Levels} />
             <Route exact path="/game" component={Game} />
+            <Route exact path="/done" component={LevelFinished} />
           </Switch>
         </ConnectedRouter>
       </PersistGate>

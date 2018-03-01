@@ -52,6 +52,7 @@
     "googleapis": "^25.0.0",
     "history": "^4.7.2",
     "lodash": "^4.17.4",
+    "moment": "^2.20.1",
     "phaser-ce": "^2.9.4",
     "phaser-swipe": "^1.0.4",
     "randomcolor": "^0.5.3",

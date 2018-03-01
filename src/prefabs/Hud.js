@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import moment from 'moment';
+import store from './../store';
+import * as actions from './../actions/score';
 
 export default class Hud extends Phaser.Group {
   constructor({ game, goToMenu }) {
@@ -14,20 +17,6 @@ export default class Hud extends Phaser.Group {
       align: 'center'
     });
 
-    this.uncertainty = 1;
-    this.uncertaintyLabel = 'Δ : ';
-    this.uncertaintyText = new Phaser.Text(
-      this.game,
-      this.game.width - 100,
-      10,
-      this.getUncertaintyText(),
-      {
-        font: '28px VT323',
-        fill: '#ffffff',
-        align: 'right'
-      }
-    );
-
     const backArrow = new Phaser.Text(this.game, 5, 7, '↩', {
       font: '40px VT323',
       fill: '#ffffff',
@@ -37,18 +26,13 @@ export default class Hud extends Phaser.Group {
     backArrow.inputEnabled = true;
     backArrow.events.onInputDown.add(this.goToMenu, this);
 
-    this.levelTitle = new Phaser.Text(
-      this.game,
-      this.game.width / 2 + 10,
-      25,
-      `${this.game.data.atom}`,
-      {
-        font: '32px VT323',
-        fill: '#ffffff',
-        align: 'center'
-      }
-    );
-    this.levelTitle.anchor.setTo(0.5);
+    this.timer = this.game.time.create();
+    this.timer.start();
+    this.timerText = new Phaser.Text(this.game, this.game.width - 100, 10, '00:00:00', {
+      font: '28px VT323',
+      fill: '#ffffff',
+      align: 'center'
+    });
 
     const background1 = new Phaser.Graphics(this.game)
       .beginFill('0xff0000', 0.3)
@@ -61,18 +45,13 @@ export default class Hud extends Phaser.Group {
     this.add(background1);
     this.add(background2);
     this.add(this.energyText);
-    this.add(this.uncertaintyText);
-    this.add(this.levelTitle);
+    this.add(this.timerText);
     this.add(backArrow);
     this.fixedToCamera = true;
   }
 
   getEnergyText() {
     return this.energyLabel + this.energy + '/' + this.totalParticles;
-  }
-
-  getUncertaintyText() {
-    return this.uncertaintyLabel + this.uncertainty + '/' + this.game.data.uncertainty;
   }
 
   updateTotalParticles() {
@@ -85,8 +64,19 @@ export default class Hud extends Phaser.Group {
     this.energyText.text = this.getEnergyText();
   }
 
-  updateUncertainty(n) {
-    this.uncertainty = n;
-    this.uncertaintyText.text = this.getUncertaintyText();
+  updateTimer() {
+    this.timerText.text = moment(0)
+      .set('ms', this.timer.ms)
+      .subtract('ms', 2000)
+      .format('mm:ss:SS');
+  }
+
+  setScore() {
+    store.dispatch(
+      actions.setScore({
+        level: Number(this.game.data.id),
+        score: this.timer.ms
+      })
+    );
   }
 }

@@ -1,6 +1,8 @@
 import React from 'react';
 import { connect } from 'react-redux';
+import moment from 'moment';
 import { push } from 'react-router-redux';
+import formatScore from './../tools/formatScore';
 import * as actions from './../actions/game';
 import * as levels from './../data/levels';
 import {
@@ -15,6 +17,7 @@ import {
 
 class Menu extends React.Component {
   render() {
+    const { updateCurrentLevel, beginLevel, game, score } = this.props;
     const raw = Object.keys(levels)
       .filter(key => key.indexOf('level') !== -1)
       .sort((a, b) => Number(levels[a].id) - Number(levels[b].id))
@@ -23,18 +26,23 @@ class Menu extends React.Component {
         return { id, hue, antiHue, symbol, atom };
       });
 
-    const isDisabled = id => Number(id) > this.props.game.maxLevel;
+    const enriched = raw.map(r => ({
+      ...r,
+      score: score[Number(r.id)] ? formatScore(score[Number(r.id)].best) : '00:00:00'
+    }));
+
+    const isDisabled = id => Number(id) > game.maxLevel;
 
     const handleClick = n => e => {
       if (isDisabled(n)) return;
-      this.props.updateCurrentLevel(n);
-      this.props.beginLevel();
+      updateCurrentLevel(n);
+      beginLevel();
     };
 
     return (
       <div>
         <Title>Level Selection</Title>
-        {raw.map(({ id, hue, antiHue, symbol, atom, score = '00:00:00' }) => (
+        {enriched.map(({ id, hue, antiHue, symbol, atom, score = '00:00:00' }) => (
           <MenuItem key={`${id}-${symbol}`} onClick={handleClick(id)} disabled={isDisabled(id)}>
             <Atom color={antiHue} bgColor={hue}>
               {symbol}
@@ -51,7 +59,7 @@ class Menu extends React.Component {
   }
 }
 
-const mapStateToProps = ({ game }) => ({ game });
+const mapStateToProps = ({ game, score }) => ({ game, score });
 const mapDispatchToProps = dispatch => ({
   updateCurrentLevel: n => dispatch(actions.updateCurrentLevel(n)),
   updateMaxLevel: n => dispatch(actions.updateMaxLevel(n)),
