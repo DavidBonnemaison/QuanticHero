@@ -6,7 +6,7 @@ class Molecule {
     this.id = random(1000, 9999);
     this.container = container;
     this.size = sample([random(window.innerWidth / 3, window.innerWidth / 2), random(5, 300)]);
-    this.color = randomColor({ hue: 'monochrome' });
+    this.color = randomColor();
     this.x = random(0, window.innerWidth);
     this.y = random(0, window.innerHeight);
     this.speed = {

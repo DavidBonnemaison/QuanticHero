@@ -169,6 +169,8 @@ export default class extends Phaser.State {
   }
 
   centerCamera() {
+    const hasFocus = this.game.global.heroes.filter(h => h.isFocused).length > 0;
+    if (hasFocus) return;
     const idealPosition = this.game.global.heroes.reduce(
       (acc, current) => ({
         x: acc.x + current.x,

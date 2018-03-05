@@ -1,11 +1,12 @@
 import styled from 'styled-components';
 
-export const Title = styled.h1`
+export const Title = styled.div`
   text-align: center;
   color: #999;
   padding-bottom: 20px;
   font-size: 80px;
   letter-spacing: 0.1em;
+  margin-top: 40px;
 `;
 
 export const Button = styled.div`

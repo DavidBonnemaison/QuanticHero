@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { sample, uniqBy, round, remove, min, max } from 'lodash';
+import { sample, uniqBy, round, remove, min, max, inRange } from 'lodash';
 
 export default class Hero extends Phaser.Sprite {
   constructor({ game, x, y, asset, platforms, spikes, id, HUD, touchCheck, touchController }) {
@@ -30,6 +30,11 @@ export default class Hero extends Phaser.Sprite {
       deltaX: 0,
       deltaY: 0
     };
+    this.activeBall = this.game.add.group();
+    this.activeBall.alpha = 0;
+    const ball = new Phaser.Graphics(this.game).beginFill('0x1b6122', 1).drawCircle(0, 0, 16);
+    this.activeBall.add(ball);
+    this.isFocused = false;
   }
 
   duplicate() {
@@ -69,8 +74,18 @@ export default class Hero extends Phaser.Sprite {
 
   killHero(id) {
     this.kill();
+    this.activeBall.remove();
     this.game.global.heroes = remove(this.game.global.heroes, hero => hero.id !== id);
     this.destroy();
+  }
+
+  toggleFocus() {
+    if (this.isFocused) {
+      this.isFocused = false;
+      return;
+    }
+    this.game.global.heroes.forEach(hero => (hero.isFocused = false));
+    this.isFocused = true;
   }
 
   update() {
@@ -84,8 +99,32 @@ export default class Hero extends Phaser.Sprite {
       return;
     }
 
+    this.game.global.heroes.forEach(h => {
+      if (h.id === this.id) h.position = this.position;
+    });
+
+    this.activeBall.position = {
+      ...this.position,
+      y: this.y - 50
+    };
+
+    this.activeBall.alpha = this.isFocused ? 1 : 0;
+    if (this.isFocused) {
+      this.game.camera.focusOnXY(this.x, this.y);
+    }
+
     const previousMovement = this.touchCheck;
     this.touchCheck = this.touchController.check();
+    const { timer } = this.touchController;
+    const longPress = inRange(timer._now - timer._started, 500, 501);
+    if (longPress) {
+      let { x, y } = this.touchController.currentPosition;
+      const onHero = inRange(this.x, x - 24, x + 24) && inRange(this.y, y - 32, y + 32);
+      if (onHero) {
+        this.toggleFocus();
+      }
+    }
+
     let { deltaX, deltaY } = this.touchCheck;
     const lastDeltaX = previousMovement.deltaX;
     const jump = deltaY > 20;

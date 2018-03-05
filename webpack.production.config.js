@@ -56,10 +56,7 @@ module.exports = {
       },
       hash: true
     }),
-    new CopyWebpackPlugin([
-      { from: 'assets', to: 'assets' },
-      { from: '_redirects', to: '_redirects' }
-    ])
+    new CopyWebpackPlugin([{ from: 'assets', to: 'assets' }, { from: '_redirects' }])
   ],
   module: {
     rules: [

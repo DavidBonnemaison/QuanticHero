@@ -7,3 +7,4 @@ dist/
 /index.html
 build/
 .idea/
+.DS_Store
