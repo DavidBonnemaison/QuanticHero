@@ -119,7 +119,7 @@ export default class Hero extends Phaser.Sprite {
     const longPress = inRange(timer._now - timer._started, 500, 501);
     if (longPress) {
       let { x, y } = this.touchController.currentPosition;
-      const onHero = inRange(this.x, x - 24, x + 24) && inRange(this.y, y - 32, y + 32);
+      const onHero = inRange(this.x, x - 32, x + 32) && inRange(this.y, y - 44, y + 44);
       if (onHero) {
         this.toggleFocus();
       }
