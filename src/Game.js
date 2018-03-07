@@ -26,7 +26,6 @@ class Game extends Phaser.Game {
     // with Cordova with need to wait that the device is ready so we will call the Boot state in another file
     if (!window.cordova) {
       this.state.start('Boot');
-      console.log('game ready');
     }
   }
 }

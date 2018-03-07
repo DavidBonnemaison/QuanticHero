@@ -6,7 +6,6 @@ export default (state = initialState, action) => {
   switch (type) {
     case 'SET_SCORE':
       const currentBest = state[payload.level] ? state[payload.level].best : 0;
-      console.log(currentBest);
       return {
         ...state,
         [payload.level]: {

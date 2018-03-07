@@ -63,7 +63,7 @@ export const Molecule = styled.div`
     position: absolute;
     font-size: 40px;
     top: 10px;
-    right: 10px;
+    left: 10px;
     line-height: 1;
   }
 `;

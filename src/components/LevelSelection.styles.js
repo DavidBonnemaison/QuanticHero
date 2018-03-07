@@ -42,7 +42,7 @@ export const Atom = styled.div`
 export const AtomicNumber = styled.div`
   position: absolute;
   top: -35px;
-  right: 5px;
+  left: 5px;
   font-size: 30px;
 `;
 

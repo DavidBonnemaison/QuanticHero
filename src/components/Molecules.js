@@ -13,7 +13,7 @@ class Molecule {
       x: random(-10, 10) * this.size / 1000,
       y: random(-10, 10) * this.size / 1000
     };
-    this.opacity = max([random(50, 1000) / this.size ** 2 * 10, 0.2]);
+    this.opacity = max([random(50, 1000) / this.size ** 2, 0.2]);
   }
 
   getTemplate() {
@@ -33,7 +33,7 @@ class Molecule {
       if (leftPosition < this.size * -1) leftPosition = window.innerWidth;
       document.getElementById('' + this.id).style.left = leftPosition + this.speed.x + 'px';
       document.getElementById('' + this.id).style.top = topPosition + this.speed.y + 'px';
-    }, 35);
+    }, 30);
   }
 
   create() {

@@ -41,8 +41,6 @@ export default class extends Phaser.State {
   handleStoreChange() {
     const oldState = this.gameState;
     this.gameState = store.getState().game;
-    console.log(oldState);
-    console.log(this.gameState);
   }
 
   createSpike({ x, y, width, height }) {
@@ -169,9 +167,8 @@ export default class extends Phaser.State {
   }
 
   centerCamera() {
-    const hasFocus = this.game.global.heroes.filter(h => h.isFocused).length > 0;
-    if (hasFocus) return;
-    const idealPosition = this.game.global.heroes.reduce(
+    const hasFocus = this.game.global.heroes.filter(h => h.isFocused);
+    let idealPosition = this.game.global.heroes.reduce(
       (acc, current) => ({
         x: acc.x + current.x,
         y: acc.y + current.y
@@ -179,9 +176,15 @@ export default class extends Phaser.State {
       { x: 0, y: 0 }
     );
 
-    idealPosition.x /= this.game.global.heroes.length;
-    idealPosition.y /= this.game.global.heroes.length;
-
+    if (hasFocus.length) {
+      idealPosition = {
+        x: hasFocus[0].x,
+        y: hasFocus[0].y
+      };
+    } else {
+      idealPosition.x /= this.game.global.heroes.length;
+      idealPosition.y /= this.game.global.heroes.length;
+    }
     const newPosition = {
       x: (idealPosition.x + (this.game.camera.x + this.game.width / 2) * 9) / 10,
       y: (idealPosition.y + (this.game.camera.y + this.game.height / 2) * 9) / 10
