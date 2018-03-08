@@ -151,7 +151,7 @@ export default class Hero extends Phaser.Sprite {
     }
 
     if (this.cursors.left.isDown || goLeft) {
-      this.body.velocity.x = max([deltaX < 20 ? 8 * deltaX : -350, -350]);
+      this.body.velocity.x = max([deltaX < 20 && deltaX !== 0 ? 8 * deltaX : -350, -350]);
       if (isOnGround) {
         this.animations.play('left');
       }

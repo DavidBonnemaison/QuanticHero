@@ -22,6 +22,7 @@ render(
             <Route exact path="/levels" component={Levels} />
             <Route exact path="/game" component={Game} />
             <Route exact path="/done" component={LevelFinished} />
+            <Route exact path="/explanation" component={Explanation} />
           </Switch>
         </ConnectedRouter>
       </PersistGate>

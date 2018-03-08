@@ -27,16 +27,27 @@ export const ScoreType = styled.div`
   left: 0;
 `;
 
+export const ButtonContainer = styled.div`
+  position: absolute;
+  bottom: 15px;
+  height: 100px;
+  width: 100%;
+`;
+
 export const Button = styled.div`
   display: inline-block;
   vertical-align: middle;
-  position: absolute;
   bottom: 15px;
-  width: 38%;
+  width: 26%;
   padding: 10px;
   font-size: 36px;
-  left: ${p => (p.type === 'next' ? `52%` : `5%`)};
-  background-color: ${p => (p.type === 'next' ? `#b71c1c` : `#888`)};
+  background-color: ${p =>
+    p.type === 'next' ? `#b71c1c` : p.type === 'retry' ? `#b1810f` : `#888`};
+  margin-right: 5%;
+
+  &:last-child {
+    margin-right: 0;
+  }
 `;
 
 export const Best = styled.div`

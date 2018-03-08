@@ -19,7 +19,7 @@ class Menu extends React.Component {
   render() {
     const newGame = () => {
       this.props.newGame();
-      this.props.goTo('/game');
+      this.props.goTo('/explanation');
     };
     return (
       <div>
