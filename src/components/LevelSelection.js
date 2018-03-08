@@ -17,7 +17,7 @@ import {
 
 class Menu extends React.Component {
   render() {
-    const { updateCurrentLevel, beginLevel, game, score } = this.props;
+    const { updateCurrentLevel, beginLevel, goToExplanation, game, score } = this.props;
     const raw = Object.keys(levels)
       .filter(key => key.indexOf('level') !== -1)
       .sort((a, b) => Number(levels[a].id) - Number(levels[b].id))
@@ -36,7 +36,12 @@ class Menu extends React.Component {
     const handleClick = n => e => {
       if (isDisabled(n)) return;
       updateCurrentLevel(n);
-      beginLevel();
+      const { explanations } = levels[`level${n}`];
+      if (!explanations) {
+        beginLevel();
+        return;
+      }
+      goToExplanation();
     };
 
     return (
@@ -63,7 +68,8 @@ const mapStateToProps = ({ game, score }) => ({ game, score });
 const mapDispatchToProps = dispatch => ({
   updateCurrentLevel: n => dispatch(actions.updateCurrentLevel(n)),
   updateMaxLevel: n => dispatch(actions.updateMaxLevel(n)),
-  beginLevel: () => dispatch(push('/game'))
+  beginLevel: () => dispatch(push('/game')),
+  goToExplanation: () => dispatch(push('/explanation'))
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(Menu);

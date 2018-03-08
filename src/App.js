@@ -10,6 +10,7 @@ import Menu from './components/Menu';
 import Levels from './components/LevelSelection';
 import Game from './Game';
 import LevelFinished from './components/LevelFinished';
+import Explanation from './components/Explanation';
 
 render(
   <div>
