@@ -1,6 +1,6 @@
 {
   "parser": "babel-eslint",
-  "extends": ["standard", "prettier"],
+  "extends": ["standard", "plugin:react/recommended", "prettier"],
   "parserOptions": {
     "ecmaVersion": 6,
     "sourceType": "module"

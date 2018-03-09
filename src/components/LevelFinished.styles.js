@@ -38,7 +38,7 @@ export const Button = styled.div`
   display: inline-block;
   vertical-align: middle;
   bottom: 15px;
-  width: 26%;
+  width: 24%;
   padding: 10px;
   font-size: 36px;
   background-color: ${p =>

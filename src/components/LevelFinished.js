@@ -1,6 +1,6 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import moment from 'moment';
 import { push } from 'react-router-redux';
 import * as actions from './../actions/game';
 import {
@@ -17,6 +17,14 @@ import formatScore from './../tools/formatScore';
 import * as levels from './../data/levels';
 
 class LevelFinished extends React.Component {
+  static propTypes = {
+    game: PropTypes.object.isRequired,
+    score: PropTypes.array.isRequired,
+    nextLevel: PropTypes.func.isRequired,
+    setCurrentLevel: PropTypes.func.isRequired,
+    goToMenu: PropTypes.func.isRequired
+  };
+
   render() {
     const { game, score, nextLevel, setCurrentLevel, goToMenu } = this.props;
     const currentLevels = score[game.currentLevel - 1] || {

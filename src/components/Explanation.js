@@ -1,10 +1,16 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { push } from 'react-router-redux';
 import * as levels from './../data/levels';
 import { Button, Container, Text } from './Explanation.styles';
 
 class Explanation extends React.Component {
+  static propTypes = {
+    game: PropTypes.object.isRequired,
+    play: PropTypes.func.isRequired
+  };
+
   render() {
     const { play, game } = this.props;
     const { currentLevel } = game;
