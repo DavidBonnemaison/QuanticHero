@@ -161,6 +161,7 @@ export default class extends Phaser.State {
     setTimeout(() => {
       this.world.sendToBack(this.molecules);
       this.heroes.add(this.game.add.existing(this.hero));
+      this.overlay.destroy();
     }, 2100);
     this.game.add.existing(this.overlay);
     this.world.bringToTop(this.molecules);

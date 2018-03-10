@@ -17,6 +17,7 @@ class Menu extends React.Component {
   }
 
   render() {
+    console.log('test');
     const newGame = () => {
       this.props.newGame();
       this.props.goTo('/explanation');
