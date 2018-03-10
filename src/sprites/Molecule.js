@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import _ from 'lodash';
+import { random, sample } from 'lodash';
 import randomColor from 'randomcolor';
 
 export default class Molecule extends Phaser.Group {
@@ -7,8 +7,8 @@ export default class Molecule extends Phaser.Group {
     super(game, x, y);
     this.game = game;
     this.scale.setTo(0.2, 0.2);
-    this.id = _.random(1000, 9999);
-    this.size = _.sample([_.random(2000, 3000), _.random(50, 300)]);
+    this.id = random(1000, 9999);
+    this.size = sample([random(50, 300), random(game.width, game.width * 2)]);
     this.color = (
       '0x' +
       randomColor({
@@ -17,16 +17,14 @@ export default class Molecule extends Phaser.Group {
     )
       .toUpperCase()
       .replace('#', '');
-    this.x = _.random(-this.size, this.game.world.width + this.size);
-    this.y = _.random(-this.size, this.game.world.height + this.size);
+    this.x = random(-this.size, this.game.width + this.size);
+    this.y = random(-this.size, this.game.height + this.size);
     this.speed = {
-      x:
-        _.sample([_.random(-10, -5, true), _.random(5, 10, true)]) *
-        Math.sqrt(this.size) /
-        150,
-      y: _.random(-10, 10, true) * Math.sqrt(this.size) / 150
+      x: sample([random(-10, -5, true), random(5, 10, true)]) * Math.sqrt(this.size) / 150,
+      y: random(-10, 10, true) * Math.sqrt(this.size) / 150
     };
-    this.alpha = _.random(0.2, 0.8, true) / this.size * 200;
+
+    this.alpha = random(0.2, 0.8, true) / this.size * 200;
 
     const graphics = this.game.add.graphics(0, 0);
     graphics.beginFill(this.color);
@@ -35,18 +33,19 @@ export default class Molecule extends Phaser.Group {
   }
 
   update() {
-    if (this.y - this.size / 2 > this.game.world.height)
-      this.y = this.size / 10 * -1;
-
-    if (this.y < this.size / 2 * -1)
-      this.y = this.game.world.height + this.size / 2;
-
-    if (this.x - this.size / 2 > this.game.world.width)
-      this.x = this.size / 2 * -1;
-    if (this.x < this.size / 2 * -1)
-      this.x = this.game.world.width + this.size / 2;
+    const bounds = {
+      top: this.game.camera.y,
+      right: this.game.width + this.game.camera.x,
+      bottom: this.game.height + this.game.camera.y,
+      left: this.game.camera.x
+    };
 
     this.x += this.speed.x;
     this.y += this.speed.y;
+
+    if (this.y + this.size < bounds.top && this.speed.y < 0) this.y = bounds.bottom + 100;
+    if (this.y - this.size > bounds.bottom && this.speed.y > 0) this.y = bounds.top - 100;
+    if (this.x - this.size > bounds.right && this.speed.x > 0) this.x = bounds.left - 100;
+    if (this.x + this.size < bounds.left && this.speed.x < 0) this.x = bounds.right + 100;
   }
 }

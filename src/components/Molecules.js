@@ -5,13 +5,13 @@ class Molecule {
   constructor({ container }) {
     this.id = random(1000, 9999);
     this.container = container;
-    this.size = sample([random(window.innerWidth / 3, window.innerWidth / 2), random(5, 300)]);
+    this.size = sample([random(window.innerWidth / 3, window.innerWidth / 2), random(20, 300)]);
     this.color = randomColor();
     this.x = random(0, window.innerWidth);
     this.y = random(0, window.innerHeight);
     this.speed = {
-      x: random(-10, 10) * this.size / 1000,
-      y: random(-10, 10) * this.size / 1000
+      x: random(-20, 20) * this.size / 1000,
+      y: random(-20, 20) * this.size / 1000
     };
     this.opacity = max([random(50, 1000) / this.size ** 2, 0.2]);
   }
@@ -41,12 +41,6 @@ class Molecule {
     const newMolecule = this.getTemplate();
     newMolecule.style.width = `${this.size}px`;
     newMolecule.style.height = `${this.size}px`;
-    if (this.size < 300) {
-      newMolecule.style.filter = `blur(${this.size / 50}px)`;
-    } else {
-      newMolecule.style.filter = `blur(${this.size / 300}px)`;
-    }
-
     newMolecule.style.background = this.color;
     newMolecule.style.opacity = this.opacity;
     newMolecule.style.left = `${this.x}px`;

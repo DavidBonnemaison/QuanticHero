@@ -131,7 +131,7 @@ export default class extends Phaser.State {
     });
 
     this.molecules = this.game.add.group();
-    range(0, 200).forEach(this.createMolecule.bind(this));
+    range(0, 20).forEach(this.createMolecule.bind(this));
     this.game.data.spikes.forEach(this.createSpike.bind(this));
     this.game.data.platforms.forEach(this.createPlatform.bind(this));
     this.game.data.particles.forEach(this.createParticle.bind(this));
