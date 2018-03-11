@@ -10,7 +10,8 @@
     "cordova": "webpack --config webpack.cordova.config.js",
     "test": "eslint './src/**/*.js'",
     "prettier": "prettier --write --single-quote src/**/*.js",
-    "generate-level": "babel-node maps/seed.js"
+    "generate-level": "babel-node maps/seed.js",
+    "zip": "zip -r cordova.zip build"
   },
   "homepage": ".",
   "license": "MIT",
@@ -71,11 +72,7 @@
     "webfontloader": "^1.6.28"
   },
   "cordova": {
-    "platforms": [
-      "android",
-      "browser",
-      "ios"
-    ],
+    "platforms": ["android", "browser", "ios"],
     "plugins": {
       "cordova-plugin-whitelist": {}
     }
