@@ -25,21 +25,17 @@ export default class Particle extends Phaser.Sprite {
     }, 150);
   }
 
-  killParticle() {
+  killParticle(hero) {
+    console.log('from particle');
+    hero.duplicate();
     this.kill();
-    this.game.global.particles = this.game.global.particles.filter(
-      particle => particle !== this
-    );
+    this.game.global.particles = this.game.global.particles.filter(particle => particle !== this);
     this.HUD.updateEnergy();
     this.destroy();
   }
 
   update() {
     this.angle += sample([40, -40]);
-    this.game.physics.arcade.overlap(
-      this.game.global.heroes,
-      this,
-      this.killParticle.bind(this)
-    );
+    this.game.physics.arcade.overlap(this.game.global.heroes, this, this.killParticle.bind(this));
   }
 }

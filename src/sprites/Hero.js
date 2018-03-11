@@ -40,6 +40,7 @@ export default class Hero extends Phaser.Sprite {
   }
 
   duplicate() {
+    console.log('from hero');
     this.data.uncertainty = 3; // temporary limit at 3
     if (this.game.global.heroes.length === this.data.uncertainty) {
       return;
@@ -103,6 +104,8 @@ export default class Hero extends Phaser.Sprite {
       return;
     }
 
+    this.game.physics.arcade.overlap(this.game.global.particles, this, this.duplicate.bind(this));
+
     this.game.global.heroes.forEach(h => {
       if (h.id === this.id) h.position = this.position;
     });
@@ -147,7 +150,6 @@ export default class Hero extends Phaser.Sprite {
       this.body.velocity.y = max([deltaY > 20 ? -12 * deltaY : -450, -450]);
       isOnGround = false;
       this.animations.play('jump');
-      this.duplicate();
     }
 
     if (this.cursors.left.isDown || goLeft) {
