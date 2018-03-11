@@ -9,7 +9,7 @@ import Platform from '../sprites/Platform';
 import Spike from '../sprites/Spike';
 import HUD from './../prefabs/Hud';
 import Overlay from './../prefabs/Overlay';
-import Door from '../sprites/Door';
+import Portal from '../sprites/Portal';
 import store from './../store';
 import * as gameActions from './../actions/game';
 import TouchController from './../tools/TouchController';
@@ -119,7 +119,7 @@ export default class extends Phaser.State {
       y: 0
     });
 
-    ['heroes', 'particles', 'platforms', 'spikes', 'door'].forEach(group => {
+    ['heroes', 'particles', 'platforms', 'spikes', 'portal'].forEach(group => {
       this[group] = new Phaser.Group(this.game);
       this[group].enableBody = true;
       this.game.global[group] = [];
@@ -136,14 +136,14 @@ export default class extends Phaser.State {
     this.game.data.platforms.forEach(this.createPlatform.bind(this));
     this.game.data.particles.forEach(this.createParticle.bind(this));
 
-    this.doorSprite = new Door({
+    this.portalSprite = new Portal({
       game: this.game,
       id: 0,
       x: this.game.data.door.x - 48,
       y: this.game.data.door.y - 96,
-      asset: 'door'
+      asset: 'portal'
     });
-    this.door.add(this.game.add.existing(this.doorSprite));
+    this.portal.add(this.game.add.existing(this.portalSprite));
 
     this.hero = new Hero({
       game: this.game,
@@ -206,20 +206,17 @@ export default class extends Phaser.State {
       this.game.state.clearCurrentState();
       this.state.start('Game');
     }
-    if (this.game.global.particles.length === 0) {
-      this.doorSprite.open();
-      const isAtTheDoor = this.game.physics.arcade.collide(this.game.global.heroes, this.door);
-      if (isAtTheDoor) {
-        const nextLevel = Number(this.currentLevel) + 1;
-        store.dispatch(gameActions.updateCurrentLevel(nextLevel));
-        this.HUD.setScore();
-        if (this.maxLevel < nextLevel) {
-          store.dispatch(gameActions.updateMaxLevel(nextLevel));
-        }
-        this.game.state.clearCurrentState();
-        this.game.destroy();
-        store.dispatch(push('/done'));
+    const isAtThePortal = this.game.physics.arcade.collide(this.game.global.heroes, this.portal);
+    if (isAtThePortal) {
+      const nextLevel = Number(this.currentLevel) + 1;
+      store.dispatch(gameActions.updateCurrentLevel(nextLevel));
+      this.HUD.setScore();
+      if (this.maxLevel < nextLevel) {
+        store.dispatch(gameActions.updateMaxLevel(nextLevel));
       }
+      this.game.state.clearCurrentState();
+      this.game.destroy();
+      store.dispatch(push('/done'));
     }
   }
 }

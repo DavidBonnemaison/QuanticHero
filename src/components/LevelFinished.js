@@ -19,7 +19,7 @@ import * as levels from './../data/levels';
 class LevelFinished extends React.Component {
   static propTypes = {
     game: PropTypes.object.isRequired,
-    score: PropTypes.array.isRequired,
+    score: PropTypes.object.isRequired,
     nextLevel: PropTypes.func.isRequired,
     setCurrentLevel: PropTypes.func.isRequired,
     goToMenu: PropTypes.func.isRequired
@@ -41,13 +41,13 @@ class LevelFinished extends React.Component {
       <Container>
         <Done>{atom}</Done>
         <Score>
-          {formatScore(best)}
-          <ScoreType>All Time Best</ScoreType>
-        </Score>
-        <Score>
           {formatScore(last)}
           <ScoreType>Last game</ScoreType>
           {best === last && <Best>New record !</Best>}
+        </Score>
+        <Score>
+          {formatScore(best)}
+          <ScoreType>All Time Best</ScoreType>
         </Score>
         <Molecule bgColor={hue} color={antiHue}>
           <span>{id}</span>

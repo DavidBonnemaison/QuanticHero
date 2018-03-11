@@ -17,7 +17,7 @@ export const Score = styled.div`
   color: #aaa;
   border: 2px solid;
   padding: 10px;
-  margin: 35px 20px;
+  margin: 60px 20px;
   position: relative;
 `;
 
@@ -63,16 +63,16 @@ export const Molecule = styled.div`
   background-color: ${p => p.bgColor};
   color: ${p => p.color};
   text-align: center;
-  width: 200px;
-  height: 200px;
-  line-height: 200px;
-  font-size: 100px;
+  width: 150px;
+  height: 150px;
+  line-height: 150px;
+  font-size: 75px;
   margin: 10px auto;
   position: relative;
 
   > span:first-child {
     position: absolute;
-    font-size: 40px;
+    font-size: 30px;
     top: 10px;
     left: 10px;
     line-height: 1;
