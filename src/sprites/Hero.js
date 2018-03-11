@@ -1,9 +1,22 @@
 import Phaser from 'phaser';
+import pixi from 'pixi';
 import { sample, uniqBy, round, remove, min, max, inRange } from 'lodash';
 import { setTimeout } from 'timers';
 
 export default class Hero extends Phaser.Sprite {
-  constructor({ game, x, y, asset, platforms, spikes, id, HUD, touchCheck, touchController }) {
+  constructor({
+    game,
+    x,
+    y,
+    asset,
+    platforms,
+    spikes,
+    id,
+    HUD,
+    touchCheck,
+    touchController,
+    isFocused
+  }) {
     super(game, x, y, asset);
     this.game = game;
     this.asset = 'hero';
@@ -25,22 +38,17 @@ export default class Hero extends Phaser.Sprite {
     this.animations.add('jump', [13, 14, 15], 3, true);
     this.cursors = this.game.input.keyboard.createCursorKeys();
     this.animations.play('jump');
-    this.game.global.cleanHeroes = setInterval(this.clean.bind(this), 1000);
     this.touchController = touchController;
     this.touchCheck = touchCheck || {
       deltaX: 0,
       deltaY: 0
     };
-    this.activeBall = this.game.add.group();
-    this.activeBall.alpha = 0;
-    this.ball = new Phaser.Graphics(this.game).beginFill('0x1b6122', 1).drawCircle(0, 0, 16);
-    this.activeBall.add(this.ball);
-    this.isFocused = false;
+    this.isFocused = isFocused;
     this.isAvailable = true;
+    this.loadTexture(isFocused ? 'hero' : 'disabled');
   }
 
   duplicate() {
-    console.log('from hero');
     this.data.uncertainty = 3; // temporary limit at 3
     if (this.game.global.heroes.length === this.data.uncertainty) {
       return;
@@ -57,7 +65,8 @@ export default class Hero extends Phaser.Sprite {
       ...this,
       x: clonedHero.position.x + Math.random() * 200 - 100,
       y: clonedHero.position.y - 10,
-      id: Math.random() * 100
+      id: Math.random() * 100,
+      isFocused: false
     });
 
     this.game.add.existing(newHero);
@@ -69,14 +78,13 @@ export default class Hero extends Phaser.Sprite {
     if (!this.game) {
       return;
     }
-    this.game.global.heroes = uniqBy(this.game.global.heroes, ({ x, y }) => round(x) + round(y));
-    if (!this.game.global.heroes.includes(this)) {
-      this.killHero(this.id);
+    const heroes = uniqBy(this.game.global.heroes, ({ x, y }) => round(x, -1) + round(y));
+    if (!heroes.includes(this)) {
+      this.x += 10;
     }
   }
 
   killHero(id) {
-    this.activeBall.remove(this.ball);
     this.kill();
     this.game.global.heroes = remove(this.game.global.heroes, hero => hero.id !== id);
     this.destroy();
@@ -85,12 +93,14 @@ export default class Hero extends Phaser.Sprite {
   toggleFocus() {
     this.isAvailable = false;
     setTimeout(() => (this.isAvailable = true), 600);
-    if (this.isFocused) {
-      this.isFocused = false;
+    const numberFocused = this.game.global.heroes.filter(h => h.isFocused).length;
+    if (numberFocused === 1) {
+      this.isFocused = true;
+      this.loadTexture('hero');
       return;
     }
-    this.game.global.heroes.forEach(hero => (hero.isFocused = false));
-    this.isFocused = true;
+    this.isFocused = !this.isFocused;
+    this.loadTexture(this.isFocused ? 'hero' : 'disabled');
   }
 
   update() {
@@ -109,13 +119,6 @@ export default class Hero extends Phaser.Sprite {
     this.game.global.heroes.forEach(h => {
       if (h.id === this.id) h.position = this.position;
     });
-
-    this.activeBall.position = {
-      ...this.position,
-      y: this.y - 50
-    };
-
-    this.activeBall.alpha = this.isFocused ? 1 : 0;
 
     const previousMovement = this.touchCheck;
     this.touchCheck = this.touchController.check();
@@ -146,19 +149,19 @@ export default class Hero extends Phaser.Sprite {
       this.touchCheck.deltaX = previousMovement.deltaX;
     }
 
-    if ((this.cursors.up.isDown || jump) && isOnGround) {
+    if ((this.cursors.up.isDown || jump) && isOnGround && this.isFocused) {
       this.body.velocity.y = max([deltaY > 20 ? -12 * deltaY : -450, -450]);
       isOnGround = false;
       this.animations.play('jump');
     }
 
-    if (this.cursors.left.isDown || goLeft) {
+    if ((this.cursors.left.isDown || goLeft) && this.isFocused) {
       this.body.velocity.x = max([deltaX < 20 && deltaX !== 0 ? 8 * deltaX : -350, -350]);
       if (isOnGround) {
         this.animations.play('left');
       }
       this.scale.x = -1;
-    } else if (this.cursors.right.isDown || goRight) {
+    } else if ((this.cursors.right.isDown || goRight) && this.isFocused) {
       this.body.velocity.x = min([deltaX > 20 ? 8 * deltaX : 350, 350]);
       if (isOnGround) {
         this.animations.play('right');

@@ -24,12 +24,27 @@ export default class Molecule extends Phaser.Group {
       y: random(-10, 10, true) * Math.sqrt(this.size) / 150
     };
 
-    this.alpha = random(0.2, 0.8, true) / this.size * 200;
-
     const graphics = this.game.add.graphics(0, 0);
     graphics.beginFill(this.color);
     graphics.drawCircle(0, 0, this.size);
     this.addChild(graphics);
+
+    this.alpha = random();
+    this.alphaPlus = true;
+    if (this.size > 400) {
+      this.alpha = random(0.1, 0.2, true);
+      return;
+    }
+
+    this.interval = setInterval(() => {
+      this.alpha = this.alphaPlus ? this.alpha + 0.02 : this.alpha - 0.02;
+      if (this.alpha > 0.9) {
+        this.alphaPlus = false;
+      }
+      if (this.alpha < 0.02) {
+        this.alphaPlus = true;
+      }
+    }, 33);
   }
 
   update() {
@@ -40,12 +55,16 @@ export default class Molecule extends Phaser.Group {
       left: this.game.camera.x
     };
 
+    if (this.alpha < 0.02) {
+      this.x = random(bounds.left, bounds.right);
+    }
+
     this.x += this.speed.x;
     this.y += this.speed.y;
 
-    if (this.y + this.size < bounds.top && this.speed.y < 0) this.y = bounds.bottom + 100;
-    if (this.y - this.size > bounds.bottom && this.speed.y > 0) this.y = bounds.top - 100;
-    if (this.x - this.size > bounds.right && this.speed.x > 0) this.x = bounds.left - 100;
-    if (this.x + this.size < bounds.left && this.speed.x < 0) this.x = bounds.right + 100;
+    if (this.y + this.size < bounds.top && this.speed.y < 0) this.y = bounds.bottom + 150;
+    if (this.y - this.size > bounds.bottom && this.speed.y > 0) this.y = bounds.top - 150;
+    if (this.x - this.size > bounds.right && this.speed.x > 0) this.x = bounds.left - 150;
+    if (this.x + this.size < bounds.left && this.speed.x < 0) this.x = bounds.right + 150;
   }
 }

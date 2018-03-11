@@ -154,7 +154,8 @@ export default class extends Phaser.State {
       platforms: this.platforms,
       spikes: this.spikes,
       HUD: this.HUD,
-      touchController: new TouchController(this.game)
+      touchController: new TouchController(this.game),
+      isFocused: true
     });
 
     this.game.global.heroes.push(this.hero);

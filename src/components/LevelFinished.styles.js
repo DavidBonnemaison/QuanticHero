@@ -17,7 +17,7 @@ export const Score = styled.div`
   color: #aaa;
   border: 2px solid;
   padding: 10px;
-  margin: 60px 20px;
+  margin: 40px 20px;
   position: relative;
 `;
 
@@ -30,7 +30,7 @@ export const ScoreType = styled.div`
 export const ButtonContainer = styled.div`
   position: absolute;
   bottom: 15px;
-  height: 100px;
+  height: 60px;
   width: 100%;
 `;
 
@@ -38,7 +38,7 @@ export const Button = styled.div`
   display: inline-block;
   vertical-align: middle;
   bottom: 15px;
-  width: 24%;
+  width: 22%;
   padding: 10px;
   font-size: 36px;
   background-color: ${p =>

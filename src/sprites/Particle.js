@@ -13,7 +13,7 @@ export default class Particle extends Phaser.Sprite {
     this.body.immovable = true;
     this.body.moves = false;
     this.HUD.updateTotalParticles();
-    setInterval(() => {
+    this.interval = setInterval(() => {
       const offsetX = random(-5, 5);
       const offsetY = random(-5, 5);
       this.x += offsetX;
@@ -26,9 +26,9 @@ export default class Particle extends Phaser.Sprite {
   }
 
   killParticle(hero) {
-    console.log('from particle');
     hero.duplicate();
     this.kill();
+    clearInterval(this.interval);
     this.game.global.particles = this.game.global.particles.filter(particle => particle !== this);
     this.HUD.updateEnergy();
     this.destroy();
