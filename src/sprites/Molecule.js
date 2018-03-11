@@ -8,7 +8,7 @@ export default class Molecule extends Phaser.Group {
     this.game = game;
     this.scale.setTo(0.2, 0.2);
     this.id = random(1000, 9999);
-    this.size = sample([random(50, 300), random(game.width, game.width * 2)]);
+    this.size = sample([random(20, 200), random(game.width, game.width * 2)]);
     this.color = (
       '0x' +
       randomColor({
