@@ -8,4 +8,5 @@ dist/
 build/
 .idea/
 .DS_Store
+*/.DS_Store
 cordova.zip

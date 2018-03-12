@@ -61,12 +61,19 @@ export default class extends Phaser.State {
     this.spikes.add(this.game.add.existing(spike));
   }
 
-  createParticle({ x, y }) {
+  createParticle({ x, y, type }) {
+    const assetType = {
+      duplicate: 'blue',
+      speed: 'red',
+      lowGravity: 'green',
+      antiGravity: 'cyan'
+    };
     const particle = new Particle({
       game: this.game,
       x,
       y,
-      asset: 'ball',
+      type,
+      asset: assetType[type],
       particles: this.particles,
       HUD: this.HUD
     });

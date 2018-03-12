@@ -46,6 +46,8 @@ export default class Hero extends Phaser.Sprite {
     this.isFocused = isFocused;
     this.isAvailable = true;
     this.loadTexture(isFocused ? 'hero' : 'disabled');
+    this.velocityMultiplier = 1;
+    this.upsideDown = 1;
   }
 
   duplicate() {
@@ -90,7 +92,7 @@ export default class Hero extends Phaser.Sprite {
     this.destroy();
   }
 
-  toggleFocus() {
+  toggleFocus(force) {
     this.isAvailable = false;
     setTimeout(() => (this.isAvailable = true), 600);
     const numberFocused = this.game.global.heroes.filter(h => h.isFocused).length;
@@ -99,14 +101,13 @@ export default class Hero extends Phaser.Sprite {
       this.loadTexture('hero');
       return;
     }
-    this.isFocused = !this.isFocused;
+    this.isFocused = force || !this.isFocused;
     this.loadTexture(this.isFocused ? 'hero' : 'disabled');
   }
 
   update() {
     if (this.game.global.heroes.length > 1 && !this.inCamera) {
-      this.killHero(this.id);
-      return;
+      this.toggleFocus(false);
     }
 
     if (this.game.physics.arcade.collide(this, this.spikes)) {
@@ -141,7 +142,10 @@ export default class Hero extends Phaser.Sprite {
     this.body.velocity.x = 0;
     const hitPlatform = this.game.physics.arcade.collide(this, this.platforms);
 
-    let isOnGround = this.body.touching.down && hitPlatform;
+    const touching = this.upsideDown === 1 ? this.body.touching.down : this.body.touching.up;
+    let isOnGround = touching && hitPlatform;
+
+    this.scale.y = this.upsideDown;
 
     const keepMoving = !hitPlatform && lastDeltaX !== 0 && deltaX === 0;
     if (keepMoving) {
@@ -150,19 +154,21 @@ export default class Hero extends Phaser.Sprite {
     }
 
     if ((this.cursors.up.isDown || jump) && isOnGround && this.isFocused) {
-      this.body.velocity.y = max([deltaY > 20 ? -12 * deltaY : -450, -450]);
+      this.body.velocity.y =
+        max([deltaY > 20 ? -12 * deltaY : -450, -450]) * this.upsideDown * this.velocityMultiplier;
       isOnGround = false;
       this.animations.play('jump');
     }
 
     if ((this.cursors.left.isDown || goLeft) && this.isFocused) {
-      this.body.velocity.x = max([deltaX < 20 && deltaX !== 0 ? 8 * deltaX : -350, -350]);
+      this.body.velocity.x =
+        max([deltaX < 20 && deltaX !== 0 ? 8 * deltaX : -350, -350]) * this.velocityMultiplier;
       if (isOnGround) {
         this.animations.play('left');
       }
       this.scale.x = -1;
     } else if ((this.cursors.right.isDown || goRight) && this.isFocused) {
-      this.body.velocity.x = min([deltaX > 20 ? 8 * deltaX : 350, 350]);
+      this.body.velocity.x = min([deltaX > 20 ? 8 * deltaX : 350, 350]) * this.velocityMultiplier;
       if (isOnGround) {
         this.animations.play('right');
       }

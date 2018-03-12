@@ -37,14 +37,41 @@
   ],
   "particles": [
     {
+      "type": "duplicate",
       "x": 500,
       "y": 600
+    },
+    {
+      "type": "lowGravity",
+      "x": 900,
+      "y": 500
+    },
+    {
+      "type": "speed",
+      "x": 1500,
+      "y": 700
+    },
+    {
+      "type": "antiGravity",
+      "x": 200,
+      "y": 900
+    },
+    {
+      "type": "antiGravity",
+      "x": 500,
+      "y": 400
     }
   ],
   "platforms": [
     {
       "x": 0,
       "y": 950,
+      "width": 1600,
+      "height": 50
+    },
+    {
+      "x": 0,
+      "y": 30,
       "width": 1600,
       "height": 50
     },
@@ -75,6 +102,37 @@
     {
       "x": 1400,
       "y": 750,
+      "width": 200,
+      "height": 20
+    },
+
+    {
+      "x": 1000,
+      "y": 300,
+      "width": 200,
+      "height": 20
+    },
+    {
+      "x": 650,
+      "y": 250,
+      "width": 200,
+      "height": 20
+    },
+    {
+      "x": 400,
+      "y": 350,
+      "width": 200,
+      "height": 20
+    },
+    {
+      "x": 1200,
+      "y": 150,
+      "width": 100,
+      "height": 20
+    },
+    {
+      "x": 1400,
+      "y": 250,
       "width": 200,
       "height": 20
     }

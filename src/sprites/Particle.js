@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { random, sample } from 'lodash';
 
 export default class Particle extends Phaser.Sprite {
-  constructor({ game, x, y, asset, particles, HUD }) {
+  constructor({ game, x, y, asset, particles, HUD, type }) {
     super(game, x, y, asset);
     this.anchor.setTo(0.5);
     this.game = game;
@@ -13,6 +13,7 @@ export default class Particle extends Phaser.Sprite {
     this.body.immovable = true;
     this.body.moves = false;
     this.HUD.updateTotalParticles();
+    this.type = type;
     this.interval = setInterval(() => {
       const offsetX = random(-5, 5);
       const offsetY = random(-5, 5);
@@ -26,7 +27,21 @@ export default class Particle extends Phaser.Sprite {
   }
 
   killParticle(hero) {
-    hero.duplicate();
+    switch (this.type) {
+      case 'duplicate':
+        hero.duplicate();
+        break;
+      case 'speed':
+        hero.velocityMultiplier = 1.4;
+        break;
+      case 'lowGravity':
+        this.game.physics.arcade.gravity.y = this.game.physics.arcade.gravity.y / 2;
+        break;
+      case 'antiGravity':
+        this.game.physics.arcade.gravity.y = this.game.physics.arcade.gravity.y * -1;
+        hero.upsideDown = hero.upsideDown * -1;
+        break;
+    }
     this.kill();
     clearInterval(this.interval);
     this.game.global.particles = this.game.global.particles.filter(particle => particle !== this);
