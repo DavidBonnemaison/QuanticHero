@@ -8,14 +8,6 @@ export default class Hud extends Phaser.Group {
     super(game);
     this.game = game;
     this.goToMenu = goToMenu;
-    this.totalParticles = 0;
-    this.energy = 0;
-    this.energyLabel = 'E : ';
-    this.energyText = new Phaser.Text(this.game, 54, 10, this.getEnergyText(), {
-      font: '28px VT323',
-      fill: '#ffffff',
-      align: 'center'
-    });
 
     const backArrow = new Phaser.Text(this.game, 5, 7, '↩', {
       font: '40px VT323',
@@ -28,8 +20,8 @@ export default class Hud extends Phaser.Group {
 
     this.timer = this.game.time.create();
     this.timer.start();
-    this.timerText = new Phaser.Text(this.game, this.game.width - 100, 10, '00:00:00', {
-      font: '28px VT323',
+    this.timerText = new Phaser.Text(this.game, this.game.width - 135, 2, '00:00:00', {
+      font: '40px VT323',
       fill: '#ffffff',
       align: 'center'
     });
@@ -44,24 +36,9 @@ export default class Hud extends Phaser.Group {
 
     this.add(background1);
     this.add(background2);
-    this.add(this.energyText);
     this.add(this.timerText);
     this.add(backArrow);
     this.fixedToCamera = true;
-  }
-
-  getEnergyText() {
-    return this.energyLabel + this.energy + '/' + this.totalParticles;
-  }
-
-  updateTotalParticles() {
-    this.totalParticles += 1;
-    this.energyText.text = this.getEnergyText();
-  }
-
-  updateEnergy() {
-    this.energy += 1;
-    this.energyText.text = this.getEnergyText();
   }
 
   updateTimer() {

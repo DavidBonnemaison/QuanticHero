@@ -107,7 +107,7 @@ export default class Hero extends Phaser.Sprite {
 
   update() {
     if (this.game.global.heroes.length > 1 && !this.inCamera) {
-      this.toggleFocus(false);
+      this.toggleFocus(true);
     }
 
     if (this.game.physics.arcade.collide(this, this.spikes)) {
