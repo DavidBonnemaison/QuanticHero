@@ -15,6 +15,22 @@ export default (state = initialState, action) => {
           }
         };
       }
+      if (payload.type === 'particle') {
+        return {
+          ...state,
+          [`level${payload.level}`]: {
+            ...state[`level${payload.level}`],
+            particles: state[`level${payload.level}`].particles.map((p, i) => {
+              return i === Number(payload.n)
+                ? {
+                    ...p,
+                    [payload.prop]: payload.prop === 'type' ? payload.value : Number(payload.value)
+                  }
+                : p;
+            })
+          }
+        };
+      }
       return { ...state };
     case 'UPDATE_ALL_LEVELS':
       return payload.data;

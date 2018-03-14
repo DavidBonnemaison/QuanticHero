@@ -13,8 +13,9 @@ const reducers = combineReducers({ menu, game, score, levels, routing: routerRed
 const middleware = routerMiddleware(hashHistory);
 
 const persistConfig = {
-  key: 'root',
-  storage
+  key: 'qtmhro',
+  storage,
+  blacklist: ['routing']
 };
 
 const persistedReducer = persistReducer(persistConfig, reducers);
