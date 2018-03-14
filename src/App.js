@@ -10,6 +10,7 @@ import Levels from './components/LevelSelection';
 import Game from './Game';
 import LevelFinished from './components/LevelFinished';
 import Explanation from './components/Explanation';
+import Editor from './components/Editor';
 
 const history = syncHistoryWithStore(hashHistory, store);
 
@@ -23,6 +24,7 @@ render(
           <Route exact path="/game" component={Game} />
           <Route exact path="/done" component={LevelFinished} />
           <Route exact path="/explanation" component={Explanation} />
+          <Route exact path="/editor" component={Editor} />
         </Router>
       </PersistGate>
     </Provider>

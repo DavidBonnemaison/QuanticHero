@@ -7,8 +7,9 @@ import { routerReducer, routerMiddleware } from 'react-router-redux';
 import menu from './reducers/menu';
 import game from './reducers/game';
 import score from './reducers/score';
+import levels from './reducers/levels';
 
-const reducers = combineReducers({ menu, game, score, routing: routerReducer });
+const reducers = combineReducers({ menu, game, score, levels, routing: routerReducer });
 const middleware = routerMiddleware(hashHistory);
 
 const persistConfig = {
