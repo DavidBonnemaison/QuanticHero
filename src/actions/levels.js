@@ -13,3 +13,8 @@ export const setLevels = data => ({
   type: 'UPDATE_ALL_LEVELS',
   payload: { data }
 });
+
+export const addPlatform = ({ level }) => ({
+  type: 'ADD_PLATFORM',
+  payload: { level }
+});

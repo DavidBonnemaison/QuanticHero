@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { range } from 'lodash';
 import { push } from 'react-router-redux';
-import * as levels from '../data/levels';
 import Hero from '../sprites/Hero';
 import Particle from '../sprites/Particle';
 import Molecule from '../sprites/Molecule';
@@ -23,7 +22,10 @@ export default class extends Phaser.State {
     if (maxLevel === 0) {
       this.state.start('Tuto');
     }
-
+    const levels = store.getState().levels;
+    if (!levels) {
+      store.dispatch(push('/'));
+    }
     this.game.data = levels[`level${this.currentLevel}`];
     if (this.game.data === undefined) {
       this.game.data = levels.level1;

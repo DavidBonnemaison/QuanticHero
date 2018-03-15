@@ -2,14 +2,15 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { push } from 'react-router-redux';
 import * as actions from './../actions/game';
+import { setLevels } from './../actions/levels';
 import { Title, Button } from './Menu.styles';
 import Molecules from './../components/Molecules';
+import * as levels from './../data/levels';
 
 class Menu extends React.Component {
-  handleClick = n => e => this.props.updateCurrentLevel(n);
-
   componentDidMount() {
     Molecules.start();
+    if (!this.props.levels) this.props.setLevels(levels);
   }
 
   componentWillUnmount() {
@@ -32,10 +33,11 @@ class Menu extends React.Component {
   }
 }
 
-const mapStateToProps = ({ game }) => ({ game });
+const mapStateToProps = ({ game, levels }) => ({ game, levels });
 const mapDispatchToProps = dispatch => ({
   goTo: l => dispatch(push(l)),
-  newGame: () => dispatch(actions.updateCurrentLevel(1))
+  newGame: () => dispatch(actions.updateCurrentLevel(1)),
+  setLevels: data => dispatch(setLevels(data))
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(Menu);
