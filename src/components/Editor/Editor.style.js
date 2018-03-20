@@ -20,6 +20,7 @@ export const FieldEditor = styled.div`
   border: 1px solid #ccc;
   border-radius: 2px;
   padding: 10px;
+  position: relative;
 
   > div {
     margin: 5px 0;
@@ -80,4 +81,29 @@ export const AddButton = styled.div`
   text-align: center;
   float: right;
   border: 2px solid black;
+`;
+
+export const Platform = styled.div`
+  position: absolute;
+  text-align: center;
+  color: ${p => p.antiHue};
+  span {
+    font-size: ${p => p.scale * 40}px;
+    background-color: ${p => p.color};
+    position: relative;
+    top: ${p => p.scale * -10}px;
+    width: ${p => p.scale * 40}px;
+    text-align: center;
+    display: inline-block;
+    border-radius: 50%;
+  }
+`;
+
+export const ItemNumber = styled.div`
+  position: absolute;
+  right: 0;
+  top: -5px;
+  background: #666;
+  color: white;
+  padding: 10px;
 `;

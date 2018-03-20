@@ -156,15 +156,17 @@ class Editor extends React.Component {
         <DisplayPanel hue={hue} width={width * scale} height={height * scale}>
           <PlayButton onClick={play}>PLAY</PlayButton>
           <ResetButton onClick={this.resetLevels}>RESET</ResetButton>
-          {platforms.map(p => (
+          {platforms.map((p, i) => (
             <DrawPlatform
               key={`platformDrawing${p.x}${p.y}`}
               {...p}
               color={antiHue}
               scale={scale}
+              antiHue={antiHue}
+              i={i}
             />
           ))}
-          {particles.map(p => (
+          {particles.map((p, i) => (
             <DrawParticle key={`particleDrawing${p.x}${p.y}`} {...p} scale={scale} />
           ))}
           <div

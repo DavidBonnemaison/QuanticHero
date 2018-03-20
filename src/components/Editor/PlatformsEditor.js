@@ -1,9 +1,10 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { FieldEditor } from './Editor.style';
+import { FieldEditor, ItemNumber } from './Editor.style';
 
 const PlatformsEditor = ({ x, y, width, height, onChange, i }) => (
   <FieldEditor>
+    <ItemNumber>{i}</ItemNumber>
     <div>
       <label>x:</label>
       <input type="number" defaultValue={x} onBlur={onChange} step="10" data-n={i} data-prop="x" />
