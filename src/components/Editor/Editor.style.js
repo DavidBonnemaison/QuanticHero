@@ -107,3 +107,12 @@ export const ItemNumber = styled.div`
   color: white;
   padding: 10px;
 `;
+
+export const DeleteItem = styled.div`
+  position: absolute;
+  right: 0;
+  bottom: -5px;
+  color: red;
+  padding: 10px;
+  cursor: pointer;
+`;

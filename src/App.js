@@ -11,11 +11,21 @@ import Game from './Game';
 import LevelFinished from './components/LevelFinished';
 import Explanation from './components/Explanation';
 import Editor from './components/Editor';
+import s from 'styled-components';
+import config from './config';
 
 const history = syncHistoryWithStore(hashHistory, store);
+const Container = s.div`
+  max-width: ${config.width};
+  max-height: ${config.height};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+`;
 
 render(
-  <div>
+  <Container>
     <Provider store={store}>
       <PersistGate persistor={persistor} loading={null}>
         <Router history={history}>
@@ -28,6 +38,6 @@ render(
         </Router>
       </PersistGate>
     </Provider>
-  </div>,
+  </Container>,
   document.getElementById('app')
 );

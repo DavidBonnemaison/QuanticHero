@@ -1,24 +1,27 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { FieldEditor, ItemNumber } from './Editor.style';
+import { FieldEditor, ItemNumber, DeleteItem } from './Editor.style';
 
-const PlatformsEditor = ({ x, y, width, height, onChange, i }) => (
+const PlatformsEditor = ({ x, y, width, height, onChange, deletePlatform, i }) => (
   <FieldEditor>
     <ItemNumber>{i}</ItemNumber>
+    <DeleteItem data-n={i} onClick={deletePlatform}>
+      ✕
+    </DeleteItem>
     <div>
       <label>x:</label>
-      <input type="number" defaultValue={x} onBlur={onChange} step="10" data-n={i} data-prop="x" />
+      <input type="number" value={x} onChange={onChange} step="10" data-n={i} data-prop="x" />
     </div>
     <div>
       <label>y:</label>
-      <input type="number" defaultValue={y} onBlur={onChange} step="10" data-n={i} data-prop="y" />
+      <input type="number" value={y} onChange={onChange} step="10" data-n={i} data-prop="y" />
     </div>
     <div>
       <label>width:</label>
       <input
         type="number"
-        defaultValue={width}
-        onBlur={onChange}
+        value={width}
+        onChange={onChange}
         step="10"
         data-n={i}
         data-prop="width"
@@ -28,8 +31,8 @@ const PlatformsEditor = ({ x, y, width, height, onChange, i }) => (
       <label>height:</label>
       <input
         type="number"
-        defaultValue={height}
-        onBlur={onChange}
+        value={height}
+        onChange={onChange}
         step="10"
         data-n={i}
         data-prop="height"
@@ -44,6 +47,7 @@ PlatformsEditor.propTypes = {
   width: PropTypes.number.isRequired,
   height: PropTypes.number.isRequired,
   onChange: PropTypes.func.isRequired,
+  deletePlatform: PropTypes.func.isRequired,
   i: PropTypes.number.isRequired
 };
 

@@ -1,15 +1,30 @@
 const initialState = null;
 
 const defaultPlatform = {
-  x: 0,
-  y: 0,
+  x: 100,
+  y: 100,
   width: 200,
   height: 20
+};
+
+const defaultParticle = {
+  x: 100,
+  y: 100,
+  type: 'duplicate'
 };
 
 export default (state = initialState, action) => {
   const { type, payload } = action;
   const levelNumber = payload && payload.level && `level${payload.level}`;
+
+  const updateProperty = ({ property, value }) => ({
+    ...state,
+    [levelNumber]: {
+      ...state[levelNumber],
+      [property]: value
+    }
+  });
+
   switch (type) {
     case 'UPDATE_LEVEL':
       switch (payload.type) {
@@ -65,6 +80,16 @@ export default (state = initialState, action) => {
               }
             }
           };
+        case 'width':
+          return updateProperty({
+            property: 'width',
+            value: Number(payload.value)
+          });
+        case 'height':
+          return updateProperty({
+            property: 'height',
+            value: Number(payload.value)
+          });
         default:
           return state;
       }
@@ -74,6 +99,33 @@ export default (state = initialState, action) => {
         [levelNumber]: {
           ...state[levelNumber],
           platforms: state[levelNumber].platforms.concat(defaultPlatform)
+        }
+      };
+    }
+    case 'ADD_PARTICLE': {
+      return {
+        ...state,
+        [levelNumber]: {
+          ...state[levelNumber],
+          particles: state[levelNumber].particles.concat(defaultParticle)
+        }
+      };
+    }
+    case 'DELETE_PLATFORM': {
+      return {
+        ...state,
+        [levelNumber]: {
+          ...state[levelNumber],
+          platforms: state[levelNumber].platforms.filter((p, i) => i !== Number(payload.n))
+        }
+      };
+    }
+    case 'DELETE_PARTICLE': {
+      return {
+        ...state,
+        [levelNumber]: {
+          ...state[levelNumber],
+          particles: state[levelNumber].particles.filter((p, i) => i !== Number(payload.n))
         }
       };
     }

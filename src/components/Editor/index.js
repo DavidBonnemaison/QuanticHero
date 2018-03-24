@@ -25,6 +25,10 @@ class Editor extends React.Component {
     game: PropTypes.object.isRequired,
     levels: PropTypes.object.isRequired,
     update: PropTypes.func.isRequired,
+    addPlatform: PropTypes.func.isRequired,
+    deletePlatform: PropTypes.func.isRequired,
+    addParticle: PropTypes.func.isRequired,
+    deleteParticle: PropTypes.func.isRequired,
     setLevels: PropTypes.func.isRequired,
     play: PropTypes.func.isRequired,
     updateCurrentGameLevel: PropTypes.func.isRequired
@@ -38,6 +42,7 @@ class Editor extends React.Component {
     const { value, dataset } = target;
     const { n, prop } = dataset;
     this.props.update({ level: this.state.level, type, n, prop, value });
+    target.focus();
   }
 
   componentDidMount() {
@@ -59,14 +64,29 @@ class Editor extends React.Component {
     this.props.setLevels(levels);
   };
 
+  getScale = ({ width, height }) =>
+    max([(window.innerWidth - 220) / width, window.innerHeight / height]);
+
+  deletePlatform = ({ target }) =>
+    this.props.deletePlatform({
+      level: this.state.level,
+      n: target.dataset.n
+    });
+
+  deleteParticle = ({ target }) =>
+    this.props.deleteParticle({
+      level: this.state.level,
+      n: target.dataset.n
+    });
+
   render() {
     if (!this.props.levels) {
       return null;
     }
-    const { play, levels } = this.props;
+    const { play, levels, addPlatform, addParticle } = this.props;
     const level = levels[`level${this.state.level}`];
     const { platforms, particles, hue, antiHue, width, height, player, door } = level;
-    const scale = max([(window.innerWidth - 220) / width, window.innerHeight / height]);
+    const scale = this.getScale({ width, height });
     const levelsRange = range(1, 11);
 
     return (
@@ -76,29 +96,58 @@ class Editor extends React.Component {
           <select value={this.state.level} onChange={this.changeLevel}>
             {levelsRange.map(l => (
               <option key={`level${l}`} value={l}>
-                {l}
+                {l} - {levels[`level${l}`].atom}
               </option>
             ))}
           </select>
+          <FieldEditor>
+            <div>
+              <label>width:</label>
+              <input
+                type="number"
+                value={width}
+                onChange={e => this.onChange(e, 'width')}
+                step="10"
+                data-n={0}
+                data-prop="width"
+              />
+            </div>
+            <div>
+              <label>height:</label>
+              <input
+                type="number"
+                value={height}
+                onChange={e => this.onChange(e, 'height')}
+                step="10"
+                data-n={0}
+                data-prop="height"
+              />
+            </div>
+          </FieldEditor>
           <h3>
             Platforms
-            <AddButton>+</AddButton>
+            <AddButton onClick={() => addPlatform({ level: this.state.level })}>+</AddButton>
           </h3>
           {platforms.map((p, i) => (
             <PlatformsEditor
               {...p}
-              key={`platform${p.x}${p.y}`}
+              key={`platform${i}`}
               onChange={e => this.onChange(e, 'platform')}
+              deletePlatform={this.deletePlatform}
               i={i}
             />
           ))}
           <hr />
-          <h3>Particles</h3>
+          <h3>
+            Particles
+            <AddButton onClick={() => addParticle({ level: this.state.level })}>+</AddButton>
+          </h3>
           {particles.map((p, i) => (
             <ParticlesEditor
               {...p}
-              key={`particles${p.x}${p.y}`}
+              key={`particles${i}`}
               onChange={e => this.onChange(e, 'particle')}
+              deleteParticle={this.deleteParticle}
               i={i}
             />
           ))}
@@ -108,8 +157,8 @@ class Editor extends React.Component {
               <label>x:</label>
               <input
                 type="number"
-                defaultValue={player.position.x}
-                onBlur={e => this.onChange(e, 'player')}
+                value={player.position.x}
+                onChange={e => this.onChange(e, 'player')}
                 step="10"
                 data-n={0}
                 data-prop="x"
@@ -119,8 +168,8 @@ class Editor extends React.Component {
               <label>y:</label>
               <input
                 type="number"
-                defaultValue={player.position.y}
-                onBlur={e => this.onChange(e, 'player')}
+                value={player.position.y}
+                onChange={e => this.onChange(e, 'player')}
                 step="10"
                 data-n={0}
                 data-prop="y"
@@ -133,8 +182,8 @@ class Editor extends React.Component {
               <label>x:</label>
               <input
                 type="number"
-                defaultValue={door.x}
-                onBlur={e => this.onChange(e, 'portal')}
+                value={door.x}
+                onChange={e => this.onChange(e, 'portal')}
                 step="10"
                 data-n={0}
                 data-prop="x"
@@ -144,8 +193,8 @@ class Editor extends React.Component {
               <label>y:</label>
               <input
                 type="number"
-                defaultValue={door.y}
-                onBlur={e => this.onChange(e, 'portal')}
+                value={door.y}
+                onChange={e => this.onChange(e, 'portal')}
                 step="10"
                 data-n={0}
                 data-prop="y"
@@ -167,7 +216,7 @@ class Editor extends React.Component {
             />
           ))}
           {particles.map((p, i) => (
-            <DrawParticle key={`particleDrawing${p.x}${p.y}`} {...p} scale={scale} />
+            <DrawParticle key={`particleDrawing${p.x}${p.y}`} {...p} scale={scale} i={i} />
           ))}
           <div
             style={{
@@ -203,7 +252,11 @@ const mapDispatchToProps = dispatch => ({
     dispatch(actions.update({ level, type, n, prop, value })),
   setLevels: data => dispatch(actions.setLevels(data)),
   play: () => dispatch(push('/game')),
-  updateCurrentGameLevel: n => dispatch(updateCurrentLevel(n))
+  updateCurrentGameLevel: n => dispatch(updateCurrentLevel(n)),
+  addPlatform: n => dispatch(actions.addPlatform(n)),
+  deletePlatform: ({ level, n }) => dispatch(actions.deletePlatform({ level, n })),
+  addParticle: n => dispatch(actions.addParticle(n)),
+  deleteParticle: ({ level, n }) => dispatch(actions.deleteParticle({ level, n }))
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(Editor);

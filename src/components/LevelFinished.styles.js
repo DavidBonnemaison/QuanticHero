@@ -4,6 +4,8 @@ export const Container = styled.div`
   color: white;
   font-size: 20px;
   text-align: center;
+  position: relative;
+  height: 100vh;
 `;
 
 export const Done = styled.div`
@@ -30,6 +32,7 @@ export const ScoreType = styled.div`
 export const ButtonContainer = styled.div`
   position: absolute;
   bottom: 15px;
+  left: 0;
   height: 60px;
   width: 100%;
 `;
@@ -40,7 +43,7 @@ export const Button = styled.div`
   bottom: 15px;
   width: 22%;
   padding: 10px;
-  font-size: 36px;
+  font-size: 30px;
   background-color: ${p =>
     p.type === 'next' ? `#b71c1c` : p.type === 'retry' ? `#b1810f` : `#888`};
   margin-right: 5%;
