@@ -10,7 +10,8 @@ import {
   FieldEditor,
   PlayButton,
   ResetButton,
-  AddButton
+  AddButton,
+  DownloadButton
 } from './Editor.style';
 import { connect } from 'react-redux';
 import * as actions from './../../actions/levels';
@@ -19,6 +20,38 @@ import PlatformsEditor from './PlatformsEditor';
 import ParticlesEditor from './ParticleEditor';
 import DrawPlatform from './DrawPlatform';
 import DrawParticle from './DrawParticle';
+
+const downloader = (filename, text) => {
+  var element = document.createElement('a');
+  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+  element.setAttribute('download', filename);
+
+  element.style.display = 'none';
+  document.body.appendChild(element);
+
+  element.click();
+
+  document.body.removeChild(element);
+};
+
+const Grid = ({ h, v, scale }) => {
+  const s = 20 * scale;
+  return range(0, h).map(x =>
+    range(0, v).map(y => (
+      <div
+        key={`gridItem-${x}-${y}`}
+        style={{
+          position: 'absolute',
+          left: `${x * s}px`,
+          top: `${y * s}px`,
+          width: `${s}px`,
+          height: `${s}px`,
+          backgroundColor: (x + y) % 2 === 0 ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'
+        }}
+      />
+    ))
+  );
+};
 
 class Editor extends React.Component {
   static propTypes = {
@@ -79,6 +112,12 @@ class Editor extends React.Component {
       n: target.dataset.n
     });
 
+  download = () => {
+    const levelName = `level${this.state.level}`;
+    const content = JSON.stringify(this.props.levels[levelName], null, 2);
+    downloader(`${levelName}.json`, content);
+  };
+
   render() {
     if (!this.props.levels) {
       return null;
@@ -88,6 +127,10 @@ class Editor extends React.Component {
     const { platforms, particles, hue, antiHue, width, height, player, door } = level;
     const scale = this.getScale({ width, height });
     const levelsRange = range(1, 11);
+    const grid = {
+      h: width / 20,
+      v: height / 20
+    };
 
     return (
       <Container>
@@ -225,6 +268,7 @@ class Editor extends React.Component {
         <DisplayPanel hue={hue} width={width * scale} height={height * scale}>
           <PlayButton onClick={play}>PLAY</PlayButton>
           <ResetButton onClick={this.resetLevels}>RESET</ResetButton>
+          <DownloadButton onClick={this.download}>DOWNLOAD</DownloadButton>
           {platforms.map((p, i) => (
             <DrawPlatform
               key={`platformDrawing${p.x}${p.y}`}
@@ -260,6 +304,7 @@ class Editor extends React.Component {
               borderRadius: '50%'
             }}
           />
+          <Grid {...grid} scale={scale} />
         </DisplayPanel>
       </Container>
     );

@@ -43,7 +43,7 @@ export const FieldEditor = styled.div`
 
 export const DisplayPanel = styled.div`
   position: absolute;
-  left: 220px;
+  left: 260px;
   top: 0;
   right: 0;
   bottom: 0;
@@ -67,6 +67,15 @@ export const ResetButton = styled.button`
   position: fixed;
   top: 0;
   left: 260px;
+  font-size: 16px;
+  z-index: 1;
+`;
+
+export const DownloadButton = styled.button`
+  padding: 10px;
+  position: fixed;
+  top: 0;
+  left: 360px;
   font-size: 16px;
   z-index: 1;
 `;
@@ -115,4 +124,8 @@ export const DeleteItem = styled.div`
   color: red;
   padding: 10px;
   cursor: pointer;
+`;
+
+export const GridItem = styled.div`
+  position: absolute;
 `;
