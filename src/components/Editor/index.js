@@ -92,7 +92,7 @@ class Editor extends React.Component {
     return (
       <Container>
         <EditPanel>
-          Level{' '}
+          <h3>Level</h3>
           <select value={this.state.level} onChange={this.changeLevel}>
             {levelsRange.map(l => (
               <option key={`level${l}`} value={l}>
@@ -121,6 +121,26 @@ class Editor extends React.Component {
                 step="10"
                 data-n={0}
                 data-prop="height"
+              />
+            </div>
+            <div>
+              <label>Hue:</label>
+              <input
+                type="color"
+                value={hue}
+                onChange={e => this.onChange(e, 'hue')}
+                data-n={0}
+                data-prop="hue"
+              />
+            </div>
+            <div>
+              <label>A-hue:</label>
+              <input
+                type="color"
+                value={antiHue}
+                onChange={e => this.onChange(e, 'antiHue')}
+                data-n={0}
+                data-prop="hue"
               />
             </div>
           </FieldEditor>

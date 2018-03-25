@@ -90,6 +90,16 @@ export default (state = initialState, action) => {
             property: 'height',
             value: Number(payload.value)
           });
+        case 'hue':
+          return updateProperty({
+            property: 'hue',
+            value: payload.value
+          });
+        case 'antiHue':
+          return updateProperty({
+            property: 'antiHue',
+            value: payload.value
+          });
         default:
           return state;
       }
