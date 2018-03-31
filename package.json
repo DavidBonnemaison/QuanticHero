@@ -60,6 +60,8 @@
     "phaser-swipe": "^1.0.4",
     "randomcolor": "^0.5.3",
     "react": "^16.2.0",
+    "react-dnd": "^2.6.0",
+    "react-dnd-html5-backend": "^2.6.0",
     "react-dom": "^16.2.0",
     "react-redux": "^5.0.7",
     "react-router": "3.2.1",
@@ -72,7 +74,11 @@
     "webfontloader": "^1.6.28"
   },
   "cordova": {
-    "platforms": ["android", "browser", "ios"],
+    "platforms": [
+      "android",
+      "browser",
+      "ios"
+    ],
     "plugins": {
       "cordova-plugin-whitelist": {}
     }

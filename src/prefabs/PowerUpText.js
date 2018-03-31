@@ -6,17 +6,18 @@ export default class PowerUpText extends Phaser.Group {
     this.game = game;
     this.type = type;
 
-    const powerUptext = new Phaser.Text(this.game, 20, 70, 'POWER UP !', {
-      font: '40px VT323',
+    this.powerUptext = new Phaser.Text(this.game, this.game.width, 70, `${type.toUpperCase()} !`, {
+      font: '180px VT323',
       fill: '#ffffff',
       align: 'center'
     });
 
-    this.add(powerUptext);
+    this.alpha = 0.5;
+    this.add(this.powerUptext);
     this.fixedToCamera = true;
   }
 
   update() {
-    this.x += 10;
+    this.powerUptext.x -= 5;
   }
 }

@@ -6,6 +6,7 @@ export const Container = styled.div`
   text-align: center;
   position: relative;
   height: 100vh;
+  width: 100%;
 `;
 
 export const Done = styled.div`

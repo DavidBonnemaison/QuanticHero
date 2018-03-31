@@ -38,6 +38,7 @@ export const FieldEditor = styled.div`
     display: inline-block;
     width: 70px;
     padding: 3px;
+    border: 1px solid #ddd;
   }
 `;
 
@@ -92,20 +93,17 @@ export const AddButton = styled.div`
   border: 2px solid black;
 `;
 
-export const Platform = styled.div`
+export const PlatformNumber = styled.div`
+  font-size: ${p => p.scale * 40}px;
+  background-color: ${p => p.color};
+  color: ${p => p.anti};
   position: absolute;
+  top: ${p => p.scale * -10}px;
+  width: ${p => p.scale * 40}px;
+  margin-left: ${p => p.scale * -20}px;
   text-align: center;
-  color: ${p => p.antiHue};
-  span {
-    font-size: ${p => p.scale * 40}px;
-    background-color: ${p => p.color};
-    position: relative;
-    top: ${p => p.scale * -10}px;
-    width: ${p => p.scale * 40}px;
-    text-align: center;
-    display: inline-block;
-    border-radius: 50%;
-  }
+  display: inline-block;
+  border-radius: 50%;
 `;
 
 export const ItemNumber = styled.div`

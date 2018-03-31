@@ -2,6 +2,10 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { range, max } from 'lodash';
 import { push } from 'react-router-redux';
+import { connect } from 'react-redux';
+import HTML5Backend from 'react-dnd-html5-backend';
+import { DragDropContext, DropTarget } from 'react-dnd';
+
 import * as levels from './../../data/levels';
 import {
   Container,
@@ -13,7 +17,6 @@ import {
   AddButton,
   DownloadButton
 } from './Editor.style';
-import { connect } from 'react-redux';
 import * as actions from './../../actions/levels';
 import { updateCurrentLevel } from './../../actions/game';
 import PlatformsEditor from './PlatformsEditor';
@@ -34,6 +37,16 @@ const downloader = (filename, text) => {
   document.body.removeChild(element);
 };
 
+const collect = connect => ({ connectDropTarget: connect.dropTarget() });
+
+const target = {
+  drop(props, monitor) {
+    return {
+      diff: monitor.getDifferenceFromInitialOffset()
+    };
+  }
+};
+
 const Grid = ({ h, v, scale }) => {
   const s = 20 * scale;
   return range(0, h).map(x =>
@@ -46,6 +59,7 @@ const Grid = ({ h, v, scale }) => {
           top: `${y * s}px`,
           width: `${s}px`,
           height: `${s}px`,
+          pointerEvents: 'none',
           backgroundColor: (x + y) % 2 === 0 ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'
         }}
       />
@@ -122,7 +136,7 @@ class Editor extends React.Component {
     if (!this.props.levels) {
       return null;
     }
-    const { play, levels, addPlatform, addParticle } = this.props;
+    const { play, levels, addPlatform, addParticle, update } = this.props;
     const level = levels[`level${this.state.level}`];
     const { platforms, particles, hue, antiHue, width, height, player, door } = level;
     const scale = this.getScale({ width, height });
@@ -265,47 +279,17 @@ class Editor extends React.Component {
             </div>
           </FieldEditor>
         </EditPanel>
-        <DisplayPanel hue={hue} width={width * scale} height={height * scale}>
-          <PlayButton onClick={play}>PLAY</PlayButton>
-          <ResetButton onClick={this.resetLevels}>RESET</ResetButton>
-          <DownloadButton onClick={this.download}>DOWNLOAD</DownloadButton>
-          {platforms.map((p, i) => (
-            <DrawPlatform
-              key={`platformDrawing${p.x}${p.y}`}
-              {...p}
-              color={antiHue}
-              scale={scale}
-              antiHue={antiHue}
-              i={i}
-            />
-          ))}
-          {particles.map((p, i) => (
-            <DrawParticle key={`particleDrawing${p.x}${p.y}`} {...p} scale={scale} i={i} />
-          ))}
-          <div
-            style={{
-              position: 'absolute',
-              left: `${player.position.x * scale}px`,
-              top: `${player.position.y * scale}px`,
-              width: `${20 * scale}px`,
-              height: `${50 * scale}px`,
-              backgroundColor: 'red'
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              left: `${door.x * scale - 25}px`,
-              top: `${door.y * scale - 60}px`,
-              width: `${70 * scale}px`,
-              height: `${70 * scale}px`,
-              backgroundColor: 'rgba(255,255,255,0.5)',
-              border: `${5 * scale}px solid black`,
-              borderRadius: '50%'
-            }}
-          />
-          <Grid {...grid} scale={scale} />
-        </DisplayPanel>
+        <TargetedEditor
+          {...this.props}
+          scale={scale}
+          play={play}
+          grid={grid}
+          resetLevels={this.resetLevels}
+          download={this.download}
+          level={level}
+          update={update}
+          currentLevel={this.state.level}
+        />
       </Container>
     );
   }
@@ -324,4 +308,82 @@ const mapDispatchToProps = dispatch => ({
   deleteParticle: ({ level, n }) => dispatch(actions.deleteParticle({ level, n }))
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(Editor);
+const EditorComponent = ({
+  level,
+  scale,
+  grid,
+  play,
+  resetLevels,
+  download,
+  connectDropTarget,
+  update,
+  currentLevel
+}) => {
+  const { platforms, particles, hue, antiHue, width, height, player, door } = level;
+  const onDrop = ({ n, x, y }) => {
+    update({
+      level: currentLevel,
+      type: 'platform',
+      n,
+      prop: 'x',
+      value: x
+    });
+    update({
+      level: currentLevel,
+      type: 'platform',
+      n,
+      prop: 'y',
+      value: y
+    });
+  };
+  return connectDropTarget(
+    <div>
+      <DisplayPanel hue={hue} width={width * scale} height={height * scale}>
+        <PlayButton onClick={play}>PLAY</PlayButton>
+        <ResetButton onClick={resetLevels}>RESET</ResetButton>
+        <DownloadButton onClick={download}>DOWNLOAD</DownloadButton>
+        {platforms.map((p, i) => (
+          <DrawPlatform
+            key={`platformDrawing${p.x}${p.y}`}
+            {...p}
+            color={antiHue}
+            scale={scale}
+            antiHue={hue}
+            onDrop={onDrop}
+            i={i}
+          />
+        ))}
+        {particles.map((p, i) => (
+          <DrawParticle key={`particleDrawing${p.x}${p.y}`} {...p} scale={scale} i={i} />
+        ))}
+        <div
+          style={{
+            position: 'absolute',
+            left: `${player.position.x * scale}px`,
+            top: `${player.position.y * scale}px`,
+            width: `${20 * scale}px`,
+            height: `${80 * scale}px`,
+            backgroundColor: 'red'
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: `${(door.x - 40) * scale}px`,
+            top: `${(door.y - 100) * scale}px`,
+            width: `${70 * scale}px`,
+            height: `${70 * scale}px`,
+            backgroundColor: 'rgba(255,255,255,0.5)',
+            border: `${5 * scale}px solid black`,
+            borderRadius: '50%'
+          }}
+        />
+        <Grid {...grid} scale={scale} />
+      </DisplayPanel>
+    </div>
+  );
+};
+
+const TargetedEditor = DropTarget('DrawPlatform', target, collect)(EditorComponent);
+
+export default connect(mapStateToProps, mapDispatchToProps)(DragDropContext(HTML5Backend)(Editor));
