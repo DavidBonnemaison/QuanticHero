@@ -1,1 +1,65 @@
-{"id":"3","symbol":"Li","atom":"Lithium","uncertainty":3,"width":1800,"height":1100,"hue":"#f3fd2e","antiHue":"#0c02d1","player":{"position":{"x":900,"y":1000}},"spikes":[{"x":0,"y":1090,"width":450,"height":10},{"x":1350,"y":1090,"width":450,"height":10}],"particles":[{"x":210,"y":750},{"x":370,"y":720},{"x":1360,"y":860}],"platforms":[{"x":450,"y":1080,"width":900,"height":20},{"x":500,"y":1000,"width":150,"height":20},{"x":830,"y":940,"width":150,"height":20},{"x":430,"y":900,"width":130,"height":20},{"x":360,"y":800,"width":100,"height":20},{"x":1500,"y":990,"width":120,"height":20},{"x":760,"y":840,"width":160,"height":20},{"x":1040,"y":830,"width":120,"height":20},{"x":640,"y":700,"width":140,"height":20},{"x":1180,"y":960,"width":100,"height":20},{"x":920,"y":730,"width":120,"height":20},{"x":1360,"y":780,"width":170,"height":20},{"x":200,"y":920,"width":130,"height":20}],"door":{"x":710,"y":700}}
+{
+  "id": "3",
+  "symbol": "Li",
+  "atom": "Lithium",
+  "uncertainty": 3,
+  "width": 1800,
+  "height": 1100,
+  "hue": "#ffb700",
+  "antiHue": "#0c02d1",
+  "player": {
+    "position": {
+      "x": 100,
+      "y": 980
+    }
+  },
+  "explanations": [
+    "Hey, uh.. That next portal is too far for you to reach it.",
+    "I'll put a special electron to help you get there."
+  ],
+  "spikes": [
+    {
+      "x": 0,
+      "y": 1090,
+      "width": 450,
+      "height": 10
+    },
+    {
+      "x": 1350,
+      "y": 1090,
+      "width": 450,
+      "height": 10
+    }
+  ],
+  "particles": [
+    {
+      "x": 880,
+      "y": 770,
+      "type": "lowGravity"
+    }
+  ],
+  "platforms": [
+    {
+      "x": 0,
+      "y": 1060,
+      "width": 1800,
+      "height": 40
+    },
+    {
+      "x": 1030,
+      "y": 940,
+      "width": 200,
+      "height": 20
+    },
+    {
+      "x": 790,
+      "y": 840,
+      "width": 200,
+      "height": 20
+    }
+  ],
+  "door": {
+    "x": 100,
+    "y": 900
+  }
+}

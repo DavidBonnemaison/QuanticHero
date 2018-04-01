@@ -25,6 +25,15 @@ class LevelFinished extends React.Component {
     goToMenu: PropTypes.func.isRequired
   };
 
+  nextLevel = () => {
+    const { explanations } = levels[`level${this.props.game.currentLevel}`];
+    if (!explanations) {
+      this.props.nextLevel();
+      return;
+    }
+    this.props.goToExplanation();
+  };
+
   render() {
     const { game, score, nextLevel, setCurrentLevel, goToMenu } = this.props;
     const currentLevels = score[game.currentLevel - 1] || {
@@ -58,7 +67,7 @@ class LevelFinished extends React.Component {
           <Button type="retry" onClick={retry}>
             Retry
           </Button>
-          <Button type="next" onClick={nextLevel}>
+          <Button type="next" onClick={this.nextLevel}>
             Next
           </Button>
         </ButtonContainer>
@@ -71,7 +80,8 @@ const mapStateToProps = ({ game, score }) => ({ game, score });
 const mapDispatchToProps = dispatch => ({
   nextLevel: () => dispatch(push('/game')),
   goToMenu: () => dispatch(push('/')),
-  setCurrentLevel: n => dispatch(actions.updateCurrentLevel(n))
+  setCurrentLevel: n => dispatch(actions.updateCurrentLevel(n)),
+  goToExplanation: () => dispatch(push('/explanation'))
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(LevelFinished);
