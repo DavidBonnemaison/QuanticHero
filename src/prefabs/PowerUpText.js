@@ -6,8 +6,15 @@ export default class PowerUpText extends Phaser.Group {
     this.game = game;
     this.type = type;
 
-    this.powerUptext = new Phaser.Text(this.game, this.game.width, 70, `${type.toUpperCase()} !`, {
-      font: '180px VT323',
+    const words = {
+      antiGravity: 'ANTI GRAVITY !',
+      lowGravity: 'LOW GRAVITY !',
+      speed: 'HIGH SPEED !',
+      duplicate: 'CLONING !'
+    };
+
+    this.powerUptext = new Phaser.Text(this.game, this.game.width, 100, words[type], {
+      font: '150px VT323',
       fill: '#ffffff',
       align: 'center'
     });
@@ -18,6 +25,6 @@ export default class PowerUpText extends Phaser.Group {
   }
 
   update() {
-    this.powerUptext.x -= 5;
+    this.powerUptext.x -= 8;
   }
 }

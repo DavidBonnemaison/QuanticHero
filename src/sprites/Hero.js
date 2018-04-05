@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import pixi from 'pixi';
 import { sample, uniqBy, round, remove, min, max, inRange } from 'lodash';
 import { setTimeout } from 'timers';
 
@@ -154,8 +153,7 @@ export default class Hero extends Phaser.Sprite {
     }
 
     if ((this.cursors.up.isDown || jump) && isOnGround && this.isFocused) {
-      this.body.velocity.y =
-        max([deltaY > 20 ? -12 * deltaY : -450, -450]) * this.upsideDown * this.velocityMultiplier;
+      this.body.velocity.y = max([deltaY > 20 ? -12 * deltaY : -450, -450]) * this.upsideDown;
       isOnGround = false;
       this.animations.play('jump');
     }
