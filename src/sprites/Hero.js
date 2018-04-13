@@ -134,7 +134,7 @@ export default class Hero extends Phaser.Sprite {
 
     let { deltaX, deltaY } = this.touchCheck;
     const lastDeltaX = previousMovement.deltaX;
-    const jump = deltaY > 20;
+    const jump = this.upsideDown === 1 ? deltaY > 20 : deltaY < -20;
     const goRight = deltaX > 20 || lastDeltaX > 20;
     const goLeft = deltaX < -20 || lastDeltaX < -20;
 
@@ -152,7 +152,9 @@ export default class Hero extends Phaser.Sprite {
       this.touchCheck.deltaX = previousMovement.deltaX;
     }
 
+    console.log(deltaY);
     if ((this.cursors.up.isDown || jump) && isOnGround && this.isFocused) {
+      console.log(jump);
       this.body.velocity.y = max([deltaY > 20 ? -12 * deltaY : -450, -450]) * this.upsideDown;
       isOnGround = false;
       this.animations.play('jump');

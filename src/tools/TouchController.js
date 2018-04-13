@@ -1,5 +1,5 @@
 import Phaser from 'phaser-ce';
-import { max } from 'lodash';
+import { max, min } from 'lodash';
 
 class TouchController {
   constructor(game) {
@@ -60,12 +60,15 @@ class TouchController {
       return this.lastMovement;
     }
 
-    if (this.lastMovement.deltaY > 20) {
+    const gravity = this.game.physics.arcade.gravity.y > 0 ? 1 : -1;
+
+    if (this.lastMovement.deltaY > 20 * gravity) {
       this.lastPosition.y = y;
     }
 
     const deltaX = x - this.lastPosition.x;
-    const deltaY = max([this.lastPosition.y - y, 0]);
+    const deltaY =
+      gravity === 1 ? max([this.lastPosition.y - y, 0]) : min([this.lastPosition.y - y, 0]);
 
     this.lastPosition = {
       x,
