@@ -151,10 +151,7 @@ export default class Hero extends Phaser.Sprite {
       deltaX = lastDeltaX;
       this.touchCheck.deltaX = previousMovement.deltaX;
     }
-
-    console.log(deltaY);
     if ((this.cursors.up.isDown || jump) && isOnGround && this.isFocused) {
-      console.log(jump);
       this.body.velocity.y = max([deltaY > 20 ? -12 * deltaY : -450, -450]) * this.upsideDown;
       isOnGround = false;
       this.animations.play('jump');

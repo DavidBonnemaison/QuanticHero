@@ -62,7 +62,7 @@ class TouchController {
 
     const gravity = this.game.physics.arcade.gravity.y > 0 ? 1 : -1;
 
-    if (this.lastMovement.deltaY > 20 * gravity) {
+    if (Math.abs(this.lastMovement.deltaY) > 20) {
       this.lastPosition.y = y;
     }
 
