@@ -100,8 +100,7 @@ export const LevelSelection: React.FC = () => {
             }`}
             onClick={() => setActiveTab('entanglement')}
           >
-            [ ENTANGLEMENT Ψ ⊗ Ψ ]
-            <span className={styles.entanglementTabBadge}>110-114</span>
+            [ ENTANGLEMENT Ψ ⊗ Ψ ]<span className={styles.entanglementTabBadge}>110-114</span>
           </button>
         </div>
       )}

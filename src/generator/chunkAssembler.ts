@@ -1,3 +1,5 @@
+import { getNarrativeForLevel } from '../data/cosmicNarrative';
+import { getElementSpectroscopy } from '../data/spectroscopy';
 import { PHYSICS } from '../physics/constants';
 import type { Door, LevelData, Particle, Platform, Spike } from '../types';
 import {
@@ -13,7 +15,7 @@ import {
   createSuperpositionChamberChunk,
   translateChunk
 } from './chunks';
-import { PERIODIC_ELEMENTS, SeededRandom, getAlphaForDifficulty } from './dagGenerator';
+import { SeededRandom, getAlphaForDifficulty } from './dagGenerator';
 import { isReachable, x_reach } from './kinematics';
 import { type SimulationResult, simulateFullLevel } from './simulator';
 
@@ -96,12 +98,7 @@ export function assemblePacedLevel(options: PacedAssemblerOptions = {}): PacedLe
   const alpha = getAlphaForDifficulty(atom, difficulty);
   const rng = new SeededRandom(seed);
 
-  const elementInfo = PERIODIC_ELEMENTS[atom] ?? {
-    symbol: `X${atom}`,
-    name: `Element-${atom}`,
-    hue: '#111827',
-    antiHue: '#38bdf8'
-  };
+  const elementInfo = getElementSpectroscopy(atom);
 
   // 1. Phase 1: Éveil (15%)
   const spawnX = 140;
@@ -245,6 +242,7 @@ export function assemblePacedLevel(options: PacedAssemblerOptions = {}): PacedLe
     height,
     hue: elementInfo.hue,
     antiHue: elementInfo.antiHue,
+    explanations: getNarrativeForLevel(atom),
     player,
     spikes: allSpikes,
     particles: allParticles,

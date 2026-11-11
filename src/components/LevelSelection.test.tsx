@@ -111,7 +111,9 @@ describe('LevelSelection component', () => {
 
     fireEvent.click(ghostBtn);
     expect(useGameStore.getState().ghostEnabled).toBe(false);
-    expect(screen.getByRole('button', { name: /ghost disabled/i })).toHaveTextContent('[GHOST: OFF]');
+    expect(screen.getByRole('button', { name: /ghost disabled/i })).toHaveTextContent(
+      '[GHOST: OFF]'
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /ghost disabled/i }));
     expect(useGameStore.getState().ghostEnabled).toBe(true);

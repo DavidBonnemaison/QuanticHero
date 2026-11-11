@@ -32,7 +32,9 @@ describe('ShareModal component', () => {
   it('renders modal with level info and QR code image when isOpen is true', async () => {
     render(<ShareModal isOpen={true} onClose={vi.fn()} level={mockLevel} />);
 
-    expect(screen.getByRole('heading', { level: 2, name: /quantum challenge/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: /quantum challenge/i })
+    ).toBeInTheDocument();
     expect(screen.getByText(/Quark/)).toBeInTheDocument();
 
     // QR code image is generated asynchronously

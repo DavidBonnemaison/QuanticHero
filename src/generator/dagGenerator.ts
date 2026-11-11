@@ -42,48 +42,19 @@ export class SeededRandom {
   }
 }
 
-// Periodic Table data (first 36 elements with name, symbol, theme hues)
+import { getNarrativeForLevel } from '../data/cosmicNarrative';
+import { SPECTROSCOPY_DATABASE, getElementSpectroscopy } from '../data/spectroscopy';
+
+// Complete Periodic Table data derived from the 118-element spectroscopy database
 export const PERIODIC_ELEMENTS: Record<
   number,
   { symbol: string; name: string; hue: string; antiHue: string }
-> = {
-  1: { symbol: 'H', name: 'Hydrogen', hue: '#070737', antiHue: '#c56805' },
-  2: { symbol: 'He', name: 'Helium', hue: '#15082e', antiHue: '#eab308' },
-  3: { symbol: 'Li', name: 'Lithium', hue: '#2e0819', antiHue: '#10b981' },
-  4: { symbol: 'Be', name: 'Beryllium', hue: '#0c2e08', antiHue: '#f43f5e' },
-  5: { symbol: 'B', name: 'Boron', hue: '#2e2608', antiHue: '#3b82f6' },
-  6: { symbol: 'C', name: 'Carbon', hue: '#18181b', antiHue: '#06b6d4' },
-  7: { symbol: 'N', name: 'Nitrogen', hue: '#f2a6cc', antiHue: '#0d5933' },
-  8: { symbol: 'O', name: 'Oxygen', hue: '#b3c009', antiHue: '#4c3ff6' },
-  9: { symbol: 'F', name: 'Fluorine', hue: '#09c09a', antiHue: '#f63f6f' },
-  10: { symbol: 'Ne', name: 'Neon', hue: '#ff0055', antiHue: '#00ffaa' },
-  11: { symbol: 'Na', name: 'Sodium', hue: '#e67e22', antiHue: '#2980b9' },
-  12: { symbol: 'Mg', name: 'Magnesium', hue: '#bdc3c7', antiHue: '#8e44ad' },
-  13: { symbol: 'Al', name: 'Aluminium', hue: '#95a5a6', antiHue: '#d35400' },
-  14: { symbol: 'Si', name: 'Silicon', hue: '#34495e', antiHue: '#1abc9c' },
-  15: { symbol: 'P', name: 'Phosphorus', hue: '#c0392b', antiHue: '#27ae60' },
-  16: { symbol: 'S', name: 'Sulfur', hue: '#f39c12', antiHue: '#2c3e50' },
-  17: { symbol: 'Cl', name: 'Chlorine', hue: '#16a085', antiHue: '#c0392b' },
-  18: { symbol: 'Ar', name: 'Argon', hue: '#8e44ad', antiHue: '#f1c40f' },
-  19: { symbol: 'K', name: 'Potassium', hue: '#9b59b6', antiHue: '#2ecc71' },
-  20: { symbol: 'Ca', name: 'Calcium', hue: '#7f8c8d', antiHue: '#e74c3c' },
-  21: { symbol: 'Sc', name: 'Scandium', hue: '#2c3e50', antiHue: '#3498db' },
-  22: { symbol: 'Ti', name: 'Titanium', hue: '#34495e', antiHue: '#e67e22' },
-  23: { symbol: 'V', name: 'Vanadium', hue: '#1abc9c', antiHue: '#9b59b6' },
-  24: { symbol: 'Cr', name: 'Chromium', hue: '#95a5a6', antiHue: '#c0392b' },
-  25: { symbol: 'Mn', name: 'Manganese', hue: '#d35400', antiHue: '#2980b9' },
-  26: { symbol: 'Fe', name: 'Iron', hue: '#7f8c8d', antiHue: '#f39c12' },
-  27: { symbol: 'Co', name: 'Cobalt', hue: '#2980b9', antiHue: '#e74c3c' },
-  28: { symbol: 'Ni', name: 'Nickel', hue: '#27ae60', antiHue: '#8e44ad' },
-  29: { symbol: 'Cu', name: 'Copper', hue: '#d35400', antiHue: '#16a085' },
-  30: { symbol: 'Zn', name: 'Zinc', hue: '#7f8c8d', antiHue: '#3498db' },
-  31: { symbol: 'Ga', name: 'Gallium', hue: '#bdc3c7', antiHue: '#9b59b6' },
-  32: { symbol: 'Ge', name: 'Germanium', hue: '#34495e', antiHue: '#e67e22' },
-  33: { symbol: 'As', name: 'Arsenic', hue: '#16a085', antiHue: '#c0392b' },
-  34: { symbol: 'Se', name: 'Selenium', hue: '#c0392b', antiHue: '#1abc9c' },
-  35: { symbol: 'Br', name: 'Bromine', hue: '#962d3e', antiHue: '#34888c' },
-  36: { symbol: 'Kr', name: 'Krypton', hue: '#34495e', antiHue: '#9b59b6' }
-};
+> = Object.fromEntries(
+  SPECTROSCOPY_DATABASE.map((el) => [
+    el.z,
+    { symbol: el.symbol, name: el.name, hue: el.hue, antiHue: el.antiHue }
+  ])
+);
 
 export function getAlphaForDifficulty(
   atom: number,
@@ -187,12 +158,7 @@ function attemptGeneration(
 ): { levelData: LevelData; simulation: SimulationResult } | null {
   const alpha = getAlphaForDifficulty(atom, difficulty);
   const rng = new SeededRandom(seed);
-  const elementInfo = PERIODIC_ELEMENTS[atom] ?? {
-    symbol: `X${atom}`,
-    name: `Element-${atom}`,
-    hue: '#111827',
-    antiHue: '#38bdf8'
-  };
+  const elementInfo = getElementSpectroscopy(atom);
 
   const maxApex = delta_y_max(); // ~144.64 px
   const maxClimb = maxApex * alpha; // e.g. ~101 to 127 px
@@ -323,6 +289,7 @@ function attemptGeneration(
     height,
     hue: elementInfo.hue,
     antiHue: elementInfo.antiHue,
+    explanations: getNarrativeForLevel(atom),
     player,
     spikes,
     particles,
