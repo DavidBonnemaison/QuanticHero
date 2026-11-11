@@ -158,7 +158,14 @@ export const useGameStore = create<GameStore>()(
 
       updateMaxEntanglementLevel: (lvl: number) => set({ maxEntanglementLevel: Number(lvl) }),
 
-      resetGame: () => set({ currentLevel: 0, maxLevel: 1, maxEntanglementLevel: 110 }),
+      resetGame: () =>
+        set({
+          currentLevel: 0,
+          maxLevel: 1,
+          maxEntanglementLevel: 110,
+          scores: {},
+          sharedLevel: null
+        }),
 
       recordScore: (level: number, score: number, ghostTrajectory?: string) =>
         set((state) => {
@@ -366,6 +373,7 @@ export const useGameStore = create<GameStore>()(
       partialize: (state) => ({
         currentLevel: state.currentLevel,
         maxLevel: state.maxLevel,
+        maxEntanglementLevel: state.maxEntanglementLevel,
         scores: state.scores,
         customLevels: state.customLevels,
         isMuted: state.isMuted,

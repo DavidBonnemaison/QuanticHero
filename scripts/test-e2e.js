@@ -85,6 +85,29 @@ async function run() {
 
     await page.waitForSelector('#app', { timeout: 5000 });
 
+    // Verify Retro Arcade Theme (no emojis, arcade buttons)
+    const menuThemeCheck = await page.evaluate(() => {
+      const text = document.body.textContent || '';
+      const forbiddenEmojis = ['🔊', '🔇', '📳', '📴', '✨', '⚡', '👻', '📤', '✏️', '📱'];
+      const foundEmojis = forbiddenEmojis.filter(emoji => text.includes(emoji));
+      const hasSoundBtn = text.includes('SND:');
+      const hasHapticBtn = text.includes('HAP:');
+      const hasFxBtn = text.includes('FX:');
+      return {
+        foundEmojis,
+        hasSoundBtn,
+        hasHapticBtn,
+        hasFxBtn
+      };
+    });
+    if (menuThemeCheck.foundEmojis.length > 0) {
+      throw new Error(`Modern emojis found in menu: ${menuThemeCheck.foundEmojis.join(', ')}`);
+    }
+    if (!menuThemeCheck.hasSoundBtn || !menuThemeCheck.hasHapticBtn || !menuThemeCheck.hasFxBtn) {
+      throw new Error(`Retro arcade controls missing: ${JSON.stringify(menuThemeCheck)}`);
+    }
+    console.log('✓ Retro arcade theme verified on menu (no modern emojis, [SND:], [HAP:], [FX:] active)!');
+
     // Look for New game clickable element
     const newGameFound = await page.evaluate(() => {
       const els = Array.from(document.querySelectorAll('*'));
@@ -152,6 +175,7 @@ async function run() {
           hasGame: true,
           currentState: gs && gs.scene.isActive() ? 'Game' : null,
           heroesCount: gs && gs.heroes ? gs.heroes.length : null,
+          ghostFramesCount: gs && gs.ghostFrames ? gs.ghostFrames.length : 0,
           portalKey: g.textures.exists('portal'),
           canvasTop: canvasRect ? canvasRect.top : null,
           portalX: p ? p.x : null,
@@ -181,6 +205,11 @@ async function run() {
       return { hasGame: false };
     });
     console.log('Game state evaluation:', JSON.stringify(gameState, null, 2));
+
+    if (gameState.ghostFramesCount > 0) {
+      throw new Error(`Ghost should NOT be active on first level run, but found ${gameState.ghostFramesCount} frames`);
+    }
+    console.log('✓ Ghost run logic verified: ghost is strictly inactive on first run');
 
     if (gameState.portalY !== 654) {
       throw new Error(`Portal Y coordinate invalid: ${gameState.portalY} (expected 654)`);
@@ -401,9 +430,9 @@ async function run() {
     });
     console.log('Level completion screen info:', JSON.stringify(donePageInfo));
     if (!donePageInfo.hasShareButton) {
-      throw new Error('Share button ("Partager 📤") not found on /done screen');
+      throw new Error('Share button ("Partager") not found on /done screen');
     }
-    console.log('✓ Level completion verified with "Partager 📤" button!');
+    console.log('✓ Level completion verified with "Partager" button!');
     await page.screenshot({ path: '/tmp/done_screenshot.png' });
     console.log('/done verified and screenshot saved to /tmp/done_screenshot.png!');
 
@@ -423,6 +452,168 @@ async function run() {
       throw new Error('Hydrogen (level 1) is not visible in initial viewport of /levels');
     }
     console.log('/levels verified successfully (Level 1 Hydrogen visible at top)!');
+
+    // VERIFY ENTANGLEMENT TAB IS HIDDEN WHEN maxLevel < 10
+    console.log('Verifying Entanglement tab is hidden when maxLevel < 10...');
+    const isEntanglementHidden = await page.evaluate(() => {
+      const text = document.body.textContent || '';
+      return !text.includes('INTRICATION');
+    });
+    if (!isEntanglementHidden) {
+      throw new Error('Entanglement tab should be hidden when maxLevel < 10');
+    }
+    console.log('✓ Entanglement tab is strictly hidden when player has unlocked fewer than 10 levels');
+
+    // UNLOCK 10 LEVELS AND VERIFY ENTANGLEMENT MODE
+    console.log('Unlocking 10 levels and verifying Entanglement tab appears...');
+    await page.evaluate(() => {
+      const storageKey = 'qtmhro';
+      const raw = localStorage.getItem(storageKey);
+      const stored = raw ? JSON.parse(raw) : { state: {} };
+      stored.state = {
+        ...stored.state,
+        maxLevel: 10,
+        currentLevel: 10,
+        maxEntanglementLevel: 110
+      };
+      localStorage.setItem(storageKey, JSON.stringify(stored));
+    });
+
+    await page.goto('http://localhost:4173/levels', { waitUntil: 'networkidle2' });
+    await new Promise(r => setTimeout(r, 600));
+
+    const entanglementTabClicked = await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const tab = btns.find(b => b.textContent && b.textContent.includes('INTRICATION'));
+      if (tab) {
+        tab.click();
+        return true;
+      }
+      return false;
+    });
+    if (!entanglementTabClicked) {
+      throw new Error('Entanglement tab button not found after unlocking 10 levels');
+    }
+    console.log('✓ Entanglement tab unlocked and switched!');
+    await new Promise(r => setTimeout(r, 600));
+
+    // Verify Darmstadtium (Level 110) is visible and click it
+    const darmstadtiumClicked = await page.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll('[role="button"]'));
+      const card = cards.find(e => e.textContent && e.textContent.includes('Darmstadtium'));
+      if (card) {
+        card.click();
+        return true;
+      }
+      return false;
+    });
+    if (!darmstadtiumClicked) {
+      throw new Error('Darmstadtium (Level 110) card not found or not clickable in entanglement tab');
+    }
+    console.log('✓ Clicked Level 110 Darmstadtium card!');
+
+    // Wait for navigation to /explanation or /game
+    await page.waitForFunction(() => window.location.pathname === '/explanation' || window.location.pathname === '/game', { timeout: 5000 });
+    console.log('Current URL after selecting level 110:', page.url());
+
+    if (page.url().includes('/explanation')) {
+      console.log('Level 110 explanation displayed, clicking "Got it"...');
+      const gotItClicked = await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const btn = btns.find(b => b.textContent && b.textContent.includes('Got it'));
+        if (btn) {
+          btn.click();
+          return true;
+        }
+        return false;
+      });
+      if (!gotItClicked) {
+        throw new Error('"Got it" button not found on explanation page for level 110');
+      }
+      await page.waitForFunction(() => window.location.pathname === '/game', { timeout: 5000 });
+      console.log('Arrived at /game after "Got it"!');
+    }
+
+    console.log('Waiting for Phaser Quantum Entanglement scene to load and be active...');
+    await page.waitForFunction(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      return Boolean(gs && gs.scene.isActive() && gs.isEntangled && gs.heroes && gs.heroes.length === 2);
+    }, { timeout: 10000 });
+
+    // Verify Entanglement scene state
+    const entanglementState = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return null;
+      return {
+        hasGame: true,
+        isEntangled: Boolean(gs.isEntangled),
+        heroesCount: gs.heroes ? gs.heroes.length : 0,
+        hasEntanglementBeam: Boolean(gs.entanglementGraphics),
+        hasAlphaPortal: Boolean(gs.portalSprite),
+        hasBetaPortal: Boolean(gs.betaPortalSprite),
+        alphaX: gs.heroes[0]?.x,
+        betaX: gs.heroes[1]?.x
+      };
+    });
+    console.log('Entanglement Game State:', JSON.stringify(entanglementState, null, 2));
+
+    if (!entanglementState || !entanglementState.isEntangled) {
+      throw new Error(`GameScene is not in entangled mode: ${JSON.stringify(entanglementState)}`);
+    }
+    if (entanglementState.heroesCount !== 2) {
+      throw new Error(`Expected 2 heroes in entangled mode, got ${entanglementState.heroesCount}`);
+    }
+    if (!entanglementState.hasEntanglementBeam) {
+      throw new Error('Entanglement laser beam graphics missing');
+    }
+    if (!entanglementState.hasAlphaPortal || !entanglementState.hasBetaPortal) {
+      throw new Error('Dual portals (Alpha and Beta) missing in entangled mode');
+    }
+    console.log('✓ Verified: 2 entangled heroes (Alpha & Beta) spawned with laser beam and dual portals!');
+
+    // Simulate entangled heroes reaching their respective portals
+    console.log('Simulating dual heroes docking into Alpha and Beta portals...');
+    const dualDockTriggered = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs || !gs.portalSprite || !gs.betaPortalSprite || !gs.heroes || gs.heroes.length < 2) return false;
+      const alphaHero = gs.heroes.find(h => !h.isBeta);
+      const betaHero = gs.heroes.find(h => h.isBeta);
+      if (!alphaHero || !betaHero) return false;
+
+      // Position alpha hero at alpha portal and beta hero at beta portal
+      alphaHero.x = gs.portalSprite.x;
+      alphaHero.y = gs.portalSprite.y;
+      betaHero.x = gs.betaPortalSprite.x;
+      betaHero.y = gs.betaPortalSprite.y;
+
+      gs.handleEntangledPortalArrival(alphaHero, gs.portalSprite, false);
+      gs.handleEntangledPortalArrival(betaHero, gs.betaPortalSprite, true);
+      return true;
+    });
+    if (!dualDockTriggered) {
+      throw new Error('Failed to trigger dual portal arrival in Entanglement level 110');
+    }
+
+    console.log('Waiting for automatic navigation to /done after Entanglement completion...');
+    await page.waitForFunction(() => window.location.pathname === '/done', { timeout: 6000 });
+    console.log('✓ Successfully arrived at /done after Quantum Entanglement completion!');
+
+    await new Promise(r => setTimeout(r, 600));
+    const entanglementDoneInfo = await page.evaluate(() => {
+      const text = document.body.textContent || '';
+      return {
+        hasDarmstadtium: text.includes('Darmstadtium'),
+        buttons: Array.from(document.querySelectorAll('button')).map(b => b.textContent.trim())
+      };
+    });
+    console.log('Entanglement completion info:', JSON.stringify(entanglementDoneInfo));
+    if (!entanglementDoneInfo.hasDarmstadtium) {
+      throw new Error('Darmstadtium was not displayed on /done screen');
+    }
+    console.log('✓ Darmstadtium completion verified on /done screen!');
+
+    await page.screenshot({ path: '/tmp/entanglement_done_screenshot.png' });
+    console.log('Entanglement screenshot saved to /tmp/entanglement_done_screenshot.png');
 
     console.log('Testing /editor route...');
     await page.goto('http://localhost:4173/editor', { waitUntil: 'networkidle2' });

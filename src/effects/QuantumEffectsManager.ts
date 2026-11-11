@@ -128,15 +128,27 @@ export class QuantumEffectsManager {
       const vy = hero.body.velocity.y;
       const speed = Math.sqrt(vx * vx + vy * vy);
 
-      // Subtle, non-intrusive micro-wake only when moving fast
-      if (speed > 80) {
+      // Hero moving at normal gameplay speeds emits visible quantum de Broglie aura
+      if (speed >= 15) {
         const baseColor = hero.isFocused ? 0x00e5ff : 0xbd00ff;
-        const waveOsc = Math.sin(time * 0.005);
-        const radius = 14 + (speed / 350) * 4 + waveOsc * 2;
-        const alpha = Math.min(0.12, (speed / 450) * 0.12);
+        const pulse = Math.sin(time * 0.007);
+        const auraRadius = 18 + Math.min(speed / 15, 6) + pulse * 2;
+        const alpha = Math.min(0.38, 0.2 + (speed / 300) * 0.18);
 
-        this.graphics.lineStyle(1.0, baseColor, alpha);
-        this.graphics.strokeCircle(hero.x, hero.y, radius);
+        // Core quantum aura
+        this.graphics.lineStyle(1.5, baseColor, alpha);
+        this.graphics.strokeCircle(hero.x, hero.y, auraRadius);
+
+        // Motion propagation ripple when moving fast enough
+        if (speed > 40) {
+          const ripplePhase = (time * 0.04 + speed * 0.015) % 18;
+          const rippleRadius = auraRadius + ripplePhase;
+          const rippleAlpha = Math.max(0, (1 - ripplePhase / 18) * 0.28);
+          if (rippleAlpha > 0.02) {
+            this.graphics.lineStyle(1.0, baseColor, rippleAlpha);
+            this.graphics.strokeCircle(hero.x, hero.y, rippleRadius);
+          }
+        }
       }
     }
   }

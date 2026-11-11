@@ -32,9 +32,8 @@ describe('ShareModal component', () => {
   it('renders modal with level info and QR code image when isOpen is true', async () => {
     render(<ShareModal isOpen={true} onClose={vi.fn()} level={mockLevel} />);
 
-    expect(screen.getByText('Partage de Niveau')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: /défi quantique/i })).toBeInTheDocument();
     expect(screen.getByText(/Quark/)).toBeInTheDocument();
-    expect(screen.getByText(/1 plateformes • 1 particules/)).toBeInTheDocument();
 
     // QR code image is generated asynchronously
     await waitFor(() => {
@@ -62,14 +61,14 @@ describe('ShareModal component', () => {
     fireEvent.click(copyBtn);
 
     expect(writeTextMock).toHaveBeenCalled();
-    expect(await screen.findByText('Lien copié dans le presse-papier !')).toBeInTheDocument();
+    expect(await screen.findByText(/lien copié dans le presse-papier/i)).toBeInTheDocument();
   });
 
-  it('triggers onPlay when "Tester immédiatement" is clicked', () => {
+  it('triggers onPlay when "Tester le défi" is clicked', () => {
     const onPlayMock = vi.fn();
     render(<ShareModal isOpen={true} onClose={vi.fn()} level={mockLevel} onPlay={onPlayMock} />);
 
-    const playBtn = screen.getByRole('button', { name: /tester immédiatement/i });
+    const playBtn = screen.getByRole('button', { name: /tester le défi/i });
     fireEvent.click(playBtn);
     expect(onPlayMock).toHaveBeenCalledTimes(1);
   });

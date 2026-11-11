@@ -42,6 +42,7 @@ describe('LevelFinished component', () => {
           <Route path="/done" element={<LevelFinished />} />
           <Route path="/game" element={<div>Game Screen</div>} />
           <Route path="/explanation" element={<div>Explanation Screen</div>} />
+          <Route path="/levels" element={<div>Levels Screen</div>} />
           <Route path="/editor" element={<div>Editor Screen</div>} />
         </Routes>
       </MemoryRouter>
@@ -113,26 +114,27 @@ describe('LevelFinished component', () => {
       });
     });
 
-    it('renders custom level details, custom badge, and score from slot 0', () => {
+    it('renders custom level details, speedrun challenge badge, and score from slot 0', () => {
       renderWithRouter();
 
-      expect(screen.getByText('Niveau Personnalisé')).toBeInTheDocument();
+      expect(screen.getByText(/DÉFI SPEEDRUN : Quarkonium/i)).toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 1, name: 'Quarkonium' })).toBeInTheDocument();
       expect(screen.getAllByText('00:12:40').length).toBe(2);
-      expect(screen.getByRole('button', { name: /éditer ce niveau/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /éditer ce niveau/i })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: /sauvegarder/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /partager/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /niveaux/i })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
     });
 
-    it('saves level to custom levels and navigates to editor when "Éditer ce niveau" is clicked', () => {
+    it('clears sharedLevel and navigates to levels when "Niveaux" is clicked', () => {
       renderWithRouter();
 
-      fireEvent.click(screen.getByRole('button', { name: /éditer ce niveau/i }));
+      fireEvent.click(screen.getByRole('button', { name: /niveaux/i }));
 
       const store = useGameStore.getState();
       expect(store.sharedLevel).toBeNull();
-      expect(store.customLevels?.level1.atom).toBe('Quarkonium');
-      expect(screen.getByText('Editor Screen')).toBeInTheDocument();
+      expect(screen.getByText('Levels Screen')).toBeInTheDocument();
     });
 
     it('saves level to custom levels and shows confirmation toast when "Sauvegarder" is clicked', () => {

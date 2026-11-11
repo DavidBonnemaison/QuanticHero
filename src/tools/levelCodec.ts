@@ -25,6 +25,8 @@ export interface MinifiedLevel {
   t?: Array<[number, number, number]>;
   sp?: Array<[number, number] | [number, number, number, number]>;
   e?: string[];
+  g?: string;
+  bt?: number;
 }
 
 function sanitizeNumber(val: unknown, min: number, max: number, defaultVal: number): number {
@@ -128,6 +130,12 @@ export function compressLevel(level: LevelData): string {
       .slice(0, 5)
       .map((ex) => sanitizeText(ex, 150, ''))
       .filter(Boolean);
+  }
+  if (level.authorGhost) {
+    minified.g = level.authorGhost;
+  }
+  if (level.authorTime !== undefined && level.authorTime > 0) {
+    minified.bt = Math.round(level.authorTime);
   }
 
   const json = JSON.stringify(minified);
@@ -333,6 +341,20 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
     }
   }
 
+  let authorGhost: string | undefined;
+  if (typeof raw.g === 'string' && raw.g.startsWith('v1|')) {
+    authorGhost = raw.g;
+  } else if (typeof raw.authorGhost === 'string' && raw.authorGhost.startsWith('v1|')) {
+    authorGhost = raw.authorGhost;
+  }
+
+  let authorTime: number | undefined;
+  if (typeof raw.bt === 'number' && raw.bt > 0) {
+    authorTime = Math.round(raw.bt);
+  } else if (typeof raw.authorTime === 'number' && raw.authorTime > 0) {
+    authorTime = Math.round(raw.authorTime);
+  }
+
   const level: LevelData = {
     id,
     symbol,
@@ -355,7 +377,9 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
     platforms,
     particles,
     spikes,
-    ...(explanations.length > 0 ? { explanations } : {})
+    ...(explanations.length > 0 ? { explanations } : {}),
+    ...(authorGhost ? { authorGhost } : {}),
+    ...(authorTime ? { authorTime } : {})
   };
 
   return level;

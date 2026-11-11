@@ -53,17 +53,12 @@ describe('Menu component', () => {
     expect(screen.getByText('Explanation Page')).toBeInTheDocument();
   });
 
-  it('renders Level Editor & Share button and navigates to editor on click', () => {
+  it('hides level editor button from main menu', () => {
     renderWithRouter();
-
-    const editorBtn = screen.getByRole('button', { name: /level editor & share/i });
-    expect(editorBtn).toBeInTheDocument();
-
-    fireEvent.click(editorBtn);
-    expect(screen.getByText('Editor Page')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /editor/i })).not.toBeInTheDocument();
   });
 
-  it('does not display Entanglement Mode button by default', () => {
+  it('does not display Entanglement Mode button on main menu', () => {
     renderWithRouter();
     expect(screen.queryByRole('button', { name: /entanglement mode/i })).not.toBeInTheDocument();
   });
@@ -98,15 +93,15 @@ describe('Menu component', () => {
 
     const soundButton = screen.getByRole('button', { name: /mute sound/i });
     expect(soundButton).toBeInTheDocument();
-    expect(soundButton).toHaveTextContent('🔊');
+    expect(soundButton).toHaveTextContent('SND:ON');
 
     fireEvent.click(soundButton);
     expect(useGameStore.getState().isMuted).toBe(true);
-    expect(screen.getByRole('button', { name: /unmute sound/i })).toHaveTextContent('🔇');
+    expect(screen.getByRole('button', { name: /unmute sound/i })).toHaveTextContent('SND:OFF');
 
     fireEvent.click(screen.getByRole('button', { name: /unmute sound/i }));
     expect(useGameStore.getState().isMuted).toBe(false);
-    expect(screen.getByRole('button', { name: /mute sound/i })).toHaveTextContent('🔊');
+    expect(screen.getByRole('button', { name: /mute sound/i })).toHaveTextContent('SND:ON');
   });
 
   it('renders haptics toggle button and toggles haptics state on click', () => {
@@ -114,15 +109,15 @@ describe('Menu component', () => {
 
     const hapticsButton = screen.getByRole('button', { name: /disable haptics/i });
     expect(hapticsButton).toBeInTheDocument();
-    expect(hapticsButton).toHaveTextContent('📳');
+    expect(hapticsButton).toHaveTextContent('HAP:ON');
 
     fireEvent.click(hapticsButton);
     expect(useGameStore.getState().hapticsEnabled).toBe(false);
-    expect(screen.getByRole('button', { name: /enable haptics/i })).toHaveTextContent('📴');
+    expect(screen.getByRole('button', { name: /enable haptics/i })).toHaveTextContent('HAP:OFF');
 
     fireEvent.click(screen.getByRole('button', { name: /enable haptics/i }));
     expect(useGameStore.getState().hapticsEnabled).toBe(true);
-    expect(screen.getByRole('button', { name: /disable haptics/i })).toHaveTextContent('📳');
+    expect(screen.getByRole('button', { name: /disable haptics/i })).toHaveTextContent('HAP:ON');
   });
 
   it('renders reduced effects toggle button and toggles reducedEffects state on click', () => {
@@ -130,18 +125,18 @@ describe('Menu component', () => {
 
     const fxButton = screen.getByRole('button', { name: /enable reduced visual effects/i });
     expect(fxButton).toBeInTheDocument();
-    expect(fxButton).toHaveTextContent('✨');
+    expect(fxButton).toHaveTextContent('FX:HI');
 
     fireEvent.click(fxButton);
     expect(useGameStore.getState().reducedEffects).toBe(true);
     expect(screen.getByRole('button', { name: /enable full visual effects/i })).toHaveTextContent(
-      '⚡'
+      'FX:LO'
     );
 
     fireEvent.click(screen.getByRole('button', { name: /enable full visual effects/i }));
     expect(useGameStore.getState().reducedEffects).toBe(false);
     expect(
       screen.getByRole('button', { name: /enable reduced visual effects/i })
-    ).toHaveTextContent('✨');
+    ).toHaveTextContent('FX:HI');
   });
 });

@@ -54,6 +54,7 @@ export default function Menu(): React.ReactElement {
   }, [customLevels, setLevels]);
 
   const handleNewGame = () => {
+    useGameStore.getState().resetGame();
     updateCurrentLevel(1);
     navigate('/explanation');
   };
@@ -98,7 +99,7 @@ export default function Menu(): React.ReactElement {
           aria-label={isMuted ? 'Unmute sound' : 'Mute sound'}
           title={isMuted ? 'Unmute sound' : 'Mute sound'}
         >
-          {isMuted ? '🔇' : '🔊'}
+          {isMuted ? 'SND:OFF' : 'SND:ON'}
         </button>
         <button
           type="button"
@@ -107,7 +108,7 @@ export default function Menu(): React.ReactElement {
           aria-label={hapticsEnabled ? 'Disable haptics' : 'Enable haptics'}
           title={hapticsEnabled ? 'Disable haptics' : 'Enable haptics'}
         >
-          {hapticsEnabled ? '📳' : '📴'}
+          {hapticsEnabled ? 'HAP:ON' : 'HAP:OFF'}
         </button>
         <button
           type="button"
@@ -118,7 +119,7 @@ export default function Menu(): React.ReactElement {
           }
           title={reducedEffects ? 'Enable full visual effects' : 'Enable reduced visual effects'}
         >
-          {reducedEffects ? '⚡' : '✨'}
+          {reducedEffects ? 'FX:LO' : 'FX:HI'}
         </button>
       </div>
       <div id="container" />
@@ -128,9 +129,6 @@ export default function Menu(): React.ReactElement {
       </button>
       <button type="button" className={styles.button} onClick={handleGoToLevels}>
         Levels
-      </button>
-      <button type="button" className={styles.button} onClick={() => navigate('/editor')}>
-        Level Editor & Share
       </button>
       {installPrompt && (
         <button type="button" className={styles.button} onClick={handleInstallClick}>

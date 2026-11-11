@@ -55,23 +55,26 @@
 }
 
 .soundButton {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 8px;
-  font-size: 26px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-family: "VT323", monospace;
+  font-size: 20px;
+  letter-spacing: 1px;
   line-height: 1;
-  padding: 8px 12px;
+  padding: 6px 10px;
   cursor: pointer;
-  color: #fff;
-  transition: background-color 0.15s, transform 0.1s;
+  color: #00ffcc;
+  transition: all 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .soundButton:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
+  background-color: #111;
+  border-color: #00ffcc;
+  box-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
 }
 
 .soundButton:active {

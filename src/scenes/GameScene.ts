@@ -383,11 +383,34 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // 7b. Ghost Hero Replay
+    // Display ghost only on replay of an already-beaten level or if challenge has author ghost
     const store = useGameStore.getState();
     const currentLvlNum = Number(this.levelData.id);
     const scoreItem = store.scores[currentLvlNum];
-    if (scoreItem?.ghostTrajectory) {
-      this.ghostFrames = decompressTrajectory(scoreItem.ghostTrajectory);
+
+    let trajectoryToReplay: string | undefined;
+
+    if (store.sharedLevel?.authorGhost) {
+      // Shared challenge with author ghost
+      trajectoryToReplay = store.sharedLevel.authorGhost;
+    } else if (store.sharedLevel) {
+      // Shared level without author ghost: check if player already beat it before
+      const sharedScore = store.scores[0];
+      if (sharedScore?.best && sharedScore.best > 0 && sharedScore.ghostTrajectory) {
+        trajectoryToReplay = sharedScore.ghostTrajectory;
+      }
+    } else {
+      // Standard career level: only show ghost if replaying a completed level (best > 0 and level < maxLevel)
+      const isReplay = Boolean(
+        scoreItem?.best && scoreItem.best > 0 && store.maxLevel > currentLvlNum
+      );
+      if (isReplay && scoreItem?.ghostTrajectory) {
+        trajectoryToReplay = scoreItem.ghostTrajectory;
+      }
+    }
+
+    if (trajectoryToReplay) {
+      this.ghostFrames = decompressTrajectory(trajectoryToReplay);
       if (this.ghostFrames.length > 0) {
         this.ghostHero = new GhostHero(this, this.ghostFrames);
         this.ghostHero.setVisible(store.ghostEnabled);
@@ -502,9 +525,9 @@ export default class GameScene extends Phaser.Scene {
     hudBar.setScrollFactor(0);
     hudBar.setDepth(100);
 
-    const backButton = this.add.text(12, 4, '↩', {
+    const backButton = this.add.text(10, 6, '◄', {
       fontFamily: 'VT323',
-      fontSize: '36px',
+      fontSize: '28px',
       color: '#ffffff'
     });
     backButton.setScrollFactor(0);
@@ -522,10 +545,11 @@ export default class GameScene extends Phaser.Scene {
     });
 
     // Sound toggle button
-    const getSoundLabel = () => (useGameStore.getState().isMuted ? '🔇' : '🔊');
-    const soundButton = this.add.text(50, 6, getSoundLabel(), {
-      fontFamily: '"Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif',
-      fontSize: '24px'
+    const getSoundLabel = () => (useGameStore.getState().isMuted ? 'SND:OFF' : 'SND:ON');
+    const soundButton = this.add.text(46, 8, getSoundLabel(), {
+      fontFamily: 'VT323',
+      fontSize: '20px',
+      color: '#00ffcc'
     });
     soundButton.setScrollFactor(0);
     soundButton.setDepth(101);
@@ -536,10 +560,11 @@ export default class GameScene extends Phaser.Scene {
     });
 
     // Haptic feedback toggle button
-    const getHapticLabel = () => (useGameStore.getState().hapticsEnabled ? '📳' : '📴');
-    const hapticButton = this.add.text(86, 6, getHapticLabel(), {
-      fontFamily: '"Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif',
-      fontSize: '24px'
+    const getHapticLabel = () => (useGameStore.getState().hapticsEnabled ? 'HAP:ON' : 'HAP:OFF');
+    const hapticButton = this.add.text(118, 8, getHapticLabel(), {
+      fontFamily: 'VT323',
+      fontSize: '20px',
+      color: '#00ffcc'
     });
     hapticButton.setScrollFactor(0);
     hapticButton.setDepth(101);
@@ -549,11 +574,12 @@ export default class GameScene extends Phaser.Scene {
       hapticButton.setText(getHapticLabel());
     });
 
-    // Visual effects toggle button (✨ full effects / ⚡ reduced effects)
-    const getFxLabel = () => (useGameStore.getState().reducedEffects ? '⚡' : '✨');
-    const fxButton = this.add.text(122, 6, getFxLabel(), {
-      fontFamily: '"Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif',
-      fontSize: '24px'
+    // Visual effects toggle button (FX:HI / FX:LO)
+    const getFxLabel = () => (useGameStore.getState().reducedEffects ? 'FX:LO' : 'FX:HI');
+    const fxButton = this.add.text(190, 8, getFxLabel(), {
+      fontFamily: 'VT323',
+      fontSize: '20px',
+      color: '#00ffcc'
     });
     fxButton.setScrollFactor(0);
     fxButton.setDepth(101);
@@ -563,22 +589,24 @@ export default class GameScene extends Phaser.Scene {
       fxButton.setText(getFxLabel());
     });
 
-    // Ghost replay toggle button (👻)
+    // Ghost replay toggle button [GHOST]
     const getGhostAlpha = () => (useGameStore.getState().ghostEnabled ? 1 : 0.35);
-    this.ghostButton = this.add.text(158, 6, '👻', {
-      fontFamily: '"Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif',
-      fontSize: '24px'
+    this.ghostButton = this.add.text(252, 8, '[GHOST]', {
+      fontFamily: 'VT323',
+      fontSize: '20px',
+      color: '#38bdf8'
     });
     this.ghostButton.setScrollFactor(0);
     this.ghostButton.setDepth(101);
     this.ghostButton.setAlpha(getGhostAlpha());
+    this.ghostButton.setVisible(this.ghostFrames.length > 0);
     this.ghostButton.setInteractive({ useHandCursor: true });
     this.ghostButton.on('pointerdown', () => {
       useGameStore.getState().toggleGhost();
       const isEnabled = useGameStore.getState().ghostEnabled;
       this.ghostButton?.setAlpha(getGhostAlpha());
       if (this.ghostHero) {
-        this.ghostHero.setVisible(isEnabled);
+        this.ghostHero.setVisible(isEnabled && this.ghostFrames.length > 0);
       }
       if (this.splitDeltaText) {
         this.splitDeltaText.setVisible(isEnabled && this.ghostFrames.length > 0);
@@ -598,8 +626,9 @@ export default class GameScene extends Phaser.Scene {
       if (this.ghostButton?.active) {
         const isEnabled = useGameStore.getState().ghostEnabled;
         this.ghostButton.setAlpha(getGhostAlpha());
+        this.ghostButton.setVisible(this.ghostFrames.length > 0);
         if (this.ghostHero) {
-          this.ghostHero.setVisible(isEnabled);
+          this.ghostHero.setVisible(isEnabled && this.ghostFrames.length > 0);
         }
         if (this.splitDeltaText) {
           this.splitDeltaText.setVisible(isEnabled && this.ghostFrames.length > 0);

@@ -19,9 +19,12 @@ export const LevelSelection: React.FC = () => {
   const ghostEnabled = useGameStore((state) => state.ghostEnabled);
   const toggleGhost = useGameStore((state) => state.toggleGhost);
 
-  const allowEntanglement = location.search.includes('entanglement=1');
-  const [activeTab] = useState<'classic' | 'entanglement'>(
-    allowEntanglement ? 'entanglement' : 'classic'
+  const isEntanglementUnlocked = maxLevel >= 10 || location.search.includes('entanglement=1');
+  const [activeTab, setActiveTab] = useState<'classic' | 'entanglement'>(
+    isEntanglementUnlocked &&
+      (location.search.includes('tab=entanglement') || location.search.includes('entanglement=1'))
+      ? 'entanglement'
+      : 'classic'
   );
 
   const raw = Object.keys(allLevels)
@@ -67,18 +70,9 @@ export const LevelSelection: React.FC = () => {
     <div className={styles.selectionContainer}>
       <div className={styles.header}>
         <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
-          ← Menu
+          ◄ MENU
         </button>
         <h1 className={styles.title}>Level Selection</h1>
-        <button
-          type="button"
-          className={styles.ghostToggle}
-          style={{ width: 'auto', padding: '0 12px', fontSize: '18px' }}
-          onClick={() => navigate('/editor')}
-          title="Create and share custom levels"
-        >
-          ✏️ Editor
-        </button>
         <button
           type="button"
           className={`${styles.ghostToggle} ${ghostEnabled ? styles.ghostToggleActive : ''}`}
@@ -86,12 +80,31 @@ export const LevelSelection: React.FC = () => {
           title={ghostEnabled ? 'Ghost replay enabled' : 'Ghost replay disabled'}
           aria-label={ghostEnabled ? 'Ghost enabled' : 'Ghost disabled'}
         >
-          <span role="img" aria-label="ghost">
-            👻
-          </span>{' '}
-          {ghostEnabled ? 'ON' : 'OFF'}
+          {ghostEnabled ? '[GHOST: ON]' : '[GHOST: OFF]'}
         </button>
       </div>
+
+      {isEntanglementUnlocked && (
+        <div className={styles.tabContainer}>
+          <button
+            type="button"
+            className={`${styles.tabButton} ${activeTab === 'classic' ? styles.tabButtonActive : ''}`}
+            onClick={() => setActiveTab('classic')}
+          >
+            [ CLASSIC ATOMS ]
+          </button>
+          <button
+            type="button"
+            className={`${styles.tabButton} ${styles.entanglementTab} ${
+              activeTab === 'entanglement' ? styles.tabButtonActive : ''
+            }`}
+            onClick={() => setActiveTab('entanglement')}
+          >
+            [ INTRICATION Ψ ⊗ Ψ ]
+            <span className={styles.entanglementTabBadge}>110-114</span>
+          </button>
+        </div>
+      )}
       {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore }) => {
         const disabled = isDisabled(id);
         return (

@@ -73,12 +73,6 @@ export default function LevelFinished(): React.ReactElement {
     navigate('/');
   };
 
-  const handleEditInEditor = () => {
-    saveSharedLevelToCustom(1);
-    setSharedLevel(null);
-    navigate('/editor');
-  };
-
   const handleSaveToMyLevels = () => {
     saveSharedLevelToCustom(1);
     setSaveMessage('Niveau sauvegardé dans vos niveaux !');
@@ -87,7 +81,13 @@ export default function LevelFinished(): React.ReactElement {
 
   return (
     <div className={styles.container}>
-      {isShared && <div className={styles.customBadge}>Niveau Personnalisé</div>}
+      {isShared && (
+        <div className={styles.customBadge}>
+          {sharedLevel?.authorTime
+            ? `★ DÉFI SPEEDRUN : ${atom} (${formatScore(sharedLevel.authorTime)}) ★`
+            : `★ DÉFI SPEEDRUN : ${atom} ★`}
+        </div>
+      )}
       <h1 className={styles.done}>{atom}</h1>
 
       <div className={styles.scoresWrapper}>
@@ -126,13 +126,6 @@ export default function LevelFinished(): React.ReactElement {
           </button>
           <button
             type="button"
-            className={`${styles.button} ${styles.buttonEdit}`}
-            onClick={handleEditInEditor}
-          >
-            Éditer ce niveau
-          </button>
-          <button
-            type="button"
             className={`${styles.button} ${styles.buttonSave}`}
             onClick={handleSaveToMyLevels}
           >
@@ -143,7 +136,17 @@ export default function LevelFinished(): React.ReactElement {
             className={`${styles.button} ${styles.buttonShare}`}
             onClick={() => setIsShareOpen(true)}
           >
-            Partager 📤
+            Partager
+          </button>
+          <button
+            type="button"
+            className={`${styles.button} ${styles.buttonNext}`}
+            onClick={() => {
+              setSharedLevel(null);
+              navigate('/levels');
+            }}
+          >
+            Niveaux
           </button>
         </div>
       ) : (
@@ -167,7 +170,7 @@ export default function LevelFinished(): React.ReactElement {
             className={`${styles.button} ${styles.buttonShare}`}
             onClick={() => setIsShareOpen(true)}
           >
-            Partager 📤
+            Partager
           </button>
           <button
             type="button"
@@ -185,10 +188,10 @@ export default function LevelFinished(): React.ReactElement {
         <ShareModal
           isOpen={isShareOpen}
           onClose={() => setIsShareOpen(false)}
-          level={
-            isShared && sharedLevel
+          level={{
+            ...(isShared && sharedLevel
               ? sharedLevel
-              : (levels as unknown as Record<string, LevelData>)[`level${levelIndex}`] || {
+              : allLevels[`level${levelIndex}`] || {
                   id: String(levelIndex),
                   hue: '#070737',
                   antiHue: '#c56805',
@@ -201,8 +204,10 @@ export default function LevelFinished(): React.ReactElement {
                   platforms: [],
                   particles: [],
                   spikes: []
-                }
-          }
+                }),
+            authorGhost: currentLevelScore.ghostTrajectory,
+            authorTime: best || last
+          }}
         />
       )}
     </div>

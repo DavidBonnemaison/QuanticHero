@@ -64,6 +64,8 @@ export interface LevelData {
   platforms: Platform[];
   door: Door;
   entanglement?: EntanglementConfig;
+  authorGhost?: string;
+  authorTime?: number;
 }
 
 export type LevelsMap = Record<string, LevelData>;

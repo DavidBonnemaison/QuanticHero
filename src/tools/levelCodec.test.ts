@@ -76,6 +76,21 @@ describe('levelCodec', () => {
       expect(decoded.explanations).toEqual(sampleLevel.explanations);
     });
 
+    it('preserves authorGhost and authorTime when present in level data', () => {
+      const challengeLevel: LevelData = {
+        ...sampleLevel,
+        authorGhost: 'v1|0,80,910,0,idle,0;200,85,910,0,walk,0;1200,750,750,0,idle,0',
+        authorTime: 12450
+      };
+
+      const url = encodeLevelToUrl(challengeLevel);
+      const decoded = decodeLevelFromUrl(url);
+
+      expect(decoded).not.toBeNull();
+      expect(decoded?.authorGhost).toBe(challengeLevel.authorGhost);
+      expect(decoded?.authorTime).toBe(12450);
+    });
+
     it('works with uncompressed raw JSON payload fallback', () => {
       const rawJson = JSON.stringify(sampleLevel);
       const decoded = decompressLevel(rawJson);
