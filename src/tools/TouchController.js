@@ -1,4 +1,3 @@
-import { max, min } from 'lodash';
 import Phaser from 'phaser';
 
 class TouchController {
@@ -23,7 +22,7 @@ class TouchController {
     };
   }
 
-  touchBegin(e) {
+  touchBegin(_e) {
     this.touching = true;
     this.timer.start();
     this.lastPosition = {
@@ -32,7 +31,7 @@ class TouchController {
     };
   }
 
-  touchEnd(e) {
+  touchEnd(_e) {
     this.touching = false;
     this.timer.stop();
     this.timer._started = 0;
@@ -68,7 +67,7 @@ class TouchController {
 
     const deltaX = x - this.lastPosition.x;
     const deltaY =
-      gravity === 1 ? max([this.lastPosition.y - y, 0]) : min([this.lastPosition.y - y, 0]);
+      gravity === 1 ? Math.max(this.lastPosition.y - y, 0) : Math.min(this.lastPosition.y - y, 0);
 
     this.lastPosition = {
       x,

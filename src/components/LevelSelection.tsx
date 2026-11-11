@@ -1,10 +1,9 @@
 import type React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import * as actions from '../actions/game';
 import * as levelsData from '../data/levels';
+import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
-import type { LevelData, RootState } from '../types';
+import type { LevelData } from '../types';
 import {
   Atom,
   AtomDescription,
@@ -21,10 +20,10 @@ import {
 const allLevels = levelsData as unknown as Record<string, LevelData>;
 
 export const LevelSelection: React.FC = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const game = useSelector((state: RootState) => state.game);
-  const score = useSelector((state: RootState) => state.score);
+  const maxLevel = useGameStore((state) => state.maxLevel);
+  const scores = useGameStore((state) => state.scores);
+  const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
 
   const raw = Object.keys(allLevels)
     .filter((key) => key.startsWith('level'))
@@ -36,16 +35,16 @@ export const LevelSelection: React.FC = () => {
 
   const enriched = raw.map((r) => ({
     ...r,
-    score: score[Number(r.id)] ? formatScore(score[Number(r.id)].best) : '00:00:00'
+    score: scores[Number(r.id)] ? formatScore(scores[Number(r.id)].best) : '00:00:00'
   }));
 
-  const isDisabled = (id: string | number) => Number(id) > game.maxLevel;
+  const isDisabled = (id: string | number) => Number(id) > maxLevel;
 
   const handleSelect = (n: string | number) => {
     if (isDisabled(n)) return;
-    dispatch(actions.updateCurrentLevel(Number(n)));
+    updateCurrentLevel(Number(n));
     const targetLevel = allLevels[`level${n}`];
-    if (targetLevel && targetLevel.explanations && targetLevel.explanations.length > 0) {
+    if (targetLevel?.explanations && targetLevel.explanations.length > 0) {
       navigate('/explanation');
     } else {
       navigate('/game');

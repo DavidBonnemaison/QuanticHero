@@ -1,5 +1,5 @@
-import { random, sample } from 'lodash';
 import Phaser from 'phaser';
+import { random, sample } from '../tools/math';
 import PowerUpText from './../prefabs/PowerUpText';
 
 export default class Particle extends Phaser.Sprite {

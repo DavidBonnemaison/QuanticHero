@@ -1,30 +1,29 @@
 import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import * as actions from '../actions/game';
-import { setLevels } from '../actions/levels';
 import * as levels from '../data/levels';
-import type { RootState } from '../types';
+import { useGameStore } from '../store';
+import type { LevelData } from '../types';
 import { Button, MenuWrapper, Title } from './Menu.styles';
 import Molecules from './Molecules';
 
 export default function Menu() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const currentLevels = useSelector((state: RootState) => state.levels);
+  const customLevels = useGameStore((state) => state.customLevels);
+  const setLevels = useGameStore((state) => state.setLevels);
+  const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
 
   useEffect(() => {
     Molecules.start();
-    if (!currentLevels) {
-      dispatch(setLevels(levels));
+    if (!customLevels) {
+      setLevels(levels as unknown as Record<string, LevelData>);
     }
     return () => {
       Molecules.end();
     };
-  }, [currentLevels, dispatch]);
+  }, [customLevels, setLevels]);
 
   const handleNewGame = () => {
-    dispatch(actions.updateCurrentLevel(1));
+    updateCurrentLevel(1);
     navigate('/explanation');
   };
 

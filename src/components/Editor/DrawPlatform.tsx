@@ -1,6 +1,6 @@
-import { round } from 'lodash';
 import type React from 'react';
 import { useDrag } from 'react-dnd';
+import { round } from '../../tools/math';
 import { PlatformNumber } from './Editor.style';
 
 interface DrawPlatformProps {
@@ -25,7 +25,7 @@ export const DrawPlatform: React.FC<DrawPlatformProps> = (props) => {
       end: (_item, monitor) => {
         if (!monitor.didDrop()) return;
         const dropResult = monitor.getDropResult<{ diff?: { x: number; y: number } }>();
-        if (dropResult && dropResult.diff) {
+        if (dropResult?.diff) {
           const newX = round(props.x + dropResult.diff.x / scale, -1);
           const newY = round(props.y + dropResult.diff.y / scale, -1);
           onDrop({ n: i, x: newX, y: newY });

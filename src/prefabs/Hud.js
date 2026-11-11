@@ -1,7 +1,6 @@
-import moment from 'moment';
 import Phaser from 'phaser';
-import * as actions from './../actions/score';
-import store from './../store';
+import { useGameStore } from '../store';
+import formatScore from '../tools/formatScore';
 
 export default class Hud extends Phaser.Group {
   constructor({ game, goToMenu }) {
@@ -42,18 +41,10 @@ export default class Hud extends Phaser.Group {
   }
 
   updateTimer() {
-    this.timerText.text = moment(0)
-      .set('ms', this.timer.ms)
-      .subtract(2000, 'ms')
-      .format('mm:ss:SS');
+    this.timerText.text = formatScore(Math.max(0, this.timer.ms - 2000));
   }
 
   setScore() {
-    store.dispatch(
-      actions.setScore({
-        level: Number(this.game.data.id),
-        score: this.timer.ms
-      })
-    );
+    useGameStore.getState().recordScore(Number(this.game.data.id), this.timer.ms);
   }
 }

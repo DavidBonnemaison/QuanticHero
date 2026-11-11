@@ -1,14 +1,12 @@
-import { max, range } from 'lodash';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { DndProvider, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { updateCurrentLevel } from '../../actions/game';
-import * as actions from '../../actions/levels';
 import * as levelsData from '../../data/levels';
-import type { LevelData, RootState } from '../../types';
+import { useGameStore } from '../../store';
+import { range } from '../../tools/math';
+import type { LevelData } from '../../types';
 import DrawParticle from './DrawParticle';
 import DrawPlatform from './DrawPlatform';
 import {
@@ -82,7 +80,7 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
   play,
   resetLevels,
   download,
-  currentLevel,
+  currentLevel: _currentLevel,
   onDropPlatform
 }) => {
   const { platforms, particles, hue, antiHue, width, height, player, door } = level;
@@ -143,23 +141,30 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
 };
 
 export const EditorView: React.FC = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const levels = useSelector((state: RootState) => state.levels);
-  const game = useSelector((state: RootState) => state.game);
+  const customLevels = useGameStore((state) => state.customLevels);
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const setLevels = useGameStore((state) => state.setLevels);
+  const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
+  const updateLevelField = useGameStore((state) => state.updateLevelField);
+  const addPlatform = useGameStore((state) => state.addPlatform);
+  const deletePlatform = useGameStore((state) => state.deletePlatform);
+  const addParticle = useGameStore((state) => state.addParticle);
+  const deleteParticle = useGameStore((state) => state.deleteParticle);
 
-  const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(game.currentLevel || 1);
+  const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(currentLevel || 1);
 
   useEffect(() => {
-    if (!levels) {
-      dispatch(actions.setLevels(levelsData as unknown as Record<string, LevelData>));
+    if (!customLevels) {
+      setLevels(levelsData as unknown as Record<string, LevelData>);
     }
-    if (game.currentLevel) {
-      setCurrentLevelNumber(game.currentLevel);
+    if (currentLevel) {
+      setCurrentLevelNumber(currentLevel);
     }
-  }, [levels, game.currentLevel, dispatch]);
+  }, [customLevels, currentLevel, setLevels]);
 
+  const levels = customLevels;
   if (!levels) {
     return null;
   }
@@ -173,7 +178,7 @@ export const EditorView: React.FC = () => {
   const { platforms, particles, hue, antiHue, width, height, player, door } = level;
 
   const getScale = (dims: { width: number; height: number }) =>
-    max([(window.innerWidth - 220) / dims.width, window.innerHeight / dims.height]) || 1;
+    Math.max((window.innerWidth - 220) / dims.width, window.innerHeight / dims.height) || 1;
 
   const scale = getScale({ width, height });
   const levelsRange = range(1, 11);
@@ -188,27 +193,31 @@ export const EditorView: React.FC = () => {
   ) => {
     const { value, dataset } = e.target;
     const { n, prop } = dataset;
-    dispatch(actions.update({ level: currentLevelNumber, type, n, prop, value }));
+    updateLevelField({ level: currentLevelNumber, type, n, prop, value });
   };
 
   const handleChangeLevel = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = Number(e.target.value);
-    dispatch(updateCurrentLevel(val));
+    updateCurrentLevel(val);
     setCurrentLevelNumber(val);
   };
 
   const handleResetLevels = () => {
-    dispatch(actions.setLevels(levelsData as unknown as Record<string, LevelData>));
+    setLevels(levelsData as unknown as Record<string, LevelData>);
   };
 
   const handleDeletePlatform = (e: React.MouseEvent<HTMLDivElement>) => {
     const n = (e.currentTarget as HTMLElement).dataset.n;
-    dispatch(actions.deletePlatform({ level: currentLevelNumber, n }));
+    if (n !== undefined) {
+      deletePlatform({ level: currentLevelNumber, n });
+    }
   };
 
   const handleDeleteParticle = (e: React.MouseEvent<HTMLDivElement>) => {
     const n = (e.currentTarget as HTMLElement).dataset.n;
-    dispatch(actions.deleteParticle({ level: currentLevelNumber, n }));
+    if (n !== undefined) {
+      deleteParticle({ level: currentLevelNumber, n });
+    }
   };
 
   const handleDownload = () => {
@@ -217,24 +226,20 @@ export const EditorView: React.FC = () => {
   };
 
   const handleDropPlatform = ({ n, x, y }: { n: number; x: number; y: number }) => {
-    dispatch(
-      actions.update({
-        level: currentLevelNumber,
-        type: 'platform',
-        n,
-        prop: 'x',
-        value: x
-      })
-    );
-    dispatch(
-      actions.update({
-        level: currentLevelNumber,
-        type: 'platform',
-        n,
-        prop: 'y',
-        value: y
-      })
-    );
+    updateLevelField({
+      level: currentLevelNumber,
+      type: 'platform',
+      n,
+      prop: 'x',
+      value: x
+    });
+    updateLevelField({
+      level: currentLevelNumber,
+      type: 'platform',
+      n,
+      prop: 'y',
+      value: y
+    });
   };
 
   return (
@@ -300,9 +305,7 @@ export const EditorView: React.FC = () => {
         </FieldEditor>
         <h3>
           Platforms
-          <AddButton onClick={() => dispatch(actions.addPlatform({ level: currentLevelNumber }))}>
-            +
-          </AddButton>
+          <AddButton onClick={() => addPlatform({ level: currentLevelNumber })}>+</AddButton>
         </h3>
         {platforms.map((p, i) => (
           <PlatformsEditor
@@ -316,9 +319,7 @@ export const EditorView: React.FC = () => {
         <hr />
         <h3>
           Particles
-          <AddButton onClick={() => dispatch(actions.addParticle({ level: currentLevelNumber }))}>
-            +
-          </AddButton>
+          <AddButton onClick={() => addParticle({ level: currentLevelNumber })}>+</AddButton>
         </h3>
         {particles.map((p, i) => (
           <ParticlesEditor

@@ -1,52 +1,49 @@
-import { range } from 'lodash';
 import Phaser from 'phaser';
-import { push } from 'react-router-redux';
 import Hero from '../sprites/Hero';
 import Molecule from '../sprites/Molecule';
 import Particle from '../sprites/Particle';
 import Platform from '../sprites/Platform';
 import Portal from '../sprites/Portal';
 import Spike from '../sprites/Spike';
-import * as gameActions from './../actions/game';
-import { setLevels } from './../actions/levels';
 import * as defaultLevels from './../data/levels';
 import HUD from './../prefabs/Hud';
 import Overlay from './../prefabs/Overlay';
-import store from './../store';
+import { push } from './../shims/navigation';
+import { useGameStore } from './../store';
 import TouchController from './../tools/TouchController';
+import { range } from './../tools/math';
 
 export default class extends Phaser.State {
   init() {
-    this.gameState = store.getState().game;
-    const { currentLevel, maxLevel } = this.gameState;
+    const { currentLevel, maxLevel, customLevels } = useGameStore.getState();
     this.currentLevel = currentLevel;
     this.maxLevel = maxLevel;
     if (maxLevel === 0) {
       this.state.start('Tuto');
       return;
     }
-    let levels = store.getState().levels;
+    let levels = customLevels;
     if (!levels) {
       levels = defaultLevels;
-      store.dispatch(setLevels(defaultLevels));
+      useGameStore.getState().setLevels(defaultLevels);
     }
     this.game.data = levels[`level${this.currentLevel}`];
     if (this.game.data === undefined) {
       this.game.data = levels.level1;
-      store.dispatch(gameActions.updateCurrentLevel(1));
+      useGameStore.getState().updateCurrentLevel(1);
     }
     this.game.stage.backgroundColor = this.game.data.hue;
-    store.subscribe(this.handleStoreChange.bind(this));
+    useGameStore.subscribe(this.handleStoreChange.bind(this));
   }
 
   goToMenu() {
-    store.dispatch(push('/'));
+    push('/');
     this.game.destroy();
   }
 
-  handleStoreChange() {
-    const oldState = this.gameState;
-    this.gameState = store.getState().game;
+  handleStoreChange(state) {
+    this.currentLevel = state.currentLevel;
+    this.maxLevel = state.maxLevel;
   }
 
   createSpike({ x, y, width, height }) {
@@ -222,14 +219,14 @@ export default class extends Phaser.State {
     const isAtThePortal = this.game.physics.arcade.collide(this.game.global.heroes, this.portal);
     if (isAtThePortal) {
       const nextLevel = Number(this.currentLevel) + 1;
-      store.dispatch(gameActions.updateCurrentLevel(nextLevel));
+      useGameStore.getState().updateCurrentLevel(nextLevel);
       this.HUD.setScore();
       if (this.maxLevel < nextLevel) {
-        store.dispatch(gameActions.updateMaxLevel(nextLevel));
+        useGameStore.getState().updateMaxLevel(nextLevel);
       }
       this.game.state.clearCurrentState();
       this.game.destroy();
-      store.dispatch(push('/done'));
+      push('/done');
     }
   }
 }

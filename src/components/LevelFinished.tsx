@@ -1,10 +1,8 @@
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import * as actions from '../actions/game';
 import * as levels from '../data/levels';
+import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
-import type { RootState } from '../types';
 import {
   BestBadge,
   Button,
@@ -19,14 +17,14 @@ import {
 } from './LevelFinished.styles';
 
 export default function LevelFinished() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const game = useSelector((state: RootState) => state.game);
-  const score = useSelector((state: RootState) => state.score);
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const scores = useGameStore((state) => state.scores);
+  const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
 
-  const levelIndex = Math.max(1, game.currentLevel - 1);
-  const currentLevelScore = score[levelIndex] || { best: 0, last: 0 };
+  const levelIndex = Math.max(1, currentLevel - 1);
+  const currentLevelScore = scores[levelIndex] || { best: 0, last: 0 };
   const { last, best } = currentLevelScore;
 
   const currentLevelData = (levels as any)[`level${levelIndex}`] || {
@@ -39,8 +37,8 @@ export default function LevelFinished() {
   const { id, hue, antiHue, symbol, atom } = currentLevelData;
 
   const handleNextLevel = () => {
-    const nextLevelData = (levels as any)[`level${game.currentLevel}`];
-    if (nextLevelData && nextLevelData.explanations && nextLevelData.explanations.length > 0) {
+    const nextLevelData = (levels as any)[`level${currentLevel}`];
+    if (nextLevelData?.explanations && nextLevelData.explanations.length > 0) {
       navigate('/explanation');
     } else {
       navigate('/game');
@@ -48,7 +46,7 @@ export default function LevelFinished() {
   };
 
   const handleRetry = () => {
-    dispatch(actions.updateCurrentLevel(levelIndex));
+    updateCurrentLevel(levelIndex);
     navigate('/game');
   };
 

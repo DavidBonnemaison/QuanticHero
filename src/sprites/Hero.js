@@ -1,5 +1,5 @@
-import { inRange, max, min, remove, round, sample, uniqBy } from 'lodash';
 import Phaser from 'phaser';
+import { inRange, remove, round, sample, uniqBy } from '../tools/math';
 
 export default class Hero extends Phaser.Sprite {
   constructor({
@@ -30,7 +30,7 @@ export default class Hero extends Phaser.Sprite {
     this.body.collideWorldBounds = true;
     this.HUD = HUD;
     this.data = this.game.data;
-    if (this.animations && this.animations._frameData) {
+    if (this.animations?._frameData) {
       this.animations.add('left', [6, 7, 8, 9, 10, 11], 30, true);
       this.animations.add('idle', [0, 1, 2, 3], 10, true);
       this.animations.add('right', [6, 7, 8, 9, 10, 11], 30, true);
@@ -153,20 +153,21 @@ export default class Hero extends Phaser.Sprite {
       this.touchCheck.deltaX = previousMovement.deltaX;
     }
     if ((this.cursors.up.isDown || jump) && isOnGround && this.isFocused) {
-      this.body.velocity.y = max([deltaY > 20 ? -12 * deltaY : -450, -450]) * this.upsideDown;
+      this.body.velocity.y = Math.max(deltaY > 20 ? -12 * deltaY : -450, -450) * this.upsideDown;
       isOnGround = false;
       this.animations.play('jump');
     }
 
     if ((this.cursors.left.isDown || goLeft) && this.isFocused) {
       this.body.velocity.x =
-        max([deltaX < 20 && deltaX !== 0 ? 8 * deltaX : -350, -350]) * this.velocityMultiplier;
+        Math.max(deltaX < 20 && deltaX !== 0 ? 8 * deltaX : -350, -350) * this.velocityMultiplier;
       if (isOnGround) {
         this.animations.play('left');
       }
       this.scale.x = -1;
     } else if ((this.cursors.right.isDown || goRight) && this.isFocused) {
-      this.body.velocity.x = min([deltaX > 20 ? 8 * deltaX : 350, 350]) * this.velocityMultiplier;
+      this.body.velocity.x =
+        Math.min(deltaX > 20 ? 8 * deltaX : 350, 350) * this.velocityMultiplier;
       if (isOnGround) {
         this.animations.play('right');
       }

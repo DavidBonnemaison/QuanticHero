@@ -1,6 +1,6 @@
-import { random, sample } from 'lodash';
 import Phaser from 'phaser';
 import randomColor from 'randomcolor';
+import { random, sample } from '../tools/math';
 
 export default class Molecule extends Phaser.Group {
   constructor({ game, x, y }) {

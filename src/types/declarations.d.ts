@@ -14,10 +14,5 @@ declare module 'phaser' {
 }
 
 declare module 'randomcolor' {
-  export default function randomColor(options?: any): string;
-}
-
-declare module 'react-router-redux' {
-  export const push: (path: string) => any;
-  export const replace: (path: string) => any;
+  export default function randomColor(options?: Record<string, unknown>): string;
 }

@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import WebFont from 'webfontloader';
 
 export default class extends Phaser.State {
   init() {
@@ -9,13 +8,11 @@ export default class extends Phaser.State {
   }
 
   preload() {
-    WebFont.load({
-      google: {
-        families: ['VT323']
-      },
-      active: this.fontsLoaded,
-      inactive: this.fontsLoaded
-    });
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => this.fontsLoaded());
+    } else {
+      this.fontsLoaded();
+    }
     setTimeout(this.fontsLoaded, 1000);
 
     const text = this.add.text(this.world.centerX, this.world.centerY, 'loading fonts', {

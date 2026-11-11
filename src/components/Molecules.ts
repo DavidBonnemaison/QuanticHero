@@ -1,5 +1,5 @@
-import { max, random, range, sample } from 'lodash';
 import randomColor from 'randomcolor';
+import { random, range, sample } from '../tools/math';
 
 class Molecule {
   id: number;
@@ -27,7 +27,7 @@ class Molecule {
       x: (random(-20, 20) * this.size) / 1000,
       y: (random(-20, 20) * this.size) / 1000
     };
-    this.opacity = max([random(50, 1000) / this.size ** 2, 0.2]) || 0.5;
+    this.opacity = Math.max(random(50, 1000) / this.size ** 2, 0.2) || 0.5;
   }
 
   getTemplate(): HTMLDivElement {
