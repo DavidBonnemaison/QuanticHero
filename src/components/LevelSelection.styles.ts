@@ -54,7 +54,7 @@ export const MenuItem = styled.div<{ disabled?: boolean }>`
   user-select: none;
   transition: transform 0.1s, background-color 0.15s;
 
-  ${p =>
+  ${(p) =>
     !p.disabled
       ? `
     cursor: pointer;
@@ -73,8 +73,8 @@ export const MenuItem = styled.div<{ disabled?: boolean }>`
 `;
 
 export const Atom = styled.div<{ bgColor: string; color: string }>`
-  background-color: ${p => p.bgColor};
-  color: ${p => p.color};
+  background-color: ${(p) => p.bgColor};
+  color: ${(p) => p.color};
   width: 80px;
   height: 80px;
   line-height: 80px;

@@ -1,18 +1,18 @@
-import Phaser from 'phaser';
 import { range } from 'lodash';
+import Phaser from 'phaser';
 import { push } from 'react-router-redux';
 import Hero from '../sprites/Hero';
-import Particle from '../sprites/Particle';
 import Molecule from '../sprites/Molecule';
+import Particle from '../sprites/Particle';
 import Platform from '../sprites/Platform';
-import Spike from '../sprites/Spike';
-import HUD from './../prefabs/Hud';
-import Overlay from './../prefabs/Overlay';
 import Portal from '../sprites/Portal';
-import store from './../store';
+import Spike from '../sprites/Spike';
 import * as gameActions from './../actions/game';
 import { setLevels } from './../actions/levels';
 import * as defaultLevels from './../data/levels';
+import HUD from './../prefabs/Hud';
+import Overlay from './../prefabs/Overlay';
+import store from './../store';
 import TouchController from './../tools/TouchController';
 
 export default class extends Phaser.State {
@@ -132,7 +132,7 @@ export default class extends Phaser.State {
       y: 0
     });
 
-    ['heroes', 'particles', 'platforms', 'spikes', 'portal'].forEach(group => {
+    ['heroes', 'particles', 'platforms', 'spikes', 'portal'].forEach((group) => {
       this[group] = new Phaser.Group(this.game);
       this[group].enableBody = true;
       this.game.global[group] = [];
@@ -182,7 +182,7 @@ export default class extends Phaser.State {
   }
 
   centerCamera() {
-    const hasFocus = this.game.global.heroes.filter(h => h.isFocused);
+    const hasFocus = this.game.global.heroes.filter((h) => h.isFocused);
     let idealPosition = this.game.global.heroes.reduce(
       (acc, current) => ({
         x: acc.x + current.x,

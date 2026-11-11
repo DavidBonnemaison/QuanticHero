@@ -1,5 +1,5 @@
-import Phaser from 'phaser';
 import { random, sample } from 'lodash';
+import Phaser from 'phaser';
 import PowerUpText from './../prefabs/PowerUpText';
 
 export default class Particle extends Phaser.Sprite {
@@ -45,7 +45,7 @@ export default class Particle extends Phaser.Sprite {
     this.PowerUpText = new PowerUpText({ game: this.game, type: this.type });
     this.kill();
     clearInterval(this.interval);
-    this.game.global.particles = this.game.global.particles.filter(particle => particle !== this);
+    this.game.global.particles = this.game.global.particles.filter((particle) => particle !== this);
     this.destroy();
   }
 

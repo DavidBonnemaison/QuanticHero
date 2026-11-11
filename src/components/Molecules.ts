@@ -1,5 +1,5 @@
+import { max, random, range, sample } from 'lodash';
 import randomColor from 'randomcolor';
-import { random, sample, range, max } from 'lodash';
 
 class Molecule {
   id: number;
@@ -93,9 +93,12 @@ class Molecule {
     newMolecule.style.transition = '1s opacity ease-in-out';
     containerElm.appendChild(newMolecule);
     this.setMotion();
-    this.opacityTimeout1 = setTimeout(() => {
-      this.setOpacity();
-    }, random(100, 1500));
+    this.opacityTimeout1 = setTimeout(
+      () => {
+        this.setOpacity();
+      },
+      random(100, 1500)
+    );
     return this;
   }
 
@@ -120,7 +123,7 @@ export default {
       Molecules.push(new Molecule({ container: '#container' }).create());
     }),
   end: () => {
-    Molecules.forEach(mol => mol.destroy());
+    Molecules.forEach((mol) => mol.destroy());
     Molecules = [];
   }
 };

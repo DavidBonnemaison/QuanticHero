@@ -1,11 +1,12 @@
 import 'pixi';
 import 'p2';
 import Phaser from 'phaser';
-import React, { useEffect } from 'react';
+import type React from 'react';
+import { useEffect } from 'react';
 import config from './config';
 import BootState from './states/Boot';
-import SplashState from './states/Splash';
 import GameState from './states/Game';
+import SplashState from './states/Splash';
 import TutoState from './states/Tuto';
 
 declare global {

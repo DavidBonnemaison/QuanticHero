@@ -52,9 +52,9 @@ export const DisplayPanel = styled.div<{ hue: string; width: number; height: num
   right: 0;
   bottom: 0;
   overflow: auto;
-  background-color: ${p => p.hue};
-  width: ${p => p.width}px;
-  height: ${p => p.height}px;
+  background-color: ${(p) => p.hue};
+  width: ${(p) => p.width}px;
+  height: ${(p) => p.height}px;
 `;
 
 export const PlayButton = styled.button`
@@ -100,13 +100,13 @@ export const AddButton = styled.div`
 `;
 
 export const PlatformNumber = styled.div<{ scale: number; color: string; anti: string }>`
-  font-size: ${p => p.scale * 40}px;
-  background-color: ${p => p.color};
-  color: ${p => p.anti};
+  font-size: ${(p) => p.scale * 40}px;
+  background-color: ${(p) => p.color};
+  color: ${(p) => p.anti};
   position: absolute;
-  top: ${p => p.scale * -10}px;
-  width: ${p => p.scale * 40}px;
-  margin-left: ${p => p.scale * -20}px;
+  top: ${(p) => p.scale * -10}px;
+  width: ${(p) => p.scale * 40}px;
+  margin-left: ${(p) => p.scale * -20}px;
   text-align: center;
   display: inline-block;
   border-radius: 50%;

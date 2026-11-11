@@ -1,5 +1,5 @@
-import Phaser from 'phaser';
 import { random, sample } from 'lodash';
+import Phaser from 'phaser';
 import randomColor from 'randomcolor';
 
 export default class Molecule extends Phaser.Group {
@@ -20,8 +20,8 @@ export default class Molecule extends Phaser.Group {
     this.x = random(-this.size, this.game.width + this.size);
     this.y = random(-this.size, this.game.height + this.size);
     this.speed = {
-      x: sample([random(-10, -5, true), random(5, 10, true)]) * Math.sqrt(this.size) / 150,
-      y: random(-10, 10, true) * Math.sqrt(this.size) / 150
+      x: (sample([random(-10, -5, true), random(5, 10, true)]) * Math.sqrt(this.size)) / 150,
+      y: (random(-10, 10, true) * Math.sqrt(this.size)) / 150
     };
 
     const graphics = this.game.add.graphics(0, 0);

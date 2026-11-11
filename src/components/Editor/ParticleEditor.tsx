@@ -1,5 +1,5 @@
-import React from 'react';
-import { FieldEditor, ItemNumber, DeleteItem } from './Editor.style';
+import type React from 'react';
+import { DeleteItem, FieldEditor, ItemNumber } from './Editor.style';
 
 interface ParticleEditorProps {
   x: number;

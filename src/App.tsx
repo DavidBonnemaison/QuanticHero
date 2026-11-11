@@ -1,16 +1,17 @@
-import React, { useEffect } from 'react';
+import type React from 'react';
+import { useEffect } from 'react';
 import { Provider } from 'react-redux';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { PersistGate } from 'redux-persist/integration/react';
 import styled from 'styled-components';
-import { persistor, default as store } from './store';
-import { setNavigator } from './shims/navigation';
-import Menu from './components/Menu';
-import Levels from './components/LevelSelection';
 import Game from './Game';
-import LevelFinished from './components/LevelFinished';
-import Explanation from './components/Explanation';
 import Editor from './components/Editor';
+import Explanation from './components/Explanation';
+import LevelFinished from './components/LevelFinished';
+import Levels from './components/LevelSelection';
+import Menu from './components/Menu';
+import { setNavigator } from './shims/navigation';
+import { persistor, default as store } from './store';
 
 const NavigationSync: React.FC = () => {
   const navigate = useNavigate();

@@ -2,8 +2,8 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import * as levels from '../data/levels';
+import type { RootState } from '../types';
 import { Button, Container, Text } from './Explanation.styles';
-import { RootState } from '../types';
 
 export default function Explanation() {
   const navigate = useNavigate();

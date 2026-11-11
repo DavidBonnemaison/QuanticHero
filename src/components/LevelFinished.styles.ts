@@ -64,8 +64,8 @@ export const BestBadge = styled.div`
 `;
 
 export const Molecule = styled.div<{ bgColor: string; color: string }>`
-  background-color: ${p => p.bgColor};
-  color: ${p => p.color};
+  background-color: ${(p) => p.bgColor};
+  color: ${(p) => p.color};
   text-align: center;
   width: 140px;
   height: 140px;
@@ -101,7 +101,7 @@ export const Button = styled.button<{ buttonType?: 'next' | 'retry' | 'menu' }>`
   border-radius: 4px;
   cursor: pointer;
   color: #fff;
-  background-color: ${p =>
+  background-color: ${(p) =>
     p.buttonType === 'next' ? '#b71c1c' : p.buttonType === 'retry' ? '#b1810f' : '#444'};
   transition: opacity 0.15s, transform 0.1s;
 

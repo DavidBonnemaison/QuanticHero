@@ -1,6 +1,5 @@
+import { inRange, max, min, remove, round, sample, uniqBy } from 'lodash';
 import Phaser from 'phaser';
-import { sample, uniqBy, round, remove, min, max, inRange } from 'lodash';
-
 
 export default class Hero extends Phaser.Sprite {
   constructor({
@@ -57,8 +56,8 @@ export default class Hero extends Phaser.Sprite {
       return;
     }
     const onGoingDuplications = this.game.global.heroes
-      .map(hero => hero.isDuplicating)
-      .filter(status => status === true);
+      .map((hero) => hero.isDuplicating)
+      .filter((status) => status === true);
     if (onGoingDuplications.length) {
       return;
     }
@@ -89,14 +88,14 @@ export default class Hero extends Phaser.Sprite {
 
   killHero(id) {
     this.kill();
-    this.game.global.heroes = remove(this.game.global.heroes, hero => hero.id !== id);
+    this.game.global.heroes = remove(this.game.global.heroes, (hero) => hero.id !== id);
     this.destroy();
   }
 
   toggleFocus(force) {
     this.isAvailable = false;
     setTimeout(() => (this.isAvailable = true), 600);
-    const numberFocused = this.game.global.heroes.filter(h => h.isFocused).length;
+    const numberFocused = this.game.global.heroes.filter((h) => h.isFocused).length;
     if (numberFocused === 1) {
       this.isFocused = true;
       this.loadTexture('hero');
@@ -118,7 +117,7 @@ export default class Hero extends Phaser.Sprite {
 
     this.game.physics.arcade.overlap(this.game.global.particles, this, this.duplicate.bind(this));
 
-    this.game.global.heroes.forEach(h => {
+    this.game.global.heroes.forEach((h) => {
       if (h.id === this.id) h.position = this.position;
     });
 
@@ -127,7 +126,7 @@ export default class Hero extends Phaser.Sprite {
     const { timer } = this.touchController;
     const longPress = inRange(timer._now - timer._started, 450, 500);
     if (longPress && this.isAvailable) {
-      let { x, y } = this.touchController.currentPosition;
+      const { x, y } = this.touchController.currentPosition;
       const onHero = inRange(this.x, x - 36, x + 36) && inRange(this.y, y - 36, y + 36);
       if (onHero) {
         this.toggleFocus();

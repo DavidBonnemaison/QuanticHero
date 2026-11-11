@@ -1,22 +1,22 @@
 import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import * as actions from '../actions/game';
+import * as levels from '../data/levels';
+import formatScore from '../tools/formatScore';
+import type { RootState } from '../types';
 import {
+  BestBadge,
+  Button,
+  ButtonContainer,
   Container,
   Done,
-  ScoresWrapper,
+  Molecule,
   ScoreBox,
   ScoreType,
   ScoreValue,
-  BestBadge,
-  ButtonContainer,
-  Button,
-  Molecule
+  ScoresWrapper
 } from './LevelFinished.styles';
-import formatScore from '../tools/formatScore';
-import * as levels from '../data/levels';
-import { RootState } from '../types';
 
 export default function LevelFinished() {
   const dispatch = useDispatch();

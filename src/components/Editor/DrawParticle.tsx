@@ -1,5 +1,5 @@
-import React from 'react';
-import { ParticleType } from '../../types';
+import type React from 'react';
+import type { ParticleType } from '../../types';
 
 interface DrawParticleProps {
   x: number;

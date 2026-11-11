@@ -1,6 +1,6 @@
-import React from 'react';
-import { useDrag } from 'react-dnd';
 import { round } from 'lodash';
+import type React from 'react';
+import { useDrag } from 'react-dnd';
 import { PlatformNumber } from './Editor.style';
 
 interface DrawPlatformProps {
@@ -15,18 +15,8 @@ interface DrawPlatformProps {
   onDrop: (params: { n: number; x: number; y: number }) => void;
 }
 
-export const DrawPlatform: React.FC<DrawPlatformProps> = props => {
-  const {
-    x,
-    y,
-    width,
-    height,
-    scale,
-    color,
-    i,
-    antiHue,
-    onDrop
-  } = props;
+export const DrawPlatform: React.FC<DrawPlatformProps> = (props) => {
+  const { x, y, width, height, scale, color, i, antiHue, onDrop } = props;
 
   const [{ isDragging }, dragRef] = useDrag(
     () => ({
@@ -41,7 +31,7 @@ export const DrawPlatform: React.FC<DrawPlatformProps> = props => {
           onDrop({ n: i, x: newX, y: newY });
         }
       },
-      collect: monitor => ({
+      collect: (monitor) => ({
         isDragging: monitor.isDragging()
       })
     }),

@@ -27,7 +27,9 @@ function waitForServer(port, timeoutMs = 15000) {
 async function run() {
   console.log('Starting preview server...');
   const server = spawn('npx', ['vite', 'preview', '--port', '4173'], {
-    cwd: '/home/antigravity/QuanticHero',
+    cwd: process.cwd(),
+    env: process.env,
+    shell: true,
     stdio: 'pipe'
   });
 

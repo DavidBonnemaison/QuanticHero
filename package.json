@@ -8,7 +8,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:e2e": "node scripts/test-e2e.js"
+    "test:e2e": "node scripts/test-e2e.js",
+    "lint": "biome check src",
+    "format": "biome format --write src",
+    "check": "biome check --write src"
   },
   "license": "MIT",
   "dependencies": {
@@ -30,6 +33,7 @@
     "webfontloader": "^1.6.28"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@types/lodash": "^4.17.27",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

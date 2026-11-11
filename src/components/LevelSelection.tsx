@@ -1,21 +1,21 @@
-import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import type React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import formatScore from '../tools/formatScore';
 import * as actions from '../actions/game';
 import * as levelsData from '../data/levels';
-import { RootState, LevelData } from '../types';
+import formatScore from '../tools/formatScore';
+import type { LevelData, RootState } from '../types';
 import {
-  SelectionContainer,
-  Header,
-  BackButton,
-  Title,
-  MenuItem,
   Atom,
-  AtomicNumber,
   AtomDescription,
+  AtomScore,
   AtomTitle,
-  AtomScore
+  AtomicNumber,
+  BackButton,
+  Header,
+  MenuItem,
+  SelectionContainer,
+  Title
 } from './LevelSelection.styles';
 
 const allLevels = levelsData as unknown as Record<string, LevelData>;
@@ -27,14 +27,14 @@ export const LevelSelection: React.FC = () => {
   const score = useSelector((state: RootState) => state.score);
 
   const raw = Object.keys(allLevels)
-    .filter(key => key.startsWith('level'))
+    .filter((key) => key.startsWith('level'))
     .sort((a, b) => Number(allLevels[a].id) - Number(allLevels[b].id))
-    .map(key => {
+    .map((key) => {
       const { id, hue, antiHue, symbol, atom } = allLevels[key];
       return { id, hue, antiHue, symbol, atom };
     });
 
-  const enriched = raw.map(r => ({
+  const enriched = raw.map((r) => ({
     ...r,
     score: score[Number(r.id)] ? formatScore(score[Number(r.id)].best) : '00:00:00'
   }));

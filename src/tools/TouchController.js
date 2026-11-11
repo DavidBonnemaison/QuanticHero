@@ -1,5 +1,5 @@
-import Phaser from 'phaser';
 import { max, min } from 'lodash';
+import Phaser from 'phaser';
 
 class TouchController {
   constructor(game) {

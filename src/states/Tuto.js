@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
+import * as gameActions from './../actions/game';
 import ActionButton from './../prefabs/ActionButton';
 import store from './../store';
-import * as gameActions from './../actions/game';
 
 export default class extends Phaser.State {
   makeText(text, i) {

@@ -1,7 +1,7 @@
-import Phaser from 'phaser';
 import moment from 'moment';
-import store from './../store';
+import Phaser from 'phaser';
 import * as actions from './../actions/score';
+import store from './../store';
 
 export default class Hud extends Phaser.Group {
   constructor({ game, goToMenu }) {

@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { range, max } from 'lodash';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import { max, range } from 'lodash';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { DndProvider, useDrop } from 'react-dnd';
-
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { updateCurrentLevel } from '../../actions/game';
+import * as actions from '../../actions/levels';
 import * as levelsData from '../../data/levels';
+import type { LevelData, RootState } from '../../types';
+import DrawParticle from './DrawParticle';
+import DrawPlatform from './DrawPlatform';
 import {
+  AddButton,
   Container,
-  EditPanel,
   DisplayPanel,
+  DownloadButton,
+  EditPanel,
   FieldEditor,
   PlayButton,
-  ResetButton,
-  AddButton,
-  DownloadButton
+  ResetButton
 } from './Editor.style';
-import * as actions from '../../actions/levels';
-import { updateCurrentLevel } from '../../actions/game';
-import PlatformsEditor from './PlatformsEditor';
 import ParticlesEditor from './ParticleEditor';
-import DrawPlatform from './DrawPlatform';
-import DrawParticle from './DrawParticle';
-import { RootState, LevelData } from '../../types';
+import PlatformsEditor from './PlatformsEditor';
 
 const downloader = (filename: string, text: string) => {
   const element = document.createElement('a');
@@ -44,8 +44,8 @@ const Grid: React.FC<GridProps> = ({ h, v, scale }) => {
   const s = 20 * scale;
   return (
     <>
-      {range(0, h).map(x =>
-        range(0, v).map(y => (
+      {range(0, h).map((x) =>
+        range(0, v).map((y) => (
           <div
             key={`gridItem-${x}-${y}`}
             style={{
@@ -248,7 +248,7 @@ export const EditorView: React.FC = () => {
         </button>
         <h3>Level</h3>
         <select value={currentLevelNumber} onChange={handleChangeLevel}>
-          {levelsRange.map(l => (
+          {levelsRange.map((l) => (
             <option key={`level${l}`} value={l}>
               {l} - {levels[`level${l}`]?.atom || `Level ${l}`}
             </option>
@@ -260,7 +260,7 @@ export const EditorView: React.FC = () => {
             <input
               type="number"
               value={width}
-              onChange={e => handleFieldChange(e, 'width')}
+              onChange={(e) => handleFieldChange(e, 'width')}
               step="10"
               data-n={0}
               data-prop="width"
@@ -271,7 +271,7 @@ export const EditorView: React.FC = () => {
             <input
               type="number"
               value={height}
-              onChange={e => handleFieldChange(e, 'height')}
+              onChange={(e) => handleFieldChange(e, 'height')}
               step="10"
               data-n={0}
               data-prop="height"
@@ -282,7 +282,7 @@ export const EditorView: React.FC = () => {
             <input
               type="color"
               value={hue}
-              onChange={e => handleFieldChange(e, 'hue')}
+              onChange={(e) => handleFieldChange(e, 'hue')}
               data-n={0}
               data-prop="hue"
             />
@@ -292,7 +292,7 @@ export const EditorView: React.FC = () => {
             <input
               type="color"
               value={antiHue}
-              onChange={e => handleFieldChange(e, 'antiHue')}
+              onChange={(e) => handleFieldChange(e, 'antiHue')}
               data-n={0}
               data-prop="hue"
             />
@@ -308,7 +308,7 @@ export const EditorView: React.FC = () => {
           <PlatformsEditor
             {...p}
             key={`platform${i}`}
-            onChange={e => handleFieldChange(e, 'platform')}
+            onChange={(e) => handleFieldChange(e, 'platform')}
             deletePlatform={handleDeletePlatform}
             i={i}
           />
@@ -324,7 +324,7 @@ export const EditorView: React.FC = () => {
           <ParticlesEditor
             {...p}
             key={`particles${i}`}
-            onChange={e => handleFieldChange(e, 'particle')}
+            onChange={(e) => handleFieldChange(e, 'particle')}
             deleteParticle={handleDeleteParticle}
             i={i}
           />
@@ -336,7 +336,7 @@ export const EditorView: React.FC = () => {
             <input
               type="number"
               value={player.position.x}
-              onChange={e => handleFieldChange(e, 'player')}
+              onChange={(e) => handleFieldChange(e, 'player')}
               step="10"
               data-n={0}
               data-prop="x"
@@ -347,7 +347,7 @@ export const EditorView: React.FC = () => {
             <input
               type="number"
               value={player.position.y}
-              onChange={e => handleFieldChange(e, 'player')}
+              onChange={(e) => handleFieldChange(e, 'player')}
               step="10"
               data-n={0}
               data-prop="y"
@@ -361,7 +361,7 @@ export const EditorView: React.FC = () => {
             <input
               type="number"
               value={door.x}
-              onChange={e => handleFieldChange(e, 'portal')}
+              onChange={(e) => handleFieldChange(e, 'portal')}
               step="10"
               data-n={0}
               data-prop="x"
@@ -372,7 +372,7 @@ export const EditorView: React.FC = () => {
             <input
               type="number"
               value={door.y}
-              onChange={e => handleFieldChange(e, 'portal')}
+              onChange={(e) => handleFieldChange(e, 'portal')}
               step="10"
               data-n={0}
               data-prop="y"

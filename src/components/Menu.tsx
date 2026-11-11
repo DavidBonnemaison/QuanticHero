@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import * as actions from '../actions/game';
 import { setLevels } from '../actions/levels';
-import { MenuWrapper, Title, Button } from './Menu.styles';
-import Molecules from './Molecules';
 import * as levels from '../data/levels';
-import { RootState } from '../types';
+import type { RootState } from '../types';
+import { Button, MenuWrapper, Title } from './Menu.styles';
+import Molecules from './Molecules';
 
 export default function Menu() {
   const dispatch = useDispatch();
