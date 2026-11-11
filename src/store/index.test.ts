@@ -10,7 +10,9 @@ describe('useGameStore', () => {
       maxLevel: 1,
       scores: {},
       customLevels: null,
-      isMuted: false
+      isMuted: false,
+      hapticsEnabled: true,
+      reducedEffects: false
     });
   });
 
@@ -22,6 +24,8 @@ describe('useGameStore', () => {
       expect(state.scores).toEqual({});
       expect(state.customLevels).toBeNull();
       expect(state.isMuted).toBe(false);
+      expect(state.hapticsEnabled).toBe(true);
+      expect(state.reducedEffects).toBe(false);
     });
   });
 
@@ -56,6 +60,32 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().isMuted).toBe(true);
       useGameStore.getState().setMuted(false);
       expect(useGameStore.getState().isMuted).toBe(false);
+    });
+
+    it('toggles haptics via toggleHaptics and sets via setHapticsEnabled', () => {
+      expect(useGameStore.getState().hapticsEnabled).toBe(true);
+      useGameStore.getState().toggleHaptics();
+      expect(useGameStore.getState().hapticsEnabled).toBe(false);
+      useGameStore.getState().toggleHaptics();
+      expect(useGameStore.getState().hapticsEnabled).toBe(true);
+
+      useGameStore.getState().setHapticsEnabled(false);
+      expect(useGameStore.getState().hapticsEnabled).toBe(false);
+      useGameStore.getState().setHapticsEnabled(true);
+      expect(useGameStore.getState().hapticsEnabled).toBe(true);
+    });
+
+    it('toggles reducedEffects via toggleReducedEffects and sets via setReducedEffects', () => {
+      expect(useGameStore.getState().reducedEffects).toBe(false);
+      useGameStore.getState().toggleReducedEffects();
+      expect(useGameStore.getState().reducedEffects).toBe(true);
+      useGameStore.getState().toggleReducedEffects();
+      expect(useGameStore.getState().reducedEffects).toBe(false);
+
+      useGameStore.getState().setReducedEffects(true);
+      expect(useGameStore.getState().reducedEffects).toBe(true);
+      useGameStore.getState().setReducedEffects(false);
+      expect(useGameStore.getState().reducedEffects).toBe(false);
     });
   });
 
@@ -104,6 +134,8 @@ describe('useGameStore', () => {
       useGameStore.getState().updateCurrentLevel(3);
       useGameStore.getState().recordScore(3, 12345);
       useGameStore.getState().toggleMute();
+      useGameStore.getState().setHapticsEnabled(false);
+      useGameStore.getState().setReducedEffects(true);
 
       const raw = localStorage.getItem('qtmhro');
       expect(raw).toBeTruthy();
@@ -112,6 +144,8 @@ describe('useGameStore', () => {
       expect(parsed.state.currentLevel).toBe(3);
       expect(parsed.state.maxLevel).toBe(4);
       expect(parsed.state.isMuted).toBe(true);
+      expect(parsed.state.hapticsEnabled).toBe(false);
+      expect(parsed.state.reducedEffects).toBe(true);
       expect(parsed.state.scores[3]).toEqual({
         last: 12345,
         best: 12345

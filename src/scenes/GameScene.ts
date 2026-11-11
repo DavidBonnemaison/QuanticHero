@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
 import * as defaultLevels from '../data/levels';
+import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
 import { push } from '../shims/navigation';
 import { useGameStore } from '../store';
+import { hapticFeedback } from '../tools/HapticFeedback';
 import { formatScore } from '../tools/formatScore';
 import { gameEvents } from '../tools/gameEvents';
 import type { LevelData, ParticleType } from '../types';
@@ -46,6 +48,7 @@ export default class GameScene extends Phaser.Scene {
   private startTime = 0;
   private timerText!: Phaser.GameObjects.Text;
   private isLevelCompleted = false;
+  private quantumEffects: QuantumEffectsManager | null = null;
 
   constructor() {
     super('Game');
@@ -56,6 +59,7 @@ export default class GameScene extends Phaser.Scene {
     this.movingPlatforms = [];
     this.molecules = [];
     this.isLevelCompleted = false;
+    this.quantumEffects = null;
 
     const store = useGameStore.getState();
     const currentLevel = store.currentLevel || 1;
@@ -298,16 +302,25 @@ export default class GameScene extends Phaser.Scene {
     // 10. Level Title Overlay
     this.showLevelTitle();
 
-    // 11. Audio
+    // 11. Audio & Haptics
     soundManager.init();
     soundManager.startBgm();
     soundManager.setClonesCount(this.heroes.length);
 
+    hapticFeedback.init();
+
+    // 12. Quantum Visual Effects (de Broglie waves & spacetime vortex)
+    this.quantumEffects = new QuantumEffectsManager(this);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       soundManager.stopBgm();
+      this.quantumEffects?.destroy();
+      this.quantumEffects = null;
     });
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
       soundManager.stopBgm();
+      this.quantumEffects?.destroy();
+      this.quantumEffects = null;
     });
 
     this.startTime = this.time.now;
@@ -382,10 +395,11 @@ export default class GameScene extends Phaser.Scene {
       push('/');
     });
 
+    // Sound toggle button
     const getSoundLabel = () => (useGameStore.getState().isMuted ? '🔇' : '🔊');
-    const soundButton = this.add.text(58, 6, getSoundLabel(), {
+    const soundButton = this.add.text(50, 6, getSoundLabel(), {
       fontFamily: '"Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif',
-      fontSize: '26px'
+      fontSize: '24px'
     });
     soundButton.setScrollFactor(0);
     soundButton.setDepth(101);
@@ -395,9 +409,43 @@ export default class GameScene extends Phaser.Scene {
       soundButton.setText(getSoundLabel());
     });
 
+    // Haptic feedback toggle button
+    const getHapticLabel = () => (useGameStore.getState().hapticsEnabled ? '📳' : '📴');
+    const hapticButton = this.add.text(86, 6, getHapticLabel(), {
+      fontFamily: '"Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif',
+      fontSize: '24px'
+    });
+    hapticButton.setScrollFactor(0);
+    hapticButton.setDepth(101);
+    hapticButton.setInteractive({ useHandCursor: true });
+    hapticButton.on('pointerdown', () => {
+      useGameStore.getState().toggleHaptics();
+      hapticButton.setText(getHapticLabel());
+    });
+
+    // Visual effects toggle button (✨ full effects / ⚡ reduced effects)
+    const getFxLabel = () => (useGameStore.getState().reducedEffects ? '⚡' : '✨');
+    const fxButton = this.add.text(122, 6, getFxLabel(), {
+      fontFamily: '"Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif',
+      fontSize: '24px'
+    });
+    fxButton.setScrollFactor(0);
+    fxButton.setDepth(101);
+    fxButton.setInteractive({ useHandCursor: true });
+    fxButton.on('pointerdown', () => {
+      useGameStore.getState().toggleReducedEffects();
+      fxButton.setText(getFxLabel());
+    });
+
     const unsubStore = useGameStore.subscribe(() => {
       if (soundButton.active) {
         soundButton.setText(getSoundLabel());
+      }
+      if (hapticButton.active) {
+        hapticButton.setText(getHapticLabel());
+      }
+      if (fxButton.active) {
+        fxButton.setText(getFxLabel());
       }
     });
 
@@ -408,7 +456,7 @@ export default class GameScene extends Phaser.Scene {
       unsubStore();
     });
 
-    this.timerText = this.add.text(this.cameras.main.width - 130, 6, '00:00:00', {
+    this.timerText = this.add.text(this.cameras.main.width - 120, 6, '00:00:00', {
       fontFamily: 'VT323',
       fontSize: '34px',
       color: '#ffffff'
@@ -548,11 +596,16 @@ export default class GameScene extends Phaser.Scene {
     push('/done');
   }
 
-  update(_time: number, delta: number): void {
+  update(time: number, delta: number): void {
     // Update timer
     if (this.timerText) {
       const elapsedMs = Math.max(0, this.time.now - this.startTime);
       this.timerText.setText(formatScore(elapsedMs));
+    }
+
+    // Update quantum visual effects (de Broglie waves & spacetime vortex)
+    if (this.quantumEffects) {
+      this.quantumEffects.update(time, delta, this.heroes, this.portalSprite);
     }
 
     // Update heroes

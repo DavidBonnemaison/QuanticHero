@@ -92,4 +92,40 @@ describe('Menu component', () => {
     expect(useGameStore.getState().isMuted).toBe(false);
     expect(screen.getByRole('button', { name: /mute sound/i })).toHaveTextContent('🔊');
   });
+
+  it('renders haptics toggle button and toggles haptics state on click', () => {
+    renderWithRouter();
+
+    const hapticsButton = screen.getByRole('button', { name: /disable haptics/i });
+    expect(hapticsButton).toBeInTheDocument();
+    expect(hapticsButton).toHaveTextContent('📳');
+
+    fireEvent.click(hapticsButton);
+    expect(useGameStore.getState().hapticsEnabled).toBe(false);
+    expect(screen.getByRole('button', { name: /enable haptics/i })).toHaveTextContent('📴');
+
+    fireEvent.click(screen.getByRole('button', { name: /enable haptics/i }));
+    expect(useGameStore.getState().hapticsEnabled).toBe(true);
+    expect(screen.getByRole('button', { name: /disable haptics/i })).toHaveTextContent('📳');
+  });
+
+  it('renders reduced effects toggle button and toggles reducedEffects state on click', () => {
+    renderWithRouter();
+
+    const fxButton = screen.getByRole('button', { name: /enable reduced visual effects/i });
+    expect(fxButton).toBeInTheDocument();
+    expect(fxButton).toHaveTextContent('✨');
+
+    fireEvent.click(fxButton);
+    expect(useGameStore.getState().reducedEffects).toBe(true);
+    expect(screen.getByRole('button', { name: /enable full visual effects/i })).toHaveTextContent(
+      '⚡'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /enable full visual effects/i }));
+    expect(useGameStore.getState().reducedEffects).toBe(false);
+    expect(
+      screen.getByRole('button', { name: /enable reduced visual effects/i })
+    ).toHaveTextContent('✨');
+  });
 });

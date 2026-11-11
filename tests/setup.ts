@@ -38,6 +38,36 @@ if (typeof window !== 'undefined') {
 
   // Mock HTMLCanvasElement.prototype.getContext
   if (typeof HTMLCanvasElement !== 'undefined') {
-    HTMLCanvasElement.prototype.getContext = (() => null) as any;
+    const mockCtx2d = {
+      fillRect: () => {},
+      clearRect: () => {},
+      getImageData: () => ({ data: new Uint8ClampedArray(4) }),
+      putImageData: () => {},
+      createImageData: () => ({ data: new Uint8ClampedArray(4) }),
+      setTransform: () => {},
+      drawImage: () => {},
+      save: () => {},
+      fillText: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      stroke: () => {},
+      translate: () => {},
+      scale: () => {},
+      rotate: () => {},
+      arc: () => {},
+      fill: () => {},
+      measureText: () => ({ width: 0 }),
+      transform: () => {},
+      rect: () => {},
+      clip: () => {},
+      globalCompositeOperation: 'source-over'
+    };
+    HTMLCanvasElement.prototype.getContext = ((type: string) => {
+      if (type === '2d') return mockCtx2d;
+      return null;
+    }) as any;
   }
 }

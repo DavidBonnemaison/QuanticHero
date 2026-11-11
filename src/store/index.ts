@@ -17,6 +17,8 @@ export interface GameStoreState {
   scores: Record<number, ScoreItem>;
   customLevels: Record<string, LevelData> | null;
   isMuted: boolean;
+  hapticsEnabled: boolean;
+  reducedEffects: boolean;
 }
 
 export interface GameStoreActions {
@@ -32,6 +34,10 @@ export interface GameStoreActions {
   deleteParticle: (params: { level: number; n: number | string }) => void;
   toggleMute: () => void;
   setMuted: (muted: boolean) => void;
+  toggleHaptics: () => void;
+  setHapticsEnabled: (enabled: boolean) => void;
+  toggleReducedEffects: () => void;
+  setReducedEffects: (reduced: boolean) => void;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -86,7 +92,9 @@ const customStorage = {
           maxLevel: game.maxLevel ?? 1,
           scores: score ?? {},
           customLevels: levels ?? null,
-          isMuted: parsed.isMuted ?? false
+          isMuted: parsed.isMuted ?? false,
+          hapticsEnabled: parsed.hapticsEnabled ?? true,
+          reducedEffects: parsed.reducedEffects ?? false
         },
         version: 0
       };
@@ -115,9 +123,17 @@ export const useGameStore = create<GameStore>()(
       scores: {},
       customLevels: null,
       isMuted: false,
+      hapticsEnabled: true,
+      reducedEffects: false,
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
       setMuted: (muted: boolean) => set({ isMuted: muted }),
+
+      toggleHaptics: () => set((state) => ({ hapticsEnabled: !state.hapticsEnabled })),
+      setHapticsEnabled: (enabled: boolean) => set({ hapticsEnabled: enabled }),
+
+      toggleReducedEffects: () => set((state) => ({ reducedEffects: !state.reducedEffects })),
+      setReducedEffects: (reduced: boolean) => set({ reducedEffects: reduced }),
 
       updateCurrentLevel: (lvl: number) => set({ currentLevel: Number(lvl) }),
 
@@ -287,7 +303,9 @@ export const useGameStore = create<GameStore>()(
         maxLevel: state.maxLevel,
         scores: state.scores,
         customLevels: state.customLevels,
-        isMuted: state.isMuted
+        isMuted: state.isMuted,
+        hapticsEnabled: state.hapticsEnabled,
+        reducedEffects: state.reducedEffects
       })
     }
   )
