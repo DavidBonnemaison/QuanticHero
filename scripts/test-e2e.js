@@ -245,6 +245,80 @@ async function run() {
     }
     console.log('✓ Bounds collision and Hero bounce verified (left/right/up: true, down: false, bounce configured)');
 
+    // REGRESSION TEST: Verify side bounce mechanics on left and right bounds
+    const sideBounceResult = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return null;
+      const hero = gs.heroes[0];
+
+      // Test Left Boundary Bounce: Hero pressing left against left wall
+      hero.x = 32;
+      hero.body.blocked.left = true;
+      hero.body.blocked.down = true;
+      hero.updateControl(
+        { left: { isDown: true }, right: { isDown: false }, up: { isDown: false }, down: { isDown: false } },
+        null,
+        { left: true, right: false, jump: false },
+        16.6
+      );
+      const leftBounceVx = hero.body.velocity.x;
+      const leftRecoilTimer = hero.recoilTimer;
+
+      // Reset recoil
+      hero.recoilTimer = 0;
+      hero.recoilVx = 0;
+
+      // Test Right Boundary Bounce: Hero pressing right against right wall
+      hero.x = gs.levelData.width - 32;
+      hero.body.blocked.left = false;
+      hero.body.blocked.right = true;
+      hero.body.blocked.down = true;
+      hero.updateControl(
+        { left: { isDown: false }, right: { isDown: true }, up: { isDown: false }, down: { isDown: false } },
+        null,
+        { left: false, right: true, jump: false },
+        16.6
+      );
+      const rightBounceVx = hero.body.velocity.x;
+      const rightRecoilTimer = hero.recoilTimer;
+
+      // Test Ceiling Bounce: Hero hitting ceiling
+      hero.recoilTimer = 0;
+      hero.recoilVx = 0;
+      hero.body.blocked.right = false;
+      hero.body.blocked.up = true;
+      hero.body.velocity.y = -50;
+      hero.updateControl(null, null, { left: false, right: false, jump: false }, 16.6);
+      const ceilingBounceVy = hero.body.velocity.y;
+
+      // Reset hero state
+      hero.body.blocked.up = false;
+      hero.recoilTimer = 0;
+      hero.recoilVx = 0;
+
+      return {
+        leftBounceVx,
+        leftRecoilTimer,
+        rightBounceVx,
+        rightRecoilTimer,
+        ceilingBounceVy
+      };
+    });
+
+    if (
+      !sideBounceResult ||
+      sideBounceResult.leftBounceVx <= 150 ||
+      sideBounceResult.leftRecoilTimer <= 0 ||
+      sideBounceResult.rightBounceVx >= -150 ||
+      sideBounceResult.rightRecoilTimer <= 0 ||
+      sideBounceResult.ceilingBounceVy < 150
+    ) {
+      throw new Error(`Side / ceiling bounce test failed: ${JSON.stringify(sideBounceResult)}`);
+    }
+    console.log(
+      `✓ Side bounce verified (left: vx=${sideBounceResult.leftBounceVx}, right: vx=${sideBounceResult.rightBounceVx}, ceiling: vy=${sideBounceResult.ceilingBounceVy})`
+    );
+
     // REGRESSION TEST: Verify PowerUp text styling (150px right-to-left banner)
     const powerUpResult = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
@@ -324,9 +398,11 @@ async function run() {
     }
 
     console.log('SUCCESS: Game launched without any uncaught exceptions!');
+  } catch (err) {
+    console.error('Test execution error:', err);
+    throw err;
   } finally {
     server.kill();
-    process.exit(0);
   }
 }
 

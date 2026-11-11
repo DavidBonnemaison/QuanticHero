@@ -198,12 +198,18 @@ export default class GameScene extends Phaser.Scene {
     this.portalSprite.play('spin');
 
     // 7. Heroes
-    this.heroGroup = this.physics.add.group();
+    this.heroGroup = this.physics.add.group({
+      bounceX: 0.4,
+      bounceY: 0.3,
+      collideWorldBounds: true
+    });
     const startX = this.levelData.player.position.x;
     const startY = this.levelData.player.position.y;
     const initialHero = new Hero(this, startX, startY, true);
     this.heroes.push(initialHero);
     this.heroGroup.add(initialHero);
+    initialHero.setBounce(0.4, 0.3);
+    initialHero.setCollideWorldBounds(true);
 
     this.cameras.main.centerOn(initialHero.x, initialHero.y);
     this.cameras.main.startFollow(initialHero, true, 0.1, 0.1);
@@ -392,6 +398,8 @@ export default class GameScene extends Phaser.Scene {
           clonedHero.setGravityInverted(this.physics.world.gravity.y < 0);
           this.heroes.push(clonedHero);
           this.heroGroup.add(clonedHero);
+          clonedHero.setBounce(0.4, 0.3);
+          clonedHero.setCollideWorldBounds(true);
         }
         break;
       }
@@ -455,7 +463,7 @@ export default class GameScene extends Phaser.Scene {
     push('/done');
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
     // Update timer
     if (this.timerText) {
       const elapsedMs = Math.max(0, this.time.now - this.startTime);
@@ -465,7 +473,7 @@ export default class GameScene extends Phaser.Scene {
     // Update heroes
     for (const hero of [...this.heroes]) {
       if (hero.active) {
-        hero.updateControl(this.cursors, this.wasd, this.touchInput);
+        hero.updateControl(this.cursors, this.wasd, this.touchInput, delta);
         // Restart if hero falls out through the bottom of the scene
         if (hero.y > this.levelData.height + 20) {
           if (hero.isFocused || this.heroes.length <= 1) {
