@@ -1,1 +1,1 @@
-export { push, routerReducer, routerMiddleware, setNavigator } from './navigation.js';
+export { push, routerMiddleware, routerReducer, setNavigator } from './navigation.js';

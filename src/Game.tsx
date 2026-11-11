@@ -1,44 +1,48 @@
-import 'pixi';
-import 'p2';
 import Phaser from 'phaser';
-import React, { useEffect } from 'react';
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 import config from './config';
-import BootState from './states/Boot';
-import SplashState from './states/Splash';
-import GameState from './states/Game';
-import TutoState from './states/Tuto';
+import BootScene from './scenes/BootScene';
+import GameScene from './scenes/GameScene';
+import PreloadScene from './scenes/PreloadScene';
 
 declare global {
   interface Window {
-    game: any;
-  }
-}
-
-class PhaserGameInstance extends (Phaser.Game as new (...args: any[]) => any) {
-  constructor() {
-    super(config.width, config.height, Phaser.CANVAS, 'game', null);
-
-    this.state.add('Boot', BootState, false);
-    this.state.add('Splash', SplashState, false);
-    this.state.add('Game', GameState, false);
-    this.state.add('Tuto', TutoState, false);
-
-    this.state.start('Boot');
+    game: Phaser.Game | null;
   }
 }
 
 export const GameContainer: React.FC = () => {
+  const gameRef = useRef<Phaser.Game | null>(null);
+
   useEffect(() => {
-    const gameInstance = new PhaserGameInstance();
+    const gameConfig: Phaser.Types.Core.GameConfig = {
+      type: Phaser.AUTO,
+      parent: 'game',
+      width: config.width,
+      height: config.height,
+      physics: {
+        default: 'arcade',
+        arcade: {
+          gravity: { x: 0, y: 700 },
+          debug: false
+        }
+      },
+      scene: [BootScene, PreloadScene, GameScene]
+    };
+
+    const gameInstance = new Phaser.Game(gameConfig);
+    gameRef.current = gameInstance;
     window.game = gameInstance;
 
     return () => {
-      if (window.game) {
+      if (gameRef.current) {
         try {
-          window.game.destroy();
+          gameRef.current.destroy(true);
         } catch {
           // game may have already been destroyed on level completion
         }
+        gameRef.current = null;
         window.game = null;
       }
     };

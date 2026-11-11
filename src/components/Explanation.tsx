@@ -1,14 +1,12 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
+import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as levels from '../data/levels';
-import { Button, Container, Text } from './Explanation.styles';
-import { RootState } from '../types';
+import { useGameStore } from '../store';
+import styles from './Explanation.module.css';
 
-export default function Explanation() {
+export default function Explanation(): React.ReactElement {
   const navigate = useNavigate();
-  const game = useSelector((state: RootState) => state.game);
-  const { currentLevel } = game;
+  const currentLevel = useGameStore((state) => state.currentLevel);
   const levelData = (levels as any)[`level${currentLevel}`] || { explanations: [] };
   const explanations: string[] = levelData.explanations || [];
 
@@ -17,13 +15,15 @@ export default function Explanation() {
   };
 
   return (
-    <Container>
-      <Text>
+    <div className={styles.container}>
+      <div className={styles.text}>
         {explanations.map((e, i) => (
           <p key={`exp-${i}`}>{e}</p>
         ))}
-      </Text>
-      <Button onClick={handlePlay}>Got it</Button>
-    </Container>
+      </div>
+      <button type="button" className={styles.button} onClick={handlePlay}>
+        Got it
+      </button>
+    </div>
   );
 }

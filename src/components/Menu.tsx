@@ -1,30 +1,51 @@
-import React, { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as actions from '../actions/game';
-import { setLevels } from '../actions/levels';
-import { MenuWrapper, Title, Button } from './Menu.styles';
-import Molecules from './Molecules';
 import * as levels from '../data/levels';
-import { RootState } from '../types';
+import { useGameStore } from '../store';
+import type { LevelData } from '../types';
+import styles from './Menu.module.css';
+import Molecules from './Molecules';
 
-export default function Menu() {
-  const dispatch = useDispatch();
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
+export default function Menu(): React.ReactElement {
   const navigate = useNavigate();
-  const currentLevels = useSelector((state: RootState) => state.levels);
+  const customLevels = useGameStore((state) => state.customLevels);
+  const setLevels = useGameStore((state) => state.setLevels);
+  const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     Molecules.start();
-    if (!currentLevels) {
-      dispatch(setLevels(levels));
+    if (!customLevels) {
+      setLevels(levels as unknown as Record<string, LevelData>);
     }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
     return () => {
       Molecules.end();
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, [currentLevels, dispatch]);
+  }, [customLevels, setLevels]);
 
   const handleNewGame = () => {
-    dispatch(actions.updateCurrentLevel(1));
+    updateCurrentLevel(1);
     navigate('/explanation');
   };
 
@@ -32,12 +53,30 @@ export default function Menu() {
     navigate('/levels');
   };
 
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
+
   return (
-    <MenuWrapper>
+    <div className={styles.menuWrapper}>
       <div id="container" />
-      <Title>Quantum Hero</Title>
-      <Button onClick={handleNewGame}>New game</Button>
-      <Button onClick={handleGoToLevels}>Levels</Button>
-    </MenuWrapper>
+      <h1 className={styles.title}>Quantum Hero</h1>
+      <button type="button" className={styles.button} onClick={handleNewGame}>
+        New game
+      </button>
+      <button type="button" className={styles.button} onClick={handleGoToLevels}>
+        Levels
+      </button>
+      {installPrompt && (
+        <button type="button" className={styles.button} onClick={handleInstallClick}>
+          Install App
+        </button>
+      )}
+    </div>
   );
 }

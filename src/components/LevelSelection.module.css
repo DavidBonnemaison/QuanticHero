@@ -1,0 +1,120 @@
+.selectionContainer {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 16px 12px calc(30px + env(safe-area-inset-bottom, 20px));
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px dashed #444;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+.backButton {
+  background: transparent;
+  border: 1px solid #666;
+  color: #fff;
+  font-family: inherit;
+  font-size: 22px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.backButton:hover {
+  background: #333;
+}
+
+.title {
+  text-align: center;
+  color: white;
+  font-size: 32px;
+  margin: 0;
+  font-weight: normal;
+  letter-spacing: 0.05em;
+}
+
+.menuItem {
+  background-color: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: white;
+  padding: 16px;
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  transition: transform 0.1s, background-color 0.15s;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background-color: #2a2a2a;
+  border-color: #555;
+}
+
+.menuItem:active {
+  transform: scale(0.98);
+}
+
+.menuItemDisabled {
+  cursor: not-allowed;
+  opacity: 0.25;
+}
+
+.menuItemDisabled:hover {
+  background-color: #222;
+  border-color: #333;
+}
+
+.menuItemDisabled:active {
+  transform: none;
+}
+
+.atom {
+  width: 80px;
+  height: 80px;
+  line-height: 80px;
+  font-size: 56px;
+  text-align: center;
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.atomicNumber {
+  position: absolute;
+  top: -28px;
+  left: 4px;
+  font-size: 24px;
+  color: #ddd;
+}
+
+.atomDescription {
+  flex-grow: 1;
+  padding-left: 18px;
+  overflow: hidden;
+}
+
+.atomTitle {
+  font-weight: normal;
+  font-size: 34px;
+  padding: 0;
+  margin: 0 0 6px;
+  color: #fff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.atomScore {
+  font-size: 26px;
+  color: #bbb;
+  font-family: "VT323", monospace;
+}

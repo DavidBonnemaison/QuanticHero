@@ -1,7 +1,7 @@
-import React from 'react';
+import type React from 'react';
 import { useDrag } from 'react-dnd';
-import { round } from 'lodash';
-import { PlatformNumber } from './Editor.style';
+import { round } from '../../tools/math';
+import styles from './Editor.module.css';
 
 interface DrawPlatformProps {
   x: number;
@@ -15,18 +15,8 @@ interface DrawPlatformProps {
   onDrop: (params: { n: number; x: number; y: number }) => void;
 }
 
-export const DrawPlatform: React.FC<DrawPlatformProps> = props => {
-  const {
-    x,
-    y,
-    width,
-    height,
-    scale,
-    color,
-    i,
-    antiHue,
-    onDrop
-  } = props;
+export const DrawPlatform: React.FC<DrawPlatformProps> = (props) => {
+  const { x, y, width, height, scale, color, i, antiHue, onDrop } = props;
 
   const [{ isDragging }, dragRef] = useDrag(
     () => ({
@@ -35,13 +25,13 @@ export const DrawPlatform: React.FC<DrawPlatformProps> = props => {
       end: (_item, monitor) => {
         if (!monitor.didDrop()) return;
         const dropResult = monitor.getDropResult<{ diff?: { x: number; y: number } }>();
-        if (dropResult && dropResult.diff) {
+        if (dropResult?.diff) {
           const newX = round(props.x + dropResult.diff.x / scale, -1);
           const newY = round(props.y + dropResult.diff.y / scale, -1);
           onDrop({ n: i, x: newX, y: newY });
         }
       },
-      collect: monitor => ({
+      collect: (monitor) => ({
         isDragging: monitor.isDragging()
       })
     }),
@@ -64,9 +54,19 @@ export const DrawPlatform: React.FC<DrawPlatformProps> = props => {
         cursor: 'move'
       }}
     >
-      <PlatformNumber scale={scale} color={color} anti={antiHue}>
+      <div
+        className={styles.platformNumber}
+        style={{
+          fontSize: `${scale * 40}px`,
+          backgroundColor: color,
+          color: antiHue,
+          top: `${scale * -10}px`,
+          width: `${scale * 40}px`,
+          marginLeft: `${scale * -20}px`
+        }}
+      >
         {i}
-      </PlatformNumber>
+      </div>
     </div>
   );
 };

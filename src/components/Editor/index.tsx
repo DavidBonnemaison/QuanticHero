@@ -1,32 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { range, max } from 'lodash';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { DndProvider, useDrop } from 'react-dnd';
-
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useNavigate } from 'react-router-dom';
 import * as levelsData from '../../data/levels';
-import {
-  Container,
-  EditPanel,
-  DisplayPanel,
-  FieldEditor,
-  PlayButton,
-  ResetButton,
-  AddButton,
-  DownloadButton
-} from './Editor.style';
-import * as actions from '../../actions/levels';
-import { updateCurrentLevel } from '../../actions/game';
-import PlatformsEditor from './PlatformsEditor';
-import ParticlesEditor from './ParticleEditor';
-import DrawPlatform from './DrawPlatform';
+import { useGameStore } from '../../store';
+import { range } from '../../tools/math';
+import type { LevelData } from '../../types';
 import DrawParticle from './DrawParticle';
-import { RootState, LevelData } from '../../types';
+import DrawPlatform from './DrawPlatform';
+import styles from './Editor.module.css';
+import ParticlesEditor from './ParticleEditor';
+import PlatformsEditor from './PlatformsEditor';
 
 const downloader = (filename: string, text: string) => {
   const element = document.createElement('a');
-  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+  element.setAttribute('href', `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`);
   element.setAttribute('download', filename);
   element.style.display = 'none';
   document.body.appendChild(element);
@@ -44,8 +33,8 @@ const Grid: React.FC<GridProps> = ({ h, v, scale }) => {
   const s = 20 * scale;
   return (
     <>
-      {range(0, h).map(x =>
-        range(0, v).map(y => (
+      {range(0, h).map((x) =>
+        range(0, v).map((y) => (
           <div
             key={`gridItem-${x}-${y}`}
             style={{
@@ -82,7 +71,7 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
   play,
   resetLevels,
   download,
-  currentLevel,
+  currentLevel: _currentLevel,
   onDropPlatform
 }) => {
   const { platforms, particles, hue, antiHue, width, height, player, door } = level;
@@ -96,10 +85,31 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
 
   return (
     <div ref={dropRef as unknown as React.Ref<HTMLDivElement>}>
-      <DisplayPanel hue={hue} width={width * scale} height={height * scale}>
-        <PlayButton onClick={play}>PLAY</PlayButton>
-        <ResetButton onClick={resetLevels}>RESET</ResetButton>
-        <DownloadButton onClick={download}>DOWNLOAD</DownloadButton>
+      <div
+        className={styles.displayPanel}
+        style={{
+          backgroundColor: hue,
+          width: `${width * scale}px`,
+          height: `${height * scale}px`
+        }}
+      >
+        <button type="button" className={`${styles.topButton} ${styles.playButton}`} onClick={play}>
+          PLAY
+        </button>
+        <button
+          type="button"
+          className={`${styles.topButton} ${styles.resetButton}`}
+          onClick={resetLevels}
+        >
+          RESET
+        </button>
+        <button
+          type="button"
+          className={`${styles.topButton} ${styles.downloadButton}`}
+          onClick={download}
+        >
+          DOWNLOAD
+        </button>
         {platforms.map((p, i) => (
           <DrawPlatform
             key={`platformDrawing${p.x}-${p.y}-${i}`}
@@ -137,29 +147,36 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
           }}
         />
         <Grid {...grid} scale={scale} />
-      </DisplayPanel>
+      </div>
     </div>
   );
 };
 
 export const EditorView: React.FC = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const levels = useSelector((state: RootState) => state.levels);
-  const game = useSelector((state: RootState) => state.game);
+  const customLevels = useGameStore((state) => state.customLevels);
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const setLevels = useGameStore((state) => state.setLevels);
+  const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
+  const updateLevelField = useGameStore((state) => state.updateLevelField);
+  const addPlatform = useGameStore((state) => state.addPlatform);
+  const deletePlatform = useGameStore((state) => state.deletePlatform);
+  const addParticle = useGameStore((state) => state.addParticle);
+  const deleteParticle = useGameStore((state) => state.deleteParticle);
 
-  const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(game.currentLevel || 1);
+  const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(currentLevel || 1);
 
   useEffect(() => {
-    if (!levels) {
-      dispatch(actions.setLevels(levelsData as unknown as Record<string, LevelData>));
+    if (!customLevels) {
+      setLevels(levelsData as unknown as Record<string, LevelData>);
     }
-    if (game.currentLevel) {
-      setCurrentLevelNumber(game.currentLevel);
+    if (currentLevel) {
+      setCurrentLevelNumber(currentLevel);
     }
-  }, [levels, game.currentLevel, dispatch]);
+  }, [customLevels, currentLevel, setLevels]);
 
+  const levels = customLevels;
   if (!levels) {
     return null;
   }
@@ -173,7 +190,7 @@ export const EditorView: React.FC = () => {
   const { platforms, particles, hue, antiHue, width, height, player, door } = level;
 
   const getScale = (dims: { width: number; height: number }) =>
-    max([(window.innerWidth - 220) / dims.width, window.innerHeight / dims.height]) || 1;
+    Math.max((window.innerWidth - 220) / dims.width, window.innerHeight / dims.height) || 1;
 
   const scale = getScale({ width, height });
   const levelsRange = range(1, 11);
@@ -188,27 +205,31 @@ export const EditorView: React.FC = () => {
   ) => {
     const { value, dataset } = e.target;
     const { n, prop } = dataset;
-    dispatch(actions.update({ level: currentLevelNumber, type, n, prop, value }));
+    updateLevelField({ level: currentLevelNumber, type, n, prop, value });
   };
 
   const handleChangeLevel = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = Number(e.target.value);
-    dispatch(updateCurrentLevel(val));
+    updateCurrentLevel(val);
     setCurrentLevelNumber(val);
   };
 
   const handleResetLevels = () => {
-    dispatch(actions.setLevels(levelsData as unknown as Record<string, LevelData>));
+    setLevels(levelsData as unknown as Record<string, LevelData>);
   };
 
   const handleDeletePlatform = (e: React.MouseEvent<HTMLDivElement>) => {
     const n = (e.currentTarget as HTMLElement).dataset.n;
-    dispatch(actions.deletePlatform({ level: currentLevelNumber, n }));
+    if (n !== undefined) {
+      deletePlatform({ level: currentLevelNumber, n });
+    }
   };
 
   const handleDeleteParticle = (e: React.MouseEvent<HTMLDivElement>) => {
     const n = (e.currentTarget as HTMLElement).dataset.n;
-    dispatch(actions.deleteParticle({ level: currentLevelNumber, n }));
+    if (n !== undefined) {
+      deleteParticle({ level: currentLevelNumber, n });
+    }
   };
 
   const handleDownload = () => {
@@ -217,30 +238,27 @@ export const EditorView: React.FC = () => {
   };
 
   const handleDropPlatform = ({ n, x, y }: { n: number; x: number; y: number }) => {
-    dispatch(
-      actions.update({
-        level: currentLevelNumber,
-        type: 'platform',
-        n,
-        prop: 'x',
-        value: x
-      })
-    );
-    dispatch(
-      actions.update({
-        level: currentLevelNumber,
-        type: 'platform',
-        n,
-        prop: 'y',
-        value: y
-      })
-    );
+    updateLevelField({
+      level: currentLevelNumber,
+      type: 'platform',
+      n,
+      prop: 'x',
+      value: x
+    });
+    updateLevelField({
+      level: currentLevelNumber,
+      type: 'platform',
+      n,
+      prop: 'y',
+      value: y
+    });
   };
 
   return (
-    <Container>
-      <EditPanel>
+    <div className={styles.container}>
+      <div className={styles.editPanel}>
         <button
+          type="button"
           onClick={() => navigate('/')}
           style={{ marginBottom: 12, padding: '4px 8px', cursor: 'pointer' }}
         >
@@ -248,19 +266,19 @@ export const EditorView: React.FC = () => {
         </button>
         <h3>Level</h3>
         <select value={currentLevelNumber} onChange={handleChangeLevel}>
-          {levelsRange.map(l => (
+          {levelsRange.map((l) => (
             <option key={`level${l}`} value={l}>
               {l} - {levels[`level${l}`]?.atom || `Level ${l}`}
             </option>
           ))}
         </select>
-        <FieldEditor>
+        <div className={styles.fieldEditor}>
           <div>
             <label>width:</label>
             <input
               type="number"
               value={width}
-              onChange={e => handleFieldChange(e, 'width')}
+              onChange={(e) => handleFieldChange(e, 'width')}
               step="10"
               data-n={0}
               data-prop="width"
@@ -271,7 +289,7 @@ export const EditorView: React.FC = () => {
             <input
               type="number"
               value={height}
-              onChange={e => handleFieldChange(e, 'height')}
+              onChange={(e) => handleFieldChange(e, 'height')}
               step="10"
               data-n={0}
               data-prop="height"
@@ -282,7 +300,7 @@ export const EditorView: React.FC = () => {
             <input
               type="color"
               value={hue}
-              onChange={e => handleFieldChange(e, 'hue')}
+              onChange={(e) => handleFieldChange(e, 'hue')}
               data-n={0}
               data-prop="hue"
             />
@@ -292,23 +310,28 @@ export const EditorView: React.FC = () => {
             <input
               type="color"
               value={antiHue}
-              onChange={e => handleFieldChange(e, 'antiHue')}
+              onChange={(e) => handleFieldChange(e, 'antiHue')}
               data-n={0}
               data-prop="hue"
             />
           </div>
-        </FieldEditor>
+        </div>
         <h3>
           Platforms
-          <AddButton onClick={() => dispatch(actions.addPlatform({ level: currentLevelNumber }))}>
+          <div
+            className={styles.addButton}
+            onClick={() => addPlatform({ level: currentLevelNumber })}
+            role="button"
+            tabIndex={0}
+          >
             +
-          </AddButton>
+          </div>
         </h3>
         {platforms.map((p, i) => (
           <PlatformsEditor
             {...p}
             key={`platform${i}`}
-            onChange={e => handleFieldChange(e, 'platform')}
+            onChange={(e) => handleFieldChange(e, 'platform')}
             deletePlatform={handleDeletePlatform}
             i={i}
           />
@@ -316,27 +339,32 @@ export const EditorView: React.FC = () => {
         <hr />
         <h3>
           Particles
-          <AddButton onClick={() => dispatch(actions.addParticle({ level: currentLevelNumber }))}>
+          <div
+            className={styles.addButton}
+            onClick={() => addParticle({ level: currentLevelNumber })}
+            role="button"
+            tabIndex={0}
+          >
             +
-          </AddButton>
+          </div>
         </h3>
         {particles.map((p, i) => (
           <ParticlesEditor
             {...p}
             key={`particles${i}`}
-            onChange={e => handleFieldChange(e, 'particle')}
+            onChange={(e) => handleFieldChange(e, 'particle')}
             deleteParticle={handleDeleteParticle}
             i={i}
           />
         ))}
         <h3>Player</h3>
-        <FieldEditor>
+        <div className={styles.fieldEditor}>
           <div>
             <label>x:</label>
             <input
               type="number"
               value={player.position.x}
-              onChange={e => handleFieldChange(e, 'player')}
+              onChange={(e) => handleFieldChange(e, 'player')}
               step="10"
               data-n={0}
               data-prop="x"
@@ -347,21 +375,21 @@ export const EditorView: React.FC = () => {
             <input
               type="number"
               value={player.position.y}
-              onChange={e => handleFieldChange(e, 'player')}
+              onChange={(e) => handleFieldChange(e, 'player')}
               step="10"
               data-n={0}
               data-prop="y"
             />
           </div>
-        </FieldEditor>
+        </div>
         <h3>Portal</h3>
-        <FieldEditor>
+        <div className={styles.fieldEditor}>
           <div>
             <label>x:</label>
             <input
               type="number"
               value={door.x}
-              onChange={e => handleFieldChange(e, 'portal')}
+              onChange={(e) => handleFieldChange(e, 'portal')}
               step="10"
               data-n={0}
               data-prop="x"
@@ -372,14 +400,14 @@ export const EditorView: React.FC = () => {
             <input
               type="number"
               value={door.y}
-              onChange={e => handleFieldChange(e, 'portal')}
+              onChange={(e) => handleFieldChange(e, 'portal')}
               step="10"
               data-n={0}
               data-prop="y"
             />
           </div>
-        </FieldEditor>
-      </EditPanel>
+        </div>
+      </div>
       <EditorComponent
         scale={scale}
         play={() => navigate('/game')}
@@ -390,7 +418,7 @@ export const EditorView: React.FC = () => {
         currentLevel={currentLevelNumber}
         onDropPlatform={handleDropPlatform}
       />
-    </Container>
+    </div>
   );
 };
 

@@ -1,32 +1,19 @@
-import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import type React from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as actions from '../actions/game';
-import {
-  Container,
-  Done,
-  ScoresWrapper,
-  ScoreBox,
-  ScoreType,
-  ScoreValue,
-  BestBadge,
-  ButtonContainer,
-  Button,
-  Molecule
-} from './LevelFinished.styles';
-import formatScore from '../tools/formatScore';
 import * as levels from '../data/levels';
-import { RootState } from '../types';
+import { useGameStore } from '../store';
+import formatScore from '../tools/formatScore';
+import styles from './LevelFinished.module.css';
 
-export default function LevelFinished() {
-  const dispatch = useDispatch();
+export default function LevelFinished(): React.ReactElement {
   const navigate = useNavigate();
 
-  const game = useSelector((state: RootState) => state.game);
-  const score = useSelector((state: RootState) => state.score);
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const scores = useGameStore((state) => state.scores);
+  const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
 
-  const levelIndex = Math.max(1, game.currentLevel - 1);
-  const currentLevelScore = score[levelIndex] || { best: 0, last: 0 };
+  const levelIndex = Math.max(1, currentLevel - 1);
+  const currentLevelScore = scores[levelIndex] || { best: 0, last: 0 };
   const { last, best } = currentLevelScore;
 
   const currentLevelData = (levels as any)[`level${levelIndex}`] || {
@@ -39,8 +26,8 @@ export default function LevelFinished() {
   const { id, hue, antiHue, symbol, atom } = currentLevelData;
 
   const handleNextLevel = () => {
-    const nextLevelData = (levels as any)[`level${game.currentLevel}`];
-    if (nextLevelData && nextLevelData.explanations && nextLevelData.explanations.length > 0) {
+    const nextLevelData = (levels as any)[`level${currentLevel}`];
+    if (nextLevelData?.explanations && nextLevelData.explanations.length > 0) {
       navigate('/explanation');
     } else {
       navigate('/game');
@@ -48,7 +35,7 @@ export default function LevelFinished() {
   };
 
   const handleRetry = () => {
-    dispatch(actions.updateCurrentLevel(levelIndex));
+    updateCurrentLevel(levelIndex);
     navigate('/game');
   };
 
@@ -57,38 +44,50 @@ export default function LevelFinished() {
   };
 
   return (
-    <Container>
-      <Done>{atom}</Done>
+    <div className={styles.container}>
+      <h1 className={styles.done}>{atom}</h1>
 
-      <ScoresWrapper>
-        <ScoreBox>
-          <ScoreType>Last game</ScoreType>
-          <ScoreValue>{formatScore(last)}</ScoreValue>
-          {best === last && best > 0 && <BestBadge>New record !</BestBadge>}
-        </ScoreBox>
+      <div className={styles.scoresWrapper}>
+        <div className={styles.scoreBox}>
+          <span className={styles.scoreType}>Last game</span>
+          <span className={styles.scoreValue}>{formatScore(last)}</span>
+          {best === last && best > 0 && <div className={styles.bestBadge}>New record !</div>}
+        </div>
 
-        <ScoreBox>
-          <ScoreType>All Time Best</ScoreType>
-          <ScoreValue>{formatScore(best)}</ScoreValue>
-        </ScoreBox>
-      </ScoresWrapper>
+        <div className={styles.scoreBox}>
+          <span className={styles.scoreType}>All Time Best</span>
+          <span className={styles.scoreValue}>{formatScore(best)}</span>
+        </div>
+      </div>
 
-      <Molecule bgColor={hue} color={antiHue}>
-        <span>{id}</span>
+      <div className={styles.molecule} style={{ backgroundColor: hue, color: antiHue }}>
+        <span className={styles.atomicId}>{id}</span>
         <span>{symbol}</span>
-      </Molecule>
+      </div>
 
-      <ButtonContainer>
-        <Button buttonType="menu" onClick={handleGoToMenu}>
+      <div className={styles.buttonContainer}>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.buttonMenu}`}
+          onClick={handleGoToMenu}
+        >
           Menu
-        </Button>
-        <Button buttonType="retry" onClick={handleRetry}>
+        </button>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.buttonRetry}`}
+          onClick={handleRetry}
+        >
           Retry
-        </Button>
-        <Button buttonType="next" onClick={handleNextLevel}>
+        </button>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.buttonNext}`}
+          onClick={handleNextLevel}
+        >
           Next
-        </Button>
-      </ButtonContainer>
-    </Container>
+        </button>
+      </div>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
-import React from 'react';
-import { FieldEditor, ItemNumber, DeleteItem } from './Editor.style';
+import type React from 'react';
+import styles from './Editor.module.css';
 
 interface ParticleEditorProps {
   x: number;
@@ -18,11 +18,17 @@ export const ParticleEditor: React.FC<ParticleEditorProps> = ({
   i,
   deleteParticle
 }) => (
-  <FieldEditor>
-    <ItemNumber>{i}</ItemNumber>
-    <DeleteItem data-n={i} onClick={deleteParticle}>
+  <div className={styles.fieldEditor}>
+    <div className={styles.itemNumber}>{i}</div>
+    <div
+      className={styles.deleteItem}
+      data-n={i}
+      onClick={deleteParticle}
+      role="button"
+      tabIndex={0}
+    >
       ✕
-    </DeleteItem>
+    </div>
     <div>
       <label>x:</label>
       <input type="number" value={x} onChange={onChange} step="10" data-n={i} data-prop="x" />
@@ -40,7 +46,7 @@ export const ParticleEditor: React.FC<ParticleEditorProps> = ({
         <option value="antiGravity">antiGravity</option>
       </select>
     </div>
-  </FieldEditor>
+  </div>
 );
 
 export default ParticleEditor;

@@ -1,5 +1,5 @@
-import React from 'react';
-import { FieldEditor, ItemNumber, DeleteItem } from './Editor.style';
+import type React from 'react';
+import styles from './Editor.module.css';
 
 interface PlatformsEditorProps {
   x: number;
@@ -20,11 +20,17 @@ export const PlatformsEditor: React.FC<PlatformsEditorProps> = ({
   deletePlatform,
   i
 }) => (
-  <FieldEditor>
-    <ItemNumber>{i}</ItemNumber>
-    <DeleteItem data-n={i} onClick={deletePlatform}>
+  <div className={styles.fieldEditor}>
+    <div className={styles.itemNumber}>{i}</div>
+    <div
+      className={styles.deleteItem}
+      data-n={i}
+      onClick={deletePlatform}
+      role="button"
+      tabIndex={0}
+    >
       ✕
-    </DeleteItem>
+    </div>
     <div>
       <label>x:</label>
       <input type="number" value={x} onChange={onChange} step="10" data-n={i} data-prop="x" />
@@ -55,7 +61,7 @@ export const PlatformsEditor: React.FC<PlatformsEditorProps> = ({
         data-prop="height"
       />
     </div>
-  </FieldEditor>
+  </div>
 );
 
 export default PlatformsEditor;

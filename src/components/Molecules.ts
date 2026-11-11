@@ -1,5 +1,5 @@
 import randomColor from 'randomcolor';
-import { random, sample, range, max } from 'lodash';
+import { random, range, sample } from '../tools/math';
 
 class Molecule {
   id: number;
@@ -27,7 +27,7 @@ class Molecule {
       x: (random(-20, 20) * this.size) / 1000,
       y: (random(-20, 20) * this.size) / 1000
     };
-    this.opacity = max([random(50, 1000) / this.size ** 2, 0.2]) || 0.5;
+    this.opacity = Math.max(random(50, 1000) / this.size ** 2, 0.2) || 0.5;
   }
 
   getTemplate(): HTMLDivElement {
@@ -93,9 +93,12 @@ class Molecule {
     newMolecule.style.transition = '1s opacity ease-in-out';
     containerElm.appendChild(newMolecule);
     this.setMotion();
-    this.opacityTimeout1 = setTimeout(() => {
-      this.setOpacity();
-    }, random(100, 1500));
+    this.opacityTimeout1 = setTimeout(
+      () => {
+        this.setOpacity();
+      },
+      random(100, 1500)
+    );
     return this;
   }
 
@@ -120,7 +123,7 @@ export default {
       Molecules.push(new Molecule({ container: '#container' }).create());
     }),
   end: () => {
-    Molecules.forEach(mol => mol.destroy());
+    Molecules.forEach((mol) => mol.destroy());
     Molecules = [];
   }
 };
