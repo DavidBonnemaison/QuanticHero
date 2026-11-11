@@ -26,30 +26,46 @@ class Molecule {
 
   setMotion() {
     this.motion = setInterval(() => {
-      let topPosition = Number(document.getElementById('' + this.id).style.top.slice(0, -2));
+      const el = document.getElementById('' + this.id);
+      if (!el) {
+        clearInterval(this.motion);
+        return;
+      }
+      let topPosition = Number(el.style.top.slice(0, -2));
       if (topPosition > window.innerHeight) topPosition = this.size * -1;
       if (topPosition < this.size * -1) topPosition = window.innerHeight;
-      let leftPosition = Number(document.getElementById('' + this.id).style.left.slice(0, -2));
+      let leftPosition = Number(el.style.left.slice(0, -2));
       if (leftPosition > window.innerWidth) leftPosition = this.size * -1;
       if (leftPosition < this.size * -1) leftPosition = window.innerWidth;
-      document.getElementById('' + this.id).style.left = leftPosition + this.speed.x + 'px';
-      document.getElementById('' + this.id).style.top = topPosition + this.speed.y + 'px';
+      el.style.left = leftPosition + this.speed.x + 'px';
+      el.style.top = topPosition + this.speed.y + 'px';
     }, 30);
   }
 
   setOpacity() {
     this.opacityMore = setInterval(() => {
-      document.getElementById('' + this.id).style.opacity = 0.4;
+      const el = document.getElementById('' + this.id);
+      if (!el) {
+        clearInterval(this.opacityMore);
+        return;
+      }
+      el.style.opacity = 0.4;
     }, 2000);
-    setTimeout(() => {
+    this.opacityTimeout2 = setTimeout(() => {
       this.opacityLess = setInterval(() => {
-        document.getElementById('' + this.id).style.opacity = 0;
+        const el = document.getElementById('' + this.id);
+        if (!el) {
+          clearInterval(this.opacityLess);
+          return;
+        }
+        el.style.opacity = 0;
       }, 2000);
     }, 1000);
   }
 
   create() {
     const containerElm = document.querySelector(this.container);
+    if (!containerElm) return this;
     const newMolecule = this.getTemplate();
     newMolecule.style.width = `${this.size}px`;
     newMolecule.style.height = `${this.size}px`;
@@ -64,17 +80,22 @@ class Molecule {
     newMolecule.style.transition = '1s opacity ease-in-out';
     containerElm.appendChild(newMolecule);
     this.setMotion();
-    setTimeout(() => {
+    this.opacityTimeout1 = setTimeout(() => {
       this.setOpacity();
     }, random(100, 1500));
     return this;
   }
 
   destroy() {
+    clearTimeout(this.opacityTimeout1);
+    clearTimeout(this.opacityTimeout2);
     clearInterval(this.motion);
     clearInterval(this.opacityLess);
     clearInterval(this.opacityMore);
-    document.getElementById('' + this.id).remove();
+    const el = document.getElementById('' + this.id);
+    if (el) {
+      el.remove();
+    }
   }
 }
 

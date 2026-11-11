@@ -44,7 +44,7 @@ export default class Hud extends Phaser.Group {
   updateTimer() {
     this.timerText.text = moment(0)
       .set('ms', this.timer.ms)
-      .subtract('ms', 2000)
+      .subtract(2000, 'ms')
       .format('mm:ss:SS');
   }
 

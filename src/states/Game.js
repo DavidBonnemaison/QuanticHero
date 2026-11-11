@@ -11,6 +11,8 @@ import Overlay from './../prefabs/Overlay';
 import Portal from '../sprites/Portal';
 import store from './../store';
 import * as gameActions from './../actions/game';
+import { setLevels } from './../actions/levels';
+import * as defaultLevels from './../data/levels';
 import TouchController from './../tools/TouchController';
 
 export default class extends Phaser.State {
@@ -21,10 +23,12 @@ export default class extends Phaser.State {
     this.maxLevel = maxLevel;
     if (maxLevel === 0) {
       this.state.start('Tuto');
+      return;
     }
-    const levels = store.getState().levels;
+    let levels = store.getState().levels;
     if (!levels) {
-      store.dispatch(push('/'));
+      levels = defaultLevels;
+      store.dispatch(setLevels(defaultLevels));
     }
     this.game.data = levels[`level${this.currentLevel}`];
     if (this.game.data === undefined) {
