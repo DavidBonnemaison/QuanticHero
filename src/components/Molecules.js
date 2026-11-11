@@ -1,6 +1,6 @@
 import randomColor from 'randomcolor';
 import { random, sample, range, max } from 'lodash';
-import { setTimeout } from 'timers';
+
 
 class Molecule {
   constructor({ container }) {

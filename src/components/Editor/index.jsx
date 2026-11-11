@@ -1,10 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { range, max } from 'lodash';
-import { push } from 'react-router-redux';
 import { connect } from 'react-redux';
-import HTML5Backend from 'react-dnd-html5-backend';
-import { DragDropContext, DropTarget } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { DndProvider, useDrop } from 'react-dnd';
 
 import * as levels from './../../data/levels';
 import {
@@ -37,15 +36,6 @@ const downloader = (filename, text) => {
   document.body.removeChild(element);
 };
 
-const collect = connect => ({ connectDropTarget: connect.dropTarget() });
-
-const target = {
-  drop(props, monitor) {
-    return {
-      diff: monitor.getDifferenceFromInitialOffset()
-    };
-  }
-};
 
 const Grid = ({ h, v, scale }) => {
   const s = 20 * scale;
@@ -279,7 +269,7 @@ class Editor extends React.Component {
             </div>
           </FieldEditor>
         </EditPanel>
-        <TargetedEditor
+        <EditorComponent
           {...this.props}
           scale={scale}
           play={play}
@@ -315,7 +305,6 @@ const EditorComponent = ({
   play,
   resetLevels,
   download,
-  connectDropTarget,
   update,
   currentLevel
 }) => {
@@ -336,8 +325,16 @@ const EditorComponent = ({
       value: y
     });
   };
-  return connectDropTarget(
-    <div>
+
+  const [, dropRef] = useDrop(() => ({
+    accept: 'DrawPlatform',
+    drop: (item, monitor) => ({
+      diff: monitor.getDifferenceFromInitialOffset()
+    })
+  }));
+
+  return (
+    <div ref={dropRef}>
       <DisplayPanel hue={hue} width={width * scale} height={height * scale}>
         <PlayButton onClick={play}>PLAY</PlayButton>
         <ResetButton onClick={resetLevels}>RESET</ResetButton>
@@ -384,6 +381,12 @@ const EditorComponent = ({
   );
 };
 
-const TargetedEditor = DropTarget('DrawPlatform', target, collect)(EditorComponent);
+const ConnectedEditor = connect(mapStateToProps, mapDispatchToProps)(Editor);
 
-export default connect(mapStateToProps, mapDispatchToProps)(DragDropContext(HTML5Backend)(Editor));
+export default function EditorWithDnd(props) {
+  return (
+    <DndProvider backend={HTML5Backend}>
+      <ConnectedEditor {...props} />
+    </DndProvider>
+  );
+}

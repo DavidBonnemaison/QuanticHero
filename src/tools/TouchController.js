@@ -1,4 +1,4 @@
-import Phaser from 'phaser-ce';
+import Phaser from 'phaser';
 import { max, min } from 'lodash';
 
 class TouchController {

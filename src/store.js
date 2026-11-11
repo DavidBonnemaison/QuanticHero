@@ -1,16 +1,15 @@
-import thunkMiddleware from 'redux-thunk';
-import { createStore, combineReducers, applyMiddleware } from 'redux';
+import { thunk } from 'redux-thunk';
+import { createStore, combineReducers, applyMiddleware, compose } from 'redux';
 import { persistStore, persistReducer } from 'redux-persist';
-import { hashHistory } from 'react-router';
 import storage from 'redux-persist/lib/storage';
-import { routerReducer, routerMiddleware } from 'react-router-redux';
+import { routerReducer, routerMiddleware } from './shims/navigation.js';
 import menu from './reducers/menu';
 import game from './reducers/game';
 import score from './reducers/score';
 import levels from './reducers/levels';
 
 const reducers = combineReducers({ menu, game, score, levels, routing: routerReducer });
-const middleware = routerMiddleware(hashHistory);
+const middleware = routerMiddleware();
 
 const persistConfig = {
   key: 'qtmhro',
@@ -20,11 +19,14 @@ const persistConfig = {
 
 const persistedReducer = persistReducer(persistConfig, reducers);
 
+const composeEnhancers =
+  (typeof window !== 'undefined' && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__) || compose;
+
 export function initStore(initialState) {
-  return applyMiddleware(thunkMiddleware, middleware)(createStore)(
+  return createStore(
     persistedReducer,
     initialState,
-    window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+    composeEnhancers(applyMiddleware(thunk, middleware))
   );
 }
 

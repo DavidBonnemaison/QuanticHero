@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>Quantum Hero</title>
@@ -18,7 +17,8 @@
             margin: 0;
             padding: 0;
             background: black;
-            font-family: 'VT323', monospace
+            font-family: 'VT323', monospace;
+            overflow-x: hidden;
         }
 
         #content {
@@ -41,11 +41,8 @@
         }
     </style>
 </head>
-
 <body>
     <div id="app"></div>
-    <!-- uncomment the line bellow for cordova feature -->
-    <!-- <script type="text/javascript" src="cordova.js"></script> -->
+    <script type="module" src="/src/main.jsx"></script>
 </body>
-
 </html>

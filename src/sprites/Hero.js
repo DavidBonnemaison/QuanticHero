@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { sample, uniqBy, round, remove, min, max, inRange } from 'lodash';
-import { setTimeout } from 'timers';
+
 
 export default class Hero extends Phaser.Sprite {
   constructor({
