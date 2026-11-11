@@ -20,6 +20,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public isBeta = false;
   public entanglementMode?: EntanglementMode;
   public enteredPortal = false;
+  public tunnelCharges = 0;
+  public pauliGraceUntil = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, isFocused = true) {
     super(scene, x, y, isFocused ? 'hero' : 'disabled');
@@ -212,6 +214,16 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
 
     if (!touchingGround) {
       this.play(this.getAnimKey('jump'), true);
+    }
+
+    // Translucent shimmering pulse when quantum tunneling charges are active
+    if (this.tunnelCharges > 0) {
+      const pulseAlpha = 0.5 + 0.25 * Math.sin(Date.now() * 0.008);
+      if (typeof this.setAlpha === 'function') {
+        this.setAlpha(pulseAlpha);
+      }
+    } else if (this.alpha !== 1 && typeof this.setAlpha === 'function') {
+      this.setAlpha(1);
     }
   }
 }

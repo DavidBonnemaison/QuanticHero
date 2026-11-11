@@ -1,8 +1,14 @@
+export type PlatformKind = 'standard' | 'wall';
+export type PlatformPhase = 'cyan' | 'magenta';
+
 export interface Platform {
   x: number;
   y: number;
   width: number;
   height: number;
+  kind?: PlatformKind; // 'wall' = vertical neon wall bounce surface
+  phase?: PlatformPhase; // 'cyan' | 'magenta' = active according to global phase
+  decayMs?: number; // Half-life decay platform: collapses N ms after initial contact
   movesTo?: {
     x?: number;
     y?: number;
@@ -10,7 +16,14 @@ export interface Platform {
   };
 }
 
-export type ParticleType = 'duplicate' | 'speed' | 'lowGravity' | 'antiGravity';
+export type ParticleType =
+  | 'duplicate'
+  | 'speed'
+  | 'lowGravity'
+  | 'antiGravity'
+  | 'tunnel'
+  | 'pauli'
+  | 'timeDilation';
 
 export interface Particle {
   x: number;
@@ -54,6 +67,11 @@ export interface LevelMeta {
   path: { x: number; y: number; t: number }[];
 }
 
+export interface CollapseConfig {
+  speedY: number; // Speed of narrowing ceiling/floor spikes (px/s)
+  delayMs: number; // Delay before collapse starts
+}
+
 export interface LevelData {
   id: string;
   symbol: string;
@@ -70,6 +88,7 @@ export interface LevelData {
   platforms: Platform[];
   door: Door;
   entanglement?: EntanglementConfig;
+  collapse?: CollapseConfig;
   authorGhost?: string;
   authorTime?: number;
   meta?: LevelMeta;

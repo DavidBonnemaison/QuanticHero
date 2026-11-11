@@ -20,10 +20,6 @@ export class SoundManager {
   private unsubStore: (() => void) | null = null;
   private unsubEvents: Array<() => void> = [];
 
-  constructor() {
-    // SoundManager is created lazily or instantiated
-  }
-
   public init(): void {
     if (this.isInitialized) return;
     this.isInitialized = true;
@@ -50,6 +46,24 @@ export class SoundManager {
       }),
       gameEvents.on('level:complete', () => {
         this.playVictory();
+      }),
+      gameEvents.on('phase:shift', () => {
+        this.playPhaseShiftSound();
+      }),
+      gameEvents.on('tunnel:use', () => {
+        this.playTunnelSound();
+      }),
+      gameEvents.on('pauli:blast', () => {
+        this.playPauliBlastSound();
+      }),
+      gameEvents.on('time:dilation', () => {
+        this.playTimeDilationSound();
+      }),
+      gameEvents.on('platform:decay', () => {
+        this.playDecaySound();
+      }),
+      gameEvents.on('hero:wall_bounce', () => {
+        this.playBounceSound();
       })
     );
 
@@ -269,6 +283,12 @@ export class SoundManager {
         freqs = [587.33, 739.99, 880.0, 1174.66, 1479.98]; // D5, F#5, A5, D6, F#6
       } else if (type === 'lowGravity') {
         freqs = [440.0, 554.37, 659.25, 880.0, 1108.73]; // A4, C#5, E5, A5, C#6
+      } else if (type === 'tunnel') {
+        freqs = [329.63, 440.0, 659.25, 880.0]; // E4, A4, E5, A5
+      } else if (type === 'pauli') {
+        freqs = [392.0, 587.33, 783.99, 1174.66]; // G4, D5, G5, D6
+      } else if (type === 'timeDilation') {
+        freqs = [783.99, 659.25, 523.25, 392.0]; // G5, E5, C5, G4 descending
       }
 
       const noteDuration = 0.045;
@@ -285,7 +305,7 @@ export class SoundManager {
         gain.gain.exponentialRampToValueAtTime(0.001, noteStart + noteDuration + 0.06);
 
         osc.connect(gain);
-        gain.connect(this.sfxGain!);
+        gain.connect(this.sfxGain);
 
         osc.start(noteStart);
         osc.stop(noteStart + noteDuration + 0.07);
@@ -398,6 +418,304 @@ export class SoundManager {
 
       subOsc.start(now);
       subOsc.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Quantum Tunneling
+   * Balayage FM sinusoïdal montant (300 Hz -> 900 Hz)
+   */
+  public playTunnelSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.24;
+
+      const carrier = ctx.createOscillator();
+      const carrierGain = ctx.createGain();
+      carrier.type = 'sine';
+      carrier.frequency.setValueAtTime(300, now);
+      carrier.frequency.exponentialRampToValueAtTime(900, now + duration);
+
+      // FM modulator
+      const modulator = ctx.createOscillator();
+      const modGain = ctx.createGain();
+      modulator.type = 'sine';
+      modulator.frequency.setValueAtTime(75, now);
+      modulator.frequency.exponentialRampToValueAtTime(150, now + duration);
+      modGain.gain.setValueAtTime(120, now);
+      modGain.gain.linearRampToValueAtTime(10, now + duration);
+
+      modulator.connect(carrier.frequency);
+
+      carrierGain.gain.setValueAtTime(0.001, now);
+      carrierGain.gain.linearRampToValueAtTime(0.28, now + 0.01);
+      carrierGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      carrier.connect(carrierGain);
+      carrierGain.connect(this.sfxGain);
+
+      modulator.start(now);
+      carrier.start(now);
+      modulator.stop(now + duration + 0.01);
+      carrier.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Phase Shift
+   * Clic résonant percutant stéréo
+   */
+  public playPhaseShiftSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.06;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(2200, now);
+      filter.Q.setValueAtTime(8, now);
+      filter.connect(this.sfxGain);
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1400, now);
+      osc.frequency.exponentialRampToValueAtTime(2800, now + duration);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.3, now + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(gain);
+      gain.connect(filter);
+
+      osc.start(now);
+      osc.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Pauli Blast
+   * Onde carrée surchargée avec filtre résonant passe-bas percutant
+   */
+  public playPauliBlastSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.3;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(10, now);
+      filter.frequency.setValueAtTime(2800, now);
+      filter.frequency.exponentialRampToValueAtTime(100, now + duration);
+      filter.connect(this.sfxGain);
+
+      // Overdriven square wave
+      const sqOsc = ctx.createOscillator();
+      const sqGain = ctx.createGain();
+      sqOsc.type = 'square';
+      sqOsc.frequency.setValueAtTime(220, now);
+      sqOsc.frequency.exponentialRampToValueAtTime(60, now + duration);
+
+      sqGain.gain.setValueAtTime(0.001, now);
+      sqGain.gain.linearRampToValueAtTime(0.35, now + 0.005);
+      sqGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      sqOsc.connect(sqGain);
+      sqGain.connect(filter);
+
+      // Kinetic sub-bass kick
+      const subOsc = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(150, now);
+      subOsc.frequency.exponentialRampToValueAtTime(35, now + duration);
+
+      subGain.gain.setValueAtTime(0.001, now);
+      subGain.gain.linearRampToValueAtTime(0.3, now + 0.006);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      subOsc.connect(subGain);
+      subGain.connect(this.sfxGain);
+
+      sqOsc.start(now);
+      subOsc.start(now);
+      sqOsc.stop(now + duration + 0.01);
+      subOsc.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Time Dilation
+   * Balayage descendant avec résonance spatiale
+   */
+  public playTimeDilationSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.52;
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sawtooth';
+      osc2.type = 'sine';
+
+      // Pitch sweep downward
+      osc1.frequency.setValueAtTime(780, now);
+      osc1.frequency.exponentialRampToValueAtTime(170, now + duration);
+
+      // Detuned pair for spatial beating
+      osc2.frequency.setValueAtTime(784, now);
+      osc2.frequency.exponentialRampToValueAtTime(172, now + duration);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2000, now);
+      filter.frequency.exponentialRampToValueAtTime(350, now + duration);
+      filter.Q.setValueAtTime(4, now);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + duration + 0.01);
+      osc2.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Half-life decay
+   * Grésillement de désintégration Geiger / court-circuit
+   */
+  public playDecaySound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.25;
+
+      // Noise crackle bursts
+      if (this.noiseBuffer) {
+        const noiseSource = ctx.createBufferSource();
+        noiseSource.buffer = this.noiseBuffer;
+
+        const bandpass = ctx.createBiquadFilter();
+        bandpass.type = 'bandpass';
+        bandpass.frequency.setValueAtTime(2500, now);
+        bandpass.Q.setValueAtTime(6, now);
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.001, now);
+        noiseGain.gain.linearRampToValueAtTime(0.3, now + 0.008);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        noiseSource.connect(bandpass);
+        bandpass.connect(noiseGain);
+        noiseGain.connect(this.sfxGain);
+
+        noiseSource.start(now);
+        noiseSource.stop(now + duration + 0.01);
+      }
+
+      // Decaying discharge tone
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.exponentialRampToValueAtTime(60, now + duration);
+
+      oscGain.gain.setValueAtTime(0.001, now);
+      oscGain.gain.linearRampToValueAtTime(0.18, now + 0.01);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(oscGain);
+      oscGain.connect(this.sfxGain);
+
+      osc.start(now);
+      osc.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Wall Rebound
+   * Springy dynamic bounce on neon walls
+   */
+  public playBounceSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.1;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.linearRampToValueAtTime(360, now + 0.03);
+      osc.frequency.exponentialRampToValueAtTime(130, now + duration);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.24, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(now);
+      osc.stop(now + duration + 0.01);
     } catch {
       // safe fallback
     }

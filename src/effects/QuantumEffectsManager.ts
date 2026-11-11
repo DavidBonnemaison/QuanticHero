@@ -99,15 +99,16 @@ export class QuantumEffectsManager {
     time: number,
     delta: number,
     heroes: Hero[],
-    portal?: Phaser.GameObjects.Sprite | Phaser.Physics.Arcade.Sprite
+    portal?: Phaser.GameObjects.Sprite | Phaser.Physics.Arcade.Sprite,
+    isTimeDilationActive = false
   ): void {
     this.checkPerformance();
     this.graphics.clear();
 
     const isReduced = this.getIsReduced();
 
-    // 1. Render de Broglie Probability Waves around moving heroes
-    this.renderDeBroglieWaves(time, heroes, isReduced);
+    // 1. Render de Broglie Probability Waves & Time Dilation Trail around moving heroes
+    this.renderDeBroglieWaves(time, heroes, isReduced, isTimeDilationActive);
 
     // 2. Render Spacetime Distortion and Vortex Particles at portal
     if (portal?.active) {
@@ -119,7 +120,12 @@ export class QuantumEffectsManager {
    * Render concentric de Broglie matter waves when heroes move,
    * with constructive/destructive quantum interference patterns when multiple clones interact.
    */
-  private renderDeBroglieWaves(time: number, heroes: Hero[], isReduced: boolean): void {
+  private renderDeBroglieWaves(
+    time: number,
+    heroes: Hero[],
+    isReduced: boolean,
+    isTimeDilationActive = false
+  ): void {
     if (isReduced) return;
 
     for (const hero of heroes) {
@@ -127,6 +133,16 @@ export class QuantumEffectsManager {
       const vx = hero.body.velocity.x;
       const vy = hero.body.velocity.y;
       const speed = Math.sqrt(vx * vx + vy * vy);
+
+      // Render cyan afterglow trail under Time Dilation
+      if (isTimeDilationActive && speed >= 10) {
+        for (let t = 1; t <= 3; t++) {
+          const trailX = hero.x - vx * 0.016 * t * 1.6;
+          const trailY = hero.y - vy * 0.016 * t * 1.6;
+          this.graphics.fillStyle(0x00ffff, 0.22 / t);
+          this.graphics.fillCircle(trailX, trailY, 15 - t * 2.5);
+        }
+      }
 
       // Hero moving at normal gameplay speeds emits visible quantum de Broglie aura
       if (speed >= 15) {

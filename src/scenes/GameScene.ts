@@ -2,6 +2,14 @@ import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
 import * as defaultLevels from '../data/levels';
 import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
+import {
+  type DecayPlatformState,
+  calculateCollapse,
+  checkPauliRepulsion,
+  checkTunnelObstacle,
+  togglePhase,
+  updateDecayPlatform
+} from '../mechanics/quantumMechanics';
 import { PHYSICS } from '../physics/constants';
 import { push } from '../shims/navigation';
 import { useGameStore } from '../store';
@@ -16,7 +24,7 @@ import { hapticFeedback } from '../tools/HapticFeedback';
 import { formatScore } from '../tools/formatScore';
 import { gameEvents } from '../tools/gameEvents';
 import { decodeLevelFromUrl } from '../tools/levelCodec';
-import type { LevelData, ParticleType } from '../types';
+import type { CollapseConfig, LevelData, ParticleType, PlatformPhase } from '../types';
 import { GhostHero } from './GhostHero';
 import Hero, { type TouchInputState } from './Hero';
 
@@ -50,6 +58,25 @@ export default class GameScene extends Phaser.Scene {
   public isEntangled = false;
   public betaHero: Hero | null = null;
   public betaPortalSprite: Phaser.Physics.Arcade.Sprite | null = null;
+
+  public isPauliActive = false;
+  public isTimeDilationActive = false;
+  public timeDilationUntil = 0;
+  public currentPhase: PlatformPhase = 'cyan';
+  public hasPhasePlatforms = false;
+
+  private phasePlatforms: Array<{ rect: Phaser.GameObjects.Rectangle; phase: PlatformPhase }> = [];
+  private decayPlatforms: Array<{
+    rect: Phaser.GameObjects.Rectangle;
+    state: DecayPlatformState;
+    startX: number;
+    startY: number;
+  }> = [];
+  private collapseTopSpikes: Phaser.GameObjects.Rectangle | null = null;
+  private collapseBottomSpikes: Phaser.GameObjects.Rectangle | null = null;
+  private collapseConfig?: CollapseConfig;
+  private pauliGraphics: Phaser.GameObjects.Graphics | null = null;
+  private unsubJump: (() => void) | null = null;
 
   private entanglementGraphics: Phaser.GameObjects.Graphics | null = null;
   private alphaEnteredPortal = false;
@@ -92,9 +119,23 @@ export default class GameScene extends Phaser.Scene {
     this.isEntangled = false;
     this.betaHero = null;
     this.betaPortalSprite = null;
-    this.entanglementGraphics = null;
     this.alphaEnteredPortal = false;
     this.betaEnteredPortal = false;
+    this.isPauliActive = false;
+    this.isTimeDilationActive = false;
+    this.timeDilationUntil = 0;
+    this.currentPhase = 'cyan';
+    this.hasPhasePlatforms = false;
+    this.phasePlatforms = [];
+    this.decayPlatforms = [];
+    this.collapseTopSpikes = null;
+    this.collapseBottomSpikes = null;
+    this.collapseConfig = undefined;
+    this.pauliGraphics = null;
+    if (this.unsubJump) {
+      this.unsubJump();
+      this.unsubJump = null;
+    }
 
     const store = useGameStore.getState();
 
@@ -180,16 +221,56 @@ export default class GameScene extends Phaser.Scene {
     });
     const antiHueColor = Phaser.Display.Color.HexStringToColor(this.levelData.antiHue).color;
 
+    this.hasPhasePlatforms = this.levelData.platforms.some((p) => Boolean(p.phase));
+    if (this.hasPhasePlatforms) {
+      this.currentPhase = 'cyan';
+      this.unsubJump = gameEvents.on('hero:jump', () => {
+        this.toggleLevelPhase();
+      });
+    }
+
     for (const p of this.levelData.platforms) {
       const width = p.width ?? 200;
       const height = p.height ?? 20;
-      const rect = this.add.rectangle(
-        p.x + width / 2,
-        p.y + height / 2,
-        width,
-        height,
-        antiHueColor
-      );
+
+      const isWall = p.kind === 'wall';
+      let fillColor = antiHueColor;
+      if (isWall) {
+        fillColor = 0x00e5ff;
+      } else if (p.phase === 'cyan') {
+        fillColor = 0x00e5ff;
+      } else if (p.phase === 'magenta') {
+        fillColor = 0xff00e5;
+      }
+
+      const rect = this.add.rectangle(p.x + width / 2, p.y + height / 2, width, height, fillColor);
+
+      if (isWall) {
+        rect.setStrokeStyle(2, 0xffffff);
+        rect.setData('kind', 'wall');
+      }
+
+      if (p.phase) {
+        rect.setData('phase', p.phase);
+        this.phasePlatforms.push({ rect, phase: p.phase });
+      }
+
+      if (p.decayMs && p.decayMs > 0) {
+        const decayState: DecayPlatformState = {
+          timerMs: 0,
+          decayMs: p.decayMs,
+          triggered: false,
+          collapsed: false,
+          respawnTimerMs: 0
+        };
+        rect.setData('decayState', decayState);
+        this.decayPlatforms.push({
+          rect,
+          state: decayState,
+          startX: p.x + width / 2,
+          startY: p.y + height / 2
+        });
+      }
 
       if (p.movesTo) {
         this.physics.add.existing(rect, false);
@@ -229,7 +310,11 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // 4. Spikes
+    if (this.hasPhasePlatforms) {
+      this.applyPhase(this.currentPhase);
+    }
+
+    // 4. Spikes & Gravitational Collapse
     this.spikes = this.physics.add.staticGroup();
     const hueColor = Phaser.Display.Color.HexStringToColor(this.levelData.hue).color;
 
@@ -247,6 +332,29 @@ export default class GameScene extends Phaser.Scene {
       this.spikes.add(spikeRect);
     }
 
+    if (this.levelData.collapse) {
+      this.collapseConfig = this.levelData.collapse;
+      this.collapseTopSpikes = this.add.rectangle(
+        this.levelData.width / 2,
+        -20,
+        this.levelData.width + 40,
+        40,
+        hueColor
+      );
+      this.physics.add.existing(this.collapseTopSpikes, true);
+      this.spikes.add(this.collapseTopSpikes);
+
+      this.collapseBottomSpikes = this.add.rectangle(
+        this.levelData.width / 2,
+        this.levelData.height + 20,
+        this.levelData.width + 40,
+        40,
+        hueColor
+      );
+      this.physics.add.existing(this.collapseBottomSpikes, true);
+      this.spikes.add(this.collapseBottomSpikes);
+    }
+
     // 5. Particles
     this.particles = this.physics.add.group({
       allowGravity: false,
@@ -256,7 +364,10 @@ export default class GameScene extends Phaser.Scene {
       duplicate: 'blue',
       speed: 'red',
       lowGravity: 'green',
-      antiGravity: 'cyan'
+      antiGravity: 'cyan',
+      tunnel: 'yellow',
+      pauli: 'red',
+      timeDilation: 'cyan'
     };
 
     for (const part of this.levelData.particles) {
@@ -264,6 +375,11 @@ export default class GameScene extends Phaser.Scene {
       const sprite = this.physics.add.sprite(part.x, part.y, textureKey);
       sprite.setScale(0.2, 0.2);
       sprite.setData('type', part.type);
+      if (part.type === 'pauli') {
+        sprite.setTint(0xff6600);
+      } else if (part.type === 'timeDilation') {
+        sprite.setTint(0x9933ff);
+      }
       this.particles.add(sprite);
       const pBody = sprite.body as Phaser.Physics.Arcade.Body;
       pBody.setImmovable(true);
@@ -347,8 +463,48 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Collisions and Overlaps
-    this.physics.add.collider(this.heroGroup, this.platforms);
-    this.physics.add.collider(this.heroGroup, this.movingPlatformsGroup);
+    this.physics.add.collider(this.heroGroup, this.platforms, (heroObj, platObj) => {
+      const hero = heroObj as Hero;
+      const plat = platObj as Phaser.GameObjects.Rectangle;
+
+      // 1. Neon Wall Rebound (kind === 'wall')
+      if (plat.getData('kind') === 'wall') {
+        if (hero.x < plat.x) {
+          hero.bounceOffRightWall();
+        } else {
+          hero.bounceOffLeftWall();
+        }
+        soundManager.playBounceSound();
+        gameEvents.emit('hero:wall_bounce', { x: hero.x, y: hero.y });
+      }
+
+      // 2. Radioactive Half-Life Platform Decay Trigger
+      const decayState = plat.getData('decayState') as DecayPlatformState | undefined;
+      if (decayState && !decayState.triggered) {
+        const touchingTop =
+          hero.upsideDown === 1
+            ? hero.body?.touching.down || hero.body?.blocked.down
+            : hero.body?.touching.up || hero.body?.blocked.up;
+        if (touchingTop) {
+          decayState.triggered = true;
+        }
+      }
+    });
+
+    this.physics.add.collider(this.heroGroup, this.movingPlatformsGroup, (heroObj, platObj) => {
+      const hero = heroObj as Hero;
+      const plat = platObj as Phaser.GameObjects.Rectangle;
+      const decayState = plat.getData('decayState') as DecayPlatformState | undefined;
+      if (decayState && !decayState.triggered) {
+        const touchingTop =
+          hero.upsideDown === 1
+            ? hero.body?.touching.down || hero.body?.blocked.down
+            : hero.body?.touching.up || hero.body?.blocked.up;
+        if (touchingTop) {
+          decayState.triggered = true;
+        }
+      }
+    });
     this.physics.add.collider(this.heroGroup, this.sceneBounds, (heroObj, boundObj) => {
       const hero = heroObj as Hero;
       const bound = boundObj as Phaser.GameObjects.Rectangle;
@@ -465,6 +621,14 @@ export default class GameScene extends Phaser.Scene {
         this.entanglementGraphics.destroy();
         this.entanglementGraphics = null;
       }
+      if (this.pauliGraphics) {
+        this.pauliGraphics.destroy();
+        this.pauliGraphics = null;
+      }
+      if (this.unsubJump) {
+        this.unsubJump();
+        this.unsubJump = null;
+      }
     });
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
       soundManager.stopBgm();
@@ -473,6 +637,14 @@ export default class GameScene extends Phaser.Scene {
       if (this.entanglementGraphics) {
         this.entanglementGraphics.destroy();
         this.entanglementGraphics = null;
+      }
+      if (this.pauliGraphics) {
+        this.pauliGraphics.destroy();
+        this.pauliGraphics = null;
+      }
+      if (this.unsubJump) {
+        this.unsubJump();
+        this.unsubJump = null;
       }
     });
   }
@@ -764,7 +936,10 @@ export default class GameScene extends Phaser.Scene {
       antiGravity: 'ANTI GRAVITY !',
       lowGravity: 'LOW GRAVITY !',
       speed: 'HIGH SPEED !',
-      duplicate: 'CLONING !'
+      duplicate: 'CLONING !',
+      tunnel: 'TUNNELING CHARGE !',
+      pauli: 'PAULI BLAST !',
+      timeDilation: 'TIME DILATION !'
     };
 
     switch (type) {
@@ -775,6 +950,7 @@ export default class GameScene extends Phaser.Scene {
           const clonedHero = new Hero(this, hero.x + spawnOffset, hero.y - 10, false);
           clonedHero.velocityMultiplier = hero.velocityMultiplier;
           clonedHero.setGravityInverted(this.physics.world.gravity.y < 0);
+          clonedHero.pauliGraceUntil = this.time.now + 500;
           this.heroes.push(clonedHero);
           this.heroGroup.add(clonedHero);
           gameEvents.emit('hero:duplicate', { count: this.heroes.length });
@@ -797,14 +973,37 @@ export default class GameScene extends Phaser.Scene {
         }
         break;
       }
+      case 'tunnel': {
+        hero.tunnelCharges = 2;
+        break;
+      }
+      case 'pauli': {
+        this.isPauliActive = true;
+        for (const h of this.heroes) {
+          h.pauliGraceUntil = this.time.now + 500;
+        }
+        break;
+      }
+      case 'timeDilation': {
+        this.isTimeDilationActive = true;
+        this.timeDilationUntil = this.time.now + 4000;
+        soundManager.playTimeDilationSound();
+        gameEvents.emit('time:dilation', { active: true, durationMs: 4000 });
+        break;
+      }
     }
 
-    const toast = this.add.text(this.cameras.main.width, 100, powerUpNames[type] || '', {
+    this.showRetroToast(powerUpNames[type] || '');
+  }
+
+  public showRetroToast(message: string): void {
+    if (!message) return;
+    const toast = this.add.text(this.cameras.main.width, 100, message, {
       fontFamily: 'VT323',
       fontSize: '150px',
       color: '#ffffff'
     });
-    toast.setAlpha(0.5);
+    toast.setAlpha(0.6);
     toast.setScrollFactor(0);
     toast.setDepth(150);
 
@@ -814,6 +1013,47 @@ export default class GameScene extends Phaser.Scene {
       duration: 2200,
       ease: 'Linear',
       onComplete: () => toast.destroy()
+    });
+  }
+
+  public toggleLevelPhase(): void {
+    if (!this.hasPhasePlatforms) return;
+    this.currentPhase = togglePhase(this.currentPhase);
+    this.applyPhase(this.currentPhase);
+    soundManager.playPhaseShiftSound();
+    gameEvents.emit('phase:shift', { phase: this.currentPhase });
+    this.showRetroToast(`PHASE SHIFT: ${this.currentPhase.toUpperCase()} !`);
+  }
+
+  public applyPhase(phase: PlatformPhase): void {
+    for (const { rect, phase: pPhase } of this.phasePlatforms) {
+      const isActive = pPhase === phase;
+      rect.setAlpha(isActive ? 1.0 : 0.25);
+      const body = rect.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.checkCollision.none = !isActive;
+      }
+    }
+  }
+
+  private drawPauliFlash(x1: number, y1: number, x2: number, y2: number): void {
+    if (!this.pauliGraphics) {
+      this.pauliGraphics = this.add.graphics();
+      this.pauliGraphics.setDepth(25);
+    }
+    const g = this.pauliGraphics;
+    g.clear();
+    g.lineStyle(3, 0xffeb3b, 1.0);
+    const midX = (x1 + x2) / 2 + (Math.random() * 20 - 10);
+    const midY = (y1 + y2) / 2 + (Math.random() * 20 - 10);
+    g.beginPath();
+    g.moveTo(x1, y1);
+    g.lineTo(midX, midY);
+    g.lineTo(x2, y2);
+    g.strokePath();
+
+    this.time.delayedCall(150, () => {
+      g.clear();
     });
   }
 
@@ -1053,9 +1293,22 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Update quantum visual effects (de Broglie waves & spacetime vortex)
+    // Time Dilation active check
+    if (this.isTimeDilationActive && time >= this.timeDilationUntil) {
+      this.isTimeDilationActive = false;
+      gameEvents.emit('time:dilation', { active: false, durationMs: 0 });
+    }
+    const timeDilationFactor = this.isTimeDilationActive ? 0.25 : 1.0;
+
+    // Update quantum visual effects (de Broglie waves, spacetime vortex & time dilation cyan trail)
     if (this.quantumEffects) {
-      this.quantumEffects.update(time, delta, this.heroes, this.portalSprite);
+      this.quantumEffects.update(
+        time,
+        delta,
+        this.heroes,
+        this.portalSprite,
+        this.isTimeDilationActive
+      );
     }
 
     // Update heroes
@@ -1073,31 +1326,120 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Update moving platforms
+    // Quantum Tunneling check
+    for (const hero of this.heroes) {
+      if (hero.active && hero.tunnelCharges > 0 && hero.body) {
+        const rawLeft =
+          (this.cursors?.left?.isDown ?? false) ||
+          (this.wasd?.A?.isDown ?? false) ||
+          this.touchInput.left;
+        const rawRight =
+          (this.cursors?.right?.isDown ?? false) ||
+          (this.wasd?.D?.isDown ?? false) ||
+          this.touchInput.right;
+        const dir = rawLeft ? 'left' : rawRight ? 'right' : null;
+        if (dir) {
+          for (const p of this.levelData.platforms) {
+            const result = checkTunnelObstacle(hero.x, hero.y, 40, 40, dir, p);
+            if (result?.canTunnel) {
+              hero.x = result.exitX;
+              hero.body.x = hero.x - hero.body.width / 2;
+              hero.tunnelCharges--;
+              soundManager.playTunnelSound();
+              gameEvents.emit('tunnel:use', { remaining: hero.tunnelCharges });
+              this.showRetroToast(`TUNNELING ! (${hero.tunnelCharges} LEFT)`);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Pauli Exclusion Principle repulsion
+    if (this.isPauliActive && this.heroes.length >= 2) {
+      const activeHeroes = this.heroes.filter((h) => h.active && h.body);
+      const repulsionEvents = checkPauliRepulsion(activeHeroes, time);
+      for (const ev of repulsionEvents) {
+        const hA = activeHeroes.find((h) => h.id === ev.heroAId);
+        const hB = activeHeroes.find((h) => h.id === ev.heroBId);
+        if (hA && hB) {
+          hA.setVelocityX(ev.impulseA.vx);
+          hA.setVelocityY(ev.impulseA.vy);
+          hB.setVelocityX(ev.impulseB.vx);
+          hB.setVelocityY(ev.impulseB.vy);
+          hA.pauliGraceUntil = ev.newGraceUntil;
+          hB.pauliGraceUntil = ev.newGraceUntil;
+          soundManager.playPauliBlastSound();
+          gameEvents.emit('pauli:blast', { hero1Id: hA.id, hero2Id: hB.id });
+          this.showRetroToast('PAULI BLAST !');
+          this.drawPauliFlash(hA.x, hA.y, hB.x, hB.y);
+        }
+      }
+    }
+
+    // Radioactive Decay Platforms update
+    for (const dp of this.decayPlatforms) {
+      const prevCollapsed = dp.state.collapsed;
+      const decayUpdate = updateDecayPlatform(dp.state, delta, timeDilationFactor);
+      dp.rect.alpha = decayUpdate.alpha;
+      const body = dp.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.checkCollision.none = !decayUpdate.solid;
+      }
+      if (decayUpdate.shaking) {
+        dp.rect.x = dp.startX + (Math.random() * 4 - 2);
+      } else {
+        dp.rect.x = dp.startX;
+      }
+      if (!prevCollapsed && decayUpdate.collapsed) {
+        soundManager.playDecaySound();
+        gameEvents.emit('platform:decay', { x: dp.rect.x, y: dp.rect.y });
+      }
+    }
+
+    // Gravitational Collapse update (narrowing spikes)
+    if (this.collapseConfig && this.collapseTopSpikes && this.collapseBottomSpikes) {
+      const { active, stepY } = calculateCollapse(
+        this.collapseConfig,
+        elapsedMs,
+        delta,
+        timeDilationFactor
+      );
+      if (active && stepY > 0) {
+        this.collapseTopSpikes.y += stepY;
+        this.collapseBottomSpikes.y -= stepY;
+        const topBody = this.collapseTopSpikes.body as Phaser.Physics.Arcade.StaticBody | null;
+        const botBody = this.collapseBottomSpikes.body as Phaser.Physics.Arcade.StaticBody | null;
+        if (topBody) topBody.updateFromGameObject();
+        if (botBody) botBody.updateFromGameObject();
+      }
+    }
+
+    // Update moving platforms (slowed by time dilation)
     for (const mp of this.movingPlatforms) {
       const body = mp.rect.body as Phaser.Physics.Arcade.Body;
       const targetX = mp.movesTo.x !== undefined ? mp.movesTo.x + mp.width / 2 : mp.startX;
       const targetY = mp.movesTo.y !== undefined ? mp.movesTo.y + mp.height / 2 : mp.startY;
 
       if (mp.direction.x === 'right') {
-        body.setVelocityX(100);
+        body.setVelocityX(100 * timeDilationFactor);
         if (mp.rect.x > targetX) {
           mp.direction.x = 'left';
         }
       } else if (mp.direction.x === 'left') {
-        body.setVelocityX(-100);
+        body.setVelocityX(-100 * timeDilationFactor);
         if (mp.rect.x < targetX) {
           mp.direction.x = 'right';
         }
       }
 
       if (mp.direction.y === 'bottom') {
-        body.setVelocityY(20);
+        body.setVelocityY(20 * timeDilationFactor);
         if (mp.rect.y > targetY) {
           mp.direction.y = 'top';
         }
       } else if (mp.direction.y === 'top') {
-        body.setVelocityY(-20);
+        body.setVelocityY(-20 * timeDilationFactor);
         if (mp.rect.y < targetY) {
           mp.direction.y = 'bottom';
         }
