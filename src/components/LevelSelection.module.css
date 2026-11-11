@@ -31,6 +31,32 @@
   background: #333;
 }
 
+.ghostToggle {
+  background: transparent;
+  border: 1px solid #666;
+  color: #fff;
+  font-family: inherit;
+  font-size: 18px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.ghostToggle:hover {
+  background: #333;
+  border-color: #888;
+}
+
+.ghostToggleActive {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
 .title {
   text-align: center;
   color: white;

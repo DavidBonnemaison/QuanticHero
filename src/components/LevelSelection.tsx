@@ -13,6 +13,8 @@ export const LevelSelection: React.FC = () => {
   const maxLevel = useGameStore((state) => state.maxLevel);
   const scores = useGameStore((state) => state.scores);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
+  const ghostEnabled = useGameStore((state) => state.ghostEnabled);
+  const toggleGhost = useGameStore((state) => state.toggleGhost);
 
   const raw = Object.keys(allLevels)
     .filter((key) => key.startsWith('level'))
@@ -47,7 +49,15 @@ export const LevelSelection: React.FC = () => {
           ← Menu
         </button>
         <h1 className={styles.title}>Level Selection</h1>
-        <div style={{ width: 70 }} />
+        <button
+          type="button"
+          className={`${styles.ghostToggle} ${ghostEnabled ? styles.ghostToggleActive : ''}`}
+          onClick={toggleGhost}
+          title={ghostEnabled ? 'Ghost replay enabled' : 'Ghost replay disabled'}
+          aria-label={ghostEnabled ? 'Ghost enabled' : 'Ghost disabled'}
+        >
+          <span role="img" aria-label="ghost">👻</span> {ghostEnabled ? 'ON' : 'OFF'}
+        </button>
       </div>
       {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore }) => {
         const disabled = isDisabled(id);

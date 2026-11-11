@@ -4,6 +4,14 @@ import * as defaultLevels from '../data/levels';
 import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
 import { push } from '../shims/navigation';
 import { useGameStore } from '../store';
+import { GhostHero } from './GhostHero';
+import {
+  GhostRecorder,
+  calculateSplitDelta,
+  decompressTrajectory,
+  formatSplitDelta,
+  type GhostFrame
+} from '../tools/GhostRecorder';
 import { hapticFeedback } from '../tools/HapticFeedback';
 import { formatScore } from '../tools/formatScore';
 import { gameEvents } from '../tools/gameEvents';
@@ -36,7 +44,12 @@ export default class GameScene extends Phaser.Scene {
   public sceneBounds!: Phaser.Physics.Arcade.StaticGroup;
   public spikes!: Phaser.Physics.Arcade.StaticGroup;
   public particles!: Phaser.Physics.Arcade.Group;
+  public ghostHero: GhostHero | null = null;
 
+  private ghostRecorder: GhostRecorder = new GhostRecorder();
+  private ghostFrames: GhostFrame[] = [];
+  private splitDeltaText: Phaser.GameObjects.Text | null = null;
+  private ghostButton: Phaser.GameObjects.Text | null = null;
   private movingPlatforms: MovingPlatform[] = [];
   private molecules: MoleculeParticle[] = [];
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
@@ -60,6 +73,11 @@ export default class GameScene extends Phaser.Scene {
     this.molecules = [];
     this.isLevelCompleted = false;
     this.quantumEffects = null;
+    this.ghostHero = null;
+    this.ghostRecorder.reset();
+    this.ghostFrames = [];
+    this.splitDeltaText = null;
+    this.ghostButton = null;
 
     const store = useGameStore.getState();
     const currentLevel = store.currentLevel || 1;
@@ -274,6 +292,18 @@ export default class GameScene extends Phaser.Scene {
       this.completeLevel();
     });
 
+    // 7b. Ghost Hero Replay
+    const store = useGameStore.getState();
+    const currentLvlNum = Number(this.levelData.id);
+    const scoreItem = store.scores[currentLvlNum];
+    if (scoreItem?.ghostTrajectory) {
+      this.ghostFrames = decompressTrajectory(scoreItem.ghostTrajectory);
+      if (this.ghostFrames.length > 0) {
+        this.ghostHero = new GhostHero(this, this.ghostFrames);
+        this.ghostHero.setVisible(store.ghostEnabled);
+      }
+    }
+
     // 8. Controls
     if (this.input.keyboard) {
       this.cursors = this.input.keyboard.createCursorKeys();
@@ -437,6 +467,28 @@ export default class GameScene extends Phaser.Scene {
       fxButton.setText(getFxLabel());
     });
 
+    // Ghost replay toggle button (👻)
+    const getGhostAlpha = () => (useGameStore.getState().ghostEnabled ? 1 : 0.35);
+    this.ghostButton = this.add.text(158, 6, '👻', {
+      fontFamily: '"Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif',
+      fontSize: '24px'
+    });
+    this.ghostButton.setScrollFactor(0);
+    this.ghostButton.setDepth(101);
+    this.ghostButton.setAlpha(getGhostAlpha());
+    this.ghostButton.setInteractive({ useHandCursor: true });
+    this.ghostButton.on('pointerdown', () => {
+      useGameStore.getState().toggleGhost();
+      const isEnabled = useGameStore.getState().ghostEnabled;
+      this.ghostButton?.setAlpha(getGhostAlpha());
+      if (this.ghostHero) {
+        this.ghostHero.setVisible(isEnabled);
+      }
+      if (this.splitDeltaText) {
+        this.splitDeltaText.setVisible(isEnabled && this.ghostFrames.length > 0);
+      }
+    });
+
     const unsubStore = useGameStore.subscribe(() => {
       if (soundButton.active) {
         soundButton.setText(getSoundLabel());
@@ -447,6 +499,16 @@ export default class GameScene extends Phaser.Scene {
       if (fxButton.active) {
         fxButton.setText(getFxLabel());
       }
+      if (this.ghostButton?.active) {
+        const isEnabled = useGameStore.getState().ghostEnabled;
+        this.ghostButton.setAlpha(getGhostAlpha());
+        if (this.ghostHero) {
+          this.ghostHero.setVisible(isEnabled);
+        }
+        if (this.splitDeltaText) {
+          this.splitDeltaText.setVisible(isEnabled && this.ghostFrames.length > 0);
+        }
+      }
     });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -456,13 +518,24 @@ export default class GameScene extends Phaser.Scene {
       unsubStore();
     });
 
-    this.timerText = this.add.text(this.cameras.main.width - 120, 6, '00:00:00', {
+    this.timerText = this.add.text(this.cameras.main.width - 15, 2, '00:00:00', {
       fontFamily: 'VT323',
-      fontSize: '34px',
+      fontSize: '26px',
       color: '#ffffff'
     });
+    this.timerText.setOrigin(1, 0);
     this.timerText.setScrollFactor(0);
     this.timerText.setDepth(101);
+
+    this.splitDeltaText = this.add.text(this.cameras.main.width - 15, 24, '--', {
+      fontFamily: 'VT323',
+      fontSize: '20px',
+      color: '#94a3b8'
+    });
+    this.splitDeltaText.setOrigin(1, 0);
+    this.splitDeltaText.setScrollFactor(0);
+    this.splitDeltaText.setDepth(101);
+    this.splitDeltaText.setVisible(useGameStore.getState().ghostEnabled && this.ghostFrames.length > 0);
   }
 
   private showLevelTitle(): void {
@@ -580,7 +653,22 @@ export default class GameScene extends Phaser.Scene {
     const currentLvl = Number(this.levelData.id);
     const store = useGameStore.getState();
 
-    store.recordScore(currentLvl, elapsedMs);
+    // Record final frame at portal
+    const focusedHero = this.heroes.find((h) => h.isFocused) || this.heroes[0];
+    if (focusedHero) {
+      this.ghostRecorder.recordFrame(
+        elapsedMs,
+        focusedHero.x,
+        focusedHero.y,
+        focusedHero.flipX,
+        'idle',
+        focusedHero.flipY,
+        true
+      );
+    }
+    const trajectory = this.ghostRecorder.getSerialized();
+
+    store.recordScore(currentLvl, elapsedMs, trajectory);
     const nextLevel = currentLvl + 1;
     store.updateCurrentLevel(nextLevel);
     if (store.maxLevel < nextLevel) {
@@ -597,10 +685,41 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
+    const elapsedMs = Math.max(0, this.time.now - this.startTime);
+
     // Update timer
     if (this.timerText) {
-      const elapsedMs = Math.max(0, this.time.now - this.startTime);
       this.timerText.setText(formatScore(elapsedMs));
+    }
+
+    // Update ghost replay
+    if (this.ghostHero && useGameStore.getState().ghostEnabled) {
+      this.ghostHero.updateReplay(elapsedMs);
+    }
+
+    // Record main player frame and update live speedrun split delta
+    const focusedHero = this.heroes.find((h) => h.isFocused) || this.heroes[0];
+    if (focusedHero && focusedHero.active && !this.isLevelCompleted) {
+      this.ghostRecorder.recordFrame(
+        elapsedMs,
+        focusedHero.x,
+        focusedHero.y,
+        focusedHero.flipX,
+        focusedHero.getAnimState(),
+        focusedHero.flipY
+      );
+
+      if (this.splitDeltaText && this.ghostFrames.length > 0 && useGameStore.getState().ghostEnabled) {
+        const deltaSec = calculateSplitDelta(
+          this.ghostFrames,
+          focusedHero.x,
+          focusedHero.y,
+          elapsedMs
+        );
+        const { text, color } = formatSplitDelta(deltaSec);
+        this.splitDeltaText.setText(text);
+        this.splitDeltaText.setColor(color);
+      }
     }
 
     // Update quantum visual effects (de Broglie waves & spacetime vortex)

@@ -48,7 +48,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     return this.isFocused ? base : `disabled-${base}`;
   }
 
-  public bounceOffLeftWall(): void {
+public bounceOffLeftWall(): void {
     if (this.recoilVx <= 0) {
       this.recoilVx = 300 * this.velocityMultiplier;
       this.recoilTimer = 220;
@@ -86,6 +86,13 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     } else if (this.upsideDown === -1 && (!this.body || this.body.velocity.y > -50)) {
       this.setVelocityY(-220);
     }
+
+  public getAnimState(): 'idle' | 'left' | 'right' | 'jump' {
+    const key = this.anims.currentAnim?.key;
+    if (key?.includes('jump')) return 'jump';
+    if (key?.includes('left')) return 'left';
+    if (key?.includes('right')) return 'right';
+    return 'idle';
   }
 
   public updateControl(

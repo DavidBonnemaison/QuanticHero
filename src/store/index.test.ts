@@ -12,7 +12,8 @@ describe('useGameStore', () => {
       customLevels: null,
       isMuted: false,
       hapticsEnabled: true,
-      reducedEffects: false
+      reducedEffects: false,
+      ghostEnabled: true
     });
   });
 
@@ -26,6 +27,7 @@ describe('useGameStore', () => {
       expect(state.isMuted).toBe(false);
       expect(state.hapticsEnabled).toBe(true);
       expect(state.reducedEffects).toBe(false);
+      expect(state.ghostEnabled).toBe(true);
     });
   });
 
@@ -87,6 +89,19 @@ describe('useGameStore', () => {
       useGameStore.getState().setReducedEffects(false);
       expect(useGameStore.getState().reducedEffects).toBe(false);
     });
+
+    it('toggles ghost replay via toggleGhost and sets via setGhostEnabled', () => {
+      expect(useGameStore.getState().ghostEnabled).toBe(true);
+      useGameStore.getState().toggleGhost();
+      expect(useGameStore.getState().ghostEnabled).toBe(false);
+      useGameStore.getState().toggleGhost();
+      expect(useGameStore.getState().ghostEnabled).toBe(true);
+
+      useGameStore.getState().setGhostEnabled(false);
+      expect(useGameStore.getState().ghostEnabled).toBe(false);
+      useGameStore.getState().setGhostEnabled(true);
+      expect(useGameStore.getState().ghostEnabled).toBe(true);
+    });
   });
 
   describe('recordScore and progression', () => {
@@ -116,6 +131,33 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().scores[1].best).toBe(14000);
     });
 
+    it('saves ghostTrajectory on new record and preserves it on slower runs', () => {
+      const traj1 = 'v1|0,100,200,0,i;66,20,0,0,r';
+      const traj2 = 'v1|0,100,200,0,i;66,35,0,0,r';
+      const traj3 = 'v1|0,100,200,0,i;66,10,0,0,r';
+
+      // First run (record)
+      useGameStore.getState().recordScore(1, 15000, traj1);
+      expect(useGameStore.getState().scores[1].ghostTrajectory).toBe(traj1);
+
+      // Slower run does not overwrite record trajectory
+      useGameStore.getState().recordScore(1, 18000, traj2);
+      expect(useGameStore.getState().scores[1].ghostTrajectory).toBe(traj1);
+
+      // Faster run updates record trajectory
+      useGameStore.getState().recordScore(1, 12000, traj3);
+      expect(useGameStore.getState().scores[1].best).toBe(12000);
+      expect(useGameStore.getState().scores[1].ghostTrajectory).toBe(traj3);
+    });
+
+    it('saves ghost trajectory directly via saveGhostTrajectory', () => {
+      useGameStore.getState().recordScore(2, 25000);
+      const customTraj = 'v1|0,50,50,0,i';
+      useGameStore.getState().saveGhostTrajectory(2, customTraj);
+
+      expect(useGameStore.getState().scores[2].ghostTrajectory).toBe(customTraj);
+    });
+
     it('does not lower maxLevel when playing an earlier level', () => {
       useGameStore.getState().updateMaxLevel(5);
       useGameStore.getState().recordScore(2, 10000);
@@ -136,6 +178,7 @@ describe('useGameStore', () => {
       useGameStore.getState().toggleMute();
       useGameStore.getState().setHapticsEnabled(false);
       useGameStore.getState().setReducedEffects(true);
+      useGameStore.getState().setGhostEnabled(false);
 
       const raw = localStorage.getItem('qtmhro');
       expect(raw).toBeTruthy();
@@ -146,6 +189,7 @@ describe('useGameStore', () => {
       expect(parsed.state.isMuted).toBe(true);
       expect(parsed.state.hapticsEnabled).toBe(false);
       expect(parsed.state.reducedEffects).toBe(true);
+      expect(parsed.state.ghostEnabled).toBe(false);
       expect(parsed.state.scores[3]).toEqual({
         last: 12345,
         best: 12345
@@ -169,6 +213,7 @@ describe('useGameStore', () => {
       expect(state.maxLevel).toBe(4);
       expect(state.scores[1]).toEqual({ last: 5000, best: 5000 });
       expect(state.isMuted).toBe(true);
+      expect(state.ghostEnabled).toBe(true);
     });
   });
 

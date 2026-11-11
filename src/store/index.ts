@@ -19,13 +19,15 @@ export interface GameStoreState {
   isMuted: boolean;
   hapticsEnabled: boolean;
   reducedEffects: boolean;
+  ghostEnabled: boolean;
 }
 
 export interface GameStoreActions {
   updateCurrentLevel: (lvl: number) => void;
   updateMaxLevel: (lvl: number) => void;
   resetGame: () => void;
-  recordScore: (level: number, score: number) => void;
+  recordScore: (level: number, score: number, ghostTrajectory?: string) => void;
+  saveGhostTrajectory: (level: number, trajectory: string) => void;
   setLevels: (data: Record<string, LevelData> | null) => void;
   updateLevelField: (params: UpdateLevelFieldParams) => void;
   addPlatform: (params: { level: number }) => void;
@@ -38,6 +40,8 @@ export interface GameStoreActions {
   setHapticsEnabled: (enabled: boolean) => void;
   toggleReducedEffects: () => void;
   setReducedEffects: (reduced: boolean) => void;
+  toggleGhost: () => void;
+  setGhostEnabled: (enabled: boolean) => void;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -94,7 +98,8 @@ const customStorage = {
           customLevels: levels ?? null,
           isMuted: parsed.isMuted ?? false,
           hapticsEnabled: parsed.hapticsEnabled ?? true,
-          reducedEffects: parsed.reducedEffects ?? false
+          reducedEffects: parsed.reducedEffects ?? false,
+          ghostEnabled: parsed.ghostEnabled ?? true
         },
         version: 0
       };
@@ -125,6 +130,7 @@ export const useGameStore = create<GameStore>()(
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
+      ghostEnabled: true,
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
       setMuted: (muted: boolean) => set({ isMuted: muted }),
@@ -135,27 +141,52 @@ export const useGameStore = create<GameStore>()(
       toggleReducedEffects: () => set((state) => ({ reducedEffects: !state.reducedEffects })),
       setReducedEffects: (reduced: boolean) => set({ reducedEffects: reduced }),
 
+      toggleGhost: () => set((state) => ({ ghostEnabled: !state.ghostEnabled })),
+      setGhostEnabled: (enabled: boolean) => set({ ghostEnabled: enabled }),
+
       updateCurrentLevel: (lvl: number) => set({ currentLevel: Number(lvl) }),
 
       updateMaxLevel: (lvl: number) => set({ maxLevel: Number(lvl) }),
 
       resetGame: () => set({ currentLevel: 0, maxLevel: 1 }),
 
-      recordScore: (level: number, score: number) =>
+      recordScore: (level: number, score: number, ghostTrajectory?: string) =>
         set((state) => {
-          const currentBest = state.scores[level]?.best ?? 0;
+          const prevItem = state.scores[level];
+          const currentBest = prevItem?.best ?? 0;
+          const isNewBest = currentBest === 0 || score < currentBest;
           const best = currentBest === 0 ? score : Math.min(currentBest, score);
+          const trajectoryToSave = isNewBest
+            ? (ghostTrajectory ?? prevItem?.ghostTrajectory)
+            : prevItem?.ghostTrajectory;
+
           const newScores = {
             ...state.scores,
             [level]: {
               last: score,
-              best
+              best,
+              ...(trajectoryToSave ? { ghostTrajectory: trajectoryToSave } : {})
             }
           };
           const maxLevel = score > 0 ? Math.max(state.maxLevel, level + 1) : state.maxLevel;
           return {
             scores: newScores,
             maxLevel
+          };
+        }),
+
+      saveGhostTrajectory: (level: number, trajectory: string) =>
+        set((state) => {
+          const prevItem = state.scores[level];
+          if (!prevItem) return state;
+          return {
+            scores: {
+              ...state.scores,
+              [level]: {
+                ...prevItem,
+                ghostTrajectory: trajectory
+              }
+            }
           };
         }),
 
@@ -305,7 +336,8 @@ export const useGameStore = create<GameStore>()(
         customLevels: state.customLevels,
         isMuted: state.isMuted,
         hapticsEnabled: state.hapticsEnabled,
-        reducedEffects: state.reducedEffects
+        reducedEffects: state.reducedEffects,
+        ghostEnabled: state.ghostEnabled
       })
     }
   )

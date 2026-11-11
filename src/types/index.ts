@@ -66,6 +66,7 @@ export interface GameState {
 export interface ScoreItem {
   best: number;
   last: number;
+  ghostTrajectory?: string;
 }
 
 export type ScoreState = Record<number, ScoreItem>;

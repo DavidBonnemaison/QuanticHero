@@ -100,4 +100,21 @@ describe('LevelSelection component', () => {
     // 12340 ms = 00:12:34
     expect(screen.getByText('00:12:34')).toBeInTheDocument();
   });
+
+  it('renders ghost toggle button and toggles state when clicked', () => {
+    useGameStore.setState({ ghostEnabled: true });
+    renderWithRouter();
+
+    const ghostBtn = screen.getByRole('button', { name: /ghost enabled/i });
+    expect(ghostBtn).toBeInTheDocument();
+    expect(ghostBtn).toHaveTextContent('ON');
+
+    fireEvent.click(ghostBtn);
+    expect(useGameStore.getState().ghostEnabled).toBe(false);
+    expect(screen.getByRole('button', { name: /ghost disabled/i })).toHaveTextContent('OFF');
+
+    fireEvent.click(screen.getByRole('button', { name: /ghost disabled/i }));
+    expect(useGameStore.getState().ghostEnabled).toBe(true);
+    expect(screen.getByRole('button', { name: /ghost enabled/i })).toHaveTextContent('ON');
+  });
 });
