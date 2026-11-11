@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { PersistGate } from 'redux-persist/integration/react';
+import styled from 'styled-components';
 import { persistor, default as store } from './store';
 import { setNavigator } from './shims/navigation';
 import Menu from './components/Menu';
@@ -10,17 +11,15 @@ import Game from './Game';
 import LevelFinished from './components/LevelFinished';
 import Explanation from './components/Explanation';
 import Editor from './components/Editor';
-import styled from 'styled-components';
-import config from './config';
 
-function NavigationSync() {
+const NavigationSync: React.FC = () => {
   const navigate = useNavigate();
   useEffect(() => {
     setNavigator(navigate);
     return () => setNavigator(null);
   }, [navigate]);
   return null;
-}
+};
 
 const Container = styled.div`
   max-width: 500px;
@@ -31,7 +30,7 @@ const Container = styled.div`
   flex-direction: column;
 `;
 
-export default function App() {
+export const App: React.FC = () => {
   return (
     <Container>
       <Provider store={store}>
@@ -52,4 +51,6 @@ export default function App() {
       </Provider>
     </Container>
   );
-}
+};
+
+export default App;

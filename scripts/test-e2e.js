@@ -183,6 +183,12 @@ async function run() {
     }
     console.log('/levels verified successfully (Level 1 Hydrogen visible at top)!');
 
+    console.log('Testing /done route...');
+    await page.goto('http://localhost:4173/done', { waitUntil: 'networkidle2' });
+    await new Promise(r => setTimeout(r, 1000));
+    await page.screenshot({ path: '/tmp/done_screenshot.png' });
+    console.log('/done verified and screenshot saved to /tmp/done_screenshot.png!');
+
     console.log('Testing /editor route...');
     await page.goto('http://localhost:4173/editor', { waitUntil: 'networkidle2' });
     await new Promise(r => setTimeout(r, 1000));
