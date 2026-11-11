@@ -13,8 +13,10 @@ export default class extends Phaser.State {
       google: {
         families: ['VT323']
       },
-      active: this.fontsLoaded
+      active: this.fontsLoaded,
+      inactive: this.fontsLoaded
     });
+    setTimeout(this.fontsLoaded, 1000);
 
     let text = this.add.text(
       this.world.centerX,
@@ -24,8 +26,8 @@ export default class extends Phaser.State {
     );
     text.anchor.setTo(0.5, 0.5);
 
-    this.load.image('loaderBg', './assets/images/loader-bg.png');
-    this.load.image('loaderBar', './assets/images/loader-bar.png');
+    this.load.image('loaderBg', '/assets/images/loader-bg.png');
+    this.load.image('loaderBar', '/assets/images/loader-bar.png');
   }
 
   render() {

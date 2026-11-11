@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { sample, uniqBy, round, remove, min, max, inRange } from 'lodash';
-import { setTimeout } from 'timers';
+
 
 export default class Hero extends Phaser.Sprite {
   constructor({
@@ -31,12 +31,14 @@ export default class Hero extends Phaser.Sprite {
     this.body.collideWorldBounds = true;
     this.HUD = HUD;
     this.data = this.game.data;
-    this.animations.add('left', [6, 7, 8, 9, 10, 11], 30, true);
-    this.animations.add('idle', [0, 1, 2, 3], 10, true);
-    this.animations.add('right', [6, 7, 8, 9, 10, 11], 30, true);
-    this.animations.add('jump', [13, 14, 15], 3, true);
+    if (this.animations && this.animations._frameData) {
+      this.animations.add('left', [6, 7, 8, 9, 10, 11], 30, true);
+      this.animations.add('idle', [0, 1, 2, 3], 10, true);
+      this.animations.add('right', [6, 7, 8, 9, 10, 11], 30, true);
+      this.animations.add('jump', [13, 14, 15], 3, true);
+      this.animations.play('jump');
+    }
     this.cursors = this.game.input.keyboard.createCursorKeys();
-    this.animations.play('jump');
     this.touchController = touchController;
     this.touchCheck = touchCheck || {
       deltaX: 0,

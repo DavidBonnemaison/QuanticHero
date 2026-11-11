@@ -4,7 +4,6 @@ platforms/
 dist/
 .vscode/
 *.log
-/index.html
 build/
 .idea/
 .DS_Store
