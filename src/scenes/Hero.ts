@@ -11,6 +11,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public isFocused: boolean;
   public velocityMultiplier = 1;
   public upsideDown = 1;
+  public recoilTimer = 0;
+  public recoilVx = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, isFocused = true) {
     super(scene, x, y, isFocused ? 'hero' : 'disabled');
@@ -20,8 +22,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setBounceY(0.2);
-    this.setCollideWorldBounds(true);
+    this.setBounce(0, 0);
+    this.setCollideWorldBounds(false);
     this.play(this.getAnimKey('idle'));
 
     this.setInteractive();
@@ -45,10 +47,51 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     return this.isFocused ? base : `disabled-${base}`;
   }
 
+  public bounceOffLeftWall(): void {
+    if (this.recoilVx <= 0) {
+      this.recoilVx = 300 * this.velocityMultiplier;
+      this.recoilTimer = 220;
+      const touchingGround =
+        this.upsideDown === 1
+          ? this.body?.touching.down || this.body?.blocked.down
+          : this.body?.touching.up || this.body?.blocked.up;
+      if (touchingGround) {
+        this.setVelocityY(-160 * this.upsideDown);
+      } else if (this.body && this.body.velocity.y * this.upsideDown > -50) {
+        this.setVelocityY(-100 * this.upsideDown);
+      }
+    }
+  }
+
+  public bounceOffRightWall(): void {
+    if (this.recoilVx >= 0) {
+      this.recoilVx = -300 * this.velocityMultiplier;
+      this.recoilTimer = 220;
+      const touchingGround =
+        this.upsideDown === 1
+          ? this.body?.touching.down || this.body?.blocked.down
+          : this.body?.touching.up || this.body?.blocked.up;
+      if (touchingGround) {
+        this.setVelocityY(-160 * this.upsideDown);
+      } else if (this.body && this.body.velocity.y * this.upsideDown > -50) {
+        this.setVelocityY(-100 * this.upsideDown);
+      }
+    }
+  }
+
+  public bounceOffCeiling(): void {
+    if (this.upsideDown === 1 && (!this.body || this.body.velocity.y < 50)) {
+      this.setVelocityY(220);
+    } else if (this.upsideDown === -1 && (!this.body || this.body.velocity.y > -50)) {
+      this.setVelocityY(-220);
+    }
+  }
+
   public updateControl(
     cursors: Phaser.Types.Input.Keyboard.CursorKeys | null,
     wasd: { [key: string]: Phaser.Input.Keyboard.Key } | null,
-    touch: TouchInputState
+    touch: TouchInputState,
+    delta = 16.6
   ): void {
     if (!this.body) return;
 
@@ -65,6 +108,27 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         ? this.body.touching.down || this.body.blocked.down
         : this.body.touching.up || this.body.blocked.up;
 
+    // Active bounce recoil handling (triggered only by scene boundaries)
+    if (this.recoilTimer > 0) {
+      this.recoilTimer -= delta;
+      this.setVelocityX(this.recoilVx);
+      this.recoilVx *= 0.94;
+
+      // Allow cancelling recoil early if player steers in the bounce direction
+      if (this.recoilVx > 0 && goRight) {
+        this.recoilTimer = 0;
+        this.setVelocityX(350 * this.velocityMultiplier);
+      } else if (this.recoilVx < 0 && goLeft) {
+        this.recoilTimer = 0;
+        this.setVelocityX(-350 * this.velocityMultiplier);
+      }
+
+      this.play(this.getAnimKey('jump'), true);
+      this.setFlipX(this.recoilVx < 0);
+      return;
+    }
+
+    // Normal controls
     if (this.isFocused) {
       if (goLeft) {
         this.setVelocityX(-350 * this.velocityMultiplier);
@@ -79,9 +143,11 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
           this.play(this.getAnimKey('right'), true);
         }
       } else {
-        this.setVelocityX(0);
         if (touchingGround) {
+          this.setVelocityX(0);
           this.play(this.getAnimKey('idle'), true);
+        } else {
+          this.body.velocity.x *= 0.98;
         }
       }
 

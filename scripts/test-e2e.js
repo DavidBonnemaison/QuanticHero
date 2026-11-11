@@ -222,6 +222,152 @@ async function run() {
     }
     console.log(`✓ Camera scroll verified (scrollY=${gameState.camera.scrollY}, midY=${gameState.camera.midY})`);
 
+    // REGRESSION TEST: Verify dedicated scene boundary walls and zero floor/platform bounce
+    const boundsConfig = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return null;
+      const hero = gs.heroes[0];
+      const bounds = gs.sceneBounds?.getChildren() || [];
+      const boundaryTypes = bounds.map(b => b.getData('boundary'));
+      return {
+        hasSceneBounds: !!gs.sceneBounds,
+        boundsCount: bounds.length,
+        boundaryTypes,
+        heroBounceX: hero?.body?.bounce?.x,
+        heroBounceY: hero?.body?.bounce?.y
+      };
+    });
+    if (
+      !boundsConfig ||
+      !boundsConfig.hasSceneBounds ||
+      boundsConfig.boundsCount < 3 ||
+      !boundsConfig.boundaryTypes.includes('left') ||
+      !boundsConfig.boundaryTypes.includes('right') ||
+      !boundsConfig.boundaryTypes.includes('ceiling')
+    ) {
+      throw new Error(`Scene boundary configuration invalid: ${JSON.stringify(boundsConfig)}`);
+    }
+    if (boundsConfig.heroBounceX !== 0 || boundsConfig.heroBounceY !== 0) {
+      throw new Error(
+        `Hero has non-zero bounce (causes unwanted ground/platform bouncing): bounceX=${boundsConfig.heroBounceX}, bounceY=${boundsConfig.heroBounceY}`
+      );
+    }
+    console.log(
+      '✓ Dedicated scene boundary walls verified (left/right/ceiling present, hero bounce=0 for clean platform landings)'
+    );
+
+    // REGRESSION TEST: Verify boundary bounce mechanics on left, right, and ceiling
+    const sideBounceResult = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return null;
+      const hero = gs.heroes[0];
+
+      // Test Left Boundary Bounce:
+      hero.bounceOffLeftWall();
+      const leftBounceVx = hero.recoilVx;
+      const leftRecoilTimer = hero.recoilTimer;
+
+      // Test active updateControl under left bounce with user trying to press left:
+      hero.updateControl(
+        { left: { isDown: true }, right: { isDown: false }, up: { isDown: false }, down: { isDown: false } },
+        null,
+        { left: true, right: false, jump: false },
+        16.6
+      );
+      const leftRecoilPropulsionVx = hero.body.velocity.x;
+
+      // Reset
+      hero.recoilTimer = 0;
+      hero.recoilVx = 0;
+
+      // Test Right Boundary Bounce:
+      hero.bounceOffRightWall();
+      const rightBounceVx = hero.recoilVx;
+      const rightRecoilTimer = hero.recoilTimer;
+
+      // Test active updateControl under right bounce with user trying to press right:
+      hero.updateControl(
+        { left: { isDown: false }, right: { isDown: true }, up: { isDown: false }, down: { isDown: false } },
+        null,
+        { left: false, right: true, jump: false },
+        16.6
+      );
+      const rightRecoilPropulsionVx = hero.body.velocity.x;
+
+      // Test Ceiling Bounce:
+      hero.recoilTimer = 0;
+      hero.recoilVx = 0;
+      hero.body.velocity.y = -100;
+      hero.bounceOffCeiling();
+      const ceilingBounceVy = hero.body.velocity.y;
+
+      // Reset hero state
+      hero.recoilTimer = 0;
+      hero.recoilVx = 0;
+
+      return {
+        leftBounceVx,
+        leftRecoilTimer,
+        leftRecoilPropulsionVx,
+        rightBounceVx,
+        rightRecoilTimer,
+        rightRecoilPropulsionVx,
+        ceilingBounceVy
+      };
+    });
+
+    if (
+      !sideBounceResult ||
+      sideBounceResult.leftBounceVx < 250 ||
+      sideBounceResult.leftRecoilPropulsionVx < 200 ||
+      sideBounceResult.rightBounceVx > -250 ||
+      sideBounceResult.rightRecoilPropulsionVx > -200 ||
+      sideBounceResult.ceilingBounceVy < 150
+    ) {
+      throw new Error(`Boundary bounce test failed: ${JSON.stringify(sideBounceResult)}`);
+    }
+    console.log(
+      `✓ Scene boundary bounce verified (left: vx=${sideBounceResult.leftRecoilPropulsionVx}, right: vx=${sideBounceResult.rightRecoilPropulsionVx}, ceiling: vy=${sideBounceResult.ceilingBounceVy})`
+    );
+
+    // REGRESSION TEST: Verify PowerUp text styling (150px right-to-left banner)
+    const powerUpResult = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return null;
+      const hero = gs.heroes[0];
+      const dummyParticle = gs.physics.add.sprite(hero.x, hero.y, 'blue');
+      dummyParticle.setData('type', 'lowGravity');
+      gs.collectParticle(hero, dummyParticle);
+      const texts = gs.children.list.filter(c => c.type === 'Text');
+      const toast = texts.find(t => t.text === 'LOW GRAVITY !');
+      return {
+        found: !!toast,
+        fontSize: toast?.style?.fontSize,
+        alpha: toast?.alpha,
+        x: toast?.x
+      };
+    });
+    if (!powerUpResult || !powerUpResult.found || powerUpResult.fontSize !== '150px') {
+      throw new Error(`PowerUp text invalid: ${JSON.stringify(powerUpResult)}`);
+    }
+    console.log(`✓ PowerUp banner verified (fontSize=150px, startX=${powerUpResult.x}, alpha=${powerUpResult.alpha})`);
+
+    // REGRESSION TEST: Verify restart when hero falls out through the bottom
+    const restartResult = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return false;
+      const hero = gs.heroes[0];
+      let restarted = false;
+      gs.scene.restart = () => { restarted = true; };
+      hero.y = gs.levelData.height + 30;
+      gs.update();
+      return restarted;
+    });
+    if (!restartResult) {
+      throw new Error('Scene did not restart when hero fell out of the bottom of the scene');
+    }
+    console.log('✓ Bottom exit restart verified (restarts cleanly when hero.y > height + 20)');
+
     await page.screenshot({ path: '/tmp/gameplay_screenshot.png' });
     console.log('Screenshot saved to /tmp/gameplay_screenshot.png');
 
@@ -263,9 +409,11 @@ async function run() {
     }
 
     console.log('SUCCESS: Game launched without any uncaught exceptions!');
+  } catch (err) {
+    console.error('Test execution error:', err);
+    throw err;
   } finally {
     server.kill();
-    process.exit(0);
   }
 }
 
