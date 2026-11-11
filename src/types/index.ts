@@ -48,6 +48,12 @@ export interface EntanglementConfig {
   betaDoor?: { x: number; y: number };
 }
 
+export interface LevelMeta {
+  seed: number;
+  generatorVersion: string;
+  path: { x: number; y: number; t: number }[];
+}
+
 export interface LevelData {
   id: string;
   symbol: string;
@@ -66,6 +72,7 @@ export interface LevelData {
   entanglement?: EntanglementConfig;
   authorGhost?: string;
   authorTime?: number;
+  meta?: LevelMeta;
 }
 
 export type LevelsMap = Record<string, LevelData>;
@@ -87,5 +94,5 @@ export interface RootState {
   game: GameState;
   levels: LevelsMap | null;
   score: ScoreState;
-  routing?: any;
+  routing?: unknown;
 }

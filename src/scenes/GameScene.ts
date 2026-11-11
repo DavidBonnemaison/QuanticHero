@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
 import * as defaultLevels from '../data/levels';
 import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
+import { PHYSICS } from '../physics/constants';
 import { push } from '../shims/navigation';
 import { useGameStore } from '../store';
 import {
@@ -128,7 +129,7 @@ export default class GameScene extends Phaser.Scene {
 
   create(): void {
     // 1. Physics & Bounds
-    this.physics.world.gravity.y = 700;
+    this.physics.world.gravity.y = PHYSICS.GRAVITY_Y;
     this.physics.world.setBounds(0, 0, this.levelData.width, this.levelData.height);
     this.physics.world.setBoundsCollision(false, false, false, false);
     this.cameras.main.setBounds(0, 0, this.levelData.width, this.levelData.height);
@@ -312,7 +313,7 @@ export default class GameScene extends Phaser.Scene {
       this.betaHero.setEntangled(true, entanglement.mode);
       if (entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity') {
         const bBody = this.betaHero.body as Phaser.Physics.Arcade.Body;
-        bBody.gravity.y = -1400;
+        bBody.gravity.y = -2 * PHYSICS.GRAVITY_Y;
       }
       this.heroes.push(this.betaHero);
       this.heroGroup.add(this.betaHero);
@@ -372,8 +373,9 @@ export default class GameScene extends Phaser.Scene {
         this.handleEntangledPortalArrival(heroObj as Hero, this.portalSprite, false);
       });
       if (this.betaPortalSprite) {
-        this.physics.add.overlap(this.heroGroup, this.betaPortalSprite, (_portal, heroObj) => {
-          this.handleEntangledPortalArrival(heroObj as Hero, this.betaPortalSprite!, true);
+        const betaPortal = this.betaPortalSprite;
+        this.physics.add.overlap(this.heroGroup, betaPortal, (_portal, heroObj) => {
+          this.handleEntangledPortalArrival(heroObj as Hero, betaPortal, true);
         });
       }
     } else {
@@ -780,7 +782,7 @@ export default class GameScene extends Phaser.Scene {
         break;
       }
       case 'speed': {
-        hero.velocityMultiplier = 1.4;
+        hero.velocityMultiplier = PHYSICS.HERO_SPEED_BOOST;
         break;
       }
       case 'lowGravity': {
@@ -1024,7 +1026,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Record main player frame and update live speedrun split delta
     const focusedHero = this.heroes.find((h) => h.isFocused) || this.heroes[0];
-    if (focusedHero && focusedHero.active && !this.isLevelCompleted) {
+    if (focusedHero?.active && !this.isLevelCompleted) {
       this.ghostRecorder.recordFrame(
         elapsedMs,
         focusedHero.x,
