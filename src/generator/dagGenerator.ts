@@ -1,5 +1,6 @@
 import { PHYSICS } from '../physics/constants';
 import type { Door, LevelData, Particle, Platform, Spike } from '../types';
+import { assemblePacedLevel } from './chunkAssembler';
 import { delta_y_max, isReachable, t_apex, t_land, x_reach } from './kinematics';
 import { type SimulationResult, simulateFullLevel } from './simulator';
 
@@ -9,6 +10,7 @@ export interface GeneratorOptions {
   seed?: number;
   width?: number;
   height?: number;
+  mode?: 'dag' | 'paced';
 }
 
 export class SeededRandom {
@@ -340,11 +342,20 @@ function attemptGeneration(
 
 /**
  * Deterministically generates a quantum level conforming to LevelData and verified by physics simulation.
+ * Supports standard DAG mode ('dag') and modular 4-phase chunk pacing mode ('paced').
  */
 export function generateQuantumLevel(options: GeneratorOptions = {}): {
   levelData: LevelData;
   simulation: SimulationResult;
 } {
+  if (options.mode === 'paced') {
+    const assembly = assemblePacedLevel(options);
+    return {
+      levelData: assembly.levelData,
+      simulation: assembly.simulation
+    };
+  }
+
   const atom = options.atom ?? 7;
   const seed = options.seed ?? 42;
   const difficulty = options.difficulty ?? (atom <= 4 ? 'easy' : atom <= 8 ? 'medium' : 'hard');

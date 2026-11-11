@@ -15,6 +15,10 @@ export interface SimHeroState {
   timeMs: number;
   flipX: boolean;
   animState: 'idle' | 'left' | 'right' | 'jump';
+  currentPhase?: 'cyan' | 'magenta';
+  gravityMultiplier?: number;
+  collectedParticleIndices?: number[];
+  decayContactTime?: Record<number, number>;
 }
 
 export interface SimInput {
@@ -29,6 +33,7 @@ export interface SimWorld {
   gravityY?: number;
   platforms: Platform[];
   spikes?: Spike[];
+  particles?: import('../types').Particle[];
   bounceWalls?: boolean;
 }
 
@@ -70,7 +75,11 @@ export function createInitialHeroState(
     upsideDown,
     timeMs: 0,
     flipX: false,
-    animState: 'idle'
+    animState: 'idle',
+    currentPhase: 'cyan',
+    gravityMultiplier: 1,
+    collectedParticleIndices: [],
+    decayContactTime: {}
   };
 }
 
@@ -131,6 +140,11 @@ export function stepSimulation(
       next.vy = PHYSICS.HERO_JUMP_V0 * next.upsideDown;
       next.touchingGround = false;
       next.animState = 'jump';
+
+      // Phase Shift on jump if world has phase-enabled platforms
+      if (world.platforms.some((p) => Boolean(p.phase))) {
+        next.currentPhase = next.currentPhase === 'cyan' ? 'magenta' : 'cyan';
+      }
     }
   }
 
@@ -140,7 +154,8 @@ export function stepSimulation(
 
   // 2. Physics integration
   const dt = deltaMs / 1000;
-  const gravity = (world.gravityY ?? PHYSICS.GRAVITY_Y) * next.upsideDown;
+  const gravityMultiplier = next.gravityMultiplier ?? 1;
+  const gravity = (world.gravityY ?? PHYSICS.GRAVITY_Y) * gravityMultiplier * next.upsideDown;
   next.vy += gravity * dt;
 
   let newX = next.x + next.vx * dt;
@@ -186,6 +201,38 @@ export function stepSimulation(
     }
   }
 
+  // Neon internal bounce walls (kind === 'wall')
+  for (const p of world.platforms) {
+    if (p.kind === 'wall') {
+      const vOverlap = newY + halfH > p.y && newY - halfH < p.y + p.height;
+      if (vOverlap) {
+        const hOverlap = newX + halfW >= p.x && newX - halfW <= p.x + p.width;
+        if (hOverlap) {
+          const wallCenterX = p.x + p.width / 2;
+          if (hero.x < wallCenterX) {
+            newX = p.x - halfW;
+            next.recoilVx = -PHYSICS.WALL_RECOIL_VX * mult;
+            next.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
+            if (next.touchingGround || input.jump) {
+              next.vy = PHYSICS.WALL_RECOIL_VY_JUMP * next.upsideDown;
+            } else if (next.vy * next.upsideDown > -50) {
+              next.vy = PHYSICS.WALL_RECOIL_VY * next.upsideDown;
+            }
+          } else {
+            newX = p.x + p.width + halfW;
+            next.recoilVx = PHYSICS.WALL_RECOIL_VX * mult;
+            next.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
+            if (next.touchingGround || input.jump) {
+              next.vy = PHYSICS.WALL_RECOIL_VY_JUMP * next.upsideDown;
+            } else if (next.vy * next.upsideDown > -50) {
+              next.vy = PHYSICS.WALL_RECOIL_VY * next.upsideDown;
+            }
+          }
+        }
+      }
+    }
+  }
+
   // Ceiling (y = 0)
   if (newY - halfH <= 0) {
     newY = halfH;
@@ -196,13 +243,53 @@ export function stepSimulation(
     }
   }
 
-  // 4. Platform landing & ground check
+  // 4. In-flight airborne particle collection
+  if (world.particles && world.particles.length > 0) {
+    const collected = new Set(next.collectedParticleIndices ?? []);
+    for (let i = 0; i < world.particles.length; i++) {
+      if (collected.has(i)) continue;
+      const part = world.particles[i];
+      const distX = Math.abs(newX - part.x);
+      const distY = Math.abs(newY - part.y);
+
+      if (distX < halfW + 18 && distY < halfH + 18) {
+        collected.add(i);
+        next.collectedParticleIndices = Array.from(collected);
+
+        if (part.type === 'speed') {
+          next.velocityMultiplier = PHYSICS.HERO_SPEED_BOOST;
+        } else if (part.type === 'lowGravity') {
+          next.gravityMultiplier = 0.5;
+        } else if (part.type === 'antiGravity') {
+          next.upsideDown = -next.upsideDown;
+        }
+      }
+    }
+  }
+
+  // 5. Platform landing & ground check
   let landed = false;
   if (next.upsideDown === 1) {
     const prevBottom = hero.y + halfH;
     const nextBottom = newY + halfH;
 
-    for (const p of world.platforms) {
+    for (let idx = 0; idx < world.platforms.length; idx++) {
+      const p = world.platforms[idx];
+      if (p.kind === 'wall') continue;
+
+      // Phase Shift filter: non-active phase platforms are intangible
+      if (p.phase && next.currentPhase && p.phase !== next.currentPhase) {
+        continue;
+      }
+
+      // Half-life decay filter: platform collapsed after decayMs
+      if (p.decayMs && p.decayMs > 0 && next.decayContactTime?.[idx] !== undefined) {
+        const contactDuration = next.timeMs - next.decayContactTime[idx];
+        if (contactDuration >= p.decayMs) {
+          continue;
+        }
+      }
+
       // Horizontal overlap check with body width
       const heroLeft = newX - halfW;
       const heroRight = newX + halfW;
@@ -215,6 +302,14 @@ export function stepSimulation(
           newY = p.y - halfH;
           next.vy = 0;
           landed = true;
+
+          // Record initial contact for decay platforms
+          if (p.decayMs && p.decayMs > 0 && next.decayContactTime?.[idx] === undefined) {
+            next.decayContactTime = {
+              ...(next.decayContactTime ?? {}),
+              [idx]: next.timeMs
+            };
+          }
           break;
         }
       }
@@ -263,6 +358,7 @@ export function simulatePlatformTransition(
   for (let step = 0; step < maxSteps; step++) {
     const input: SimInput = { left: false, right: false, jump: false };
     const halfW = PHYSICS.HERO_WIDTH / 2;
+    const halfH = PHYSICS.HERO_HEIGHT / 2;
 
     if (!jumped) {
       // Phase 1: Move towards edge and trigger jump
@@ -320,6 +416,21 @@ export function simulatePlatformTransition(
     // Abort if hero falls below screen or dies in spikes
     if (current.y > world.height + 50) {
       return { success: false, history, finalState: current };
+    }
+
+    if (world.spikes && world.spikes.length > 0) {
+      for (const s of world.spikes) {
+        const sw = s.width ?? 32;
+        const sh = s.height ?? 32;
+        if (
+          current.x + halfW > s.x &&
+          current.x - halfW < s.x + sw &&
+          current.y + halfH > s.y &&
+          current.y - halfH < s.y + sh
+        ) {
+          return { success: false, history, finalState: current };
+        }
+      }
     }
   }
 
