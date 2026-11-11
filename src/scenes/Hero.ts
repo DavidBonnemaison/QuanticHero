@@ -22,8 +22,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setBounce(0.4, 0.3);
-    this.setCollideWorldBounds(true);
+    this.setBounce(0, 0);
+    this.setCollideWorldBounds(false);
     this.play(this.getAnimKey('idle'));
 
     this.setInteractive();
@@ -47,6 +47,46 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     return this.isFocused ? base : `disabled-${base}`;
   }
 
+  public bounceOffLeftWall(): void {
+    if (this.recoilVx <= 0) {
+      this.recoilVx = 300 * this.velocityMultiplier;
+      this.recoilTimer = 220;
+      const touchingGround =
+        this.upsideDown === 1
+          ? this.body?.touching.down || this.body?.blocked.down
+          : this.body?.touching.up || this.body?.blocked.up;
+      if (touchingGround) {
+        this.setVelocityY(-160 * this.upsideDown);
+      } else if (this.body && this.body.velocity.y * this.upsideDown > -50) {
+        this.setVelocityY(-100 * this.upsideDown);
+      }
+    }
+  }
+
+  public bounceOffRightWall(): void {
+    if (this.recoilVx >= 0) {
+      this.recoilVx = -300 * this.velocityMultiplier;
+      this.recoilTimer = 220;
+      const touchingGround =
+        this.upsideDown === 1
+          ? this.body?.touching.down || this.body?.blocked.down
+          : this.body?.touching.up || this.body?.blocked.up;
+      if (touchingGround) {
+        this.setVelocityY(-160 * this.upsideDown);
+      } else if (this.body && this.body.velocity.y * this.upsideDown > -50) {
+        this.setVelocityY(-100 * this.upsideDown);
+      }
+    }
+  }
+
+  public bounceOffCeiling(): void {
+    if (this.upsideDown === 1 && (!this.body || this.body.velocity.y < 50)) {
+      this.setVelocityY(220);
+    } else if (this.upsideDown === -1 && (!this.body || this.body.velocity.y > -50)) {
+      this.setVelocityY(-220);
+    }
+  }
+
   public updateControl(
     cursors: Phaser.Types.Input.Keyboard.CursorKeys | null,
     wasd: { [key: string]: Phaser.Input.Keyboard.Key } | null,
@@ -68,55 +108,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         ? this.body.touching.down || this.body.blocked.down
         : this.body.touching.up || this.body.blocked.up;
 
-    // Bounce off ceiling when hitting ceiling
-    const atCeiling =
-      this.upsideDown === 1
-        ? this.body.blocked.up || this.body.touching.up
-        : this.body.blocked.down || this.body.touching.down;
-
-    if (atCeiling) {
-      if (this.upsideDown === 1 && this.body.velocity.y < 50) {
-        this.setVelocityY(220);
-      } else if (this.upsideDown === -1 && this.body.velocity.y > -50) {
-        this.setVelocityY(-220);
-      }
-    }
-
-    // Side bounce detection (world bounds & platforms)
-    const levelWidth =
-      (this.scene as unknown as { levelData?: { width?: number } })?.levelData?.width ?? 1000;
-    const halfWidth = this.body.halfWidth || 32;
-    const bounceSpeed = 300 * this.velocityMultiplier;
-
-    const hitLeft =
-      this.body.blocked.left ||
-      this.body.touching.left ||
-      (this.x <= halfWidth + 1 && (goLeft || this.body.velocity.x < 0));
-
-    const hitRight =
-      this.body.blocked.right ||
-      this.body.touching.right ||
-      (this.x >= levelWidth - halfWidth - 1 && (goRight || this.body.velocity.x > 0));
-
-    if (hitLeft && this.recoilVx <= 0) {
-      this.recoilVx = bounceSpeed;
-      this.recoilTimer = 220;
-      if (touchingGround) {
-        this.setVelocityY(-160 * this.upsideDown);
-      } else if (this.body.velocity.y * this.upsideDown > -50) {
-        this.setVelocityY(-100 * this.upsideDown);
-      }
-    } else if (hitRight && this.recoilVx >= 0) {
-      this.recoilVx = -bounceSpeed;
-      this.recoilTimer = 220;
-      if (touchingGround) {
-        this.setVelocityY(-160 * this.upsideDown);
-      } else if (this.body.velocity.y * this.upsideDown > -50) {
-        this.setVelocityY(-100 * this.upsideDown);
-      }
-    }
-
-    // Active bounce recoil handling
+    // Active bounce recoil handling (triggered only by scene boundaries)
     if (this.recoilTimer > 0) {
       this.recoilTimer -= delta;
       this.setVelocityX(this.recoilVx);

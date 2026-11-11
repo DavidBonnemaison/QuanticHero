@@ -29,6 +29,7 @@ export default class GameScene extends Phaser.Scene {
   public heroGroup!: Phaser.Physics.Arcade.Group;
   public platforms!: Phaser.Physics.Arcade.StaticGroup;
   public movingPlatformsGroup!: Phaser.Physics.Arcade.Group;
+  public sceneBounds!: Phaser.Physics.Arcade.StaticGroup;
   public spikes!: Phaser.Physics.Arcade.StaticGroup;
   public particles!: Phaser.Physics.Arcade.Group;
 
@@ -72,9 +73,43 @@ export default class GameScene extends Phaser.Scene {
     // 1. Physics & Bounds
     this.physics.world.gravity.y = 700;
     this.physics.world.setBounds(0, 0, this.levelData.width, this.levelData.height);
-    this.physics.world.setBoundsCollision(true, true, true, false);
+    this.physics.world.setBoundsCollision(false, false, false, false);
     this.cameras.main.setBounds(0, 0, this.levelData.width, this.levelData.height);
     this.cameras.main.setBackgroundColor(this.levelData.hue);
+
+    // Dedicated scene boundary walls (left, right, ceiling) for exclusive boundary bouncing
+    this.sceneBounds = this.physics.add.staticGroup();
+
+    // Left wall: thickness 40, right edge at x = 0
+    const leftWall = this.add.rectangle(-20, this.levelData.height / 2, 40, this.levelData.height);
+    this.physics.add.existing(leftWall, true);
+    leftWall.setVisible(false);
+    leftWall.setData('boundary', 'left');
+    this.sceneBounds.add(leftWall);
+
+    // Right wall: thickness 40, left edge at x = levelData.width
+    const rightWall = this.add.rectangle(
+      this.levelData.width + 20,
+      this.levelData.height / 2,
+      40,
+      this.levelData.height
+    );
+    this.physics.add.existing(rightWall, true);
+    rightWall.setVisible(false);
+    rightWall.setData('boundary', 'right');
+    this.sceneBounds.add(rightWall);
+
+    // Ceiling: thickness 40, bottom edge at y = 0
+    const ceiling = this.add.rectangle(
+      this.levelData.width / 2,
+      -20,
+      this.levelData.width + 80,
+      40
+    );
+    this.physics.add.existing(ceiling, true);
+    ceiling.setVisible(false);
+    ceiling.setData('boundary', 'ceiling');
+    this.sceneBounds.add(ceiling);
 
     // 2. Background ambient molecules
     this.createMolecules();
@@ -198,18 +233,12 @@ export default class GameScene extends Phaser.Scene {
     this.portalSprite.play('spin');
 
     // 7. Heroes
-    this.heroGroup = this.physics.add.group({
-      bounceX: 0.4,
-      bounceY: 0.3,
-      collideWorldBounds: true
-    });
+    this.heroGroup = this.physics.add.group();
     const startX = this.levelData.player.position.x;
     const startY = this.levelData.player.position.y;
     const initialHero = new Hero(this, startX, startY, true);
     this.heroes.push(initialHero);
     this.heroGroup.add(initialHero);
-    initialHero.setBounce(0.4, 0.3);
-    initialHero.setCollideWorldBounds(true);
 
     this.cameras.main.centerOn(initialHero.x, initialHero.y);
     this.cameras.main.startFollow(initialHero, true, 0.1, 0.1);
@@ -217,6 +246,18 @@ export default class GameScene extends Phaser.Scene {
     // Collisions and Overlaps
     this.physics.add.collider(this.heroGroup, this.platforms);
     this.physics.add.collider(this.heroGroup, this.movingPlatformsGroup);
+    this.physics.add.collider(this.heroGroup, this.sceneBounds, (heroObj, boundObj) => {
+      const hero = heroObj as Hero;
+      const bound = boundObj as Phaser.GameObjects.Rectangle;
+      const type = bound.getData('boundary');
+      if (type === 'left') {
+        hero.bounceOffLeftWall();
+      } else if (type === 'right') {
+        hero.bounceOffRightWall();
+      } else if (type === 'ceiling') {
+        hero.bounceOffCeiling();
+      }
+    });
     this.physics.add.overlap(this.heroGroup, this.spikes, (_heroObj) => {
       this.killHero(_heroObj as Hero);
     });
@@ -398,8 +439,6 @@ export default class GameScene extends Phaser.Scene {
           clonedHero.setGravityInverted(this.physics.world.gravity.y < 0);
           this.heroes.push(clonedHero);
           this.heroGroup.add(clonedHero);
-          clonedHero.setBounce(0.4, 0.3);
-          clonedHero.setCollideWorldBounds(true);
         }
         break;
       }

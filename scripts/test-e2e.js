@@ -222,101 +222,112 @@ async function run() {
     }
     console.log(`✓ Camera scroll verified (scrollY=${gameState.camera.scrollY}, midY=${gameState.camera.midY})`);
 
-    // REGRESSION TEST: Verify World bounds collision (sides & ceiling solid, bottom open)
+    // REGRESSION TEST: Verify dedicated scene boundary walls and zero floor/platform bounce
     const boundsConfig = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
       if (!gs) return null;
-      const check = gs.physics.world.checkCollision;
       const hero = gs.heroes[0];
+      const bounds = gs.sceneBounds?.getChildren() || [];
+      const boundaryTypes = bounds.map(b => b.getData('boundary'));
       return {
-        left: check.left,
-        right: check.right,
-        up: check.up,
-        down: check.down,
-        bounceX: hero?.body?.bounce?.x,
-        bounceY: hero?.body?.bounce?.y
+        hasSceneBounds: !!gs.sceneBounds,
+        boundsCount: bounds.length,
+        boundaryTypes,
+        heroBounceX: hero?.body?.bounce?.x,
+        heroBounceY: hero?.body?.bounce?.y
       };
     });
-    if (!boundsConfig || !boundsConfig.left || !boundsConfig.right || !boundsConfig.up || boundsConfig.down !== false) {
-      throw new Error(`Bounds collision configuration invalid: ${JSON.stringify(boundsConfig)}`);
+    if (
+      !boundsConfig ||
+      !boundsConfig.hasSceneBounds ||
+      boundsConfig.boundsCount < 3 ||
+      !boundsConfig.boundaryTypes.includes('left') ||
+      !boundsConfig.boundaryTypes.includes('right') ||
+      !boundsConfig.boundaryTypes.includes('ceiling')
+    ) {
+      throw new Error(`Scene boundary configuration invalid: ${JSON.stringify(boundsConfig)}`);
     }
-    if (boundsConfig.bounceX <= 0 || boundsConfig.bounceY <= 0) {
-      throw new Error(`Hero bounce not set: bounceX=${boundsConfig.bounceX}, bounceY=${boundsConfig.bounceY}`);
+    if (boundsConfig.heroBounceX !== 0 || boundsConfig.heroBounceY !== 0) {
+      throw new Error(
+        `Hero has non-zero bounce (causes unwanted ground/platform bouncing): bounceX=${boundsConfig.heroBounceX}, bounceY=${boundsConfig.heroBounceY}`
+      );
     }
-    console.log('✓ Bounds collision and Hero bounce verified (left/right/up: true, down: false, bounce configured)');
+    console.log(
+      '✓ Dedicated scene boundary walls verified (left/right/ceiling present, hero bounce=0 for clean platform landings)'
+    );
 
-    // REGRESSION TEST: Verify side bounce mechanics on left and right bounds
+    // REGRESSION TEST: Verify boundary bounce mechanics on left, right, and ceiling
     const sideBounceResult = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
       if (!gs) return null;
       const hero = gs.heroes[0];
 
-      // Test Left Boundary Bounce: Hero pressing left against left wall
-      hero.x = 32;
-      hero.body.blocked.left = true;
-      hero.body.blocked.down = true;
+      // Test Left Boundary Bounce:
+      hero.bounceOffLeftWall();
+      const leftBounceVx = hero.recoilVx;
+      const leftRecoilTimer = hero.recoilTimer;
+
+      // Test active updateControl under left bounce with user trying to press left:
       hero.updateControl(
         { left: { isDown: true }, right: { isDown: false }, up: { isDown: false }, down: { isDown: false } },
         null,
         { left: true, right: false, jump: false },
         16.6
       );
-      const leftBounceVx = hero.body.velocity.x;
-      const leftRecoilTimer = hero.recoilTimer;
+      const leftRecoilPropulsionVx = hero.body.velocity.x;
 
-      // Reset recoil
+      // Reset
       hero.recoilTimer = 0;
       hero.recoilVx = 0;
 
-      // Test Right Boundary Bounce: Hero pressing right against right wall
-      hero.x = gs.levelData.width - 32;
-      hero.body.blocked.left = false;
-      hero.body.blocked.right = true;
-      hero.body.blocked.down = true;
+      // Test Right Boundary Bounce:
+      hero.bounceOffRightWall();
+      const rightBounceVx = hero.recoilVx;
+      const rightRecoilTimer = hero.recoilTimer;
+
+      // Test active updateControl under right bounce with user trying to press right:
       hero.updateControl(
         { left: { isDown: false }, right: { isDown: true }, up: { isDown: false }, down: { isDown: false } },
         null,
         { left: false, right: true, jump: false },
         16.6
       );
-      const rightBounceVx = hero.body.velocity.x;
-      const rightRecoilTimer = hero.recoilTimer;
+      const rightRecoilPropulsionVx = hero.body.velocity.x;
 
-      // Test Ceiling Bounce: Hero hitting ceiling
+      // Test Ceiling Bounce:
       hero.recoilTimer = 0;
       hero.recoilVx = 0;
-      hero.body.blocked.right = false;
-      hero.body.blocked.up = true;
-      hero.body.velocity.y = -50;
-      hero.updateControl(null, null, { left: false, right: false, jump: false }, 16.6);
+      hero.body.velocity.y = -100;
+      hero.bounceOffCeiling();
       const ceilingBounceVy = hero.body.velocity.y;
 
       // Reset hero state
-      hero.body.blocked.up = false;
       hero.recoilTimer = 0;
       hero.recoilVx = 0;
 
       return {
         leftBounceVx,
         leftRecoilTimer,
+        leftRecoilPropulsionVx,
         rightBounceVx,
         rightRecoilTimer,
+        rightRecoilPropulsionVx,
         ceilingBounceVy
       };
     });
 
     if (
       !sideBounceResult ||
-      sideBounceResult.leftBounceVx <= 150 ||
-      sideBounceResult.leftRecoilTimer <= 0 ||
-      sideBounceResult.rightBounceVx >= -150 ||
-      sideBounceResult.rightRecoilTimer <= 0 ||
+      sideBounceResult.leftBounceVx < 250 ||
+      sideBounceResult.leftRecoilPropulsionVx < 200 ||
+      sideBounceResult.rightBounceVx > -250 ||
+      sideBounceResult.rightRecoilPropulsionVx > -200 ||
       sideBounceResult.ceilingBounceVy < 150
     ) {
-      throw new Error(`Side / ceiling bounce test failed: ${JSON.stringify(sideBounceResult)}`);
+      throw new Error(`Boundary bounce test failed: ${JSON.stringify(sideBounceResult)}`);
     }
     console.log(
-      `✓ Side bounce verified (left: vx=${sideBounceResult.leftBounceVx}, right: vx=${sideBounceResult.rightBounceVx}, ceiling: vy=${sideBounceResult.ceilingBounceVy})`
+      `✓ Scene boundary bounce verified (left: vx=${sideBounceResult.leftRecoilPropulsionVx}, right: vx=${sideBounceResult.rightRecoilPropulsionVx}, ceiling: vy=${sideBounceResult.ceilingBounceVy})`
     );
 
     // REGRESSION TEST: Verify PowerUp text styling (150px right-to-left banner)
