@@ -1,0 +1,92 @@
+{
+  "id": "111",
+  "symbol": "Rg",
+  "atom": "Roentgenium",
+  "uncertainty": 1,
+  "width": 1600,
+  "height": 1000,
+  "hue": "#1a002c",
+  "antiHue": "#ff007f",
+  "explanations": [
+    "Symétrie Miroir Avancée : Plateformes mobiles et point de convergence.",
+    "Alpha et Bêta doivent traverser les gouffres pour se rejoindre au portail central unique !"
+  ],
+  "entanglement": {
+    "mode": "mirror_x",
+    "betaSpawn": { "x": 1450, "y": 880 },
+    "portalMode": "single"
+  },
+  "player": {
+    "position": {
+      "x": 150,
+      "y": 880
+    }
+  },
+  "spikes": [
+    {
+      "x": 400,
+      "y": 960,
+      "width": 800,
+      "height": 40
+    }
+  ],
+  "particles": [],
+  "platforms": [
+    {
+      "x": 50,
+      "y": 920,
+      "width": 350,
+      "height": 40
+    },
+    {
+      "x": 1200,
+      "y": 920,
+      "width": 350,
+      "height": 40
+    },
+    {
+      "x": 420,
+      "y": 820,
+      "width": 140,
+      "height": 20,
+      "movesTo": {
+        "x": 600,
+        "y": 820,
+        "time": 2000
+      }
+    },
+    {
+      "x": 1040,
+      "y": 820,
+      "width": 140,
+      "height": 20,
+      "movesTo": {
+        "x": 860,
+        "y": 820,
+        "time": 2000
+      }
+    },
+    {
+      "x": 580,
+      "y": 680,
+      "width": 120,
+      "height": 20
+    },
+    {
+      "x": 900,
+      "y": 680,
+      "width": 120,
+      "height": 20
+    },
+    {
+      "x": 720,
+      "y": 560,
+      "width": 160,
+      "height": 20
+    }
+  ],
+  "door": {
+    "x": 800,
+    "y": 560
+  }
+}

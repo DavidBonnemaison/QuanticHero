@@ -9,7 +9,11 @@ describe('useGameStore', () => {
       currentLevel: 0,
       maxLevel: 1,
       scores: {},
-      customLevels: null
+      customLevels: null,
+      isMuted: false,
+      hapticsEnabled: true,
+      reducedEffects: false,
+      ghostEnabled: true
     });
   });
 
@@ -20,6 +24,10 @@ describe('useGameStore', () => {
       expect(state.maxLevel).toBe(1);
       expect(state.scores).toEqual({});
       expect(state.customLevels).toBeNull();
+      expect(state.isMuted).toBe(false);
+      expect(state.hapticsEnabled).toBe(true);
+      expect(state.reducedEffects).toBe(false);
+      expect(state.ghostEnabled).toBe(true);
     });
   });
 
@@ -41,6 +49,58 @@ describe('useGameStore', () => {
 
       expect(useGameStore.getState().currentLevel).toBe(0);
       expect(useGameStore.getState().maxLevel).toBe(1);
+    });
+
+    it('toggles mute status via toggleMute and sets via setMuted', () => {
+      expect(useGameStore.getState().isMuted).toBe(false);
+      useGameStore.getState().toggleMute();
+      expect(useGameStore.getState().isMuted).toBe(true);
+      useGameStore.getState().toggleMute();
+      expect(useGameStore.getState().isMuted).toBe(false);
+
+      useGameStore.getState().setMuted(true);
+      expect(useGameStore.getState().isMuted).toBe(true);
+      useGameStore.getState().setMuted(false);
+      expect(useGameStore.getState().isMuted).toBe(false);
+    });
+
+    it('toggles haptics via toggleHaptics and sets via setHapticsEnabled', () => {
+      expect(useGameStore.getState().hapticsEnabled).toBe(true);
+      useGameStore.getState().toggleHaptics();
+      expect(useGameStore.getState().hapticsEnabled).toBe(false);
+      useGameStore.getState().toggleHaptics();
+      expect(useGameStore.getState().hapticsEnabled).toBe(true);
+
+      useGameStore.getState().setHapticsEnabled(false);
+      expect(useGameStore.getState().hapticsEnabled).toBe(false);
+      useGameStore.getState().setHapticsEnabled(true);
+      expect(useGameStore.getState().hapticsEnabled).toBe(true);
+    });
+
+    it('toggles reducedEffects via toggleReducedEffects and sets via setReducedEffects', () => {
+      expect(useGameStore.getState().reducedEffects).toBe(false);
+      useGameStore.getState().toggleReducedEffects();
+      expect(useGameStore.getState().reducedEffects).toBe(true);
+      useGameStore.getState().toggleReducedEffects();
+      expect(useGameStore.getState().reducedEffects).toBe(false);
+
+      useGameStore.getState().setReducedEffects(true);
+      expect(useGameStore.getState().reducedEffects).toBe(true);
+      useGameStore.getState().setReducedEffects(false);
+      expect(useGameStore.getState().reducedEffects).toBe(false);
+    });
+
+    it('toggles ghost replay via toggleGhost and sets via setGhostEnabled', () => {
+      expect(useGameStore.getState().ghostEnabled).toBe(true);
+      useGameStore.getState().toggleGhost();
+      expect(useGameStore.getState().ghostEnabled).toBe(false);
+      useGameStore.getState().toggleGhost();
+      expect(useGameStore.getState().ghostEnabled).toBe(true);
+
+      useGameStore.getState().setGhostEnabled(false);
+      expect(useGameStore.getState().ghostEnabled).toBe(false);
+      useGameStore.getState().setGhostEnabled(true);
+      expect(useGameStore.getState().ghostEnabled).toBe(true);
     });
   });
 
@@ -71,6 +131,33 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().scores[1].best).toBe(14000);
     });
 
+    it('saves ghostTrajectory on new record and preserves it on slower runs', () => {
+      const traj1 = 'v1|0,100,200,0,i;66,20,0,0,r';
+      const traj2 = 'v1|0,100,200,0,i;66,35,0,0,r';
+      const traj3 = 'v1|0,100,200,0,i;66,10,0,0,r';
+
+      // First run (record)
+      useGameStore.getState().recordScore(1, 15000, traj1);
+      expect(useGameStore.getState().scores[1].ghostTrajectory).toBe(traj1);
+
+      // Slower run does not overwrite record trajectory
+      useGameStore.getState().recordScore(1, 18000, traj2);
+      expect(useGameStore.getState().scores[1].ghostTrajectory).toBe(traj1);
+
+      // Faster run updates record trajectory
+      useGameStore.getState().recordScore(1, 12000, traj3);
+      expect(useGameStore.getState().scores[1].best).toBe(12000);
+      expect(useGameStore.getState().scores[1].ghostTrajectory).toBe(traj3);
+    });
+
+    it('saves ghost trajectory directly via saveGhostTrajectory', () => {
+      useGameStore.getState().recordScore(2, 25000);
+      const customTraj = 'v1|0,50,50,0,i';
+      useGameStore.getState().saveGhostTrajectory(2, customTraj);
+
+      expect(useGameStore.getState().scores[2].ghostTrajectory).toBe(customTraj);
+    });
+
     it('does not lower maxLevel when playing an earlier level', () => {
       useGameStore.getState().updateMaxLevel(5);
       useGameStore.getState().recordScore(2, 10000);
@@ -82,12 +169,31 @@ describe('useGameStore', () => {
       useGameStore.getState().recordScore(1, 0);
       expect(useGameStore.getState().maxLevel).toBe(1);
     });
+
+    it('advances maxEntanglementLevel without affecting classic maxLevel when completing an entangled level', () => {
+      useGameStore.setState({ maxLevel: 3, maxEntanglementLevel: 110 });
+      useGameStore.getState().recordScore(110, 18500);
+
+      const state = useGameStore.getState();
+      expect(state.scores[110].best).toBe(18500);
+      expect(state.maxEntanglementLevel).toBe(111);
+      expect(state.maxLevel).toBe(3); // classic maxLevel unchanged
+    });
+
+    it('updates maxEntanglementLevel via updateMaxEntanglementLevel', () => {
+      useGameStore.getState().updateMaxEntanglementLevel(113);
+      expect(useGameStore.getState().maxEntanglementLevel).toBe(113);
+    });
   });
 
   describe('localStorage persistence', () => {
     it('persists store updates to localStorage under key "qtmhro"', () => {
       useGameStore.getState().updateCurrentLevel(3);
       useGameStore.getState().recordScore(3, 12345);
+      useGameStore.getState().toggleMute();
+      useGameStore.getState().setHapticsEnabled(false);
+      useGameStore.getState().setReducedEffects(true);
+      useGameStore.getState().setGhostEnabled(false);
 
       const raw = localStorage.getItem('qtmhro');
       expect(raw).toBeTruthy();
@@ -95,6 +201,10 @@ describe('useGameStore', () => {
       const parsed = JSON.parse(raw as string);
       expect(parsed.state.currentLevel).toBe(3);
       expect(parsed.state.maxLevel).toBe(4);
+      expect(parsed.state.isMuted).toBe(true);
+      expect(parsed.state.hapticsEnabled).toBe(false);
+      expect(parsed.state.reducedEffects).toBe(true);
+      expect(parsed.state.ghostEnabled).toBe(false);
       expect(parsed.state.scores[3]).toEqual({
         last: 12345,
         best: 12345
@@ -105,7 +215,8 @@ describe('useGameStore', () => {
       const legacyState = {
         game: JSON.stringify({ currentLevel: 2, maxLevel: 4 }),
         score: JSON.stringify({ 1: { last: 5000, best: 5000 } }),
-        levels: null
+        levels: null,
+        isMuted: true
       };
       localStorage.setItem('qtmhro', JSON.stringify(legacyState));
 
@@ -116,6 +227,8 @@ describe('useGameStore', () => {
       expect(state.currentLevel).toBe(2);
       expect(state.maxLevel).toBe(4);
       expect(state.scores[1]).toEqual({ last: 5000, best: 5000 });
+      expect(state.isMuted).toBe(true);
+      expect(state.ghostEnabled).toBe(true);
     });
   });
 
@@ -201,6 +314,54 @@ describe('useGameStore', () => {
         .getState()
         .updateLevelField({ level: 1, type: 'particle', n: 0, prop: 'type', value: 'split' });
       expect(useGameStore.getState().customLevels?.level1.particles[0].type).toBe('split');
+    });
+
+    it('sets and clears sharedLevel via setSharedLevel', () => {
+      const mockLevel = {
+        id: 'shared-test',
+        symbol: 'St',
+        atom: 'Sharedium',
+        width: 1000,
+        height: 1000,
+        hue: '#111111',
+        antiHue: '#222222',
+        player: { position: { x: 50, y: 50 } },
+        door: { x: 900, y: 900 },
+        platforms: [],
+        particles: [],
+        spikes: []
+      };
+
+      useGameStore.getState().setSharedLevel(mockLevel);
+      expect(useGameStore.getState().sharedLevel).toEqual(mockLevel);
+
+      useGameStore.getState().setSharedLevel(null);
+      expect(useGameStore.getState().sharedLevel).toBeNull();
+    });
+
+    it('saves shared level into customLevels slot via saveSharedLevelToCustom', () => {
+      const mockLevel = {
+        id: 'shared-slot-test',
+        symbol: 'Sl',
+        atom: 'Slotium',
+        width: 1200,
+        height: 800,
+        hue: '#333333',
+        antiHue: '#444444',
+        player: { position: { x: 60, y: 60 } },
+        door: { x: 800, y: 800 },
+        platforms: [],
+        particles: [],
+        spikes: []
+      };
+
+      useGameStore.getState().setSharedLevel(mockLevel);
+      useGameStore.getState().saveSharedLevelToCustom(1);
+
+      const store = useGameStore.getState();
+      expect(store.customLevels?.level1.atom).toBe('Slotium');
+      expect(store.customLevels?.level1.id).toBe('1');
+      expect(store.currentLevel).toBe(1);
     });
   });
 });

@@ -14,21 +14,39 @@ export interface UpdateLevelFieldParams {
 export interface GameStoreState {
   currentLevel: number;
   maxLevel: number;
+  maxEntanglementLevel: number;
   scores: Record<number, ScoreItem>;
   customLevels: Record<string, LevelData> | null;
+  isMuted: boolean;
+  hapticsEnabled: boolean;
+  reducedEffects: boolean;
+  ghostEnabled: boolean;
+  sharedLevel: LevelData | null;
 }
 
 export interface GameStoreActions {
   updateCurrentLevel: (lvl: number) => void;
   updateMaxLevel: (lvl: number) => void;
+  updateMaxEntanglementLevel: (lvl: number) => void;
   resetGame: () => void;
-  recordScore: (level: number, score: number) => void;
+  recordScore: (level: number, score: number, ghostTrajectory?: string) => void;
+  saveGhostTrajectory: (level: number, trajectory: string) => void;
   setLevels: (data: Record<string, LevelData> | null) => void;
+  setSharedLevel: (level: LevelData | null) => void;
+  saveSharedLevelToCustom: (slot?: number) => void;
   updateLevelField: (params: UpdateLevelFieldParams) => void;
   addPlatform: (params: { level: number }) => void;
   deletePlatform: (params: { level: number; n: number | string }) => void;
   addParticle: (params: { level: number }) => void;
   deleteParticle: (params: { level: number; n: number | string }) => void;
+  toggleMute: () => void;
+  setMuted: (muted: boolean) => void;
+  toggleHaptics: () => void;
+  setHapticsEnabled: (enabled: boolean) => void;
+  toggleReducedEffects: () => void;
+  setReducedEffects: (reduced: boolean) => void;
+  toggleGhost: () => void;
+  setGhostEnabled: (enabled: boolean) => void;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -81,8 +99,13 @@ const customStorage = {
         state: {
           currentLevel: game.currentLevel ?? 0,
           maxLevel: game.maxLevel ?? 1,
+          maxEntanglementLevel: parsed.state?.maxEntanglementLevel ?? 110,
           scores: score ?? {},
-          customLevels: levels ?? null
+          customLevels: levels ?? null,
+          isMuted: parsed.isMuted ?? false,
+          hapticsEnabled: parsed.hapticsEnabled ?? true,
+          reducedEffects: parsed.reducedEffects ?? false,
+          ghostEnabled: parsed.ghostEnabled ?? true
         },
         version: 0
       };
@@ -108,34 +131,107 @@ export const useGameStore = create<GameStore>()(
     (set, _get) => ({
       currentLevel: 0,
       maxLevel: 1,
+      maxEntanglementLevel: 110,
       scores: {},
       customLevels: null,
+      sharedLevel: null,
+      isMuted: false,
+      hapticsEnabled: true,
+      reducedEffects: false,
+      ghostEnabled: true,
+
+      toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
+      setMuted: (muted: boolean) => set({ isMuted: muted }),
+
+      toggleHaptics: () => set((state) => ({ hapticsEnabled: !state.hapticsEnabled })),
+      setHapticsEnabled: (enabled: boolean) => set({ hapticsEnabled: enabled }),
+
+      toggleReducedEffects: () => set((state) => ({ reducedEffects: !state.reducedEffects })),
+      setReducedEffects: (reduced: boolean) => set({ reducedEffects: reduced }),
+
+      toggleGhost: () => set((state) => ({ ghostEnabled: !state.ghostEnabled })),
+      setGhostEnabled: (enabled: boolean) => set({ ghostEnabled: enabled }),
 
       updateCurrentLevel: (lvl: number) => set({ currentLevel: Number(lvl) }),
 
       updateMaxLevel: (lvl: number) => set({ maxLevel: Number(lvl) }),
 
-      resetGame: () => set({ currentLevel: 0, maxLevel: 1 }),
+      updateMaxEntanglementLevel: (lvl: number) => set({ maxEntanglementLevel: Number(lvl) }),
 
-      recordScore: (level: number, score: number) =>
+      resetGame: () =>
+        set({
+          currentLevel: 0,
+          maxLevel: 1,
+          maxEntanglementLevel: 110,
+          scores: {},
+          sharedLevel: null
+        }),
+
+      recordScore: (level: number, score: number, ghostTrajectory?: string) =>
         set((state) => {
-          const currentBest = state.scores[level]?.best ?? 0;
+          const prevItem = state.scores[level];
+          const currentBest = prevItem?.best ?? 0;
+          const isNewBest = currentBest === 0 || score < currentBest;
           const best = currentBest === 0 ? score : Math.min(currentBest, score);
+          const trajectoryToSave = isNewBest
+            ? (ghostTrajectory ?? prevItem?.ghostTrajectory)
+            : prevItem?.ghostTrajectory;
+
           const newScores = {
             ...state.scores,
             [level]: {
               last: score,
-              best
+              best,
+              ...(trajectoryToSave ? { ghostTrajectory: trajectoryToSave } : {})
             }
           };
-          const maxLevel = score > 0 ? Math.max(state.maxLevel, level + 1) : state.maxLevel;
+          const isEntangled = level >= 110;
+          const maxLevel =
+            !isEntangled && score > 0 ? Math.max(state.maxLevel, level + 1) : state.maxLevel;
+          const maxEntanglementLevel =
+            isEntangled && score > 0
+              ? Math.max(state.maxEntanglementLevel ?? 110, level + 1)
+              : (state.maxEntanglementLevel ?? 110);
+
           return {
             scores: newScores,
-            maxLevel
+            maxLevel,
+            maxEntanglementLevel
+          };
+        }),
+
+      saveGhostTrajectory: (level: number, trajectory: string) =>
+        set((state) => {
+          const prevItem = state.scores[level];
+          if (!prevItem) return state;
+          return {
+            scores: {
+              ...state.scores,
+              [level]: {
+                ...prevItem,
+                ghostTrajectory: trajectory
+              }
+            }
           };
         }),
 
       setLevels: (data: Record<string, LevelData> | null) => set({ customLevels: data }),
+
+      setSharedLevel: (level: LevelData | null) => set({ sharedLevel: level }),
+
+      saveSharedLevelToCustom: (slot = 1) =>
+        set((state) => {
+          if (!state.sharedLevel) return state;
+          const customLevels = state.customLevels
+            ? { ...state.customLevels }
+            : ({ ...levelsData } as unknown as Record<string, LevelData>);
+          const levelKey = `level${slot}`;
+          customLevels[levelKey] = {
+            ...state.sharedLevel,
+            id: String(slot)
+          };
+          return { customLevels, currentLevel: slot };
+        }),
 
       updateLevelField: ({ level, type, n, prop, value }: UpdateLevelFieldParams) =>
         set((state) => {
@@ -277,8 +373,13 @@ export const useGameStore = create<GameStore>()(
       partialize: (state) => ({
         currentLevel: state.currentLevel,
         maxLevel: state.maxLevel,
+        maxEntanglementLevel: state.maxEntanglementLevel,
         scores: state.scores,
-        customLevels: state.customLevels
+        customLevels: state.customLevels,
+        isMuted: state.isMuted,
+        hapticsEnabled: state.hapticsEnabled,
+        reducedEffects: state.reducedEffects,
+        ghostEnabled: state.ghostEnabled
       })
     }
   )

@@ -1,0 +1,262 @@
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(5, 5, 20, 0.9);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal {
+  background: #05051a;
+  border: 3px solid #00ffcc;
+  box-shadow: 0 0 25px rgba(0, 255, 204, 0.4), inset 0 0 15px rgba(0, 255, 204, 0.15);
+  border-radius: 0;
+  width: 92%;
+  max-width: 480px;
+  padding: 24px;
+  color: #00ffcc;
+  font-family: "VT323", monospace;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  animation: scaleUp 0.15s ease-out;
+}
+
+.closeButton {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: transparent;
+  border: 1px solid #ff007f;
+  color: #ff007f;
+  font-family: "VT323", monospace;
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 8px;
+  transition: all 0.15s ease;
+}
+
+.closeButton:hover {
+  background: #ff007f;
+  color: #000;
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.6);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: normal;
+  color: #00ffcc;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.6);
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  font-size: 18px;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+.levelInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 255, 204, 0.06);
+  border: 1px dashed #00ffcc;
+  padding: 10px 14px;
+  margin: 12px 0 16px;
+}
+
+.atomBadge {
+  font-size: 26px;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+.authorRecord {
+  font-size: 22px;
+  color: #ffeb3b;
+  letter-spacing: 1px;
+}
+
+.ghostBadge {
+  font-size: 18px;
+  color: #38bdf8;
+  letter-spacing: 1px;
+}
+
+.qrContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 14px 0;
+}
+
+.qrCard {
+  background: #ffffff;
+  padding: 10px;
+  border: 2px solid #00ffcc;
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+  display: inline-block;
+  line-height: 0;
+}
+
+.qrImage {
+  display: block;
+  width: 220px;
+  height: 220px;
+  image-rendering: pixelated;
+}
+
+.qrLoading {
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #05051a;
+  font-size: 20px;
+}
+
+.qrHint {
+  margin-top: 10px;
+  font-size: 18px;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+.urlSection {
+  margin-top: 14px;
+}
+
+.inputGroup {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.urlInput {
+  flex: 1;
+  background: #000;
+  border: 1px solid #334155;
+  padding: 8px 10px;
+  color: #00ffcc;
+  font-size: 16px;
+  font-family: "VT323", monospace;
+  outline: none;
+}
+
+.urlInput:focus {
+  border-color: #00ffcc;
+  box-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+}
+
+.copyButton {
+  background: #000;
+  color: #00ffcc;
+  border: 2px solid #00ffcc;
+  padding: 4px 14px;
+  font-size: 20px;
+  font-family: "VT323", monospace;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.copyButton:hover {
+  background: #00ffcc;
+  color: #000;
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.6);
+}
+
+.toast {
+  background: #00ffcc;
+  color: #000;
+  font-size: 20px;
+  font-family: "VT323", monospace;
+  padding: 6px 10px;
+  text-align: center;
+  margin-top: 8px;
+  animation: fadeIn 0.15s ease-out;
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.6);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.actionButton {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 22px;
+  font-family: "VT323", monospace;
+  cursor: pointer;
+  border: 2px solid #666;
+  background: #000;
+  color: #fff;
+  transition: all 0.15s ease;
+  text-align: center;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.playButton {
+  border-color: #38ef7d;
+  color: #38ef7d;
+}
+
+.playButton:hover {
+  background: #38ef7d;
+  color: #000;
+  box-shadow: 0 0 12px rgba(56, 239, 125, 0.6);
+}
+
+.cancelButton {
+  border-color: #ff007f;
+  color: #ff007f;
+}
+
+.cancelButton:hover {
+  background: #ff007f;
+  color: #000;
+  box-shadow: 0 0 12px rgba(255, 0, 127, 0.6);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

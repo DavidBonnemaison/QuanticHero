@@ -31,13 +31,13 @@ describe('LevelSelection component', () => {
     renderWithRouter();
 
     expect(screen.getByRole('heading', { level: 1, name: /level selection/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /← menu/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /menu/i })).toBeInTheDocument();
   });
 
   it('navigates back to menu when clicking back button', () => {
     renderWithRouter();
 
-    fireEvent.click(screen.getByRole('button', { name: /← menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /menu/i }));
     expect(screen.getByText('Menu Page')).toBeInTheDocument();
   });
 
@@ -99,5 +99,86 @@ describe('LevelSelection component', () => {
 
     // 12340 ms = 00:12:34
     expect(screen.getByText('00:12:34')).toBeInTheDocument();
+  });
+
+  it('renders ghost toggle button and toggles state when clicked', () => {
+    useGameStore.setState({ ghostEnabled: true });
+    renderWithRouter();
+
+    const ghostBtn = screen.getByRole('button', { name: /ghost enabled/i });
+    expect(ghostBtn).toBeInTheDocument();
+    expect(ghostBtn).toHaveTextContent('[GHOST: ON]');
+
+    fireEvent.click(ghostBtn);
+    expect(useGameStore.getState().ghostEnabled).toBe(false);
+    expect(screen.getByRole('button', { name: /ghost disabled/i })).toHaveTextContent('[GHOST: OFF]');
+
+    fireEvent.click(screen.getByRole('button', { name: /ghost disabled/i }));
+    expect(useGameStore.getState().ghostEnabled).toBe(true);
+    expect(screen.getByRole('button', { name: /ghost enabled/i })).toHaveTextContent('[GHOST: ON]');
+  });
+
+  it('hides Entanglement tab when maxLevel < 10', () => {
+    useGameStore.setState({ maxLevel: 9, maxEntanglementLevel: 110 });
+    renderWithRouter();
+
+    // In Classic view by default
+    expect(screen.getByText('Hydrogen')).toBeInTheDocument();
+    expect(screen.queryByText('Darmstadtium')).not.toBeInTheDocument();
+    // Entanglement tab is hidden
+    expect(screen.queryByRole('button', { name: /intrication/i })).not.toBeInTheDocument();
+  });
+
+  it('shows Entanglement tab and allows switching once maxLevel >= 10', () => {
+    useGameStore.setState({ maxLevel: 10, maxEntanglementLevel: 110 });
+    renderWithRouter();
+
+    // Entanglement tab is visible
+    const entanglementTab = screen.getByRole('button', { name: /intrication/i });
+    expect(entanglementTab).toBeInTheDocument();
+
+    // Click Entanglement tab
+    fireEvent.click(entanglementTab);
+
+    // Entangled levels 110-114 should now be visible
+    expect(screen.getByText('Darmstadtium')).toBeInTheDocument();
+    expect(screen.getByText('Roentgenium')).toBeInTheDocument();
+
+    // Click Classic tab to return
+    const classicTab = screen.getByRole('button', { name: /classic/i });
+    fireEvent.click(classicTab);
+    expect(screen.getByText('Hydrogen')).toBeInTheDocument();
+  });
+
+  it('displays entangled levels when query flag ?entanglement=1 is provided', () => {
+    useGameStore.setState({ maxLevel: 1, maxEntanglementLevel: 110 });
+    renderWithRouter('/levels?entanglement=1');
+
+    // Entangled levels 110-114 should now be visible
+    expect(screen.getByText('Darmstadtium')).toBeInTheDocument();
+    expect(screen.getByText('Roentgenium')).toBeInTheDocument();
+    expect(screen.getByText('Copernicium')).toBeInTheDocument();
+    expect(screen.getByText('Nihonium')).toBeInTheDocument();
+    expect(screen.getByText('Flerovium')).toBeInTheDocument();
+
+    // Level 110 (Darmstadtium) is unlocked
+    const ds = screen.getByText('Darmstadtium').closest('[role="button"]') as HTMLElement;
+    expect(ds).toHaveAttribute('tabindex', '0');
+    expect(ds.className).not.toMatch(/menuItemDisabled/);
+
+    // Level 111 (Roentgenium) is locked when maxEntanglementLevel = 110
+    const rg = screen.getByText('Roentgenium').closest('[role="button"]') as HTMLElement;
+    expect(rg).toHaveAttribute('tabindex', '-1');
+    expect(rg.className).toMatch(/menuItemDisabled/);
+  });
+
+  it('unlocks level 111 when maxEntanglementLevel is 111 with ?entanglement=1', () => {
+    useGameStore.setState({ maxEntanglementLevel: 111 });
+    renderWithRouter('/levels?entanglement=1');
+
+    // Level 111 (Roentgenium) is now unlocked
+    const rg = screen.getByText('Roentgenium').closest('[role="button"]') as HTMLElement;
+    expect(rg).toHaveAttribute('tabindex', '0');
+    expect(rg.className).not.toMatch(/menuItemDisabled/);
   });
 });

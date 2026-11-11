@@ -1,5 +1,6 @@
 import type React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import * as levelsData from '../data/levels';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
@@ -10,13 +11,32 @@ const allLevels = levelsData as unknown as Record<string, LevelData>;
 
 export const LevelSelection: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const maxLevel = useGameStore((state) => state.maxLevel);
+  const maxEntanglementLevel = useGameStore((state) => state.maxEntanglementLevel ?? 110);
   const scores = useGameStore((state) => state.scores);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
+  const ghostEnabled = useGameStore((state) => state.ghostEnabled);
+  const toggleGhost = useGameStore((state) => state.toggleGhost);
+
+  const isEntanglementUnlocked = maxLevel >= 10 || location.search.includes('entanglement=1');
+  const [activeTab, setActiveTab] = useState<'classic' | 'entanglement'>(
+    isEntanglementUnlocked &&
+      (location.search.includes('tab=entanglement') || location.search.includes('entanglement=1'))
+      ? 'entanglement'
+      : 'classic'
+  );
 
   const raw = Object.keys(allLevels)
     .filter((key) => key.startsWith('level'))
     .sort((a, b) => Number(allLevels[a].id) - Number(allLevels[b].id))
+    .filter((key) => {
+      const idNum = Number(allLevels[key].id);
+      if (activeTab === 'entanglement') {
+        return idNum >= 110 && idNum <= 114;
+      }
+      return idNum < 110;
+    })
     .map((key) => {
       const { id, hue, antiHue, symbol, atom } = allLevels[key];
       return { id, hue, antiHue, symbol, atom };
@@ -27,7 +47,13 @@ export const LevelSelection: React.FC = () => {
     score: scores[Number(r.id)] ? formatScore(scores[Number(r.id)].best) : '00:00:00'
   }));
 
-  const isDisabled = (id: string | number) => Number(id) > maxLevel;
+  const isDisabled = (id: string | number) => {
+    const num = Number(id);
+    if (num >= 110) {
+      return num > maxEntanglementLevel;
+    }
+    return num > maxLevel;
+  };
 
   const handleSelect = (n: string | number) => {
     if (isDisabled(n)) return;
@@ -44,11 +70,41 @@ export const LevelSelection: React.FC = () => {
     <div className={styles.selectionContainer}>
       <div className={styles.header}>
         <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
-          ← Menu
+          ◄ MENU
         </button>
         <h1 className={styles.title}>Level Selection</h1>
-        <div style={{ width: 70 }} />
+        <button
+          type="button"
+          className={`${styles.ghostToggle} ${ghostEnabled ? styles.ghostToggleActive : ''}`}
+          onClick={toggleGhost}
+          title={ghostEnabled ? 'Ghost replay enabled' : 'Ghost replay disabled'}
+          aria-label={ghostEnabled ? 'Ghost enabled' : 'Ghost disabled'}
+        >
+          {ghostEnabled ? '[GHOST: ON]' : '[GHOST: OFF]'}
+        </button>
       </div>
+
+      {isEntanglementUnlocked && (
+        <div className={styles.tabContainer}>
+          <button
+            type="button"
+            className={`${styles.tabButton} ${activeTab === 'classic' ? styles.tabButtonActive : ''}`}
+            onClick={() => setActiveTab('classic')}
+          >
+            [ CLASSIC ATOMS ]
+          </button>
+          <button
+            type="button"
+            className={`${styles.tabButton} ${styles.entanglementTab} ${
+              activeTab === 'entanglement' ? styles.tabButtonActive : ''
+            }`}
+            onClick={() => setActiveTab('entanglement')}
+          >
+            [ INTRICATION Ψ ⊗ Ψ ]
+            <span className={styles.entanglementTabBadge}>110-114</span>
+          </button>
+        </div>
+      )}
       {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore }) => {
         const disabled = isDisabled(id);
         return (

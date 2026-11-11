@@ -1,8 +1,10 @@
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { soundManager } from '../audio/SoundManager';
 import * as levels from '../data/levels';
 import { useGameStore } from '../store';
+import { hapticFeedback } from '../tools/HapticFeedback';
 import type { LevelData } from '../types';
 import styles from './Menu.module.css';
 import Molecules from './Molecules';
@@ -17,10 +19,17 @@ export default function Menu(): React.ReactElement {
   const customLevels = useGameStore((state) => state.customLevels);
   const setLevels = useGameStore((state) => state.setLevels);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
+  const isMuted = useGameStore((state) => state.isMuted);
+  const toggleMute = useGameStore((state) => state.toggleMute);
+  const hapticsEnabled = useGameStore((state) => state.hapticsEnabled);
+  const toggleHaptics = useGameStore((state) => state.toggleHaptics);
+  const reducedEffects = useGameStore((state) => state.reducedEffects);
+  const toggleReducedEffects = useGameStore((state) => state.toggleReducedEffects);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     Molecules.start();
+    hapticFeedback.init();
     if (!customLevels) {
       setLevels(levels as unknown as Record<string, LevelData>);
     }
@@ -45,6 +54,7 @@ export default function Menu(): React.ReactElement {
   }, [customLevels, setLevels]);
 
   const handleNewGame = () => {
+    useGameStore.getState().resetGame();
     updateCurrentLevel(1);
     navigate('/explanation');
   };
@@ -62,8 +72,56 @@ export default function Menu(): React.ReactElement {
     }
   };
 
+  const handleToggleSound = () => {
+    soundManager.init();
+    soundManager.ensureContext();
+    toggleMute();
+  };
+
+  const handleToggleHaptics = () => {
+    toggleHaptics();
+    if (!hapticsEnabled) {
+      hapticFeedback.triggerJump();
+    }
+  };
+
+  const handleToggleEffects = () => {
+    toggleReducedEffects();
+  };
+
   return (
     <div className={styles.menuWrapper}>
+      <div className={styles.topControls}>
+        <button
+          type="button"
+          className={styles.soundButton}
+          onClick={handleToggleSound}
+          aria-label={isMuted ? 'Unmute sound' : 'Mute sound'}
+          title={isMuted ? 'Unmute sound' : 'Mute sound'}
+        >
+          {isMuted ? 'SND:OFF' : 'SND:ON'}
+        </button>
+        <button
+          type="button"
+          className={styles.soundButton}
+          onClick={handleToggleHaptics}
+          aria-label={hapticsEnabled ? 'Disable haptics' : 'Enable haptics'}
+          title={hapticsEnabled ? 'Disable haptics' : 'Enable haptics'}
+        >
+          {hapticsEnabled ? 'HAP:ON' : 'HAP:OFF'}
+        </button>
+        <button
+          type="button"
+          className={styles.soundButton}
+          onClick={handleToggleEffects}
+          aria-label={
+            reducedEffects ? 'Enable full visual effects' : 'Enable reduced visual effects'
+          }
+          title={reducedEffects ? 'Enable full visual effects' : 'Enable reduced visual effects'}
+        >
+          {reducedEffects ? 'FX:LO' : 'FX:HI'}
+        </button>
+      </div>
       <div id="container" />
       <h1 className={styles.title}>Quantum Hero</h1>
       <button type="button" className={styles.button} onClick={handleNewGame}>

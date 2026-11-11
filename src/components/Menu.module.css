@@ -1,4 +1,5 @@
 .menuWrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -42,4 +43,64 @@
 
 .button:active {
   transform: scale(0.97);
+}
+
+.topControls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
+.soundButton {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-family: "VT323", monospace;
+  font-size: 20px;
+  letter-spacing: 1px;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: #00ffcc;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.soundButton:hover {
+  background-color: #111;
+  border-color: #00ffcc;
+  box-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+}
+
+.soundButton:active {
+  transform: scale(0.95);
+}
+
+.entanglementButton {
+  max-width: 340px;
+  border-color: #ec4899;
+  color: #ec4899;
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.25);
+}
+
+.entanglementButton:hover {
+  background-color: #ec4899;
+  color: #fff;
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.5);
+}
+
+.entanglementBadge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 22px;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  background: rgba(236, 72, 153, 0.2);
+  border: 1px solid rgba(236, 72, 153, 0.5);
 }

@@ -76,6 +76,10 @@
   left: 360px;
 }
 
+.shareButton {
+  left: 490px;
+}
+
 .addButton {
   cursor: pointer;
   font-size: 20px;

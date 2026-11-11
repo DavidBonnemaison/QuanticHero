@@ -1,0 +1,89 @@
+{
+  "id": "110",
+  "symbol": "Ds",
+  "atom": "Darmstadtium",
+  "uncertainty": 1,
+  "width": 1400,
+  "height": 1000,
+  "hue": "#0d1b2a",
+  "antiHue": "#00f0ff",
+  "explanations": [
+    "Mode Intrication Quantique : Vous contrôlez simultanément Alpha (Cyan) et Bêta (Magenta).",
+    "Vos mouvements horizontaux sont inversés par symétrie miroir. Guidez les deux héros vers leurs portails respectifs !"
+  ],
+  "entanglement": {
+    "mode": "mirror_x",
+    "betaSpawn": { "x": 1200, "y": 880 },
+    "portalMode": "dual",
+    "betaDoor": { "x": 850, "y": 880 }
+  },
+  "player": {
+    "position": {
+      "x": 200,
+      "y": 880
+    }
+  },
+  "spikes": [
+    {
+      "x": 600,
+      "y": 960,
+      "width": 200,
+      "height": 40
+    },
+    {
+      "x": 260,
+      "y": 900,
+      "width": 30,
+      "height": 20
+    },
+    {
+      "x": 1110,
+      "y": 900,
+      "width": 30,
+      "height": 20
+    }
+  ],
+  "particles": [],
+  "platforms": [
+    {
+      "x": 50,
+      "y": 920,
+      "width": 550,
+      "height": 40
+    },
+    {
+      "x": 800,
+      "y": 920,
+      "width": 550,
+      "height": 40
+    },
+    {
+      "x": 300,
+      "y": 800,
+      "width": 140,
+      "height": 20
+    },
+    {
+      "x": 960,
+      "y": 800,
+      "width": 140,
+      "height": 20
+    },
+    {
+      "x": 480,
+      "y": 880,
+      "width": 120,
+      "height": 20
+    },
+    {
+      "x": 800,
+      "y": 880,
+      "width": 120,
+      "height": 20
+    }
+  ],
+  "door": {
+    "x": 550,
+    "y": 880
+  }
+}

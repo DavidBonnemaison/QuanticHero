@@ -5,6 +5,8 @@ import config from './config';
 import BootScene from './scenes/BootScene';
 import GameScene from './scenes/GameScene';
 import PreloadScene from './scenes/PreloadScene';
+import { useGameStore } from './store';
+import { decodeLevelFromUrl } from './tools/levelCodec';
 
 declare global {
   interface Window {
@@ -16,6 +18,17 @@ export const GameContainer: React.FC = () => {
   const gameRef = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (hash.includes('custom=') || search.includes('custom=')) {
+        const decoded = decodeLevelFromUrl(hash || search);
+        if (decoded) {
+          useGameStore.getState().setSharedLevel(decoded);
+        }
+      }
+    }
+
     const gameConfig: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
       parent: 'game',
