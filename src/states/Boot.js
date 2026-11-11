@@ -13,8 +13,10 @@ export default class extends Phaser.State {
       google: {
         families: ['VT323']
       },
-      active: this.fontsLoaded
+      active: this.fontsLoaded,
+      inactive: this.fontsLoaded
     });
+    setTimeout(this.fontsLoaded, 1000);
 
     let text = this.add.text(
       this.world.centerX,

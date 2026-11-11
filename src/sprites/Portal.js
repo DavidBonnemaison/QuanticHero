@@ -7,6 +7,8 @@ export default class Portal extends Phaser.Sprite {
     this.anchor.setTo(-0.2, 0.2);
     this.game.physics.arcade.enable(this);
     this.body.immovable = true;
+    this.body.moves = false;
+    this.body.allowGravity = false;
     if (this.animations && this.animations._frameData) {
       this.animations.add('spin', [0, 1, 2, 3], 10, true);
       this.animations.play('spin');

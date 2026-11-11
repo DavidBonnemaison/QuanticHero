@@ -23,14 +23,12 @@ function NavigationSync() {
 }
 
 const Container = styled.div`
-  max-width: ${typeof config.width === 'number' ? `${config.width}px` : config.width};
-  max-height: ${typeof config.height === 'number' ? `${config.height}px` : config.height};
+  max-width: 500px;
   min-height: 100vh;
   margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
+  display: flex;
+  flex-direction: column;
 `;
 
 export default function App() {

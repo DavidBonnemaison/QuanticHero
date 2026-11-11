@@ -135,17 +135,33 @@ async function run() {
 
     // Check gameState in browser
     const gameState = await page.evaluate(() => {
-      if (window.game) {
+      const g = window.game;
+      if (g) {
+        const gs = g.state.getCurrentState();
+        const canvas = document.querySelector('canvas');
+        const canvasRect = canvas ? canvas.getBoundingClientRect() : null;
+        const p = gs.portalSprite;
         return {
           hasGame: true,
-          currentState: window.game.state.current,
-          heroesCount: window.game.global ? (window.game.global.heroes || []).length : null,
-          portalKey: window.game.cache.checkImageKey('portal')
+          currentState: g.state.current,
+          heroesCount: g.global ? (g.global.heroes || []).length : null,
+          portalKey: g.cache.checkImageKey('portal'),
+          canvasTop: canvasRect ? canvasRect.top : null,
+          portalX: p ? p.x : null,
+          portalY: p ? p.y : null,
+          portalMoves: p ? p.body.moves : null
         };
       }
       return { hasGame: false };
     });
     console.log('Game state evaluation:', JSON.stringify(gameState, null, 2));
+
+    if (gameState.portalY !== 654) {
+      throw new Error(`Portal Y coordinate invalid: ${gameState.portalY} (expected 654)`);
+    }
+    if (gameState.canvasTop !== 0) {
+      console.warn(`Canvas top is ${gameState.canvasTop} (expected 0)`);
+    }
 
     await page.screenshot({ path: '/tmp/gameplay_screenshot.png' });
     console.log('Screenshot saved to /tmp/gameplay_screenshot.png');
@@ -156,7 +172,16 @@ async function run() {
     if (!levelTitle.includes('Level Selection')) {
       throw new Error('/levels page did not load "Level Selection"');
     }
-    console.log('/levels verified successfully!');
+    const hydrogenVisible = await page.evaluate(() => {
+      const el = Array.from(document.querySelectorAll('*')).find(e => e.textContent.trim() === 'Hydrogen');
+      if (!el) return false;
+      const rect = el.getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= window.innerHeight;
+    });
+    if (!hydrogenVisible) {
+      throw new Error('Hydrogen (level 1) is not visible in initial viewport of /levels');
+    }
+    console.log('/levels verified successfully (Level 1 Hydrogen visible at top)!');
 
     console.log('Testing /editor route...');
     await page.goto('http://localhost:4173/editor', { waitUntil: 'networkidle2' });

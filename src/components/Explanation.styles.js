@@ -3,6 +3,11 @@ import styled from 'styled-components';
 export const Container = styled.div`
   text-align: center;
   color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
 `;
 
 export const Text = styled.div`

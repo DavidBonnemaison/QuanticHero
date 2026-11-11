@@ -5,8 +5,12 @@ export const Container = styled.div`
   font-size: 20px;
   text-align: center;
   position: relative;
-  height: 100vh;
+  min-height: 100vh;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 `;
 
 export const Done = styled.div`

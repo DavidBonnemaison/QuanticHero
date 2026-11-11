@@ -23,7 +23,7 @@ class Menu extends React.Component {
       this.props.goTo('/explanation');
     };
     return (
-      <div>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '100vh' }}>
         <div id="container" />
         <Title>Quantum Hero</Title>
         <Button onClick={newGame}>New game</Button>
