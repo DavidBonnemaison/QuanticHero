@@ -15,7 +15,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "phaser-ce": "^2.21.0",
+    "phaser": "^3.88.2",
     "randomcolor": "^0.5.4",
     "react": "^19.3.1",
     "react-dnd": "^16.0.1",

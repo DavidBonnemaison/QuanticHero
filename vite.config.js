@@ -7,11 +7,7 @@ export default defineConfig({
   resolve: {
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     alias: [
-      { find: /^react-router-redux$/, replacement: path.resolve(import.meta.dirname, 'src/shims/react-router-redux.js') },
-      { find: /^phaser$/, replacement: path.resolve(import.meta.dirname, 'src/shims/phaser.js') },
-      { find: /^phaser-ce$/, replacement: path.resolve(import.meta.dirname, 'src/shims/phaser.js') },
-      { find: /^pixi$/, replacement: path.resolve(import.meta.dirname, 'src/shims/pixi.js') },
-      { find: /^p2$/, replacement: path.resolve(import.meta.dirname, 'src/shims/p2.js') }
+      { find: /^react-router-redux$/, replacement: path.resolve(import.meta.dirname, 'src/shims/react-router-redux.js') }
     ]
   },
   define: {

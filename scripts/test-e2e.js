@@ -139,19 +139,19 @@ async function run() {
     const gameState = await page.evaluate(() => {
       const g = window.game;
       if (g) {
-        const gs = g.state.getCurrentState();
+        const gs = g.scene ? g.scene.getScene('Game') : null;
         const canvas = document.querySelector('canvas');
         const canvasRect = canvas ? canvas.getBoundingClientRect() : null;
-        const p = gs.portalSprite;
+        const p = gs ? gs.portalSprite : null;
         return {
           hasGame: true,
-          currentState: g.state.current,
-          heroesCount: g.global ? (g.global.heroes || []).length : null,
-          portalKey: g.cache.checkImageKey('portal'),
+          currentState: gs && gs.scene.isActive() ? 'Game' : null,
+          heroesCount: gs && gs.heroes ? gs.heroes.length : null,
+          portalKey: g.textures.exists('portal'),
           canvasTop: canvasRect ? canvasRect.top : null,
           portalX: p ? p.x : null,
           portalY: p ? p.y : null,
-          portalMoves: p ? p.body.moves : null
+          portalMoves: p && p.body ? p.body.moves : null
         };
       }
       return { hasGame: false };
