@@ -249,8 +249,8 @@ export class SoundManager {
   }
 
   /**
-   * SFX: Particle Collect (Speed, Low Gravity, Anti-Gravity)
-   * Arpège montant cristallin en onde sinusoïdale (sine, accord majeur rapide en 80-90 ms)
+   * SFX: Particle Collect (Speed, Low Gravity, Anti-Gravity, Duplicate)
+   * Arpège montant cristallin éclatant en ondes harmoniques (200 ms audible et gratifiant)
    */
   public playParticleCollect(type?: ParticleType): void {
     const ctx = this.ensureContext();
@@ -261,33 +261,34 @@ export class SoundManager {
 
     try {
       const now = ctx.currentTime;
-      // Notes in Hz for crisp major chord arpeggios
-      // Base frequencies vary subtly per particle type
-      let freqs = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      // Bright musical chords with distinct character per power-up
+      let freqs = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 (Default / Duplicate)
       if (type === 'speed') {
-        freqs = [659.25, 830.61, 987.77, 1318.51]; // E5, G#5, B5, E6
-      } else if (type === 'lowGravity' || type === 'antiGravity') {
-        freqs = [587.33, 739.99, 880.0, 1174.66]; // D5, F#5, A5, D6
+        freqs = [659.25, 830.61, 987.77, 1318.51, 1567.98]; // E5, G#5, B5, E6, G6
+      } else if (type === 'antiGravity') {
+        freqs = [587.33, 739.99, 880.0, 1174.66, 1479.98]; // D5, F#5, A5, D6, F#6
+      } else if (type === 'lowGravity') {
+        freqs = [440.0, 554.37, 659.25, 880.0, 1108.73]; // A4, C#5, E5, A5, C#6
       }
 
-      const noteDuration = 0.024;
+      const noteDuration = 0.045;
       freqs.forEach((freq, idx) => {
         const noteStart = now + idx * noteDuration;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
-        osc.type = 'sine';
+        osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, noteStart);
 
         gain.gain.setValueAtTime(0.001, noteStart);
-        gain.gain.linearRampToValueAtTime(0.18, noteStart + 0.004);
-        gain.gain.exponentialRampToValueAtTime(0.001, noteStart + noteDuration + 0.02);
+        gain.gain.linearRampToValueAtTime(0.32, noteStart + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.001, noteStart + noteDuration + 0.06);
 
         osc.connect(gain);
         gain.connect(this.sfxGain!);
 
         osc.start(noteStart);
-        osc.stop(noteStart + noteDuration + 0.025);
+        osc.stop(noteStart + noteDuration + 0.07);
       });
     } catch {
       // safe fallback

@@ -29,7 +29,7 @@ async function run() {
   const server = spawn('npx', ['vite', 'preview', '--port', '4173'], {
     cwd: process.cwd(),
     env: process.env,
-    shell: true,
+    detached: true,
     stdio: 'pipe'
   });
 
@@ -371,6 +371,42 @@ async function run() {
     await page.screenshot({ path: '/tmp/gameplay_screenshot.png' });
     console.log('Screenshot saved to /tmp/gameplay_screenshot.png');
 
+    // REGRESSION TEST: Full Level 1 Playthrough to Portal
+    console.log('Simulating full level run: hero moves to portal...');
+    const winTriggered = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs || !gs.portalSprite || !gs.heroes || gs.heroes.length === 0) return false;
+      const hero = gs.heroes[0];
+      hero.x = gs.portalSprite.x;
+      hero.y = gs.portalSprite.y;
+      gs.physics.overlap(gs.heroGroup, gs.portalSprite);
+      return true;
+    });
+    if (!winTriggered) {
+      throw new Error('Unable to trigger portal arrival in GameScene');
+    }
+
+    console.log('Waiting for automatic navigation to /done after level completion...');
+    await page.waitForFunction(() => window.location.pathname === '/done', { timeout: 5000 });
+    console.log('✓ Successfully arrived at /done via portal arrival!');
+
+    await new Promise(r => setTimeout(r, 500));
+    const donePageInfo = await page.evaluate(() => {
+      const shareBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Partager'));
+      const text = document.body.textContent || '';
+      return {
+        hasShareButton: !!shareBtn,
+        hasTitle: text.includes('Hydrogen') || text.includes('Terminé') || text.includes('Completed') || text.includes('1')
+      };
+    });
+    console.log('Level completion screen info:', JSON.stringify(donePageInfo));
+    if (!donePageInfo.hasShareButton) {
+      throw new Error('Share button ("Partager 📤") not found on /done screen');
+    }
+    console.log('✓ Level completion verified with "Partager 📤" button!');
+    await page.screenshot({ path: '/tmp/done_screenshot.png' });
+    console.log('/done verified and screenshot saved to /tmp/done_screenshot.png!');
+
     console.log('Testing /levels route...');
     await page.goto('http://localhost:4173/levels', { waitUntil: 'networkidle2' });
     const levelTitle = await page.evaluate(() => document.body.textContent);
@@ -388,12 +424,6 @@ async function run() {
     }
     console.log('/levels verified successfully (Level 1 Hydrogen visible at top)!');
 
-    console.log('Testing /done route...');
-    await page.goto('http://localhost:4173/done', { waitUntil: 'networkidle2' });
-    await new Promise(r => setTimeout(r, 1000));
-    await page.screenshot({ path: '/tmp/done_screenshot.png' });
-    console.log('/done verified and screenshot saved to /tmp/done_screenshot.png!');
-
     console.log('Testing /editor route...');
     await page.goto('http://localhost:4173/editor', { waitUntil: 'networkidle2' });
     await new Promise(r => setTimeout(r, 1000));
@@ -408,12 +438,20 @@ async function run() {
       throw new Error(`Test failed with ${errors.length} uncaught errors!`);
     }
 
-    console.log('SUCCESS: Game launched without any uncaught exceptions!');
+    console.log('SUCCESS: Full level completed and game tested without any uncaught exceptions!');
   } catch (err) {
     console.error('Test execution error:', err);
     throw err;
   } finally {
-    server.kill();
+    try {
+      if (server.pid) {
+        process.kill(-server.pid, 'SIGTERM');
+      }
+    } catch {
+      try {
+        server.kill();
+      } catch {}
+    }
   }
 }
 

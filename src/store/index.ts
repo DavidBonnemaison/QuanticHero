@@ -179,7 +179,8 @@ export const useGameStore = create<GameStore>()(
             }
           };
           const isEntangled = level >= 110;
-          const maxLevel = (!isEntangled && score > 0) ? Math.max(state.maxLevel, level + 1) : state.maxLevel;
+          const maxLevel =
+            !isEntangled && score > 0 ? Math.max(state.maxLevel, level + 1) : state.maxLevel;
           const maxEntanglementLevel =
             isEntangled && score > 0
               ? Math.max(state.maxEntanglementLevel ?? 110, level + 1)

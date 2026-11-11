@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type GhostFrame,
   GhostRecorder,
   calculateSplitDelta,
   compressTrajectory,
   decompressTrajectory,
   formatSplitDelta,
-  sampleTrajectory,
-  type GhostFrame
+  sampleTrajectory
 } from './GhostRecorder';
 
 describe('GhostRecorder', () => {
@@ -229,7 +229,11 @@ describe('GhostRecorder', () => {
 
     it('handles null and invalid values safely', () => {
       expect(formatSplitDelta(null)).toEqual({ text: '--', color: '#94a3b8', isAhead: false });
-      expect(formatSplitDelta(Number.NaN)).toEqual({ text: '--', color: '#94a3b8', isAhead: false });
+      expect(formatSplitDelta(Number.NaN)).toEqual({
+        text: '--',
+        color: '#94a3b8',
+        isAhead: false
+      });
     });
   });
 });

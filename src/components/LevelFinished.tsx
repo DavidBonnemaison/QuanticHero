@@ -4,11 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import * as levels from '../data/levels';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
+import type { LevelData } from '../types';
+import ShareModal from './Editor/ShareModal';
 import styles from './LevelFinished.module.css';
+
+const allLevels = levels as unknown as Record<string, LevelData>;
 
 export default function LevelFinished(): React.ReactElement {
   const navigate = useNavigate();
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const currentLevel = useGameStore((state) => state.currentLevel);
   const scores = useGameStore((state) => state.scores);
@@ -31,7 +36,7 @@ export default function LevelFinished(): React.ReactElement {
           symbol: sharedLevel.symbol || '?',
           atom: sharedLevel.atom || 'Custom Level'
         }
-      : (levels as any)[`level${levelIndex}`] || {
+      : allLevels[`level${levelIndex}`] || {
           id: String(levelIndex),
           hue: '#070737',
           antiHue: '#c56805',
@@ -42,7 +47,7 @@ export default function LevelFinished(): React.ReactElement {
   const { id, hue, antiHue, symbol, atom } = currentLevelData;
 
   const handleNextLevel = () => {
-    const nextLevelData = (levels as any)[`level${currentLevel}`];
+    const nextLevelData = allLevels[`level${currentLevel}`];
     if (!nextLevelData) {
       navigate('/levels');
       return;
@@ -133,6 +138,13 @@ export default function LevelFinished(): React.ReactElement {
           >
             Sauvegarder
           </button>
+          <button
+            type="button"
+            className={`${styles.button} ${styles.buttonShare}`}
+            onClick={() => setIsShareOpen(true)}
+          >
+            Partager 📤
+          </button>
         </div>
       ) : (
         <div className={styles.buttonContainer}>
@@ -152,6 +164,13 @@ export default function LevelFinished(): React.ReactElement {
           </button>
           <button
             type="button"
+            className={`${styles.button} ${styles.buttonShare}`}
+            onClick={() => setIsShareOpen(true)}
+          >
+            Partager 📤
+          </button>
+          <button
+            type="button"
             className={`${styles.button} ${styles.buttonNext}`}
             onClick={handleNextLevel}
           >
@@ -161,6 +180,31 @@ export default function LevelFinished(): React.ReactElement {
       )}
 
       {saveMessage && <div className={styles.saveToast}>{saveMessage}</div>}
+
+      {isShareOpen && (
+        <ShareModal
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+          level={
+            isShared && sharedLevel
+              ? sharedLevel
+              : (levels as unknown as Record<string, LevelData>)[`level${levelIndex}`] || {
+                  id: String(levelIndex),
+                  hue: '#070737',
+                  antiHue: '#c56805',
+                  symbol: '?',
+                  atom: 'Unknown',
+                  width: 800,
+                  height: 600,
+                  player: { position: { x: 100, y: 100 } },
+                  door: { x: 700, y: 500 },
+                  platforms: [],
+                  particles: [],
+                  spikes: []
+                }
+          }
+        />
+      )}
     </div>
   );
 }

@@ -4,19 +4,19 @@ import * as defaultLevels from '../data/levels';
 import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
 import { push } from '../shims/navigation';
 import { useGameStore } from '../store';
-import { GhostHero } from './GhostHero';
 import {
+  type GhostFrame,
   GhostRecorder,
   calculateSplitDelta,
   decompressTrajectory,
-  formatSplitDelta,
-  type GhostFrame
+  formatSplitDelta
 } from '../tools/GhostRecorder';
 import { hapticFeedback } from '../tools/HapticFeedback';
 import { formatScore } from '../tools/formatScore';
 import { gameEvents } from '../tools/gameEvents';
 import { decodeLevelFromUrl } from '../tools/levelCodec';
 import type { LevelData, ParticleType } from '../types';
+import { GhostHero } from './GhostHero';
 import Hero, { type TouchInputState } from './Hero';
 
 interface MovingPlatform {
@@ -66,6 +66,7 @@ export default class GameScene extends Phaser.Scene {
   private pointerStartX = 0;
   private pointerStartY = 0;
   private startTime = 0;
+  private timerStarted = false;
   private timerText!: Phaser.GameObjects.Text;
   private isLevelCompleted = false;
   private quantumEffects: QuantumEffectsManager | null = null;
@@ -83,6 +84,8 @@ export default class GameScene extends Phaser.Scene {
     this.ghostHero = null;
     this.ghostRecorder.reset();
     this.ghostFrames = [];
+    this.startTime = 0;
+    this.timerStarted = false;
     this.splitDeltaText = null;
     this.ghostButton = null;
     this.isEntangled = false;
@@ -300,7 +303,9 @@ export default class GameScene extends Phaser.Scene {
     if (entanglement) {
       initialHero.setEntangled(false, entanglement.mode);
 
-      const betaX = entanglement.betaSpawn ? entanglement.betaSpawn.x : this.levelData.width - startX;
+      const betaX = entanglement.betaSpawn
+        ? entanglement.betaSpawn.x
+        : this.levelData.width - startX;
       const betaY = entanglement.betaSpawn ? entanglement.betaSpawn.y : startY;
 
       this.betaHero = new Hero(this, betaX, betaY, true);
@@ -420,7 +425,6 @@ export default class GameScene extends Phaser.Scene {
 
     // 11. Audio & Haptics
     soundManager.init();
-    soundManager.startBgm();
     soundManager.setClonesCount(this.heroes.length);
 
     hapticFeedback.init();
@@ -446,8 +450,6 @@ export default class GameScene extends Phaser.Scene {
         this.entanglementGraphics = null;
       }
     });
-
-    this.startTime = this.time.now;
   }
 
   private createMolecules(): void {
@@ -629,7 +631,9 @@ export default class GameScene extends Phaser.Scene {
     this.splitDeltaText.setOrigin(1, 0);
     this.splitDeltaText.setScrollFactor(0);
     this.splitDeltaText.setDepth(101);
-    this.splitDeltaText.setVisible(useGameStore.getState().ghostEnabled && this.ghostFrames.length > 0);
+    this.splitDeltaText.setVisible(
+      useGameStore.getState().ghostEnabled && this.ghostFrames.length > 0
+    );
   }
 
   private showLevelTitle(): void {
@@ -922,7 +926,14 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
-    const elapsedMs = Math.max(0, this.time.now - this.startTime);
+    if (!this.timerStarted) {
+      this.startTime = time;
+      this.timerStarted = true;
+      if (this.ghostHero) {
+        this.ghostHero.updateReplay(0);
+      }
+    }
+    const elapsedMs = Math.max(0, time - this.startTime);
 
     // Update timer
     if (this.timerText) {
@@ -994,7 +1005,11 @@ export default class GameScene extends Phaser.Scene {
         focusedHero.flipY
       );
 
-      if (this.splitDeltaText && this.ghostFrames.length > 0 && useGameStore.getState().ghostEnabled) {
+      if (
+        this.splitDeltaText &&
+        this.ghostFrames.length > 0 &&
+        useGameStore.getState().ghostEnabled
+      ) {
         const deltaSec = calculateSplitDelta(
           this.ghostFrames,
           focusedHero.x,

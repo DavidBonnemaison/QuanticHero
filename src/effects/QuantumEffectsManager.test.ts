@@ -111,26 +111,26 @@ describe('QuantumEffectsManager', () => {
     qe.destroy();
   });
 
-  it('calculates quantum interference between multiple moving clones', () => {
+  it('renders subtle probability wake for multiple moving clones without visual clutter', () => {
     const qe = new QuantumEffectsManager(mockScene);
     const hero1 = {
       active: true,
       x: 100,
       y: 100,
       isFocused: true,
-      body: { velocity: { x: 80, y: 0 } }
+      body: { velocity: { x: 100, y: 0 } }
     } as unknown as Hero;
     const hero2 = {
       active: true,
       x: 140,
       y: 100,
       isFocused: false,
-      body: { velocity: { x: -80, y: 0 } }
+      body: { velocity: { x: -100, y: 0 } }
     } as unknown as Hero;
 
     qe.update(1000, 16.6, [hero1, hero2]);
 
-    expect(mockGraphics.lineBetween).toHaveBeenCalled();
+    expect(mockGraphics.strokeCircle).toHaveBeenCalled();
     qe.destroy();
   });
 

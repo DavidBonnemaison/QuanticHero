@@ -29,6 +29,7 @@ describe('Menu component', () => {
           <Route path="/" element={<Menu />} />
           <Route path="/explanation" element={<div>Explanation Page</div>} />
           <Route path="/levels" element={<div>Levels Page</div>} />
+          <Route path="/editor" element={<div>Editor Page</div>} />
         </Routes>
       </MemoryRouter>
     );
@@ -52,16 +53,19 @@ describe('Menu component', () => {
     expect(screen.getByText('Explanation Page')).toBeInTheDocument();
   });
 
-  it('renders Entanglement Mode button and navigates to level 110 on click', () => {
+  it('renders Level Editor & Share button and navigates to editor on click', () => {
     renderWithRouter();
 
-    const entanglementBtn = screen.getByRole('button', { name: /entanglement mode/i });
-    expect(entanglementBtn).toBeInTheDocument();
-    expect(entanglementBtn).toHaveTextContent('Ψ ⊗ Ψ');
+    const editorBtn = screen.getByRole('button', { name: /level editor & share/i });
+    expect(editorBtn).toBeInTheDocument();
 
-    fireEvent.click(entanglementBtn);
-    expect(useGameStore.getState().currentLevel).toBe(110);
-    expect(screen.getByText('Explanation Page')).toBeInTheDocument();
+    fireEvent.click(editorBtn);
+    expect(screen.getByText('Editor Page')).toBeInTheDocument();
+  });
+
+  it('does not display Entanglement Mode button by default', () => {
+    renderWithRouter();
+    expect(screen.queryByRole('button', { name: /entanglement mode/i })).not.toBeInTheDocument();
   });
 
   it('navigates to levels page on "Levels" click', () => {

@@ -120,9 +120,7 @@ export class QuantumEffectsManager {
    * with constructive/destructive quantum interference patterns when multiple clones interact.
    */
   private renderDeBroglieWaves(time: number, heroes: Hero[], isReduced: boolean): void {
-    const movingHeroes: Hero[] = [];
-    const maxRadius = isReduced ? 50 : 75;
-    const ringCount = isReduced ? 2 : 4;
+    if (isReduced) return;
 
     for (const hero of heroes) {
       if (!hero || !hero.active || !hero.body) continue;
@@ -130,67 +128,15 @@ export class QuantumEffectsManager {
       const vy = hero.body.velocity.y;
       const speed = Math.sqrt(vx * vx + vy * vy);
 
-      // Hero moving faster than threshold emits probability waves
-      if (speed > 15) {
-        movingHeroes.push(hero);
+      // Subtle, non-intrusive micro-wake only when moving fast
+      if (speed > 80) {
         const baseColor = hero.isFocused ? 0x00e5ff : 0xbd00ff;
+        const waveOsc = Math.sin(time * 0.005);
+        const radius = 14 + (speed / 350) * 4 + waveOsc * 2;
+        const alpha = Math.min(0.12, (speed / 450) * 0.12);
 
-        for (let i = 0; i < ringCount; i++) {
-          // Dynamic radius pulsing with wave propagation
-          const wavePhase = (time * 0.06 + i * (maxRadius / ringCount)) % maxRadius;
-          const currentRadius = 10 + wavePhase;
-          const radiusRatio = wavePhase / maxRadius;
-
-          // Sinusoidal probability wave amplitude
-          const waveOscillation = Math.sin(time * 0.007 - currentRadius * 0.12);
-          const alpha = Math.max(0, (1 - radiusRatio) * 0.45 * (0.6 + 0.4 * waveOscillation));
-
-          if (alpha > 0.02) {
-            this.graphics.lineStyle(1.8 * (1 - radiusRatio * 0.5), baseColor, alpha);
-            this.graphics.strokeCircle(hero.x, hero.y, currentRadius);
-          }
-        }
-      }
-    }
-
-    // Interference Patterns between quantum clones
-    if (!isReduced && movingHeroes.length >= 2) {
-      for (let i = 0; i < movingHeroes.length; i++) {
-        for (let j = i + 1; j < movingHeroes.length; j++) {
-          const h1 = movingHeroes[i];
-          const h2 = movingHeroes[j];
-
-          const dx = h2.x - h1.x;
-          const dy = h2.y - h1.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          // Interaction zone when wave fields overlap
-          if (dist > 10 && dist < maxRadius * 2) {
-            const midX = (h1.x + h2.x) / 2;
-            const midY = (h1.y + h2.y) / 2;
-
-            // de Broglie optical path difference interference: I = cos^2(pi * d / lambda)
-            const lambda = 36;
-            const pathDiff = (dist % lambda) / lambda;
-            const interferenceFactor = Math.cos(Math.PI * pathDiff) ** 2;
-
-            // Constructive interference (bright white/cyan fringe)
-            if (interferenceFactor > 0.55) {
-              const fringeAlpha = (interferenceFactor - 0.5) * 1.6 * (1 - dist / (maxRadius * 2));
-              this.graphics.lineStyle(2.5, 0xffffff, Math.min(0.9, fringeAlpha));
-              this.graphics.strokeCircle(midX, midY, 14 + interferenceFactor * 12);
-
-              // Cross-tint bridge connecting the clones
-              this.graphics.lineStyle(1.2, 0x00ffff, fringeAlpha * 0.7);
-              this.graphics.lineBetween(h1.x, h1.y, h2.x, h2.y);
-            } else {
-              // Destructive interference (darker faded purple attenuation)
-              const nodeAlpha = (0.5 - interferenceFactor) * 0.4;
-              this.graphics.lineStyle(1, 0x4a148c, nodeAlpha);
-              this.graphics.strokeCircle(midX, midY, 8);
-            }
-          }
-        }
+        this.graphics.lineStyle(1.0, baseColor, alpha);
+        this.graphics.strokeCircle(hero.x, hero.y, radius);
       }
     }
   }

@@ -14,19 +14,15 @@ export const LevelSelection: React.FC = () => {
   const location = useLocation();
   const maxLevel = useGameStore((state) => state.maxLevel);
   const maxEntanglementLevel = useGameStore((state) => state.maxEntanglementLevel ?? 110);
-  const currentLevel = useGameStore((state) => state.currentLevel);
   const scores = useGameStore((state) => state.scores);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
   const ghostEnabled = useGameStore((state) => state.ghostEnabled);
   const toggleGhost = useGameStore((state) => state.toggleGhost);
 
-  const initialTab =
-    location.search.includes('tab=entanglement') ||
-    location.search.includes('mode=entanglement') ||
-    currentLevel >= 110
-      ? 'entanglement'
-      : 'classic';
-  const [activeTab, setActiveTab] = useState<'classic' | 'entanglement'>(initialTab);
+  const allowEntanglement = location.search.includes('entanglement=1');
+  const [activeTab] = useState<'classic' | 'entanglement'>(
+    allowEntanglement ? 'entanglement' : 'classic'
+  );
 
   const raw = Object.keys(allLevels)
     .filter((key) => key.startsWith('level'))
@@ -76,30 +72,24 @@ export const LevelSelection: React.FC = () => {
         <h1 className={styles.title}>Level Selection</h1>
         <button
           type="button"
+          className={styles.ghostToggle}
+          style={{ width: 'auto', padding: '0 12px', fontSize: '18px' }}
+          onClick={() => navigate('/editor')}
+          title="Create and share custom levels"
+        >
+          ✏️ Editor
+        </button>
+        <button
+          type="button"
           className={`${styles.ghostToggle} ${ghostEnabled ? styles.ghostToggleActive : ''}`}
           onClick={toggleGhost}
           title={ghostEnabled ? 'Ghost replay enabled' : 'Ghost replay disabled'}
           aria-label={ghostEnabled ? 'Ghost enabled' : 'Ghost disabled'}
         >
-          <span role="img" aria-label="ghost">👻</span> {ghostEnabled ? 'ON' : 'OFF'}
-        </button>
-      </div>
-      <div className={styles.tabContainer}>
-        <button
-          type="button"
-          className={`${styles.tabButton} ${activeTab === 'classic' ? styles.tabButtonActive : ''}`}
-          onClick={() => setActiveTab('classic')}
-        >
-          Classic
-        </button>
-        <button
-          type="button"
-          className={`${styles.tabButton} ${styles.entanglementTab} ${
-            activeTab === 'entanglement' ? styles.tabButtonActive : ''
-          }`}
-          onClick={() => setActiveTab('entanglement')}
-        >
-          Entanglement <span className={styles.entanglementTabBadge}>Ψ ⊗ Ψ</span>
+          <span role="img" aria-label="ghost">
+            👻
+          </span>{' '}
+          {ghostEnabled ? 'ON' : 'OFF'}
         </button>
       </div>
       {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore }) => {

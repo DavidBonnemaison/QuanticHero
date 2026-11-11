@@ -25,9 +25,7 @@ describe('ShareModal component', () => {
   });
 
   it('renders nothing when isOpen is false', () => {
-    const { container } = render(
-      <ShareModal isOpen={false} onClose={vi.fn()} level={mockLevel} />
-    );
+    const { container } = render(<ShareModal isOpen={false} onClose={vi.fn()} level={mockLevel} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -69,14 +67,7 @@ describe('ShareModal component', () => {
 
   it('triggers onPlay when "Tester immédiatement" is clicked', () => {
     const onPlayMock = vi.fn();
-    render(
-      <ShareModal
-        isOpen={true}
-        onClose={vi.fn()}
-        level={mockLevel}
-        onPlay={onPlayMock}
-      />
-    );
+    render(<ShareModal isOpen={true} onClose={vi.fn()} level={mockLevel} onPlay={onPlayMock} />);
 
     const playBtn = screen.getByRole('button', { name: /tester immédiatement/i });
     fireEvent.click(playBtn);
@@ -85,13 +76,7 @@ describe('ShareModal component', () => {
 
   it('calls onClose when top close button is clicked', () => {
     const onCloseMock = vi.fn();
-    render(
-      <ShareModal
-        isOpen={true}
-        onClose={onCloseMock}
-        level={mockLevel}
-      />
-    );
+    render(<ShareModal isOpen={true} onClose={onCloseMock} level={mockLevel} />);
 
     const closeBtn = screen.getByLabelText('Fermer');
     fireEvent.click(closeBtn);
@@ -100,13 +85,7 @@ describe('ShareModal component', () => {
 
   it('calls onClose when bottom cancel button is clicked', () => {
     const onCloseMock = vi.fn();
-    render(
-      <ShareModal
-        isOpen={true}
-        onClose={onCloseMock}
-        level={mockLevel}
-      />
-    );
+    render(<ShareModal isOpen={true} onClose={onCloseMock} level={mockLevel} />);
 
     const cancelButtons = screen.getAllByRole('button', { name: /fermer/i });
     // Click the bottom action button
@@ -116,13 +95,7 @@ describe('ShareModal component', () => {
 
   it('calls onClose when backdrop is clicked', () => {
     const onCloseMock = vi.fn();
-    render(
-      <ShareModal
-        isOpen={true}
-        onClose={onCloseMock}
-        level={mockLevel}
-      />
-    );
+    render(<ShareModal isOpen={true} onClose={onCloseMock} level={mockLevel} />);
 
     const backdrop = screen.getByTestId('share-modal-backdrop');
     fireEvent.click(backdrop);
@@ -131,13 +104,7 @@ describe('ShareModal component', () => {
 
   it('calls onClose when Escape key is pressed', () => {
     const onCloseMock = vi.fn();
-    render(
-      <ShareModal
-        isOpen={true}
-        onClose={onCloseMock}
-        level={mockLevel}
-      />
-    );
+    render(<ShareModal isOpen={true} onClose={onCloseMock} level={mockLevel} />);
 
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onCloseMock).toHaveBeenCalledTimes(1);

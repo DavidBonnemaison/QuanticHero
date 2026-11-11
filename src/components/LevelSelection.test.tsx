@@ -118,17 +118,20 @@ describe('LevelSelection component', () => {
     expect(screen.getByRole('button', { name: /ghost enabled/i })).toHaveTextContent('ON');
   });
 
-  it('switches between Classic and Entanglement tabs and displays entangled levels', () => {
+  it('hides Entanglement tab by default in standard mode', () => {
     useGameStore.setState({ maxEntanglementLevel: 110 });
     renderWithRouter();
 
-    // In Classic tab by default
+    // In Classic view by default
     expect(screen.getByText('Hydrogen')).toBeInTheDocument();
     expect(screen.queryByText('Darmstadtium')).not.toBeInTheDocument();
+    // Entanglement tab is hidden
+    expect(screen.queryByRole('button', { name: /entanglement/i })).not.toBeInTheDocument();
+  });
 
-    // Click Entanglement tab
-    const entanglementTab = screen.getByRole('button', { name: /entanglement/i });
-    fireEvent.click(entanglementTab);
+  it('displays entangled levels when query flag ?entanglement=1 is provided', () => {
+    useGameStore.setState({ maxEntanglementLevel: 110 });
+    renderWithRouter('/levels?entanglement=1');
 
     // Entangled levels 110-114 should now be visible
     expect(screen.getByText('Darmstadtium')).toBeInTheDocument();
@@ -148,9 +151,9 @@ describe('LevelSelection component', () => {
     expect(rg.className).toMatch(/menuItemDisabled/);
   });
 
-  it('unlocks level 111 when maxEntanglementLevel is 111', () => {
+  it('unlocks level 111 when maxEntanglementLevel is 111 with ?entanglement=1', () => {
     useGameStore.setState({ maxEntanglementLevel: 111 });
-    renderWithRouter('/levels?tab=entanglement');
+    renderWithRouter('/levels?entanglement=1');
 
     // Level 111 (Roentgenium) is now unlocked
     const rg = screen.getByText('Roentgenium').closest('[role="button"]') as HTMLElement;

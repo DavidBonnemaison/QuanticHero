@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { sampleTrajectory, type GhostFrame } from '../tools/GhostRecorder';
+import { type GhostFrame, sampleTrajectory } from '../tools/GhostRecorder';
 
 export class GhostHero extends Phaser.GameObjects.Sprite {
   public frames: GhostFrame[];

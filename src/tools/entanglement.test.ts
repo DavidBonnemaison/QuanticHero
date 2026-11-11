@@ -41,7 +41,9 @@ describe('Quantum Entanglement Mode & Physics', () => {
 
     it('configures mode inverted_gravity for levels 112 and 113', () => {
       expect(levels.level112.entanglement?.mode).toBe('inverted_gravity');
-      expect(levels.level112.entanglement?.betaSpawn?.y).toBeLessThan(levels.level112.player.position.y);
+      expect(levels.level112.entanglement?.betaSpawn?.y).toBeLessThan(
+        levels.level112.player.position.y
+      );
       expect(levels.level112.entanglement?.betaDoor?.y).toBeLessThan(levels.level112.door.y);
 
       expect(levels.level113.entanglement?.mode).toBe('inverted_gravity');

@@ -67,7 +67,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     return this.isFocused ? base : `disabled-${base}`;
   }
 
-public bounceOffLeftWall(): void {
+  public bounceOffLeftWall(): void {
     if (this.recoilVx <= 0) {
       this.recoilVx = 300 * this.velocityMultiplier;
       this.recoilTimer = 220;
@@ -167,7 +167,7 @@ public bounceOffLeftWall(): void {
         this.setVelocityX(-350 * this.velocityMultiplier);
       }
 
-      this.play(this.getAnimKey(jump), true);
+      this.play(this.getAnimKey('jump'), true);
       this.setFlipX(this.recoilVx < 0);
       return;
     }

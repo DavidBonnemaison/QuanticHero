@@ -58,11 +58,6 @@ export default function Menu(): React.ReactElement {
     navigate('/explanation');
   };
 
-  const handleEntanglementMode = () => {
-    updateCurrentLevel(110);
-    navigate('/explanation');
-  };
-
   const handleGoToLevels = () => {
     navigate('/levels');
   };
@@ -131,15 +126,11 @@ export default function Menu(): React.ReactElement {
       <button type="button" className={styles.button} onClick={handleNewGame}>
         New game
       </button>
-      <button
-        type="button"
-        className={`${styles.button} ${styles.entanglementButton}`}
-        onClick={handleEntanglementMode}
-      >
-        Entanglement Mode <span className={styles.entanglementBadge}>Ψ ⊗ Ψ</span>
-      </button>
       <button type="button" className={styles.button} onClick={handleGoToLevels}>
         Levels
+      </button>
+      <button type="button" className={styles.button} onClick={() => navigate('/editor')}>
+        Level Editor & Share
       </button>
       {installPrompt && (
         <button type="button" className={styles.button} onClick={handleInstallClick}>

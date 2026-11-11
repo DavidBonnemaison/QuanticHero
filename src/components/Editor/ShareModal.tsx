@@ -12,12 +12,7 @@ export interface ShareModalProps {
   onPlay?: () => void;
 }
 
-export const ShareModal: React.FC<ShareModalProps> = ({
-  isOpen,
-  onClose,
-  level,
-  onPlay
-}) => {
+export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, onPlay }) => {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [shareUrl, setShareUrl] = useState<string>('');
@@ -118,12 +113,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         aria-modal="true"
         aria-labelledby="share-modal-title"
       >
-        <button
-          type="button"
-          className={styles.closeButton}
-          onClick={onClose}
-          aria-label="Fermer"
-        >
+        <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Fermer">
           ×
         </button>
 
@@ -184,11 +174,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               aria-label="URL du niveau"
               onFocus={(e) => e.target.select()}
             />
-            <button
-              type="button"
-              className={styles.copyButton}
-              onClick={handleCopy}
-            >
+            <button type="button" className={styles.copyButton} onClick={handleCopy}>
               Copier le lien
             </button>
           </div>

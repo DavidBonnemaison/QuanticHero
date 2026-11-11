@@ -27,21 +27,53 @@ vi.mock('phaser', () => {
       };
     }
 
-    setBounceY() { return this; }
-    setCollideWorldBounds() { return this; }
+    setBounce() {
+      return this;
+    }
+    setBounceY() {
+      return this;
+    }
+    setCollideWorldBounds() {
+      return this;
+    }
     play(anim: string) {
       this.anims.currentAnim = { key: anim };
       return this;
     }
-    setInteractive() { return this; }
-    on() { return this; }
-    setTexture(t: string) { this.texture = t; return this; }
-    setFlipX(f: boolean) { this.flipX = f; return this; }
-    setFlipY(f: boolean) { this.flipY = f; return this; }
-    setTint(t: number) { this.tint = t; return this; }
-    clearTint() { this.tint = 0; return this; }
-    setVelocityX(vx: number) { this.body.velocity.x = vx; return this; }
-    setVelocityY(vy: number) { this.body.velocity.y = vy; return this; }
+    setInteractive() {
+      return this;
+    }
+    on() {
+      return this;
+    }
+    setTexture(t: string) {
+      this.texture = t;
+      return this;
+    }
+    setFlipX(f: boolean) {
+      this.flipX = f;
+      return this;
+    }
+    setFlipY(f: boolean) {
+      this.flipY = f;
+      return this;
+    }
+    setTint(t: number) {
+      this.tint = t;
+      return this;
+    }
+    clearTint() {
+      this.tint = 0;
+      return this;
+    }
+    setVelocityX(vx: number) {
+      this.body.velocity.x = vx;
+      return this;
+    }
+    setVelocityY(vy: number) {
+      this.body.velocity.y = vy;
+      return this;
+    }
     setVelocity(vx: number, vy: number) {
       this.body.velocity.x = vx;
       this.body.velocity.y = vy;
@@ -101,22 +133,22 @@ describe('Hero Quantum Entanglement Mechanics', () => {
     beta.setEntangled(true, 'mirror_x');
 
     // Player presses RIGHT
-    beta.updateControl(
-      { right: { isDown: true } } as any,
-      null,
-      { left: false, right: false, jump: false }
-    );
+    beta.updateControl({ right: { isDown: true } } as any, null, {
+      left: false,
+      right: false,
+      jump: false
+    });
 
     // Beta must move LEFT (-vx) and flipX must be true
     expect(beta.body.velocity.x).toBe(-350);
     expect(beta.flipX).toBe(true);
 
     // Player presses LEFT
-    beta.updateControl(
-      { left: { isDown: true } } as any,
-      null,
-      { left: false, right: false, jump: false }
-    );
+    beta.updateControl({ left: { isDown: true } } as any, null, {
+      left: false,
+      right: false,
+      jump: false
+    });
 
     // Beta must move RIGHT (+vx) and flipX must be false
     expect(beta.body.velocity.x).toBe(350);
@@ -128,11 +160,11 @@ describe('Hero Quantum Entanglement Mechanics', () => {
     beta.setEntangled(true, 'inverted_gravity');
 
     // Player presses RIGHT
-    beta.updateControl(
-      { right: { isDown: true } } as any,
-      null,
-      { left: false, right: false, jump: false }
-    );
+    beta.updateControl({ right: { isDown: true } } as any, null, {
+      left: false,
+      right: false,
+      jump: false
+    });
 
     // In pure inverted gravity, horizontal direction is identical to normal hero
     expect(beta.body.velocity.x).toBe(350);
@@ -147,11 +179,11 @@ describe('Hero Quantum Entanglement Mechanics', () => {
     beta.body.touching.up = true;
 
     // Player presses Jump
-    beta.updateControl(
-      { up: { isDown: true } } as any,
-      null,
-      { left: false, right: false, jump: false }
-    );
+    beta.updateControl({ up: { isDown: true } } as any, null, {
+      left: false,
+      right: false,
+      jump: false
+    });
 
     // Since upsideDown is -1, -450 * (-1) = +450 (jumps downwards towards ground)
     expect(beta.body.velocity.y).toBe(450);
@@ -162,11 +194,11 @@ describe('Hero Quantum Entanglement Mechanics', () => {
     hero.setEntangled(false, 'mirror_x');
     hero.enteredPortal = true;
 
-    hero.updateControl(
-      { right: { isDown: true }, up: { isDown: true } } as any,
-      null,
-      { left: false, right: false, jump: false }
-    );
+    hero.updateControl({ right: { isDown: true }, up: { isDown: true } } as any, null, {
+      left: false,
+      right: false,
+      jump: false
+    });
 
     expect(hero.body.velocity.x).toBe(0);
     expect(hero.body.velocity.y).toBe(0);

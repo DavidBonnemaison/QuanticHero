@@ -20,8 +20,7 @@ export interface MinifiedLevel {
   pl: [number, number];
   d: [number, number];
   p: Array<
-    | [number, number, number, number]
-    | [number, number, number, number, number, number, number]
+    [number, number, number, number] | [number, number, number, number, number, number, number]
   >;
   t?: Array<[number, number, number]>;
   sp?: Array<[number, number] | [number, number, number, number]>;
@@ -76,10 +75,7 @@ export function compressLevel(level: LevelData): string {
       const y = Math.round(plat.y);
       const w = Math.round(plat.width);
       const h = Math.round(plat.height);
-      if (
-        plat.movesTo &&
-        (plat.movesTo.x !== undefined || plat.movesTo.y !== undefined)
-      ) {
+      if (plat.movesTo && (plat.movesTo.x !== undefined || plat.movesTo.y !== undefined)) {
         return [
           x,
           y,
@@ -97,11 +93,7 @@ export function compressLevel(level: LevelData): string {
   if (level.particles && level.particles.length > 0) {
     minified.t = level.particles.slice(0, 100).map((part) => {
       const typeIdx = PARTICLE_TYPES.indexOf(part.type);
-      return [
-        Math.round(part.x),
-        Math.round(part.y),
-        typeIdx >= 0 ? typeIdx : 0
-      ];
+      return [Math.round(part.x), Math.round(part.y), typeIdx >= 0 ? typeIdx : 0];
     });
   }
 
@@ -192,8 +184,10 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
   const rawWidth = raw.w ?? raw.width;
   const rawHeight = raw.h ?? raw.height;
   if (
-    (rawWidth !== undefined && (typeof rawWidth !== 'number' || rawWidth <= 0 || !Number.isFinite(rawWidth))) ||
-    (rawHeight !== undefined && (typeof rawHeight !== 'number' || rawHeight <= 0 || !Number.isFinite(rawHeight)))
+    (rawWidth !== undefined &&
+      (typeof rawWidth !== 'number' || rawWidth <= 0 || !Number.isFinite(rawWidth))) ||
+    (rawHeight !== undefined &&
+      (typeof rawHeight !== 'number' || rawHeight <= 0 || !Number.isFinite(rawHeight)))
   ) {
     return null;
   }
@@ -225,7 +219,10 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
   const platforms: Platform[] = [];
   for (const item of rawPlatforms.slice(0, 300)) {
     if (Array.isArray(item)) {
-      if (item.length >= 4 && item.every((n: unknown) => typeof n === 'number' && Number.isFinite(n))) {
+      if (
+        item.length >= 4 &&
+        item.every((n: unknown) => typeof n === 'number' && Number.isFinite(n))
+      ) {
         const plat: Platform = {
           x: item[0],
           y: item[1],
@@ -254,7 +251,10 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
           width: Math.max(1, item.width),
           height: Math.max(1, item.height)
         };
-        if (item.movesTo && (typeof item.movesTo.x === 'number' || typeof item.movesTo.y === 'number')) {
+        if (
+          item.movesTo &&
+          (typeof item.movesTo.x === 'number' || typeof item.movesTo.y === 'number')
+        ) {
           plat.movesTo = {
             x: item.movesTo.x ?? item.x,
             y: item.movesTo.y ?? item.y,
@@ -277,7 +277,10 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
           let pType: ParticleType = 'duplicate';
           if (typeof rawType === 'number' && rawType >= 0 && rawType < PARTICLE_TYPES.length) {
             pType = PARTICLE_TYPES[rawType];
-          } else if (typeof rawType === 'string' && PARTICLE_TYPES.includes(rawType as ParticleType)) {
+          } else if (
+            typeof rawType === 'string' &&
+            PARTICLE_TYPES.includes(rawType as ParticleType)
+          ) {
             pType = rawType as ParticleType;
           }
           particles.push({ x: px, y: py, type: pType });

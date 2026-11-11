@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LevelData } from '../types';
-import {
-  compressLevel,
-  decodeLevelFromUrl,
-  decompressLevel,
-  encodeLevelToUrl
-} from './levelCodec';
+import { compressLevel, decodeLevelFromUrl, decompressLevel, encodeLevelToUrl } from './levelCodec';
 
 const sampleLevel: LevelData = {
   id: 'custom-1',

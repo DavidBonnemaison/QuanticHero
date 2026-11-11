@@ -34,7 +34,9 @@ export function compressTrajectory(frames: GhostFrame[]): string {
   let processedFrames = frames;
   if (frames.length > 1200) {
     const step = Math.ceil(frames.length / 1000);
-    processedFrames = frames.filter((_, idx) => idx === 0 || idx === frames.length - 1 || idx % step === 0);
+    processedFrames = frames.filter(
+      (_, idx) => idx === 0 || idx === frames.length - 1 || idx % step === 0
+    );
   }
 
   const chunks: string[] = [];
@@ -272,7 +274,7 @@ export function formatSplitDelta(deltaSeconds: number | null): FormattedSplitDel
  */
 export class GhostRecorder {
   private frames: GhostFrame[] = [];
-  private lastSampleTime = -Infinity;
+  private lastSampleTime = Number.NEGATIVE_INFINITY;
   private sampleIntervalMs: number;
   private lastState: {
     x: number;
@@ -288,7 +290,7 @@ export class GhostRecorder {
 
   public reset(): void {
     this.frames = [];
-    this.lastSampleTime = -Infinity;
+    this.lastSampleTime = Number.NEGATIVE_INFINITY;
     this.lastState = null;
   }
 
