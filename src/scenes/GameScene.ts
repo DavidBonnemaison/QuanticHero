@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
+import { soundManager } from '../audio/SoundManager';
 import * as defaultLevels from '../data/levels';
 import { push } from '../shims/navigation';
 import { useGameStore } from '../store';
 import { formatScore } from '../tools/formatScore';
+import { gameEvents } from '../tools/gameEvents';
 import type { LevelData, ParticleType } from '../types';
 import Hero, { type TouchInputState } from './Hero';
 
@@ -296,6 +298,18 @@ export default class GameScene extends Phaser.Scene {
     // 10. Level Title Overlay
     this.showLevelTitle();
 
+    // 11. Audio
+    soundManager.init();
+    soundManager.startBgm();
+    soundManager.setClonesCount(this.heroes.length);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      soundManager.stopBgm();
+    });
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      soundManager.stopBgm();
+    });
+
     this.startTime = this.time.now;
   }
 
@@ -358,6 +372,7 @@ export default class GameScene extends Phaser.Scene {
     backButton.setDepth(101);
     backButton.setInteractive({ useHandCursor: true });
     backButton.on('pointerdown', () => {
+      soundManager.stopBgm();
       try {
         this.game.destroy(true);
       } catch {
@@ -365,6 +380,32 @@ export default class GameScene extends Phaser.Scene {
       }
       window.game = null;
       push('/');
+    });
+
+    const getSoundLabel = () => (useGameStore.getState().isMuted ? '🔇' : '🔊');
+    const soundButton = this.add.text(58, 6, getSoundLabel(), {
+      fontFamily: '"Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif',
+      fontSize: '26px'
+    });
+    soundButton.setScrollFactor(0);
+    soundButton.setDepth(101);
+    soundButton.setInteractive({ useHandCursor: true });
+    soundButton.on('pointerdown', () => {
+      useGameStore.getState().toggleMute();
+      soundButton.setText(getSoundLabel());
+    });
+
+    const unsubStore = useGameStore.subscribe(() => {
+      if (soundButton.active) {
+        soundButton.setText(getSoundLabel());
+      }
+    });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unsubStore();
+    });
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      unsubStore();
     });
 
     this.timerText = this.add.text(this.cameras.main.width - 130, 6, '00:00:00', {
@@ -405,6 +446,7 @@ export default class GameScene extends Phaser.Scene {
     if (!hero || !hero.active) return;
     hero.destroy();
     this.heroes = this.heroes.filter((h) => h !== hero && h.active);
+    gameEvents.emit('hero:death', { remaining: this.heroes.length });
 
     if (this.heroes.length === 0) {
       this.scene.restart();
@@ -421,6 +463,7 @@ export default class GameScene extends Phaser.Scene {
     if (!particle.active) return;
     const type = particle.getData('type') as ParticleType;
     particle.destroy();
+    gameEvents.emit('particle:collect', { type });
 
     const powerUpNames: Record<ParticleType, string> = {
       antiGravity: 'ANTI GRAVITY !',
@@ -439,6 +482,7 @@ export default class GameScene extends Phaser.Scene {
           clonedHero.setGravityInverted(this.physics.world.gravity.y < 0);
           this.heroes.push(clonedHero);
           this.heroGroup.add(clonedHero);
+          gameEvents.emit('hero:duplicate', { count: this.heroes.length });
         }
         break;
       }
@@ -481,6 +525,8 @@ export default class GameScene extends Phaser.Scene {
   private completeLevel(): void {
     if (this.isLevelCompleted) return;
     this.isLevelCompleted = true;
+    soundManager.stopBgm();
+    gameEvents.emit('level:complete', { level: Number(this.levelData.id) });
 
     const elapsedMs = Math.max(0, this.time.now - this.startTime);
     const currentLvl = Number(this.levelData.id);

@@ -17,7 +17,8 @@ describe('Menu component', () => {
       currentLevel: 0,
       maxLevel: 1,
       scores: {},
-      customLevels: null
+      customLevels: null,
+      isMuted: false
     });
   });
 
@@ -74,5 +75,21 @@ describe('Menu component', () => {
     fireEvent(window, promptEvent);
 
     expect(screen.getByRole('button', { name: /install app/i })).toBeInTheDocument();
+  });
+
+  it('renders sound toggle button and toggles mute state on click', () => {
+    renderWithRouter();
+
+    const soundButton = screen.getByRole('button', { name: /mute sound/i });
+    expect(soundButton).toBeInTheDocument();
+    expect(soundButton).toHaveTextContent('🔊');
+
+    fireEvent.click(soundButton);
+    expect(useGameStore.getState().isMuted).toBe(true);
+    expect(screen.getByRole('button', { name: /unmute sound/i })).toHaveTextContent('🔇');
+
+    fireEvent.click(screen.getByRole('button', { name: /unmute sound/i }));
+    expect(useGameStore.getState().isMuted).toBe(false);
+    expect(screen.getByRole('button', { name: /mute sound/i })).toHaveTextContent('🔊');
   });
 });

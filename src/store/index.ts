@@ -16,6 +16,7 @@ export interface GameStoreState {
   maxLevel: number;
   scores: Record<number, ScoreItem>;
   customLevels: Record<string, LevelData> | null;
+  isMuted: boolean;
 }
 
 export interface GameStoreActions {
@@ -29,6 +30,8 @@ export interface GameStoreActions {
   deletePlatform: (params: { level: number; n: number | string }) => void;
   addParticle: (params: { level: number }) => void;
   deleteParticle: (params: { level: number; n: number | string }) => void;
+  toggleMute: () => void;
+  setMuted: (muted: boolean) => void;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -82,7 +85,8 @@ const customStorage = {
           currentLevel: game.currentLevel ?? 0,
           maxLevel: game.maxLevel ?? 1,
           scores: score ?? {},
-          customLevels: levels ?? null
+          customLevels: levels ?? null,
+          isMuted: parsed.isMuted ?? false
         },
         version: 0
       };
@@ -110,6 +114,10 @@ export const useGameStore = create<GameStore>()(
       maxLevel: 1,
       scores: {},
       customLevels: null,
+      isMuted: false,
+
+      toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
+      setMuted: (muted: boolean) => set({ isMuted: muted }),
 
       updateCurrentLevel: (lvl: number) => set({ currentLevel: Number(lvl) }),
 
@@ -278,7 +286,8 @@ export const useGameStore = create<GameStore>()(
         currentLevel: state.currentLevel,
         maxLevel: state.maxLevel,
         scores: state.scores,
-        customLevels: state.customLevels
+        customLevels: state.customLevels,
+        isMuted: state.isMuted
       })
     }
   )

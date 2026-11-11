@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameEvents } from '../tools/gameEvents';
 
 export interface TouchInputState {
   left: boolean;
@@ -154,6 +155,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       if (jump && touchingGround) {
         this.setVelocityY(-450 * this.upsideDown);
         this.play(this.getAnimKey('jump'), true);
+        gameEvents.emit('hero:jump');
       }
     } else {
       this.setVelocityX(0);

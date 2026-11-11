@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { soundManager } from '../audio/SoundManager';
 import * as levels from '../data/levels';
 import { useGameStore } from '../store';
 import type { LevelData } from '../types';
@@ -17,6 +18,8 @@ export default function Menu(): React.ReactElement {
   const customLevels = useGameStore((state) => state.customLevels);
   const setLevels = useGameStore((state) => state.setLevels);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
+  const isMuted = useGameStore((state) => state.isMuted);
+  const toggleMute = useGameStore((state) => state.toggleMute);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -62,8 +65,23 @@ export default function Menu(): React.ReactElement {
     }
   };
 
+  const handleToggleSound = () => {
+    soundManager.init();
+    soundManager.ensureContext();
+    toggleMute();
+  };
+
   return (
     <div className={styles.menuWrapper}>
+      <button
+        type="button"
+        className={styles.soundButton}
+        onClick={handleToggleSound}
+        aria-label={isMuted ? 'Unmute sound' : 'Mute sound'}
+        title={isMuted ? 'Unmute sound' : 'Mute sound'}
+      >
+        {isMuted ? '🔇' : '🔊'}
+      </button>
       <div id="container" />
       <h1 className={styles.title}>Quantum Hero</h1>
       <button type="button" className={styles.button} onClick={handleNewGame}>

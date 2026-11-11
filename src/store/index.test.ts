@@ -9,7 +9,8 @@ describe('useGameStore', () => {
       currentLevel: 0,
       maxLevel: 1,
       scores: {},
-      customLevels: null
+      customLevels: null,
+      isMuted: false
     });
   });
 
@@ -20,6 +21,7 @@ describe('useGameStore', () => {
       expect(state.maxLevel).toBe(1);
       expect(state.scores).toEqual({});
       expect(state.customLevels).toBeNull();
+      expect(state.isMuted).toBe(false);
     });
   });
 
@@ -41,6 +43,19 @@ describe('useGameStore', () => {
 
       expect(useGameStore.getState().currentLevel).toBe(0);
       expect(useGameStore.getState().maxLevel).toBe(1);
+    });
+
+    it('toggles mute status via toggleMute and sets via setMuted', () => {
+      expect(useGameStore.getState().isMuted).toBe(false);
+      useGameStore.getState().toggleMute();
+      expect(useGameStore.getState().isMuted).toBe(true);
+      useGameStore.getState().toggleMute();
+      expect(useGameStore.getState().isMuted).toBe(false);
+
+      useGameStore.getState().setMuted(true);
+      expect(useGameStore.getState().isMuted).toBe(true);
+      useGameStore.getState().setMuted(false);
+      expect(useGameStore.getState().isMuted).toBe(false);
     });
   });
 
@@ -88,6 +103,7 @@ describe('useGameStore', () => {
     it('persists store updates to localStorage under key "qtmhro"', () => {
       useGameStore.getState().updateCurrentLevel(3);
       useGameStore.getState().recordScore(3, 12345);
+      useGameStore.getState().toggleMute();
 
       const raw = localStorage.getItem('qtmhro');
       expect(raw).toBeTruthy();
@@ -95,6 +111,7 @@ describe('useGameStore', () => {
       const parsed = JSON.parse(raw as string);
       expect(parsed.state.currentLevel).toBe(3);
       expect(parsed.state.maxLevel).toBe(4);
+      expect(parsed.state.isMuted).toBe(true);
       expect(parsed.state.scores[3]).toEqual({
         last: 12345,
         best: 12345
@@ -105,7 +122,8 @@ describe('useGameStore', () => {
       const legacyState = {
         game: JSON.stringify({ currentLevel: 2, maxLevel: 4 }),
         score: JSON.stringify({ 1: { last: 5000, best: 5000 } }),
-        levels: null
+        levels: null,
+        isMuted: true
       };
       localStorage.setItem('qtmhro', JSON.stringify(legacyState));
 
@@ -116,6 +134,7 @@ describe('useGameStore', () => {
       expect(state.currentLevel).toBe(2);
       expect(state.maxLevel).toBe(4);
       expect(state.scores[1]).toEqual({ last: 5000, best: 5000 });
+      expect(state.isMuted).toBe(true);
     });
   });
 
