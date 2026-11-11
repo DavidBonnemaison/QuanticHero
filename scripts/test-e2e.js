@@ -222,6 +222,67 @@ async function run() {
     }
     console.log(`✓ Camera scroll verified (scrollY=${gameState.camera.scrollY}, midY=${gameState.camera.midY})`);
 
+    // REGRESSION TEST: Verify World bounds collision (sides & ceiling solid, bottom open)
+    const boundsConfig = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return null;
+      const check = gs.physics.world.checkCollision;
+      const hero = gs.heroes[0];
+      return {
+        left: check.left,
+        right: check.right,
+        up: check.up,
+        down: check.down,
+        bounceX: hero?.body?.bounce?.x,
+        bounceY: hero?.body?.bounce?.y
+      };
+    });
+    if (!boundsConfig || !boundsConfig.left || !boundsConfig.right || !boundsConfig.up || boundsConfig.down !== false) {
+      throw new Error(`Bounds collision configuration invalid: ${JSON.stringify(boundsConfig)}`);
+    }
+    if (boundsConfig.bounceX <= 0 || boundsConfig.bounceY <= 0) {
+      throw new Error(`Hero bounce not set: bounceX=${boundsConfig.bounceX}, bounceY=${boundsConfig.bounceY}`);
+    }
+    console.log('✓ Bounds collision and Hero bounce verified (left/right/up: true, down: false, bounce configured)');
+
+    // REGRESSION TEST: Verify PowerUp text styling (150px right-to-left banner)
+    const powerUpResult = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return null;
+      const hero = gs.heroes[0];
+      const dummyParticle = gs.physics.add.sprite(hero.x, hero.y, 'blue');
+      dummyParticle.setData('type', 'lowGravity');
+      gs.collectParticle(hero, dummyParticle);
+      const texts = gs.children.list.filter(c => c.type === 'Text');
+      const toast = texts.find(t => t.text === 'LOW GRAVITY !');
+      return {
+        found: !!toast,
+        fontSize: toast?.style?.fontSize,
+        alpha: toast?.alpha,
+        x: toast?.x
+      };
+    });
+    if (!powerUpResult || !powerUpResult.found || powerUpResult.fontSize !== '150px') {
+      throw new Error(`PowerUp text invalid: ${JSON.stringify(powerUpResult)}`);
+    }
+    console.log(`✓ PowerUp banner verified (fontSize=150px, startX=${powerUpResult.x}, alpha=${powerUpResult.alpha})`);
+
+    // REGRESSION TEST: Verify restart when hero falls out through the bottom
+    const restartResult = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return false;
+      const hero = gs.heroes[0];
+      let restarted = false;
+      gs.scene.restart = () => { restarted = true; };
+      hero.y = gs.levelData.height + 30;
+      gs.update();
+      return restarted;
+    });
+    if (!restartResult) {
+      throw new Error('Scene did not restart when hero fell out of the bottom of the scene');
+    }
+    console.log('✓ Bottom exit restart verified (restarts cleanly when hero.y > height + 20)');
+
     await page.screenshot({ path: '/tmp/gameplay_screenshot.png' });
     console.log('Screenshot saved to /tmp/gameplay_screenshot.png');
 

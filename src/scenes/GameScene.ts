@@ -72,6 +72,7 @@ export default class GameScene extends Phaser.Scene {
     // 1. Physics & Bounds
     this.physics.world.gravity.y = 700;
     this.physics.world.setBounds(0, 0, this.levelData.width, this.levelData.height);
+    this.physics.world.setBoundsCollision(true, true, true, false);
     this.cameras.main.setBounds(0, 0, this.levelData.width, this.levelData.height);
     this.cameras.main.setBackgroundColor(this.levelData.hue);
 
@@ -412,20 +413,20 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    const toast = this.add.text(this.cameras.main.width / 2, 80, powerUpNames[type] || '', {
+    const toast = this.add.text(this.cameras.main.width, 100, powerUpNames[type] || '', {
       fontFamily: 'VT323',
-      fontSize: '40px',
+      fontSize: '150px',
       color: '#ffffff'
     });
-    toast.setOrigin(0.5);
+    toast.setAlpha(0.5);
     toast.setScrollFactor(0);
     toast.setDepth(150);
 
     this.tweens.add({
       targets: toast,
-      y: 40,
-      alpha: 0,
-      duration: 1200,
+      x: -toast.width,
+      duration: 2200,
+      ease: 'Linear',
       onComplete: () => toast.destroy()
     });
   }
@@ -462,9 +463,17 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Update heroes
-    for (const hero of this.heroes) {
+    for (const hero of [...this.heroes]) {
       if (hero.active) {
         hero.updateControl(this.cursors, this.wasd, this.touchInput);
+        // Restart if hero falls out through the bottom of the scene
+        if (hero.y > this.levelData.height + 20) {
+          if (hero.isFocused || this.heroes.length <= 1) {
+            this.scene.restart();
+            return;
+          }
+          this.killHero(hero);
+        }
       }
     }
 

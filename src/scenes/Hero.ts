@@ -20,7 +20,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setBounceY(0.2);
+    this.setBounce(0.4, 0.3);
     this.setCollideWorldBounds(true);
     this.play(this.getAnimKey('idle'));
 
@@ -65,23 +65,40 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         ? this.body.touching.down || this.body.blocked.down
         : this.body.touching.up || this.body.blocked.up;
 
+    // Bounce off ceiling when hitting ceiling in normal gravity
+    if (this.upsideDown === 1 && this.body.blocked.up && this.body.velocity.y < 50) {
+      this.setVelocityY(150);
+    } else if (this.upsideDown === -1 && this.body.blocked.down && this.body.velocity.y > -50) {
+      this.setVelocityY(-150);
+    }
+
     if (this.isFocused) {
       if (goLeft) {
-        this.setVelocityX(-350 * this.velocityMultiplier);
+        if (!this.body.blocked.left) {
+          this.setVelocityX(-350 * this.velocityMultiplier);
+        } else {
+          this.setVelocityX(150);
+        }
         this.setFlipX(true);
         if (touchingGround) {
           this.play(this.getAnimKey('left'), true);
         }
       } else if (goRight) {
-        this.setVelocityX(350 * this.velocityMultiplier);
+        if (!this.body.blocked.right) {
+          this.setVelocityX(350 * this.velocityMultiplier);
+        } else {
+          this.setVelocityX(-150);
+        }
         this.setFlipX(false);
         if (touchingGround) {
           this.play(this.getAnimKey('right'), true);
         }
       } else {
-        this.setVelocityX(0);
         if (touchingGround) {
+          this.setVelocityX(0);
           this.play(this.getAnimKey('idle'), true);
+        } else {
+          this.body.velocity.x *= 0.98;
         }
       }
 
