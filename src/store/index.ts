@@ -20,6 +20,7 @@ export interface GameStoreState {
   hapticsEnabled: boolean;
   reducedEffects: boolean;
   ghostEnabled: boolean;
+  sharedLevel: LevelData | null;
 }
 
 export interface GameStoreActions {
@@ -29,6 +30,8 @@ export interface GameStoreActions {
   recordScore: (level: number, score: number, ghostTrajectory?: string) => void;
   saveGhostTrajectory: (level: number, trajectory: string) => void;
   setLevels: (data: Record<string, LevelData> | null) => void;
+  setSharedLevel: (level: LevelData | null) => void;
+  saveSharedLevelToCustom: (slot?: number) => void;
   updateLevelField: (params: UpdateLevelFieldParams) => void;
   addPlatform: (params: { level: number }) => void;
   deletePlatform: (params: { level: number; n: number | string }) => void;
@@ -127,6 +130,7 @@ export const useGameStore = create<GameStore>()(
       maxLevel: 1,
       scores: {},
       customLevels: null,
+      sharedLevel: null,
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
@@ -191,6 +195,22 @@ export const useGameStore = create<GameStore>()(
         }),
 
       setLevels: (data: Record<string, LevelData> | null) => set({ customLevels: data }),
+
+      setSharedLevel: (level: LevelData | null) => set({ sharedLevel: level }),
+
+      saveSharedLevelToCustom: (slot = 1) =>
+        set((state) => {
+          if (!state.sharedLevel) return state;
+          const customLevels = state.customLevels
+            ? { ...state.customLevels }
+            : ({ ...levelsData } as unknown as Record<string, LevelData>);
+          const levelKey = `level${slot}`;
+          customLevels[levelKey] = {
+            ...state.sharedLevel,
+            id: String(slot)
+          };
+          return { customLevels, currentLevel: slot };
+        }),
 
       updateLevelField: ({ level, type, n, prop, value }: UpdateLevelFieldParams) =>
         set((state) => {

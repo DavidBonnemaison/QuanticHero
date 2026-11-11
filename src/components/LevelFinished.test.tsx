@@ -2,7 +2,24 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useGameStore } from '../store';
+import type { LevelData } from '../types';
 import LevelFinished from './LevelFinished';
+
+const mockSharedLevel: LevelData = {
+  id: 'custom-99',
+  symbol: 'Qx',
+  atom: 'Quarkonium',
+  uncertainty: 3,
+  width: 1200,
+  height: 800,
+  hue: '#112233',
+  antiHue: '#aabbcc',
+  player: { position: { x: 50, y: 700 } },
+  door: { x: 900, y: 300 },
+  platforms: [{ x: 0, y: 750, width: 1200, height: 40 }],
+  particles: [],
+  spikes: []
+};
 
 describe('LevelFinished component', () => {
   beforeEach(() => {
@@ -12,7 +29,8 @@ describe('LevelFinished component', () => {
       scores: {
         1: { last: 15200, best: 15200 }
       },
-      customLevels: null
+      customLevels: null,
+      sharedLevel: null
     });
   });
 
@@ -24,6 +42,7 @@ describe('LevelFinished component', () => {
           <Route path="/done" element={<LevelFinished />} />
           <Route path="/game" element={<div>Game Screen</div>} />
           <Route path="/explanation" element={<div>Explanation Screen</div>} />
+          <Route path="/editor" element={<div>Editor Screen</div>} />
         </Routes>
       </MemoryRouter>
     );
@@ -79,9 +98,51 @@ describe('LevelFinished component', () => {
     renderWithRouter();
 
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
-    // Next level 2 has explanations or game
     expect(
       screen.queryByText('Explanation Screen') || screen.queryByText('Game Screen')
     ).toBeInTheDocument();
+  });
+
+  describe('Shared custom level mode', () => {
+    beforeEach(() => {
+      useGameStore.setState({
+        sharedLevel: mockSharedLevel,
+        scores: {
+          0: { last: 12400, best: 12400 }
+        }
+      });
+    });
+
+    it('renders custom level details, custom badge, and score from slot 0', () => {
+      renderWithRouter();
+
+      expect(screen.getByText('Niveau Personnalisé')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Quarkonium' })).toBeInTheDocument();
+      expect(screen.getAllByText('00:12:40').length).toBe(2);
+      expect(screen.getByRole('button', { name: /éditer ce niveau/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sauvegarder/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
+    });
+
+    it('saves level to custom levels and navigates to editor when "Éditer ce niveau" is clicked', () => {
+      renderWithRouter();
+
+      fireEvent.click(screen.getByRole('button', { name: /éditer ce niveau/i }));
+
+      const store = useGameStore.getState();
+      expect(store.sharedLevel).toBeNull();
+      expect(store.customLevels?.level1.atom).toBe('Quarkonium');
+      expect(screen.getByText('Editor Screen')).toBeInTheDocument();
+    });
+
+    it('saves level to custom levels and shows confirmation toast when "Sauvegarder" is clicked', () => {
+      renderWithRouter();
+
+      fireEvent.click(screen.getByRole('button', { name: /sauvegarder/i }));
+
+      const store = useGameStore.getState();
+      expect(store.customLevels?.level1.atom).toBe('Quarkonium');
+      expect(screen.getByText('Niveau sauvegardé dans vos niveaux !')).toBeInTheDocument();
+    });
   });
 });

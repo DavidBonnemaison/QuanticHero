@@ -15,6 +15,7 @@ import {
 import { hapticFeedback } from '../tools/HapticFeedback';
 import { formatScore } from '../tools/formatScore';
 import { gameEvents } from '../tools/gameEvents';
+import { decodeLevelFromUrl } from '../tools/levelCodec';
 import type { LevelData, ParticleType } from '../types';
 import Hero, { type TouchInputState } from './Hero';
 
@@ -80,6 +81,23 @@ export default class GameScene extends Phaser.Scene {
     this.ghostButton = null;
 
     const store = useGameStore.getState();
+
+    // Check if URL contains custom level and store hasn't set it yet
+    if (!store.sharedLevel && typeof window !== 'undefined') {
+      const hashOrSearch = window.location.hash || window.location.search;
+      if (hashOrSearch && (hashOrSearch.includes('custom=') || hashOrSearch.length > 20)) {
+        const decoded = decodeLevelFromUrl(hashOrSearch);
+        if (decoded) {
+          store.setSharedLevel(decoded);
+        }
+      }
+    }
+
+    if (store.sharedLevel) {
+      this.levelData = store.sharedLevel;
+      return;
+    }
+
     const currentLevel = store.currentLevel || 1;
     let levels = store.customLevels;
     if (!levels) {
@@ -647,10 +665,9 @@ export default class GameScene extends Phaser.Scene {
     if (this.isLevelCompleted) return;
     this.isLevelCompleted = true;
     soundManager.stopBgm();
-    gameEvents.emit('level:complete', { level: Number(this.levelData.id) });
+    gameEvents.emit('level:complete', { level: Number(this.levelData.id) || 0 });
 
     const elapsedMs = Math.max(0, this.time.now - this.startTime);
-    const currentLvl = Number(this.levelData.id);
     const store = useGameStore.getState();
 
     // Record final frame at portal
@@ -668,11 +685,17 @@ export default class GameScene extends Phaser.Scene {
     }
     const trajectory = this.ghostRecorder.getSerialized();
 
-    store.recordScore(currentLvl, elapsedMs, trajectory);
-    const nextLevel = currentLvl + 1;
-    store.updateCurrentLevel(nextLevel);
-    if (store.maxLevel < nextLevel) {
-      store.updateMaxLevel(nextLevel);
+    if (store.sharedLevel) {
+      // Record score for shared level under slot 0
+      store.recordScore(0, elapsedMs, trajectory);
+    } else {
+      const currentLvl = Number(this.levelData.id);
+      store.recordScore(currentLvl, elapsedMs, trajectory);
+      const nextLevel = currentLvl + 1;
+      store.updateCurrentLevel(nextLevel);
+      if (store.maxLevel < nextLevel) {
+        store.updateMaxLevel(nextLevel);
+      }
     }
 
     try {

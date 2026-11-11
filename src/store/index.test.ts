@@ -300,5 +300,53 @@ describe('useGameStore', () => {
         .updateLevelField({ level: 1, type: 'particle', n: 0, prop: 'type', value: 'split' });
       expect(useGameStore.getState().customLevels?.level1.particles[0].type).toBe('split');
     });
+
+    it('sets and clears sharedLevel via setSharedLevel', () => {
+      const mockLevel = {
+        id: 'shared-test',
+        symbol: 'St',
+        atom: 'Sharedium',
+        width: 1000,
+        height: 1000,
+        hue: '#111111',
+        antiHue: '#222222',
+        player: { position: { x: 50, y: 50 } },
+        door: { x: 900, y: 900 },
+        platforms: [],
+        particles: [],
+        spikes: []
+      };
+
+      useGameStore.getState().setSharedLevel(mockLevel);
+      expect(useGameStore.getState().sharedLevel).toEqual(mockLevel);
+
+      useGameStore.getState().setSharedLevel(null);
+      expect(useGameStore.getState().sharedLevel).toBeNull();
+    });
+
+    it('saves shared level into customLevels slot via saveSharedLevelToCustom', () => {
+      const mockLevel = {
+        id: 'shared-slot-test',
+        symbol: 'Sl',
+        atom: 'Slotium',
+        width: 1200,
+        height: 800,
+        hue: '#333333',
+        antiHue: '#444444',
+        player: { position: { x: 60, y: 60 } },
+        door: { x: 800, y: 800 },
+        platforms: [],
+        particles: [],
+        spikes: []
+      };
+
+      useGameStore.getState().setSharedLevel(mockLevel);
+      useGameStore.getState().saveSharedLevelToCustom(1);
+
+      const store = useGameStore.getState();
+      expect(store.customLevels?.level1.atom).toBe('Slotium');
+      expect(store.customLevels?.level1.id).toBe('1');
+      expect(store.currentLevel).toBe(1);
+    });
   });
 });

@@ -12,6 +12,7 @@ import DrawPlatform from './DrawPlatform';
 import styles from './Editor.module.css';
 import ParticlesEditor from './ParticleEditor';
 import PlatformsEditor from './PlatformsEditor';
+import ShareModal from './ShareModal';
 
 const downloader = (filename: string, text: string) => {
   const element = document.createElement('a');
@@ -60,6 +61,7 @@ interface EditorComponentProps {
   play: () => void;
   resetLevels: () => void;
   download: () => void;
+  share: () => void;
   currentLevel: number;
   onDropPlatform: (params: { n: number; x: number; y: number }) => void;
 }
@@ -71,6 +73,7 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
   play,
   resetLevels,
   download,
+  share,
   currentLevel: _currentLevel,
   onDropPlatform
 }) => {
@@ -109,6 +112,13 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
           onClick={download}
         >
           DOWNLOAD
+        </button>
+        <button
+          type="button"
+          className={`${styles.topButton} ${styles.shareButton}`}
+          onClick={share}
+        >
+          SHARE LEVEL
         </button>
         {platforms.map((p, i) => (
           <DrawPlatform
@@ -166,6 +176,7 @@ export const EditorView: React.FC = () => {
   const deleteParticle = useGameStore((state) => state.deleteParticle);
 
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(currentLevel || 1);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (!customLevels) {
@@ -414,9 +425,16 @@ export const EditorView: React.FC = () => {
         grid={grid}
         resetLevels={handleResetLevels}
         download={handleDownload}
+        share={() => setIsShareModalOpen(true)}
         level={level}
         currentLevel={currentLevelNumber}
         onDropPlatform={handleDropPlatform}
+      />
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        level={level}
+        onPlay={() => navigate('/game')}
       />
     </div>
   );

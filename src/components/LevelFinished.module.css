@@ -119,3 +119,36 @@
 .buttonNext {
   background-color: #b71c1c;
 }
+
+.buttonEdit {
+  background-color: #11998e;
+}
+
+.buttonSave {
+  background-color: #38ef7d;
+  color: #06171b;
+}
+
+.customBadge {
+  background-color: #38ef7d;
+  color: #06171b;
+  font-size: 18px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  display: inline-block;
+  font-family: inherit;
+}
+
+.saveToast {
+  margin-top: 12px;
+  font-size: 20px;
+  color: #38ef7d;
+  font-family: inherit;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
