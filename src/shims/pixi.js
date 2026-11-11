@@ -1,7 +1,3 @@
-import 'phaser-ce/build/custom/pixi.js';
+const PIXI = typeof window !== 'undefined' ? window.PIXI : (typeof globalThis !== 'undefined' ? globalThis.PIXI : undefined);
 
-if (typeof window !== 'undefined' && !window.PIXI && typeof PIXI !== 'undefined') {
-  window.PIXI = PIXI;
-}
-
-export default (typeof window !== 'undefined' ? window.PIXI : undefined);
+export default PIXI;

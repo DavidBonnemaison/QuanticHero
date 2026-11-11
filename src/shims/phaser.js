@@ -1,9 +1,3 @@
-import './pixi.js';
-import './p2.js';
-import 'phaser-ce/build/custom/phaser-split.js';
+const Phaser = typeof window !== 'undefined' ? window.Phaser : (typeof globalThis !== 'undefined' ? globalThis.Phaser : undefined);
 
-if (typeof window !== 'undefined' && !window.Phaser && typeof Phaser !== 'undefined') {
-  window.Phaser = Phaser;
-}
-
-export default (typeof window !== 'undefined' ? window.Phaser : undefined);
+export default Phaser;

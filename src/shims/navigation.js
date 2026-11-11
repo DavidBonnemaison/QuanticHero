@@ -16,7 +16,7 @@ export const routerReducer = (state = { location: null }, action) => {
   return state;
 };
 
-export const routerMiddleware = () => (next) => (action) => {
+export const routerMiddleware = () => (store) => (next) => (action) => {
   if (action && action.type === 'ROUTER_NAVIGATE' && typeof action.payload === 'string') {
     if (currentNavigator) {
       currentNavigator(action.payload);

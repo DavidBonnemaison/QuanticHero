@@ -24,19 +24,6 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
-    chunkSizeWarningLimit: 1600,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('phaser-ce') || id.includes('shims/phaser') || id.includes('shims/pixi') || id.includes('shims/p2')) {
-            return 'phaser';
-          }
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) {
-            return 'vendor-react';
-          }
-        }
-      }
-    }
+    sourcemap: true
   }
 });
