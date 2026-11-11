@@ -75,7 +75,7 @@ export default function LevelFinished(): React.ReactElement {
 
   const handleSaveToMyLevels = () => {
     saveSharedLevelToCustom(1);
-    setSaveMessage('Niveau sauvegardé dans vos niveaux !');
+    setSaveMessage('Level saved to your custom levels!');
     setTimeout(() => setSaveMessage(null), 3000);
   };
 
@@ -84,8 +84,8 @@ export default function LevelFinished(): React.ReactElement {
       {isShared && (
         <div className={styles.customBadge}>
           {sharedLevel?.authorTime
-            ? `★ DÉFI SPEEDRUN : ${atom} (${formatScore(sharedLevel.authorTime)}) ★`
-            : `★ DÉFI SPEEDRUN : ${atom} ★`}
+            ? `★ SPEEDRUN CHALLENGE: ${atom} (${formatScore(sharedLevel.authorTime)}) ★`
+            : `★ SPEEDRUN CHALLENGE: ${atom} ★`}
         </div>
       )}
       <h1 className={styles.done}>{atom}</h1>
@@ -129,14 +129,14 @@ export default function LevelFinished(): React.ReactElement {
             className={`${styles.button} ${styles.buttonSave}`}
             onClick={handleSaveToMyLevels}
           >
-            Sauvegarder
+            Save
           </button>
           <button
             type="button"
             className={`${styles.button} ${styles.buttonShare}`}
             onClick={() => setIsShareOpen(true)}
           >
-            Partager
+            Share
           </button>
           <button
             type="button"
@@ -146,7 +146,7 @@ export default function LevelFinished(): React.ReactElement {
               navigate('/levels');
             }}
           >
-            Niveaux
+            Levels
           </button>
         </div>
       ) : (
@@ -170,7 +170,7 @@ export default function LevelFinished(): React.ReactElement {
             className={`${styles.button} ${styles.buttonShare}`}
             onClick={() => setIsShareOpen(true)}
           >
-            Partager
+            Share
           </button>
           <button
             type="button"

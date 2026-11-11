@@ -32,7 +32,7 @@ describe('ShareModal component', () => {
   it('renders modal with level info and QR code image when isOpen is true', async () => {
     render(<ShareModal isOpen={true} onClose={vi.fn()} level={mockLevel} />);
 
-    expect(screen.getByRole('heading', { level: 2, name: /défi quantique/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: /quantum challenge/i })).toBeInTheDocument();
     expect(screen.getByText(/Quark/)).toBeInTheDocument();
 
     // QR code image is generated asynchronously
@@ -42,7 +42,7 @@ describe('ShareModal component', () => {
       expect(img.getAttribute('src')).toMatch(/^data:image\/png;base64,/);
     });
 
-    const input = screen.getByLabelText('URL du niveau') as HTMLInputElement;
+    const input = screen.getByLabelText('Level URL') as HTMLInputElement;
     expect(input.value).toContain('#custom=');
   });
 
@@ -57,18 +57,18 @@ describe('ShareModal component', () => {
 
     render(<ShareModal isOpen={true} onClose={vi.fn()} level={mockLevel} />);
 
-    const copyBtn = screen.getByRole('button', { name: /copier le lien/i });
+    const copyBtn = screen.getByRole('button', { name: /copy link/i });
     fireEvent.click(copyBtn);
 
     expect(writeTextMock).toHaveBeenCalled();
-    expect(await screen.findByText(/lien copié dans le presse-papier/i)).toBeInTheDocument();
+    expect(await screen.findByText(/link copied to clipboard/i)).toBeInTheDocument();
   });
 
-  it('triggers onPlay when "Tester le défi" is clicked', () => {
+  it('triggers onPlay when "Play Challenge" is clicked', () => {
     const onPlayMock = vi.fn();
     render(<ShareModal isOpen={true} onClose={vi.fn()} level={mockLevel} onPlay={onPlayMock} />);
 
-    const playBtn = screen.getByRole('button', { name: /tester le défi/i });
+    const playBtn = screen.getByRole('button', { name: /play challenge/i });
     fireEvent.click(playBtn);
     expect(onPlayMock).toHaveBeenCalledTimes(1);
   });
@@ -77,7 +77,7 @@ describe('ShareModal component', () => {
     const onCloseMock = vi.fn();
     render(<ShareModal isOpen={true} onClose={onCloseMock} level={mockLevel} />);
 
-    const closeBtn = screen.getByLabelText('Fermer');
+    const closeBtn = screen.getByLabelText('Close');
     fireEvent.click(closeBtn);
     expect(onCloseMock).toHaveBeenCalledTimes(1);
   });
@@ -86,7 +86,7 @@ describe('ShareModal component', () => {
     const onCloseMock = vi.fn();
     render(<ShareModal isOpen={true} onClose={onCloseMock} level={mockLevel} />);
 
-    const cancelButtons = screen.getAllByRole('button', { name: /fermer/i });
+    const cancelButtons = screen.getAllByRole('button', { name: /close/i });
     // Click the bottom action button
     fireEvent.click(cancelButtons[1]);
     expect(onCloseMock).toHaveBeenCalledTimes(1);

@@ -134,7 +134,7 @@ describe('LevelSelection component', () => {
     renderWithRouter();
 
     // Entanglement tab is visible
-    const entanglementTab = screen.getByRole('button', { name: /intrication/i });
+    const entanglementTab = screen.getByRole('button', { name: /entanglement/i });
     expect(entanglementTab).toBeInTheDocument();
 
     // Click Entanglement tab

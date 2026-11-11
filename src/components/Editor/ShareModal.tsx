@@ -114,17 +114,17 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
           type="button"
           className={styles.closeButton}
           onClick={onClose}
-          aria-label="Fermer"
+          aria-label="Close"
         >
           [X]
         </button>
 
         <div className={styles.header}>
           <h2 id="share-modal-title" className={styles.title}>
-            === DÉFI QUANTIQUE ===
+            === QUANTUM CHALLENGE ===
           </h2>
           <p className={styles.subtitle}>
-            SCANNEZ LE QR CODE ARCADE OU COPIEZ LE LIEN DU DÉFI
+            SCAN ARCADE QR CODE OR COPY CHALLENGE LINK
           </p>
         </div>
 
@@ -134,12 +134,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
           </div>
           {level.authorTime !== undefined && level.authorTime > 0 && (
             <div className={styles.authorRecord}>
-              RECORD À BATTRE : {formatScore(level.authorTime)}
+              RECORD TO BEAT: {formatScore(level.authorTime)}
             </div>
           )}
           {level.authorGhost && (
             <div className={styles.ghostBadge}>
-              ★ FANTÔME DE L'AUTEUR INCLUS DANS LE DÉFI ★
+              ★ AUTHOR GHOST INCLUDED IN CHALLENGE ★
             </div>
           )}
         </div>
@@ -149,18 +149,18 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
             {qrCodeDataUrl ? (
               <img
                 src={qrCodeDataUrl}
-                alt="QR Code du niveau"
+                alt="Level QR Code"
                 className={styles.qrImage}
                 data-testid="qr-code-image"
               />
             ) : (
               <div className={styles.qrLoading}>
-                GÉNÉRATION DU QR CODE...
+                GENERATING QR CODE...
               </div>
             )}
           </div>
           <div className={styles.qrHint}>
-            [ SCANNER AVEC L'APPAREIL PHOTO D'UN SMARTPHONE ]
+            [ SCAN WITH A SMARTPHONE CAMERA ]
           </div>
         </div>
 
@@ -171,16 +171,16 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
               readOnly
               value={shareUrl}
               className={styles.urlInput}
-              aria-label="URL du niveau"
+              aria-label="Level URL"
               onFocus={(e) => e.target.select()}
             />
             <button type="button" className={styles.copyButton} onClick={handleCopy}>
-              COPIER LE LIEN
+              COPY LINK
             </button>
           </div>
           {copied && (
             <div className={styles.toast} role="status" aria-live="polite">
-              ★ LIEN COPIÉ DANS LE PRESSE-PAPIER ! ★
+              ★ LINK COPIED TO CLIPBOARD! ★
             </div>
           )}
         </div>
@@ -191,7 +191,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
             className={`${styles.actionButton} ${styles.cancelButton}`}
             onClick={onClose}
           >
-            [ FERMER ]
+            [ CLOSE ]
           </button>
           {onPlay && (
             <button
@@ -199,7 +199,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
               className={`${styles.actionButton} ${styles.playButton}`}
               onClick={onPlay}
             >
-              [ TESTER LE DÉFI ▶ ]
+              [ PLAY CHALLENGE ▶ ]
             </button>
           )}
         </div>

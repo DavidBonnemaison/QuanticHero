@@ -421,7 +421,7 @@ async function run() {
 
     await new Promise(r => setTimeout(r, 500));
     const donePageInfo = await page.evaluate(() => {
-      const shareBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Partager'));
+      const shareBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Share'));
       const text = document.body.textContent || '';
       return {
         hasShareButton: !!shareBtn,
@@ -430,9 +430,9 @@ async function run() {
     });
     console.log('Level completion screen info:', JSON.stringify(donePageInfo));
     if (!donePageInfo.hasShareButton) {
-      throw new Error('Share button ("Partager") not found on /done screen');
+      throw new Error('Share button ("Share") not found on /done screen');
     }
-    console.log('✓ Level completion verified with "Partager" button!');
+    console.log('✓ Level completion verified with "Share" button!');
     await page.screenshot({ path: '/tmp/done_screenshot.png' });
     console.log('/done verified and screenshot saved to /tmp/done_screenshot.png!');
 
@@ -457,7 +457,7 @@ async function run() {
     console.log('Verifying Entanglement tab is hidden when maxLevel < 10...');
     const isEntanglementHidden = await page.evaluate(() => {
       const text = document.body.textContent || '';
-      return !text.includes('INTRICATION');
+      return !text.includes('ENTANGLEMENT');
     });
     if (!isEntanglementHidden) {
       throw new Error('Entanglement tab should be hidden when maxLevel < 10');
@@ -484,7 +484,7 @@ async function run() {
 
     const entanglementTabClicked = await page.evaluate(() => {
       const btns = Array.from(document.querySelectorAll('button'));
-      const tab = btns.find(b => b.textContent && b.textContent.includes('INTRICATION'));
+      const tab = btns.find(b => b.textContent && b.textContent.includes('ENTANGLEMENT'));
       if (tab) {
         tab.click();
         return true;
