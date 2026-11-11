@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:e2e": "node scripts/test-e2e.js",
     "generate:level": "tsx scripts/generate-quantum-level.ts",
+    "generate:campaign": "tsx scripts/generate-campaign.ts",
     "lint": "biome check src",
     "format": "biome format --write src",
     "check": "biome check --write src"

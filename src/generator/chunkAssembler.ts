@@ -1,11 +1,12 @@
 import { getNarrativeForLevel } from '../data/cosmicNarrative';
 import { getElementSpectroscopy } from '../data/spectroscopy';
 import { PHYSICS } from '../physics/constants';
-import type { Door, LevelData, Particle, Platform, Spike } from '../types';
+import type { CollapseConfig, Door, LevelData, Particle, Platform, Spike } from '../types';
 import {
   type Chunk,
   type ChunkArchetype,
   checkChunksOverlap,
+  computeChunkBounds,
   createDecayZoneChunk,
   createElectronChasmChunk,
   createGravityWellChunk,
@@ -161,7 +162,7 @@ export function assemblePacedLevel(options: PacedAssemblerOptions = {}): PacedLe
       stepSpacing: 180,
       platformWidth: 160,
       verticalStep: -25,
-      initialPhase: 'cyan'
+      initialPhase: 'magenta'
     });
     climaxDeltaY = -20;
   } else {
@@ -248,6 +249,494 @@ export function assemblePacedLevel(options: PacedAssemblerOptions = {}): PacedLe
     particles: allParticles,
     platforms: allPlatforms,
     door,
+    authorGhost: simulation.authorGhost,
+    authorTime: simulation.authorTime,
+    meta: {
+      seed,
+      generatorVersion: '2.0.0',
+      path: simulation.path
+    }
+  };
+
+  return {
+    levelData,
+    chunks,
+    pacingPhases: {
+      awakening: awakeningChunk,
+      acceleration: accelerationChunk,
+      climax: climaxChunk,
+      resolution: resolutionChunk
+    },
+    fullPlatformPath,
+    simulation
+  };
+}
+
+/**
+ * Assembles a campaign level (Levels 1 to 10) with its designated hallmark mechanic:
+ * - Niv 1 (H) : Éveil & Tuto (sauts confortables, texte "Oops..." conservé)
+ * - Niv 2 (He) : Autoroute speedrun fluide
+ * - Niv 3 (Li) : Gouffre à électrons & lowGravity
+ * - Niv 4 (Be) : Clonage quantique (duplicate, uncertainty: 4)
+ * - Niv 5 (B) : Puits gravitationnel vertical avec murs néon rebondissants (kind: 'wall')
+ * - Niv 6 (C) : Inversion de gravité (antiGravity)
+ * - Niv 7 (N) : Effet Tunnel (tunnel, barrière de potentiel)
+ * - Niv 8 (O) : Chambre de Superposition de Phase (alternance cyan/magenta)
+ * - Niv 9 (F) : Répulsion de Pauli (pauli) + Plateformes de demi-vie (decayMs)
+ * - Niv 10 (Ne) : Dilatation temporelle (timeDilation) + plateformes mobiles + Mini-boss effondrement (collapse)
+ */
+export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssembly {
+  const elementInfo = getElementSpectroscopy(level);
+  const narrative = getNarrativeForLevel(level);
+
+  let width = 2200;
+  let height = 1100;
+  const alpha = 0.75;
+
+  let awakeningChunk: Chunk;
+  let accelerationChunk: Chunk;
+  let climaxChunk: Chunk;
+  let resolutionChunk: Chunk;
+  let collapseConfig: CollapseConfig | undefined;
+
+  switch (level) {
+    case 1: {
+      // Niv 1 (H) : Éveil & Tuto (sauts confortables, texte "Oops..." conservé).
+      width = 1800;
+      height = 1000;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 720, width: 280 });
+
+      const p1: Platform = { x: 480, y: 700, width: 210, height: 20 };
+      const p2: Platform = { x: 760, y: 680, width: 210, height: 20 };
+      const p3: Platform = { x: 1040, y: 660, width: 210, height: 20 };
+      const accelPlatforms = [p1, p2, p3];
+
+      accelerationChunk = {
+        id: 'chunk_tuto_stepping',
+        name: 'Tutoriel Quantique',
+        archetype: 'speedrun_highway',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p3.x + p3.width - 40, y: p3.y },
+        platforms: accelPlatforms,
+        pathPlatforms: accelPlatforms,
+        spikes: [],
+        particles: [],
+        bounds: computeChunkBounds(accelPlatforms)
+      };
+
+      const p4: Platform = { x: 1310, y: 640, width: 210, height: 20 };
+      climaxChunk = {
+        id: 'chunk_tuto_climax',
+        name: "L'Éveil",
+        archetype: 'speedrun_highway',
+        entry: { x: p4.x + 40, y: p4.y },
+        exit: { x: p4.x + p4.width - 40, y: p4.y },
+        platforms: [p4],
+        pathPlatforms: [p4],
+        spikes: [],
+        particles: [],
+        bounds: computeChunkBounds([p4])
+      };
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 2: {
+      // Niv 2 (He) : Autoroute speedrun fluide
+      width = 2200;
+      height = 1100;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 600, width: 260 });
+      const rawHighway = createSpeedrunHighwayChunk({
+        steps: 4,
+        horizontalSpacing: 200,
+        verticalDrop: 38,
+        platformWidth: 190,
+        speedBoostParticle: true
+      });
+      accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawHighway, alpha, -10);
+
+      const rawClimax = createSpeedrunHighwayChunk({
+        id: 'chunk_speedrun_climax',
+        steps: 3,
+        horizontalSpacing: 190,
+        verticalDrop: 32,
+        platformWidth: 180,
+        speedBoostParticle: false
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -10);
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 3: {
+      // Niv 3 (Li) : Gouffre à électrons & lowGravity
+      width = 2200;
+      height = 1100;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 660, width: 240 });
+      const rawChasm = createElectronChasmChunk({
+        chasmWidth: 480,
+        powerType: 'lowGravity',
+        startWidth: 180,
+        landingWidth: 200,
+        verticalDrop: 20
+      });
+      accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawChasm, alpha, -15);
+
+      const rawClimax = createSpeedrunHighwayChunk({
+        id: 'chunk_chasm_climax',
+        steps: 2,
+        horizontalSpacing: 180,
+        verticalDrop: 20,
+        platformWidth: 180,
+        speedBoostParticle: false
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -10);
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 4: {
+      // Niv 4 (Be) : Clonage quantique (duplicate, uncertainty: 4)
+      width = 2200;
+      height = 1100;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 660, width: 240 });
+
+      const p1: Platform = { x: 440, y: 640, width: 190, height: 20 };
+      const p2: Platform = { x: 690, y: 620, width: 190, height: 20 };
+      const p3: Platform = { x: 940, y: 600, width: 190, height: 20 };
+      const dupPart: Particle = { x: p2.x + 95, y: p2.y - 30, type: 'duplicate' };
+      const accelPlats = [p1, p2, p3];
+
+      accelerationChunk = {
+        id: 'chunk_cloning_accel',
+        name: 'Clonage Quantique',
+        archetype: 'speedrun_highway',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p3.x + p3.width - 40, y: p3.y },
+        platforms: accelPlats,
+        pathPlatforms: accelPlats,
+        spikes: [],
+        particles: [dupPart],
+        bounds: computeChunkBounds(accelPlats, [], [dupPart])
+      };
+
+      const rawClimax = createSpeedrunHighwayChunk({
+        id: 'chunk_cloning_climax',
+        steps: 2,
+        horizontalSpacing: 190,
+        verticalDrop: 25,
+        platformWidth: 180,
+        speedBoostParticle: false
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -10);
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 5: {
+      // Niv 5 (B) : Puits gravitationnel vertical avec murs néon rebondissants (kind: 'wall')
+      width = 2200;
+      height = 1300;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 880, width: 240 });
+
+      const rawLeadIn = createSpeedrunHighwayChunk({
+        steps: 2,
+        horizontalSpacing: 180,
+        verticalDrop: 25,
+        platformWidth: 180,
+        speedBoostParticle: false
+      });
+      accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawLeadIn, alpha, -10);
+
+      const rawWell = createGravityWellChunk({
+        wellWidth: 380,
+        height: 420,
+        steps: 2
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawWell, alpha, 20);
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 6: {
+      // Niv 6 (C) : Inversion de gravité (antiGravity)
+      width = 2200;
+      height = 1100;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
+
+      const p1: Platform = { x: 440, y: 680, width: 200, height: 20 };
+      const antiGravPart: Particle = { x: 620, y: 550, type: 'antiGravity' };
+
+      // Inverted ceiling traversal (hero stands upside-down against bottom of platform)
+      const p2: Platform = { x: 740, y: 240, width: 240, height: 20 };
+      const p3: Platform = { x: 1060, y: 240, width: 240, height: 20 };
+      const restorePart: Particle = { x: 1340, y: 350, type: 'antiGravity' };
+
+      const p4: Platform = { x: 1380, y: 640, width: 240, height: 20 };
+      const invPlats = [p1, p2, p3, p4];
+      const invParts = [antiGravPart, restorePart];
+
+      accelerationChunk = {
+        id: 'chunk_antigravity',
+        name: 'Inversion de Gravité',
+        archetype: 'speedrun_highway',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p4.x + p4.width - 40, y: p4.y },
+        platforms: invPlats,
+        pathPlatforms: invPlats,
+        spikes: [],
+        particles: invParts,
+        bounds: computeChunkBounds(invPlats, [], invParts)
+      };
+      climaxChunk = accelerationChunk;
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(accelerationChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 7: {
+      // Niv 7 (N) : Effet Tunnel (tunnel, barrière de potentiel)
+      width = 2200;
+      height = 1100;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
+
+      const p1: Platform = { x: 440, y: 680, width: 200, height: 20 };
+      const tunnelPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'tunnel' };
+
+      // Potential barrier between p1 and p2
+      const barrier: Platform = { x: 695, y: 590, width: 24, height: 110 };
+
+      const p2: Platform = { x: 725, y: 680, width: 220, height: 20 };
+      const p3: Platform = { x: 1010, y: 660, width: 220, height: 20 };
+      const tunnelPlatforms = [p1, barrier, p2, p3];
+
+      accelerationChunk = {
+        id: 'chunk_tunnel_barrier',
+        name: 'Effet Tunnel',
+        archetype: 'speedrun_highway',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p3.x + p3.width - 40, y: p3.y },
+        platforms: tunnelPlatforms,
+        pathPlatforms: [p1, p2, p3],
+        spikes: [],
+        particles: [tunnelPart],
+        bounds: computeChunkBounds(tunnelPlatforms, [], [tunnelPart])
+      };
+      climaxChunk = accelerationChunk;
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(accelerationChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 8: {
+      // Niv 8 (O) : Chambre de Superposition de Phase (alternance cyan/magenta)
+      width = 2400;
+      height = 1100;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
+
+      const rawLead = createSpeedrunHighwayChunk({
+        steps: 2,
+        horizontalSpacing: 180,
+        verticalDrop: 25,
+        platformWidth: 180,
+        speedBoostParticle: false
+      });
+      accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawLead, alpha, -15);
+
+      const rawSuperpos = createSuperpositionChamberChunk({
+        steps: 4,
+        stepSpacing: 180,
+        platformWidth: 160,
+        verticalStep: -25,
+        initialPhase: 'cyan'
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawSuperpos, alpha, -20);
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 9: {
+      // Niv 9 (F) : Répulsion de Pauli (pauli) + Plateformes de demi-vie (decayMs)
+      width = 2400;
+      height = 1100;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
+      awakeningChunk.particles.push({
+        x: awakeningChunk.platforms[0].x + 120,
+        y: awakeningChunk.platforms[0].y - 30,
+        type: 'pauli'
+      });
+
+      const rawLead = createSpeedrunHighwayChunk({
+        steps: 2,
+        horizontalSpacing: 180,
+        verticalDrop: 25,
+        platformWidth: 180,
+        speedBoostParticle: false
+      });
+      accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawLead, alpha, -15);
+
+      const rawDecay = createDecayZoneChunk({
+        steps: 4,
+        decayMs: 750,
+        stepSpacing: 170,
+        platformWidth: 150,
+        verticalDelta: -20,
+        includeStableExit: true
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawDecay, alpha, -20);
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 10: {
+      // Niv 10 (Ne) : Dilatation temporelle (timeDilation) + plateformes mobiles + Mini-boss effondrement (collapse)
+      width = 2400;
+      height = 1100;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
+      awakeningChunk.particles.push({
+        x: awakeningChunk.platforms[0].x + 120,
+        y: awakeningChunk.platforms[0].y - 30,
+        type: 'timeDilation'
+      });
+
+      const mp1: Platform = {
+        x: 450,
+        y: 680,
+        width: 180,
+        height: 20,
+        movesTo: { x: 530 }
+      };
+      const mp2: Platform = {
+        x: 740,
+        y: 660,
+        width: 180,
+        height: 20,
+        movesTo: { y: 630 }
+      };
+      const movingPlats = [mp1, mp2];
+
+      accelerationChunk = {
+        id: 'chunk_moving_platforms',
+        name: 'Plateformes Temporelles',
+        archetype: 'speedrun_highway',
+        entry: { x: mp1.x + 40, y: mp1.y },
+        exit: { x: mp2.x + mp2.width - 40, y: mp2.y },
+        platforms: movingPlats,
+        pathPlatforms: movingPlats,
+        spikes: [],
+        particles: [],
+        bounds: computeChunkBounds(movingPlats)
+      };
+
+      const rawClimax = createSpeedrunHighwayChunk({
+        id: 'chunk_collapse_highway',
+        steps: 3,
+        horizontalSpacing: 180,
+        verticalDrop: 25,
+        platformWidth: 170,
+        speedBoostParticle: false
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -15);
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+
+      collapseConfig = {
+        speedY: 8,
+        delayMs: 1200
+      };
+      break;
+    }
+
+    default: {
+      // Fallback: general assemblePacedLevel
+      return assemblePacedLevel({ atom: level, seed });
+    }
+  }
+
+  // Aggregate all chunks
+  const chunks: Chunk[] = [awakeningChunk, accelerationChunk, climaxChunk, resolutionChunk];
+
+  const allPlatforms: Platform[] = [];
+  const allSpikes: Spike[] = [
+    // Pit hazard spikes at bottom
+    { x: 0, y: height - 15, width, height: 15 }
+  ];
+  const allParticles: Particle[] = [];
+  const fullPlatformPath: Platform[] = [];
+
+  for (const c of [awakeningChunk, accelerationChunk, climaxChunk, resolutionChunk]) {
+    // Deduplicate in case climax === acceleration
+    for (const p of c.platforms) {
+      if (!allPlatforms.includes(p)) allPlatforms.push(p);
+    }
+    for (const s of c.spikes) {
+      if (!allSpikes.includes(s)) allSpikes.push(s);
+    }
+    for (const part of c.particles) {
+      if (!allParticles.includes(part)) allParticles.push(part);
+    }
+    for (const pp of c.pathPlatforms) {
+      if (!fullPlatformPath.includes(pp)) fullPlatformPath.push(pp);
+    }
+  }
+
+  const player = {
+    position: {
+      x: Math.round(awakeningChunk.entry.x),
+      y: Math.round(awakeningChunk.entry.y - PHYSICS.HERO_HEIGHT / 2)
+    }
+  };
+
+  const door: Door = {
+    x: Math.round(resolutionChunk.exit.x),
+    y: Math.round(resolutionChunk.exit.y - 10)
+  };
+
+  const world = {
+    width,
+    height,
+    gravityY: PHYSICS.GRAVITY_Y,
+    platforms: allPlatforms,
+    spikes: allSpikes,
+    particles: allParticles,
+    bounceWalls: true
+  };
+
+  const simulation = simulateFullLevel(world, player.position, door, fullPlatformPath);
+
+  const levelData: LevelData = {
+    id: String(level),
+    symbol: elementInfo.symbol,
+    atom: elementInfo.name,
+    uncertainty: level === 4 ? 4 : level,
+    width,
+    height,
+    hue: elementInfo.hue,
+    antiHue: elementInfo.antiHue,
+    explanations: narrative,
+    player,
+    spikes: allSpikes,
+    particles: allParticles,
+    platforms: allPlatforms,
+    door,
+    collapse: collapseConfig,
     authorGhost: simulation.authorGhost,
     authorTime: simulation.authorTime,
     meta: {

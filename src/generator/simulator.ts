@@ -17,6 +17,7 @@ export interface SimHeroState {
   animState: 'idle' | 'left' | 'right' | 'jump';
   currentPhase?: 'cyan' | 'magenta';
   gravityMultiplier?: number;
+  tunnelCharges?: number;
   collectedParticleIndices?: number[];
   decayContactTime?: Record<number, number>;
 }
@@ -262,12 +263,35 @@ export function stepSimulation(
           next.gravityMultiplier = 0.5;
         } else if (part.type === 'antiGravity') {
           next.upsideDown = -next.upsideDown;
+        } else if (part.type === 'tunnel') {
+          next.tunnelCharges = 2;
         }
       }
     }
   }
 
-  // 5. Platform landing & ground check
+  // 5. Quantum Tunneling obstacle check
+  if (next.tunnelCharges && next.tunnelCharges > 0) {
+    for (const p of world.platforms) {
+      if (p.width <= 80 && p.height >= 30) {
+        const vOverlap = newY + halfH > p.y && newY - halfH < p.y + p.height;
+        if (vOverlap) {
+          if (next.vx > 0 && newX + halfW >= p.x && newX - halfW <= p.x + p.width) {
+            newX = p.x + p.width + halfW + 6;
+            next.tunnelCharges--;
+            break;
+          }
+          if (next.vx < 0 && newX - halfW <= p.x + p.width && newX + halfW >= p.x) {
+            newX = p.x - halfW - 6;
+            next.tunnelCharges--;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // 6. Platform landing & ground check
   let landed = false;
   if (next.upsideDown === 1) {
     const prevBottom = hero.y + halfH;
@@ -314,6 +338,47 @@ export function stepSimulation(
         }
       }
     }
+  } else {
+    // upsideDown === -1: hero stands against underside of platform
+    const prevTop = hero.y - halfH;
+    const nextTop = newY - halfH;
+
+    for (let idx = 0; idx < world.platforms.length; idx++) {
+      const p = world.platforms[idx];
+      if (p.kind === 'wall') continue;
+
+      if (p.phase && next.currentPhase && p.phase !== next.currentPhase) {
+        continue;
+      }
+
+      if (p.decayMs && p.decayMs > 0 && next.decayContactTime?.[idx] !== undefined) {
+        const contactDuration = next.timeMs - next.decayContactTime[idx];
+        if (contactDuration >= p.decayMs) {
+          continue;
+        }
+      }
+
+      const heroLeft = newX - halfW;
+      const heroRight = newX + halfW;
+      const pLeft = p.x;
+      const pRight = p.x + p.width;
+
+      if (heroRight > pLeft && heroLeft < pRight) {
+        const pBottom = p.y + p.height;
+        if (next.vy <= 0 && prevTop >= pBottom - 12 && nextTop <= pBottom + 2) {
+          newY = pBottom + halfH;
+          next.vy = 0;
+          landed = true;
+          if (p.decayMs && p.decayMs > 0 && next.decayContactTime?.[idx] === undefined) {
+            next.decayContactTime = {
+              ...(next.decayContactTime ?? {}),
+              [idx]: next.timeMs
+            };
+          }
+          break;
+        }
+      }
+    }
   }
 
   next.x = newX;
@@ -330,7 +395,10 @@ export function isHeroOnPlatform(hero: SimHeroState, platform: Platform): boolea
   if (!hero.touchingGround) return false;
   const halfW = PHYSICS.HERO_WIDTH / 2;
   const halfH = PHYSICS.HERO_HEIGHT / 2;
-  const onY = Math.abs(hero.y + halfH - platform.y) < 3;
+  const onY =
+    hero.upsideDown === 1
+      ? Math.abs(hero.y + halfH - platform.y) < 4
+      : Math.abs(hero.y - halfH - (platform.y + platform.height)) < 4;
   const onX = hero.x + halfW > platform.x && hero.x - halfW < platform.x + platform.width;
   return onY && onX;
 }

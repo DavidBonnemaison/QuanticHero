@@ -225,21 +225,21 @@ export function createGravityWellChunk(options: GravityWellOptions = {}): Chunk 
   const particles: Particle[] = [];
   const pathPlatforms: Platform[] = [];
 
-  // Left neon vertical wall
+  // Left neon vertical wall (leaves entrance opening at bottom)
   platforms.push({
     x: originX,
     y: originY,
     width: wallThickness,
-    height,
+    height: Math.max(120, height - 160),
     kind: 'wall'
   });
 
-  // Right neon vertical wall
+  // Right neon vertical wall (leaves exit opening at top)
   platforms.push({
     x: originX + wellWidth - wallThickness,
-    y: originY,
+    y: originY + 70,
     width: wallThickness,
-    height,
+    height: Math.max(120, height - 70),
     kind: 'wall'
   });
 
@@ -262,16 +262,18 @@ export function createGravityWellChunk(options: GravityWellOptions = {}): Chunk 
   pathPlatforms.push(entryLedge);
 
   // Intermediate zigzag climbing ledges
-  const usableHeight = height - 120;
-  const stepYGap = usableHeight / steps;
+  const topY = originY + 80;
+  const bottomY = originY + height - 50;
+  const stepYGap = (bottomY - topY) / (steps + 1);
 
   for (let i = 1; i <= steps; i++) {
-    const ledgeY = Math.round(originY + height - 50 - i * stepYGap);
+    const ledgeY = Math.round(bottomY - i * stepYGap);
     const isRight = i % 2 === 1;
     const ledgeWidth = 90;
+    const ledgeClearance = 12;
     const ledgeX = isRight
-      ? originX + wellWidth - wallThickness - ledgeWidth
-      : originX + wallThickness;
+      ? originX + wellWidth - wallThickness - ledgeWidth - ledgeClearance
+      : originX + wallThickness + ledgeClearance;
 
     const ledge: Platform = {
       x: ledgeX,
@@ -286,8 +288,8 @@ export function createGravityWellChunk(options: GravityWellOptions = {}): Chunk 
   // Exit platform at the top of the well
   const exitLedgeWidth = 110;
   const exitLedge: Platform = {
-    x: originX + wellWidth - wallThickness - exitLedgeWidth,
-    y: originY + 20,
+    x: originX + wellWidth - wallThickness - exitLedgeWidth - 10,
+    y: topY,
     width: exitLedgeWidth,
     height: 20
   };
@@ -424,7 +426,7 @@ export function createElectronChasmChunk(options: ElectronChasmOptions = {}): Ch
 
   // Mid-air particle suspended in the apex arc
   const midX = originX + startWidth + Math.round(chasmWidth * 0.42);
-  const midY = originY - 35; // Apex arc altitude
+  const midY = originY - 110; // Apex arc altitude
   particles.push({
     x: midX,
     y: midY,

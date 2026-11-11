@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
 import * as defaultLevels from '../data/levels';
 import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
+import { assembleCampaignLevel, assemblePacedLevel } from '../generator/chunkAssembler';
 import {
   type DecayPlatformState,
   calculateCollapse,
@@ -138,6 +139,33 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const store = useGameStore.getState();
+
+    // Check if URL contains procedural seed parameter (?seed=... or ?levelSeed=...)
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(
+        window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash
+      );
+      const seedParam =
+        searchParams.get('seed') ||
+        searchParams.get('levelSeed') ||
+        hashParams.get('seed') ||
+        hashParams.get('levelSeed');
+
+      if (seedParam !== null && seedParam !== '') {
+        const seedVal = Number.parseInt(seedParam, 10);
+        if (!Number.isNaN(seedVal)) {
+          const atomParam = searchParams.get('atom') || hashParams.get('atom');
+          const atomVal = atomParam ? Number.parseInt(atomParam, 10) : store.currentLevel || 1;
+          const paced =
+            atomVal <= 10
+              ? assembleCampaignLevel(atomVal, seedVal)
+              : assemblePacedLevel({ atom: atomVal, seed: seedVal });
+          this.levelData = paced.levelData;
+          return;
+        }
+      }
+    }
 
     // Check if URL contains custom level and store hasn't set it yet
     if (!store.sharedLevel && typeof window !== 'undefined') {
