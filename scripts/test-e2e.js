@@ -143,6 +143,11 @@ async function run() {
         const canvas = document.querySelector('canvas');
         const canvasRect = canvas ? canvas.getBoundingClientRect() : null;
         const p = gs ? gs.portalSprite : null;
+        const cam = gs ? gs.cameras.main : null;
+        const hero = gs && gs.heroes ? gs.heroes[0] : null;
+        const platforms = gs && gs.platforms ? gs.platforms.getChildren() : [];
+        const ground = platforms[0];
+
         return {
           hasGame: true,
           currentState: gs && gs.scene.isActive() ? 'Game' : null,
@@ -151,7 +156,26 @@ async function run() {
           canvasTop: canvasRect ? canvasRect.top : null,
           portalX: p ? p.x : null,
           portalY: p ? p.y : null,
-          portalMoves: p && p.body ? p.body.moves : null
+          portalMoves: p && p.body ? p.body.moves : null,
+          ground: ground && ground.body ? {
+            x: ground.body.x,
+            y: ground.body.y,
+            immovable: ground.body.immovable,
+            allowGravity: ground.body.allowGravity
+          } : null,
+          hero: hero && hero.body ? {
+            x: Math.round(hero.x),
+            y: Math.round(hero.y),
+            vy: Math.round(hero.body.velocity.y),
+            blockedDown: hero.body.blocked.down,
+            touchingDown: hero.body.touching.down
+          } : null,
+          camera: cam ? {
+            scrollX: cam.scrollX,
+            scrollY: cam.scrollY,
+            midX: cam.midPoint.x,
+            midY: cam.midPoint.y
+          } : null
         };
       }
       return { hasGame: false };
@@ -164,6 +188,39 @@ async function run() {
     if (gameState.canvasTop !== 0) {
       console.warn(`Canvas top is ${gameState.canvasTop} (expected 0)`);
     }
+
+    // REGRESSION TEST: Verify Ground Platform is immovable and did not fall with gravity
+    if (!gameState.ground) {
+      throw new Error('Ground platform not found or has no physics body');
+    }
+    if (gameState.ground.y !== 960) {
+      throw new Error(`Ground platform fell! Expected y=960, got y=${gameState.ground.y}`);
+    }
+    if (!gameState.ground.immovable) {
+      throw new Error('Ground platform must be immovable');
+    }
+    console.log('✓ Ground platform position and immovability verified (y=960, immovable=true)');
+
+    // REGRESSION TEST: Verify Hero landed on the ground and did not fall into the void
+    if (!gameState.hero) {
+      throw new Error('Hero not found or has no physics body');
+    }
+    if (gameState.hero.y > 940 || gameState.hero.y < 915) {
+      throw new Error(`Hero position out of bounds: expected y around 928, got ${gameState.hero.y}`);
+    }
+    if (!gameState.hero.touchingDown && !gameState.hero.blockedDown) {
+      throw new Error('Hero is not grounded on the platform (touchingDown/blockedDown is false)');
+    }
+    console.log(`✓ Hero landed stably on platform (hero.y=${gameState.hero.y}, touchingDown=${gameState.hero.touchingDown})`);
+
+    // REGRESSION TEST: Verify Camera is centered on hero and within scene bounds (not drifting)
+    if (!gameState.camera) {
+      throw new Error('Camera main not found');
+    }
+    if (gameState.camera.scrollY !== 400) {
+      throw new Error(`Camera scrollY abnormal: expected 400, got ${gameState.camera.scrollY}`);
+    }
+    console.log(`✓ Camera scroll verified (scrollY=${gameState.camera.scrollY}, midY=${gameState.camera.midY})`);
 
     await page.screenshot({ path: '/tmp/gameplay_screenshot.png' });
     console.log('Screenshot saved to /tmp/gameplay_screenshot.png');

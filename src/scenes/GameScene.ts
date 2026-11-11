@@ -27,8 +27,9 @@ export default class GameScene extends Phaser.Scene {
   public portalSprite!: Phaser.Physics.Arcade.Sprite;
   public heroes: Hero[] = [];
   public heroGroup!: Phaser.Physics.Arcade.Group;
-  public platforms!: Phaser.Physics.Arcade.Group;
-  public spikes!: Phaser.Physics.Arcade.Group;
+  public platforms!: Phaser.Physics.Arcade.StaticGroup;
+  public movingPlatformsGroup!: Phaser.Physics.Arcade.Group;
+  public spikes!: Phaser.Physics.Arcade.StaticGroup;
   public particles!: Phaser.Physics.Arcade.Group;
 
   private movingPlatforms: MovingPlatform[] = [];
@@ -78,7 +79,11 @@ export default class GameScene extends Phaser.Scene {
     this.createMolecules();
 
     // 3. Platforms
-    this.platforms = this.physics.add.group();
+    this.platforms = this.physics.add.staticGroup();
+    this.movingPlatformsGroup = this.physics.add.group({
+      allowGravity: false,
+      immovable: true
+    });
     const antiHueColor = Phaser.Display.Color.HexStringToColor(this.levelData.antiHue).color;
 
     for (const p of this.levelData.platforms) {
@@ -91,13 +96,14 @@ export default class GameScene extends Phaser.Scene {
         height,
         antiHueColor
       );
-      this.physics.add.existing(rect, false);
-      const body = rect.body as Phaser.Physics.Arcade.Body;
-      body.setImmovable(true);
-      body.setAllowGravity(false);
-      this.platforms.add(rect);
 
       if (p.movesTo) {
+        this.physics.add.existing(rect, false);
+        this.movingPlatformsGroup.add(rect);
+        const body = rect.body as Phaser.Physics.Arcade.Body;
+        body.setImmovable(true);
+        body.setAllowGravity(false);
+
         const dirX =
           p.movesTo.x !== undefined
             ? p.movesTo.x > p.x
@@ -123,11 +129,14 @@ export default class GameScene extends Phaser.Scene {
           startX: p.x + width / 2,
           startY: p.y + height / 2
         });
+      } else {
+        this.physics.add.existing(rect, true);
+        this.platforms.add(rect);
       }
     }
 
     // 4. Spikes
-    this.spikes = this.physics.add.group();
+    this.spikes = this.physics.add.staticGroup();
     const hueColor = Phaser.Display.Color.HexStringToColor(this.levelData.hue).color;
 
     for (const s of this.levelData.spikes) {
@@ -140,15 +149,15 @@ export default class GameScene extends Phaser.Scene {
         height,
         hueColor
       );
-      this.physics.add.existing(spikeRect, false);
-      const body = spikeRect.body as Phaser.Physics.Arcade.Body;
-      body.setImmovable(true);
-      body.setAllowGravity(false);
+      this.physics.add.existing(spikeRect, true);
       this.spikes.add(spikeRect);
     }
 
     // 5. Particles
-    this.particles = this.physics.add.group();
+    this.particles = this.physics.add.group({
+      allowGravity: false,
+      immovable: true
+    });
     const assetMap: Record<ParticleType, string> = {
       duplicate: 'blue',
       speed: 'red',
@@ -161,10 +170,10 @@ export default class GameScene extends Phaser.Scene {
       const sprite = this.physics.add.sprite(part.x, part.y, textureKey);
       sprite.setScale(0.2, 0.2);
       sprite.setData('type', part.type);
+      this.particles.add(sprite);
       const pBody = sprite.body as Phaser.Physics.Arcade.Body;
       pBody.setImmovable(true);
       pBody.setAllowGravity(false);
-      this.particles.add(sprite);
 
       this.tweens.add({
         targets: sprite,
@@ -195,10 +204,12 @@ export default class GameScene extends Phaser.Scene {
     this.heroes.push(initialHero);
     this.heroGroup.add(initialHero);
 
+    this.cameras.main.centerOn(initialHero.x, initialHero.y);
     this.cameras.main.startFollow(initialHero, true, 0.1, 0.1);
 
     // Collisions and Overlaps
     this.physics.add.collider(this.heroGroup, this.platforms);
+    this.physics.add.collider(this.heroGroup, this.movingPlatformsGroup);
     this.physics.add.overlap(this.heroGroup, this.spikes, (_heroObj) => {
       this.killHero(_heroObj as Hero);
     });
