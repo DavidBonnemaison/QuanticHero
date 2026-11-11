@@ -8,8 +8,8 @@
   "hue": "#002b36",
   "antiHue": "#2aa198",
   "explanations": [
-    "Intrication Gravitationnelle : Alpha est soumis à la gravité terrestre (sol).",
-    "Bêta est soumis à l'anti-gravité (plafond). Coordonnez leurs sauts pour franchir les obstacles !"
+    "Gravitational Entanglement: Alpha is bound to ground gravity.",
+    "Beta is bound to anti-gravity (ceiling). Coordinate their jumps to clear the obstacles!"
   ],
   "entanglement": {
     "mode": "inverted_gravity",

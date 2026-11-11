@@ -8,8 +8,8 @@
   "hue": "#0d1b2a",
   "antiHue": "#00f0ff",
   "explanations": [
-    "Mode Intrication Quantique : Vous contrôlez simultanément Alpha (Cyan) et Bêta (Magenta).",
-    "Vos mouvements horizontaux sont inversés par symétrie miroir. Guidez les deux héros vers leurs portails respectifs !"
+    "Quantum Entanglement Mode: You simultaneously control Alpha (Cyan) and Beta (Magenta).",
+    "Horizontal movements are mirrored. Guide both heroes to their respective portals!"
   ],
   "entanglement": {
     "mode": "mirror_x",

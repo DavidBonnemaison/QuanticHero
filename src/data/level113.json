@@ -8,8 +8,8 @@
   "hue": "#1f1d36",
   "antiHue": "#e9a6a6",
   "explanations": [
-    "Gravité Opposée : Le labyrinthe biphasique.",
-    "Alpha et Bêta doivent synchroniser leurs sauts pour franchir les obstacles asymétriques !"
+    "Opposite Gravity: The biphasic labyrinth.",
+    "Alpha and Beta must synchronize their jumps to clear asymmetrical hazards!"
   ],
   "entanglement": {
     "mode": "inverted_gravity",
