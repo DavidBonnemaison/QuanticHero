@@ -117,4 +117,44 @@ describe('LevelSelection component', () => {
     expect(useGameStore.getState().ghostEnabled).toBe(true);
     expect(screen.getByRole('button', { name: /ghost enabled/i })).toHaveTextContent('ON');
   });
+
+  it('switches between Classic and Entanglement tabs and displays entangled levels', () => {
+    useGameStore.setState({ maxEntanglementLevel: 110 });
+    renderWithRouter();
+
+    // In Classic tab by default
+    expect(screen.getByText('Hydrogen')).toBeInTheDocument();
+    expect(screen.queryByText('Darmstadtium')).not.toBeInTheDocument();
+
+    // Click Entanglement tab
+    const entanglementTab = screen.getByRole('button', { name: /entanglement/i });
+    fireEvent.click(entanglementTab);
+
+    // Entangled levels 110-114 should now be visible
+    expect(screen.getByText('Darmstadtium')).toBeInTheDocument();
+    expect(screen.getByText('Roentgenium')).toBeInTheDocument();
+    expect(screen.getByText('Copernicium')).toBeInTheDocument();
+    expect(screen.getByText('Nihonium')).toBeInTheDocument();
+    expect(screen.getByText('Flerovium')).toBeInTheDocument();
+
+    // Level 110 (Darmstadtium) is unlocked
+    const ds = screen.getByText('Darmstadtium').closest('[role="button"]') as HTMLElement;
+    expect(ds).toHaveAttribute('tabindex', '0');
+    expect(ds.className).not.toMatch(/menuItemDisabled/);
+
+    // Level 111 (Roentgenium) is locked when maxEntanglementLevel = 110
+    const rg = screen.getByText('Roentgenium').closest('[role="button"]') as HTMLElement;
+    expect(rg).toHaveAttribute('tabindex', '-1');
+    expect(rg.className).toMatch(/menuItemDisabled/);
+  });
+
+  it('unlocks level 111 when maxEntanglementLevel is 111', () => {
+    useGameStore.setState({ maxEntanglementLevel: 111 });
+    renderWithRouter('/levels?tab=entanglement');
+
+    // Level 111 (Roentgenium) is now unlocked
+    const rg = screen.getByText('Roentgenium').closest('[role="button"]') as HTMLElement;
+    expect(rg).toHaveAttribute('tabindex', '0');
+    expect(rg.className).not.toMatch(/menuItemDisabled/);
+  });
 });

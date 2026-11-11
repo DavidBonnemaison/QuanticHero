@@ -77,3 +77,28 @@
 .soundButton:active {
   transform: scale(0.95);
 }
+
+.entanglementButton {
+  max-width: 340px;
+  border-color: #ec4899;
+  color: #ec4899;
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.25);
+}
+
+.entanglementButton:hover {
+  background-color: #ec4899;
+  color: #fff;
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.5);
+}
+
+.entanglementBadge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 22px;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  background: rgba(236, 72, 153, 0.2);
+  border: 1px solid rgba(236, 72, 153, 0.5);
+}
+

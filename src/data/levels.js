@@ -107,6 +107,11 @@ const level106 = require('./level106');
 const level107 = require('./level107');
 const level108 = require('./level108');
 const level109 = require('./level109');
+const level110 = require('./level110.json');
+const level111 = require('./level111.json');
+const level112 = require('./level112.json');
+const level113 = require('./level113.json');
+const level114 = require('./level114.json');
 
 module.exports = {
   level1,
@@ -217,5 +222,10 @@ module.exports = {
   level106,
   level107,
   level108,
-  level109
+  level109,
+  level110,
+  level111,
+  level112,
+  level113,
+  level114
 };

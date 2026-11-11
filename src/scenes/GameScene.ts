@@ -46,7 +46,13 @@ export default class GameScene extends Phaser.Scene {
   public spikes!: Phaser.Physics.Arcade.StaticGroup;
   public particles!: Phaser.Physics.Arcade.Group;
   public ghostHero: GhostHero | null = null;
+  public isEntangled = false;
+  public betaHero: Hero | null = null;
+  public betaPortalSprite: Phaser.Physics.Arcade.Sprite | null = null;
 
+  private entanglementGraphics: Phaser.GameObjects.Graphics | null = null;
+  private alphaEnteredPortal = false;
+  private betaEnteredPortal = false;
   private ghostRecorder: GhostRecorder = new GhostRecorder();
   private ghostFrames: GhostFrame[] = [];
   private splitDeltaText: Phaser.GameObjects.Text | null = null;
@@ -79,6 +85,12 @@ export default class GameScene extends Phaser.Scene {
     this.ghostFrames = [];
     this.splitDeltaText = null;
     this.ghostButton = null;
+    this.isEntangled = false;
+    this.betaHero = null;
+    this.betaPortalSprite = null;
+    this.entanglementGraphics = null;
+    this.alphaEnteredPortal = false;
+    this.betaEnteredPortal = false;
 
     const store = useGameStore.getState();
 
@@ -274,7 +286,7 @@ export default class GameScene extends Phaser.Scene {
     portalBody.moves = false;
     this.portalSprite.play('spin');
 
-    // 7. Heroes
+    // 7. Heroes & Entanglement Setup
     this.heroGroup = this.physics.add.group();
     const startX = this.levelData.player.position.x;
     const startY = this.levelData.player.position.y;
@@ -282,8 +294,51 @@ export default class GameScene extends Phaser.Scene {
     this.heroes.push(initialHero);
     this.heroGroup.add(initialHero);
 
-    this.cameras.main.centerOn(initialHero.x, initialHero.y);
-    this.cameras.main.startFollow(initialHero, true, 0.1, 0.1);
+    const entanglement = this.levelData.entanglement;
+    this.isEntangled = Boolean(entanglement);
+
+    if (entanglement) {
+      initialHero.setEntangled(false, entanglement.mode);
+
+      const betaX = entanglement.betaSpawn ? entanglement.betaSpawn.x : this.levelData.width - startX;
+      const betaY = entanglement.betaSpawn ? entanglement.betaSpawn.y : startY;
+
+      this.betaHero = new Hero(this, betaX, betaY, true);
+      this.betaHero.setEntangled(true, entanglement.mode);
+      if (entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity') {
+        const bBody = this.betaHero.body as Phaser.Physics.Arcade.Body;
+        bBody.gravity.y = -1400;
+      }
+      this.heroes.push(this.betaHero);
+      this.heroGroup.add(this.betaHero);
+
+      // Create Beta Portal if dual portal mode or betaDoor specified
+      if (entanglement.portalMode === 'dual' || entanglement.betaDoor) {
+        const betaDoorPos = entanglement.betaDoor || this.levelData.door;
+        const betaPortalX = betaDoorPos.x - 48;
+        const betaPortalY = betaDoorPos.y - 96;
+        this.betaPortalSprite = this.physics.add.sprite(betaPortalX, betaPortalY, 'portal');
+        this.betaPortalSprite.setScale(0.15, 0.2);
+        this.betaPortalSprite.setTint(0xec4899);
+        const bpBody = this.betaPortalSprite.body as Phaser.Physics.Arcade.Body;
+        bpBody.setImmovable(true);
+        bpBody.setAllowGravity(false);
+        bpBody.moves = false;
+        this.betaPortalSprite.play('spin');
+      }
+
+      // Entanglement laser beam graphics
+      this.entanglementGraphics = this.add.graphics();
+      this.entanglementGraphics.setDepth(20);
+
+      // Initial camera positioning for centroid
+      const cx = (initialHero.x + this.betaHero.x) / 2;
+      const cy = (initialHero.y + this.betaHero.y) / 2;
+      this.cameras.main.centerOn(cx, cy);
+    } else {
+      this.cameras.main.centerOn(initialHero.x, initialHero.y);
+      this.cameras.main.startFollow(initialHero, true, 0.1, 0.1);
+    }
 
     // Collisions and Overlaps
     this.physics.add.collider(this.heroGroup, this.platforms);
@@ -306,9 +361,21 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.heroGroup, this.particles, (_heroObj, _partObj) => {
       this.collectParticle(_heroObj as Hero, _partObj as Phaser.Physics.Arcade.Sprite);
     });
-    this.physics.add.overlap(this.heroGroup, this.portalSprite, () => {
-      this.completeLevel();
-    });
+
+    if (this.isEntangled) {
+      this.physics.add.overlap(this.heroGroup, this.portalSprite, (_portal, heroObj) => {
+        this.handleEntangledPortalArrival(heroObj as Hero, this.portalSprite, false);
+      });
+      if (this.betaPortalSprite) {
+        this.physics.add.overlap(this.heroGroup, this.betaPortalSprite, (_portal, heroObj) => {
+          this.handleEntangledPortalArrival(heroObj as Hero, this.betaPortalSprite!, true);
+        });
+      }
+    } else {
+      this.physics.add.overlap(this.heroGroup, this.portalSprite, () => {
+        this.completeLevel();
+      });
+    }
 
     // 7b. Ghost Hero Replay
     const store = useGameStore.getState();
@@ -336,6 +403,7 @@ export default class GameScene extends Phaser.Scene {
     this.setupPointerControls();
 
     this.events.on('hero-clicked', (clickedHero: Hero) => {
+      if (this.isEntangled) return;
       if (this.heroes.length > 1) {
         for (const h of this.heroes) {
           h.setFocus(h === clickedHero);
@@ -364,11 +432,19 @@ export default class GameScene extends Phaser.Scene {
       soundManager.stopBgm();
       this.quantumEffects?.destroy();
       this.quantumEffects = null;
+      if (this.entanglementGraphics) {
+        this.entanglementGraphics.destroy();
+        this.entanglementGraphics = null;
+      }
     });
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
       soundManager.stopBgm();
       this.quantumEffects?.destroy();
       this.quantumEffects = null;
+      if (this.entanglementGraphics) {
+        this.entanglementGraphics.destroy();
+        this.entanglementGraphics = null;
+      }
     });
 
     this.startTime = this.time.now;
@@ -583,6 +659,13 @@ export default class GameScene extends Phaser.Scene {
 
   private killHero(hero: Hero): void {
     if (!hero || !hero.active) return;
+
+    if (this.isEntangled) {
+      gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: true });
+      this.scene.restart();
+      return;
+    }
+
     hero.destroy();
     this.heroes = this.heroes.filter((h) => h !== hero && h.active);
     gameEvents.emit('hero:death', { remaining: this.heroes.length });
@@ -595,6 +678,44 @@ export default class GameScene extends Phaser.Scene {
         this.heroes[0].setFocus(true);
         this.cameras.main.startFollow(this.heroes[0], true, 0.1, 0.1);
       }
+    }
+  }
+
+  private handleEntangledPortalArrival(
+    hero: Hero,
+    portal: Phaser.Physics.Arcade.Sprite,
+    isBetaPortal: boolean
+  ): void {
+    if (hero.enteredPortal || this.isLevelCompleted) return;
+
+    const entanglement = this.levelData.entanglement;
+    const isDual = entanglement?.portalMode === 'dual' || Boolean(entanglement?.betaDoor);
+
+    if (isDual) {
+      if (hero.isBeta && !isBetaPortal) return;
+      if (!hero.isBeta && isBetaPortal) return;
+    }
+
+    hero.enteredPortal = true;
+    if (hero.body) {
+      (hero.body as Phaser.Physics.Arcade.Body).enable = false;
+      hero.setVelocity(0, 0);
+    }
+    hero.setPosition(portal.x + 48, portal.y + 96);
+    hero.setAlpha(0.7);
+
+    if (hero.isBeta) {
+      this.betaEnteredPortal = true;
+    } else {
+      this.alphaEnteredPortal = true;
+    }
+
+    gameEvents.emit('hero:portal_docked', { isBeta: hero.isBeta });
+
+    if (this.alphaEnteredPortal && this.betaEnteredPortal) {
+      this.time.delayedCall(120, () => {
+        this.completeLevel();
+      });
     }
   }
 
@@ -693,8 +814,14 @@ export default class GameScene extends Phaser.Scene {
       store.recordScore(currentLvl, elapsedMs, trajectory);
       const nextLevel = currentLvl + 1;
       store.updateCurrentLevel(nextLevel);
-      if (store.maxLevel < nextLevel) {
-        store.updateMaxLevel(nextLevel);
+      if (currentLvl >= 110) {
+        if (store.maxEntanglementLevel < nextLevel) {
+          store.updateMaxEntanglementLevel(nextLevel);
+        }
+      } else {
+        if (store.maxLevel < nextLevel) {
+          store.updateMaxLevel(nextLevel);
+        }
       }
     }
 
@@ -707,12 +834,147 @@ export default class GameScene extends Phaser.Scene {
     push('/done');
   }
 
+  private drawEntanglementBeam(time: number): void {
+    if (!this.entanglementGraphics) return;
+    this.entanglementGraphics.clear();
+
+    const alpha = this.heroes.find((h) => !h.isBeta);
+    const beta = this.heroes.find((h) => h.isBeta);
+    if (!alpha || !beta || !alpha.active || !beta.active) return;
+
+    const ax = alpha.x;
+    const ay = alpha.y;
+    const bx = beta.x;
+    const by = beta.y;
+
+    const dx = bx - ax;
+    const dy = by - ay;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 5) return;
+
+    const nx = -dy / dist;
+    const ny = dx / dist;
+
+    const isReduced = useGameStore.getState().reducedEffects;
+    if (isReduced) {
+      const pulse = 0.5 + 0.3 * Math.sin(time * 0.006);
+      this.entanglementGraphics.lineStyle(3, 0x00ffff, pulse);
+      this.entanglementGraphics.beginPath();
+      this.entanglementGraphics.moveTo(ax, ay);
+      this.entanglementGraphics.lineTo(bx, by);
+      this.entanglementGraphics.strokePath();
+
+      this.entanglementGraphics.lineStyle(1.5, 0xec4899, pulse * 0.8);
+      this.entanglementGraphics.beginPath();
+      this.entanglementGraphics.moveTo(ax, ay);
+      this.entanglementGraphics.lineTo(bx, by);
+      this.entanglementGraphics.strokePath();
+      return;
+    }
+
+    const steps = Math.max(24, Math.min(80, Math.floor(dist / 12)));
+    const waveSpeed = time * 0.009;
+    const waveFreq = 0.035;
+    const baseAmp = 8 + 4 * Math.sin(time * 0.004);
+
+    // Pass 1: Magenta outer glow (representing Beta's quantum field)
+    this.entanglementGraphics.lineStyle(5, 0xec4899, 0.4);
+    this.entanglementGraphics.beginPath();
+    this.entanglementGraphics.moveTo(ax, ay);
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const env = Math.sin(t * Math.PI);
+      const offset = Math.sin(t * dist * waveFreq - waveSpeed) * baseAmp * env;
+      const px = ax + dx * t + nx * offset;
+      const py = ay + dy * t + ny * offset;
+      this.entanglementGraphics.lineTo(px, py);
+    }
+    this.entanglementGraphics.strokePath();
+
+    // Pass 2: Cyan wave (representing Alpha's quantum field)
+    this.entanglementGraphics.lineStyle(3, 0x00e5ff, 0.7);
+    this.entanglementGraphics.beginPath();
+    this.entanglementGraphics.moveTo(ax, ay);
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const env = Math.sin(t * Math.PI);
+      const offset =
+        Math.sin(t * dist * waveFreq - waveSpeed + Math.PI / 4) * (baseAmp * 0.75) * env;
+      const px = ax + dx * t + nx * offset;
+      const py = ay + dy * t + ny * offset;
+      this.entanglementGraphics.lineTo(px, py);
+    }
+    this.entanglementGraphics.strokePath();
+
+    // Pass 3: Bright white core line
+    this.entanglementGraphics.lineStyle(1.5, 0xffffff, 0.9);
+    this.entanglementGraphics.beginPath();
+    this.entanglementGraphics.moveTo(ax, ay);
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const env = Math.sin(t * Math.PI);
+      const offset = Math.sin(t * dist * waveFreq - waveSpeed) * (baseAmp * 0.5) * env;
+      const px = ax + dx * t + nx * offset;
+      const py = ay + dy * t + ny * offset;
+      this.entanglementGraphics.lineTo(px, py);
+    }
+    this.entanglementGraphics.strokePath();
+  }
+
   update(time: number, delta: number): void {
     const elapsedMs = Math.max(0, this.time.now - this.startTime);
 
     // Update timer
     if (this.timerText) {
       this.timerText.setText(formatScore(elapsedMs));
+    }
+
+    // Dynamic camera framing for entangled heroes
+    if (this.isEntangled && this.heroes.length >= 2) {
+      const alpha = this.heroes.find((h) => !h.isBeta);
+      const beta = this.heroes.find((h) => h.isBeta);
+      if (alpha && beta && alpha.active && beta.active) {
+        const cx = (alpha.x + beta.x) / 2;
+        const cy = (alpha.y + beta.y) / 2;
+        const dx = Math.abs(alpha.x - beta.x);
+        const dy = Math.abs(alpha.y - beta.y);
+
+        const viewW = this.cameras.main.width;
+        const viewH = this.cameras.main.height;
+        const paddingX = 240;
+        const paddingY = 200;
+
+        const requiredZoomX = viewW / (dx + paddingX);
+        const requiredZoomY = viewH / (dy + paddingY);
+        const targetZoom = Phaser.Math.Clamp(Math.min(requiredZoomX, requiredZoomY), 0.6, 1.0);
+
+        const currentZoom = this.cameras.main.zoom;
+        const newZoom = Phaser.Math.Linear(currentZoom, targetZoom, 0.08);
+        this.cameras.main.setZoom(newZoom);
+
+        const currentMid = this.cameras.main.midPoint;
+        const newCamX = Phaser.Math.Linear(currentMid.x, cx, 0.1);
+        const newCamY = Phaser.Math.Linear(currentMid.y, cy, 0.1);
+        this.cameras.main.centerOn(newCamX, newCamY);
+      }
+    }
+
+    // Entanglement boundary check & laser beam
+    if (this.isEntangled) {
+      for (const h of this.heroes) {
+        if (h.active && !h.enteredPortal) {
+          if (
+            h.y > this.levelData.height + 60 ||
+            h.y < -60 ||
+            h.x < -60 ||
+            h.x > this.levelData.width + 60
+          ) {
+            this.killHero(h);
+            return;
+          }
+        }
+      }
+      this.drawEntanglementBeam(time);
     }
 
     // Update ghost replay

@@ -52,6 +52,18 @@ describe('Menu component', () => {
     expect(screen.getByText('Explanation Page')).toBeInTheDocument();
   });
 
+  it('renders Entanglement Mode button and navigates to level 110 on click', () => {
+    renderWithRouter();
+
+    const entanglementBtn = screen.getByRole('button', { name: /entanglement mode/i });
+    expect(entanglementBtn).toBeInTheDocument();
+    expect(entanglementBtn).toHaveTextContent('Ψ ⊗ Ψ');
+
+    fireEvent.click(entanglementBtn);
+    expect(useGameStore.getState().currentLevel).toBe(110);
+    expect(screen.getByText('Explanation Page')).toBeInTheDocument();
+  });
+
   it('navigates to levels page on "Levels" click', () => {
     renderWithRouter();
 

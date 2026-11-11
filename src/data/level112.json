@@ -1,0 +1,107 @@
+{
+  "id": "112",
+  "symbol": "Cn",
+  "atom": "Copernicium",
+  "uncertainty": 1,
+  "width": 1400,
+  "height": 1000,
+  "hue": "#002b36",
+  "antiHue": "#2aa198",
+  "explanations": [
+    "Intrication Gravitationnelle : Alpha est soumis à la gravité terrestre (sol).",
+    "Bêta est soumis à l'anti-gravité (plafond). Coordonnez leurs sauts pour franchir les obstacles !"
+  ],
+  "entanglement": {
+    "mode": "inverted_gravity",
+    "betaSpawn": { "x": 150, "y": 120 },
+    "portalMode": "dual",
+    "betaDoor": { "x": 1250, "y": 120 }
+  },
+  "player": {
+    "position": {
+      "x": 150,
+      "y": 880
+    }
+  },
+  "spikes": [
+    {
+      "x": 400,
+      "y": 960,
+      "width": 80,
+      "height": 40
+    },
+    {
+      "x": 880,
+      "y": 960,
+      "width": 80,
+      "height": 40
+    },
+    {
+      "x": 400,
+      "y": 0,
+      "width": 80,
+      "height": 40
+    },
+    {
+      "x": 880,
+      "y": 0,
+      "width": 80,
+      "height": 40
+    }
+  ],
+  "particles": [],
+  "platforms": [
+    {
+      "x": 50,
+      "y": 920,
+      "width": 350,
+      "height": 40
+    },
+    {
+      "x": 480,
+      "y": 920,
+      "width": 400,
+      "height": 40
+    },
+    {
+      "x": 960,
+      "y": 920,
+      "width": 400,
+      "height": 40
+    },
+    {
+      "x": 50,
+      "y": 40,
+      "width": 350,
+      "height": 40
+    },
+    {
+      "x": 480,
+      "y": 40,
+      "width": 400,
+      "height": 40
+    },
+    {
+      "x": 960,
+      "y": 40,
+      "width": 400,
+      "height": 40
+    },
+    {
+      "x": 650,
+      "y": 800,
+      "width": 120,
+      "height": 20
+    },
+    {
+      "x": 650,
+      "y": 160,
+      "width": 120,
+      "height": 20
+    }
+  ],
+  "door": {
+    "x": 1250,
+    "y": 880
+  }
+}

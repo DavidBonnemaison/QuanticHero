@@ -43,6 +43,10 @@ export default function LevelFinished(): React.ReactElement {
 
   const handleNextLevel = () => {
     const nextLevelData = (levels as any)[`level${currentLevel}`];
+    if (!nextLevelData) {
+      navigate('/levels');
+      return;
+    }
     if (nextLevelData?.explanations && nextLevelData.explanations.length > 0) {
       navigate('/explanation');
     } else {

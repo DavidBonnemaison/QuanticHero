@@ -39,6 +39,15 @@ export interface Player {
   position: PlayerPosition;
 }
 
+export type EntanglementMode = 'mirror_x' | 'inverted_gravity' | 'mirror_and_gravity';
+
+export interface EntanglementConfig {
+  mode: EntanglementMode;
+  betaSpawn?: { x: number; y: number };
+  portalMode?: 'single' | 'dual';
+  betaDoor?: { x: number; y: number };
+}
+
 export interface LevelData {
   id: string;
   symbol: string;
@@ -54,6 +63,7 @@ export interface LevelData {
   particles: Particle[];
   platforms: Platform[];
   door: Door;
+  entanglement?: EntanglementConfig;
 }
 
 export type LevelsMap = Record<string, LevelData>;

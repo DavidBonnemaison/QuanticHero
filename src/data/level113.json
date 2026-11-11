@@ -1,0 +1,131 @@
+{
+  "id": "113",
+  "symbol": "Nh",
+  "atom": "Nihonium",
+  "uncertainty": 1,
+  "width": 1500,
+  "height": 1000,
+  "hue": "#1f1d36",
+  "antiHue": "#e9a6a6",
+  "explanations": [
+    "Gravité Opposée : Le labyrinthe biphasique.",
+    "Alpha et Bêta doivent synchroniser leurs sauts pour franchir les obstacles asymétriques !"
+  ],
+  "entanglement": {
+    "mode": "inverted_gravity",
+    "betaSpawn": { "x": 100, "y": 120 },
+    "portalMode": "dual",
+    "betaDoor": { "x": 1400, "y": 120 }
+  },
+  "player": {
+    "position": {
+      "x": 100,
+      "y": 880
+    }
+  },
+  "spikes": [
+    {
+      "x": 330,
+      "y": 960,
+      "width": 50,
+      "height": 40
+    },
+    {
+      "x": 500,
+      "y": 900,
+      "width": 30,
+      "height": 20
+    },
+    {
+      "x": 1070,
+      "y": 960,
+      "width": 50,
+      "height": 40
+    },
+    {
+      "x": 330,
+      "y": 0,
+      "width": 50,
+      "height": 40
+    },
+    {
+      "x": 870,
+      "y": 80,
+      "width": 30,
+      "height": 20
+    },
+    {
+      "x": 1070,
+      "y": 0,
+      "width": 50,
+      "height": 40
+    }
+  ],
+  "particles": [],
+  "platforms": [
+    {
+      "x": 30,
+      "y": 920,
+      "width": 300,
+      "height": 40
+    },
+    {
+      "x": 380,
+      "y": 920,
+      "width": 320,
+      "height": 40
+    },
+    {
+      "x": 750,
+      "y": 920,
+      "width": 320,
+      "height": 40
+    },
+    {
+      "x": 1120,
+      "y": 920,
+      "width": 350,
+      "height": 40
+    },
+    {
+      "x": 30,
+      "y": 40,
+      "width": 300,
+      "height": 40
+    },
+    {
+      "x": 380,
+      "y": 40,
+      "width": 320,
+      "height": 40
+    },
+    {
+      "x": 750,
+      "y": 40,
+      "width": 320,
+      "height": 40
+    },
+    {
+      "x": 1120,
+      "y": 40,
+      "width": 350,
+      "height": 40
+    },
+    {
+      "x": 520,
+      "y": 800,
+      "width": 140,
+      "height": 20
+    },
+    {
+      "x": 890,
+      "y": 160,
+      "width": 140,
+      "height": 20
+    }
+  ],
+  "door": {
+    "x": 1400,
+    "y": 880
+  }
+}

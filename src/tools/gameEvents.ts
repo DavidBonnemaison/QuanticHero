@@ -4,7 +4,8 @@ export interface GameEventPayloads {
   'hero:jump': void;
   'hero:duplicate': { count: number };
   'particle:collect': { type: ParticleType };
-  'hero:death': { remaining: number };
+  'hero:death': { remaining: number; entangledCollapse?: boolean };
+  'hero:portal_docked': { isBeta: boolean };
   'level:complete': { level: number };
 }
 

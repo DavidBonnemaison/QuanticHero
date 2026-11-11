@@ -1,0 +1,131 @@
+{
+  "id": "114",
+  "symbol": "Fl",
+  "atom": "Flerovium",
+  "uncertainty": 1,
+  "width": 1600,
+  "height": 1000,
+  "hue": "#0f051d",
+  "antiHue": "#f43f5e",
+  "explanations": [
+    "Intrication Totale : Symétrie miroir ET gravité inversée !",
+    "Alpha court au sol, Bêta court au plafond en sens opposé. Le test ultime de synchronisation quantique !"
+  ],
+  "entanglement": {
+    "mode": "mirror_and_gravity",
+    "betaSpawn": { "x": 1450, "y": 120 },
+    "portalMode": "dual",
+    "betaDoor": { "x": 150, "y": 120 }
+  },
+  "player": {
+    "position": {
+      "x": 150,
+      "y": 880
+    }
+  },
+  "spikes": [
+    {
+      "x": 450,
+      "y": 960,
+      "width": 70,
+      "height": 40
+    },
+    {
+      "x": 1080,
+      "y": 960,
+      "width": 70,
+      "height": 40
+    },
+    {
+      "x": 780,
+      "y": 900,
+      "width": 40,
+      "height": 20
+    },
+    {
+      "x": 450,
+      "y": 0,
+      "width": 70,
+      "height": 40
+    },
+    {
+      "x": 1080,
+      "y": 0,
+      "width": 70,
+      "height": 40
+    },
+    {
+      "x": 780,
+      "y": 80,
+      "width": 40,
+      "height": 20
+    }
+  ],
+  "particles": [],
+  "platforms": [
+    {
+      "x": 50,
+      "y": 920,
+      "width": 400,
+      "height": 40
+    },
+    {
+      "x": 520,
+      "y": 920,
+      "width": 560,
+      "height": 40
+    },
+    {
+      "x": 1150,
+      "y": 920,
+      "width": 400,
+      "height": 40
+    },
+    {
+      "x": 480,
+      "y": 820,
+      "width": 100,
+      "height": 20
+    },
+    {
+      "x": 1020,
+      "y": 820,
+      "width": 100,
+      "height": 20
+    },
+    {
+      "x": 50,
+      "y": 40,
+      "width": 400,
+      "height": 40
+    },
+    {
+      "x": 520,
+      "y": 40,
+      "width": 560,
+      "height": 40
+    },
+    {
+      "x": 1150,
+      "y": 40,
+      "width": 400,
+      "height": 40
+    },
+    {
+      "x": 480,
+      "y": 140,
+      "width": 100,
+      "height": 20
+    },
+    {
+      "x": 1020,
+      "y": 140,
+      "width": 100,
+      "height": 20
+    }
+  ],
+  "door": {
+    "x": 1450,
+    "y": 880
+  }
+}

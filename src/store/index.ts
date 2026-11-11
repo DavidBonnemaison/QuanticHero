@@ -14,6 +14,7 @@ export interface UpdateLevelFieldParams {
 export interface GameStoreState {
   currentLevel: number;
   maxLevel: number;
+  maxEntanglementLevel: number;
   scores: Record<number, ScoreItem>;
   customLevels: Record<string, LevelData> | null;
   isMuted: boolean;
@@ -26,6 +27,7 @@ export interface GameStoreState {
 export interface GameStoreActions {
   updateCurrentLevel: (lvl: number) => void;
   updateMaxLevel: (lvl: number) => void;
+  updateMaxEntanglementLevel: (lvl: number) => void;
   resetGame: () => void;
   recordScore: (level: number, score: number, ghostTrajectory?: string) => void;
   saveGhostTrajectory: (level: number, trajectory: string) => void;
@@ -97,6 +99,7 @@ const customStorage = {
         state: {
           currentLevel: game.currentLevel ?? 0,
           maxLevel: game.maxLevel ?? 1,
+          maxEntanglementLevel: parsed.state?.maxEntanglementLevel ?? 110,
           scores: score ?? {},
           customLevels: levels ?? null,
           isMuted: parsed.isMuted ?? false,
@@ -128,6 +131,7 @@ export const useGameStore = create<GameStore>()(
     (set, _get) => ({
       currentLevel: 0,
       maxLevel: 1,
+      maxEntanglementLevel: 110,
       scores: {},
       customLevels: null,
       sharedLevel: null,
@@ -152,7 +156,9 @@ export const useGameStore = create<GameStore>()(
 
       updateMaxLevel: (lvl: number) => set({ maxLevel: Number(lvl) }),
 
-      resetGame: () => set({ currentLevel: 0, maxLevel: 1 }),
+      updateMaxEntanglementLevel: (lvl: number) => set({ maxEntanglementLevel: Number(lvl) }),
+
+      resetGame: () => set({ currentLevel: 0, maxLevel: 1, maxEntanglementLevel: 110 }),
 
       recordScore: (level: number, score: number, ghostTrajectory?: string) =>
         set((state) => {
@@ -172,10 +178,17 @@ export const useGameStore = create<GameStore>()(
               ...(trajectoryToSave ? { ghostTrajectory: trajectoryToSave } : {})
             }
           };
-          const maxLevel = score > 0 ? Math.max(state.maxLevel, level + 1) : state.maxLevel;
+          const isEntangled = level >= 110;
+          const maxLevel = (!isEntangled && score > 0) ? Math.max(state.maxLevel, level + 1) : state.maxLevel;
+          const maxEntanglementLevel =
+            isEntangled && score > 0
+              ? Math.max(state.maxEntanglementLevel ?? 110, level + 1)
+              : (state.maxEntanglementLevel ?? 110);
+
           return {
             scores: newScores,
-            maxLevel
+            maxLevel,
+            maxEntanglementLevel
           };
         }),
 

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameEvents } from '../tools/gameEvents';
+import type { EntanglementMode } from '../types';
 
 export interface TouchInputState {
   left: boolean;
@@ -14,6 +15,10 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public upsideDown = 1;
   public recoilTimer = 0;
   public recoilVx = 0;
+  public isEntangled = false;
+  public isBeta = false;
+  public entanglementMode?: EntanglementMode;
+  public enteredPortal = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, isFocused = true) {
     super(scene, x, y, isFocused ? 'hero' : 'disabled');
@@ -31,6 +36,20 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     this.on('pointerdown', () => {
       this.scene.events.emit('hero-clicked', this);
     });
+  }
+
+  public setEntangled(isBeta: boolean, mode: EntanglementMode): void {
+    this.isEntangled = true;
+    this.isBeta = isBeta;
+    this.entanglementMode = mode;
+    if (isBeta) {
+      this.setTint(0xec4899);
+      if (mode === 'inverted_gravity' || mode === 'mirror_and_gravity') {
+        this.setGravityInverted(true);
+      }
+    } else {
+      this.clearTint();
+    }
   }
 
   public setFocus(focused: boolean): void {
@@ -86,6 +105,7 @@ public bounceOffLeftWall(): void {
     } else if (this.upsideDown === -1 && (!this.body || this.body.velocity.y > -50)) {
       this.setVelocityY(-220);
     }
+  }
 
   public getAnimState(): 'idle' | 'left' | 'right' | 'jump' {
     const key = this.anims.currentAnim?.key;
@@ -103,13 +123,29 @@ public bounceOffLeftWall(): void {
   ): void {
     if (!this.body) return;
 
-    const goLeft = (cursors?.left?.isDown ?? false) || (wasd?.A?.isDown ?? false) || touch.left;
-    const goRight = (cursors?.right?.isDown ?? false) || (wasd?.D?.isDown ?? false) || touch.right;
+    if (this.enteredPortal) {
+      this.setVelocity(0, 0);
+      this.play(this.getAnimKey('idle'), true);
+      return;
+    }
+
+    const rawLeft = (cursors?.left?.isDown ?? false) || (wasd?.A?.isDown ?? false) || touch.left;
+    const rawRight = (cursors?.right?.isDown ?? false) || (wasd?.D?.isDown ?? false) || touch.right;
     const jump =
       (cursors?.up?.isDown ?? false) ||
       (wasd?.W?.isDown ?? false) ||
       (cursors?.space?.isDown ?? false) ||
       touch.jump;
+
+    let goLeft = rawLeft;
+    let goRight = rawRight;
+
+    if (this.isEntangled && this.isBeta) {
+      if (this.entanglementMode === 'mirror_x' || this.entanglementMode === 'mirror_and_gravity') {
+        goLeft = rawRight;
+        goRight = rawLeft;
+      }
+    }
 
     const touchingGround =
       this.upsideDown === 1
@@ -131,13 +167,15 @@ public bounceOffLeftWall(): void {
         this.setVelocityX(-350 * this.velocityMultiplier);
       }
 
-      this.play(this.getAnimKey('jump'), true);
+      this.play(this.getAnimKey(jump), true);
       this.setFlipX(this.recoilVx < 0);
       return;
     }
 
     // Normal controls
-    if (this.isFocused) {
+    const isActive = this.isEntangled || this.isFocused;
+
+    if (isActive) {
       if (goLeft) {
         this.setVelocityX(-350 * this.velocityMultiplier);
         this.setFlipX(true);

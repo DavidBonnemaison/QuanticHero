@@ -169,6 +169,21 @@ describe('useGameStore', () => {
       useGameStore.getState().recordScore(1, 0);
       expect(useGameStore.getState().maxLevel).toBe(1);
     });
+
+    it('advances maxEntanglementLevel without affecting classic maxLevel when completing an entangled level', () => {
+      useGameStore.setState({ maxLevel: 3, maxEntanglementLevel: 110 });
+      useGameStore.getState().recordScore(110, 18500);
+
+      const state = useGameStore.getState();
+      expect(state.scores[110].best).toBe(18500);
+      expect(state.maxEntanglementLevel).toBe(111);
+      expect(state.maxLevel).toBe(3); // classic maxLevel unchanged
+    });
+
+    it('updates maxEntanglementLevel via updateMaxEntanglementLevel', () => {
+      useGameStore.getState().updateMaxEntanglementLevel(113);
+      expect(useGameStore.getState().maxEntanglementLevel).toBe(113);
+    });
   });
 
   describe('localStorage persistence', () => {
