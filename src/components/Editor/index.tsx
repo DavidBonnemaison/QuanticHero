@@ -9,22 +9,13 @@ import { range } from '../../tools/math';
 import type { LevelData } from '../../types';
 import DrawParticle from './DrawParticle';
 import DrawPlatform from './DrawPlatform';
-import {
-  AddButton,
-  Container,
-  DisplayPanel,
-  DownloadButton,
-  EditPanel,
-  FieldEditor,
-  PlayButton,
-  ResetButton
-} from './Editor.style';
+import styles from './Editor.module.css';
 import ParticlesEditor from './ParticleEditor';
 import PlatformsEditor from './PlatformsEditor';
 
 const downloader = (filename: string, text: string) => {
   const element = document.createElement('a');
-  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+  element.setAttribute('href', `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`);
   element.setAttribute('download', filename);
   element.style.display = 'none';
   document.body.appendChild(element);
@@ -94,10 +85,31 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
 
   return (
     <div ref={dropRef as unknown as React.Ref<HTMLDivElement>}>
-      <DisplayPanel hue={hue} width={width * scale} height={height * scale}>
-        <PlayButton onClick={play}>PLAY</PlayButton>
-        <ResetButton onClick={resetLevels}>RESET</ResetButton>
-        <DownloadButton onClick={download}>DOWNLOAD</DownloadButton>
+      <div
+        className={styles.displayPanel}
+        style={{
+          backgroundColor: hue,
+          width: `${width * scale}px`,
+          height: `${height * scale}px`
+        }}
+      >
+        <button type="button" className={`${styles.topButton} ${styles.playButton}`} onClick={play}>
+          PLAY
+        </button>
+        <button
+          type="button"
+          className={`${styles.topButton} ${styles.resetButton}`}
+          onClick={resetLevels}
+        >
+          RESET
+        </button>
+        <button
+          type="button"
+          className={`${styles.topButton} ${styles.downloadButton}`}
+          onClick={download}
+        >
+          DOWNLOAD
+        </button>
         {platforms.map((p, i) => (
           <DrawPlatform
             key={`platformDrawing${p.x}-${p.y}-${i}`}
@@ -135,7 +147,7 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
           }}
         />
         <Grid {...grid} scale={scale} />
-      </DisplayPanel>
+      </div>
     </div>
   );
 };
@@ -243,9 +255,10 @@ export const EditorView: React.FC = () => {
   };
 
   return (
-    <Container>
-      <EditPanel>
+    <div className={styles.container}>
+      <div className={styles.editPanel}>
         <button
+          type="button"
           onClick={() => navigate('/')}
           style={{ marginBottom: 12, padding: '4px 8px', cursor: 'pointer' }}
         >
@@ -259,7 +272,7 @@ export const EditorView: React.FC = () => {
             </option>
           ))}
         </select>
-        <FieldEditor>
+        <div className={styles.fieldEditor}>
           <div>
             <label>width:</label>
             <input
@@ -302,10 +315,17 @@ export const EditorView: React.FC = () => {
               data-prop="hue"
             />
           </div>
-        </FieldEditor>
+        </div>
         <h3>
           Platforms
-          <AddButton onClick={() => addPlatform({ level: currentLevelNumber })}>+</AddButton>
+          <div
+            className={styles.addButton}
+            onClick={() => addPlatform({ level: currentLevelNumber })}
+            role="button"
+            tabIndex={0}
+          >
+            +
+          </div>
         </h3>
         {platforms.map((p, i) => (
           <PlatformsEditor
@@ -319,7 +339,14 @@ export const EditorView: React.FC = () => {
         <hr />
         <h3>
           Particles
-          <AddButton onClick={() => addParticle({ level: currentLevelNumber })}>+</AddButton>
+          <div
+            className={styles.addButton}
+            onClick={() => addParticle({ level: currentLevelNumber })}
+            role="button"
+            tabIndex={0}
+          >
+            +
+          </div>
         </h3>
         {particles.map((p, i) => (
           <ParticlesEditor
@@ -331,7 +358,7 @@ export const EditorView: React.FC = () => {
           />
         ))}
         <h3>Player</h3>
-        <FieldEditor>
+        <div className={styles.fieldEditor}>
           <div>
             <label>x:</label>
             <input
@@ -354,9 +381,9 @@ export const EditorView: React.FC = () => {
               data-prop="y"
             />
           </div>
-        </FieldEditor>
+        </div>
         <h3>Portal</h3>
-        <FieldEditor>
+        <div className={styles.fieldEditor}>
           <div>
             <label>x:</label>
             <input
@@ -379,8 +406,8 @@ export const EditorView: React.FC = () => {
               data-prop="y"
             />
           </div>
-        </FieldEditor>
-      </EditPanel>
+        </div>
+      </div>
       <EditorComponent
         scale={scale}
         play={() => navigate('/game')}
@@ -391,7 +418,7 @@ export const EditorView: React.FC = () => {
         currentLevel={currentLevelNumber}
         onDropPlatform={handleDropPlatform}
       />
-    </Container>
+    </div>
   );
 };
 

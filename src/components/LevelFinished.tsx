@@ -1,22 +1,11 @@
-import React from 'react';
+import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as levels from '../data/levels';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
-import {
-  BestBadge,
-  Button,
-  ButtonContainer,
-  Container,
-  Done,
-  Molecule,
-  ScoreBox,
-  ScoreType,
-  ScoreValue,
-  ScoresWrapper
-} from './LevelFinished.styles';
+import styles from './LevelFinished.module.css';
 
-export default function LevelFinished() {
+export default function LevelFinished(): React.ReactElement {
   const navigate = useNavigate();
 
   const currentLevel = useGameStore((state) => state.currentLevel);
@@ -55,38 +44,50 @@ export default function LevelFinished() {
   };
 
   return (
-    <Container>
-      <Done>{atom}</Done>
+    <div className={styles.container}>
+      <h1 className={styles.done}>{atom}</h1>
 
-      <ScoresWrapper>
-        <ScoreBox>
-          <ScoreType>Last game</ScoreType>
-          <ScoreValue>{formatScore(last)}</ScoreValue>
-          {best === last && best > 0 && <BestBadge>New record !</BestBadge>}
-        </ScoreBox>
+      <div className={styles.scoresWrapper}>
+        <div className={styles.scoreBox}>
+          <span className={styles.scoreType}>Last game</span>
+          <span className={styles.scoreValue}>{formatScore(last)}</span>
+          {best === last && best > 0 && <div className={styles.bestBadge}>New record !</div>}
+        </div>
 
-        <ScoreBox>
-          <ScoreType>All Time Best</ScoreType>
-          <ScoreValue>{formatScore(best)}</ScoreValue>
-        </ScoreBox>
-      </ScoresWrapper>
+        <div className={styles.scoreBox}>
+          <span className={styles.scoreType}>All Time Best</span>
+          <span className={styles.scoreValue}>{formatScore(best)}</span>
+        </div>
+      </div>
 
-      <Molecule bgColor={hue} color={antiHue}>
-        <span>{id}</span>
+      <div className={styles.molecule} style={{ backgroundColor: hue, color: antiHue }}>
+        <span className={styles.atomicId}>{id}</span>
         <span>{symbol}</span>
-      </Molecule>
+      </div>
 
-      <ButtonContainer>
-        <Button buttonType="menu" onClick={handleGoToMenu}>
+      <div className={styles.buttonContainer}>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.buttonMenu}`}
+          onClick={handleGoToMenu}
+        >
           Menu
-        </Button>
-        <Button buttonType="retry" onClick={handleRetry}>
+        </button>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.buttonRetry}`}
+          onClick={handleRetry}
+        >
           Retry
-        </Button>
-        <Button buttonType="next" onClick={handleNextLevel}>
+        </button>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.buttonNext}`}
+          onClick={handleNextLevel}
+        >
           Next
-        </Button>
-      </ButtonContainer>
-    </Container>
+        </button>
+      </div>
+    </div>
   );
 }

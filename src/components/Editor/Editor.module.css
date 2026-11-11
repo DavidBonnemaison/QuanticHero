@@ -1,0 +1,118 @@
+.container {
+  position: relative;
+}
+
+.editPanel {
+  background: white;
+  font-family: sans-serif;
+  padding: 20px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  overflow: auto;
+  width: 220px;
+  z-index: 2;
+  color: #333;
+}
+
+.fieldEditor {
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  padding: 10px;
+  position: relative;
+}
+
+.fieldEditor > div {
+  margin: 5px 0;
+}
+
+.fieldEditor label {
+  display: inline-block;
+  padding-right: 5px;
+  width: 50px;
+  text-align: right;
+  font-size: 12px;
+  color: #333;
+}
+
+.fieldEditor input,
+.fieldEditor select {
+  display: inline-block;
+  width: 70px;
+  padding: 3px;
+  border: 1px solid #ddd;
+  color: #000;
+}
+
+.displayPanel {
+  position: absolute;
+  left: 260px;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+}
+
+.topButton {
+  padding: 10px;
+  position: fixed;
+  top: 0;
+  font-size: 16px;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.playButton {
+  right: 0;
+}
+
+.resetButton {
+  left: 260px;
+}
+
+.downloadButton {
+  left: 360px;
+}
+
+.addButton {
+  cursor: pointer;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 20px;
+  line-height: 20px;
+  text-align: center;
+  float: right;
+  border: 2px solid black;
+}
+
+.platformNumber {
+  position: absolute;
+  text-align: center;
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.itemNumber {
+  position: absolute;
+  right: 0;
+  top: -5px;
+  background: #666;
+  color: white;
+  padding: 10px;
+}
+
+.deleteItem {
+  position: absolute;
+  right: 0;
+  bottom: -5px;
+  color: red;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.gridItem {
+  position: absolute;
+}

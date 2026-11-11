@@ -7,7 +7,9 @@
       "recommended": true,
       "a11y": {
         "noLabelWithoutControl": "off",
-        "useButtonType": "off"
+        "useButtonType": "off",
+        "useKeyWithClickEvents": "off",
+        "useSemanticElements": "off"
       },
       "complexity": {
         "noForEach": "off"

@@ -1,7 +1,7 @@
 import type React from 'react';
 import { useDrag } from 'react-dnd';
 import { round } from '../../tools/math';
-import { PlatformNumber } from './Editor.style';
+import styles from './Editor.module.css';
 
 interface DrawPlatformProps {
   x: number;
@@ -54,9 +54,19 @@ export const DrawPlatform: React.FC<DrawPlatformProps> = (props) => {
         cursor: 'move'
       }}
     >
-      <PlatformNumber scale={scale} color={color} anti={antiHue}>
+      <div
+        className={styles.platformNumber}
+        style={{
+          fontSize: `${scale * 40}px`,
+          backgroundColor: color,
+          color: antiHue,
+          top: `${scale * -10}px`,
+          width: `${scale * 40}px`,
+          marginLeft: `${scale * -20}px`
+        }}
+      >
         {i}
-      </PlatformNumber>
+      </div>
     </div>
   );
 };

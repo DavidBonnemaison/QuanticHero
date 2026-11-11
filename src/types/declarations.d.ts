@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 declare module 'pixi' {
   const PIXI: any;
   export default PIXI;

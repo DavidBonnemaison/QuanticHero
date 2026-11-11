@@ -1,14 +1,14 @@
-import type React from 'react';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styles from './App.module.css';
 import Game from './Game';
-import Editor from './components/Editor';
 import Explanation from './components/Explanation';
 import LevelFinished from './components/LevelFinished';
 import Levels from './components/LevelSelection';
 import Menu from './components/Menu';
 import { setNavigator } from './shims/navigation';
+
+const Editor = React.lazy(() => import('./components/Editor'));
 
 const NavigationSync: React.FC = () => {
   const navigate = useNavigate();
@@ -19,18 +19,9 @@ const NavigationSync: React.FC = () => {
   return null;
 };
 
-const Container = styled.div`
-  max-width: 500px;
-  min-height: 100vh;
-  margin: 0 auto;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-`;
-
 export const App: React.FC = () => {
   return (
-    <Container>
+    <div className={styles.container}>
       <BrowserRouter>
         <NavigationSync />
         <Routes>
@@ -39,11 +30,24 @@ export const App: React.FC = () => {
           <Route path="/game" element={<Game />} />
           <Route path="/done" element={<LevelFinished />} />
           <Route path="/explanation" element={<Explanation />} />
-          <Route path="/editor" element={<Editor />} />
+          <Route
+            path="/editor"
+            element={
+              <React.Suspense
+                fallback={
+                  <div style={{ color: 'white', textAlign: 'center', padding: 50 }}>
+                    Loading Editor...
+                  </div>
+                }
+              >
+                <Editor />
+              </React.Suspense>
+            }
+          />
           <Route path="*" element={<Menu />} />
         </Routes>
       </BrowserRouter>
-    </Container>
+    </div>
   );
 };
 

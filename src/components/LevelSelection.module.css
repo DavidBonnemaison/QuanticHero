@@ -1,23 +1,21 @@
-import styled from 'styled-components';
-
-export const SelectionContainer = styled.div`
+.selectionContainer {
   width: 100%;
   max-width: 500px;
   margin: 0 auto;
   padding: 16px 12px calc(30px + env(safe-area-inset-bottom, 20px));
   box-sizing: border-box;
-`;
+}
 
-export const Header = styled.div`
+.header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 3px dashed #444;
   padding-bottom: 16px;
   margin-bottom: 20px;
-`;
+}
 
-export const BackButton = styled.button`
+.backButton {
   background: transparent;
   border: 1px solid #666;
   color: #fff;
@@ -27,22 +25,22 @@ export const BackButton = styled.button`
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.15s;
+}
 
-  &:hover {
-    background: #333;
-  }
-`;
+.backButton:hover {
+  background: #333;
+}
 
-export const Title = styled.h1`
+.title {
   text-align: center;
   color: white;
   font-size: 32px;
   margin: 0;
   font-weight: normal;
   letter-spacing: 0.05em;
-`;
+}
 
-export const MenuItem = styled.div<{ disabled?: boolean }>`
+.menuItem {
   background-color: #222;
   border: 1px solid #333;
   border-radius: 6px;
@@ -53,28 +51,33 @@ export const MenuItem = styled.div<{ disabled?: boolean }>`
   align-items: center;
   user-select: none;
   transition: transform 0.1s, background-color 0.15s;
+  cursor: pointer;
+}
 
-  ${(p) =>
-    !p.disabled
-      ? `
-    cursor: pointer;
-    &:hover {
-      background-color: #2a2a2a;
-      border-color: #555;
-    }
-    &:active {
-      transform: scale(0.98);
-    }
-  `
-      : `
-    cursor: not-allowed;
-    opacity: 0.25;
-  `};
-`;
+.menuItem:hover {
+  background-color: #2a2a2a;
+  border-color: #555;
+}
 
-export const Atom = styled.div<{ bgColor: string; color: string }>`
-  background-color: ${(p) => p.bgColor};
-  color: ${(p) => p.color};
+.menuItem:active {
+  transform: scale(0.98);
+}
+
+.menuItemDisabled {
+  cursor: not-allowed;
+  opacity: 0.25;
+}
+
+.menuItemDisabled:hover {
+  background-color: #222;
+  border-color: #333;
+}
+
+.menuItemDisabled:active {
+  transform: none;
+}
+
+.atom {
   width: 80px;
   height: 80px;
   line-height: 80px;
@@ -83,23 +86,23 @@ export const Atom = styled.div<{ bgColor: string; color: string }>`
   position: relative;
   flex-shrink: 0;
   border-radius: 4px;
-`;
+}
 
-export const AtomicNumber = styled.div`
+.atomicNumber {
   position: absolute;
   top: -28px;
   left: 4px;
   font-size: 24px;
   color: #ddd;
-`;
+}
 
-export const AtomDescription = styled.div`
+.atomDescription {
   flex-grow: 1;
   padding-left: 18px;
   overflow: hidden;
-`;
+}
 
-export const AtomTitle = styled.h2`
+.atomTitle {
   font-weight: normal;
   font-size: 34px;
   padding: 0;
@@ -108,10 +111,10 @@ export const AtomTitle = styled.h2`
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-`;
+}
 
-export const AtomScore = styled.div`
+.atomScore {
   font-size: 26px;
   color: #bbb;
-  font-family: 'VT323', monospace;
-`;
+  font-family: "VT323", monospace;
+}

@@ -4,18 +4,7 @@ import * as levelsData from '../data/levels';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
 import type { LevelData } from '../types';
-import {
-  Atom,
-  AtomDescription,
-  AtomScore,
-  AtomTitle,
-  AtomicNumber,
-  BackButton,
-  Header,
-  MenuItem,
-  SelectionContainer,
-  Title
-} from './LevelSelection.styles';
+import styles from './LevelSelection.module.css';
 
 const allLevels = levelsData as unknown as Record<string, LevelData>;
 
@@ -52,29 +41,39 @@ export const LevelSelection: React.FC = () => {
   };
 
   return (
-    <SelectionContainer>
-      <Header>
-        <BackButton onClick={() => navigate('/')}>← Menu</BackButton>
-        <Title>Level Selection</Title>
+    <div className={styles.selectionContainer}>
+      <div className={styles.header}>
+        <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
+          ← Menu
+        </button>
+        <h1 className={styles.title}>Level Selection</h1>
         <div style={{ width: 70 }} />
-      </Header>
-      {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore }) => (
-        <MenuItem
-          key={`${id}-${symbol}`}
-          onClick={() => handleSelect(id)}
-          disabled={isDisabled(id)}
-        >
-          <Atom color={antiHue} bgColor={hue}>
-            {symbol}
-            <AtomicNumber>{id}</AtomicNumber>
-          </Atom>
-          <AtomDescription>
-            <AtomTitle>{atom}</AtomTitle>
-            <AtomScore>{levelScore}</AtomScore>
-          </AtomDescription>
-        </MenuItem>
-      ))}
-    </SelectionContainer>
+      </div>
+      {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore }) => {
+        const disabled = isDisabled(id);
+        return (
+          <div
+            key={`${id}-${symbol}`}
+            className={`${styles.menuItem} ${disabled ? styles.menuItemDisabled : ''}`}
+            onClick={() => handleSelect(id)}
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') handleSelect(id);
+            }}
+          >
+            <div className={styles.atom} style={{ backgroundColor: hue, color: antiHue }}>
+              {symbol}
+              <div className={styles.atomicNumber}>{id}</div>
+            </div>
+            <div className={styles.atomDescription}>
+              <h2 className={styles.atomTitle}>{atom}</h2>
+              <div className={styles.atomScore}>{levelScore}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 };
 

@@ -1,12 +1,13 @@
-import React, { useEffect } from 'react';
+import type React from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as levels from '../data/levels';
 import { useGameStore } from '../store';
 import type { LevelData } from '../types';
-import { Button, MenuWrapper, Title } from './Menu.styles';
+import styles from './Menu.module.css';
 import Molecules from './Molecules';
 
-export default function Menu() {
+export default function Menu(): React.ReactElement {
   const navigate = useNavigate();
   const customLevels = useGameStore((state) => state.customLevels);
   const setLevels = useGameStore((state) => state.setLevels);
@@ -32,11 +33,15 @@ export default function Menu() {
   };
 
   return (
-    <MenuWrapper>
+    <div className={styles.menuWrapper}>
       <div id="container" />
-      <Title>Quantum Hero</Title>
-      <Button onClick={handleNewGame}>New game</Button>
-      <Button onClick={handleGoToLevels}>Levels</Button>
-    </MenuWrapper>
+      <h1 className={styles.title}>Quantum Hero</h1>
+      <button type="button" className={styles.button} onClick={handleNewGame}>
+        New game
+      </button>
+      <button type="button" className={styles.button} onClick={handleGoToLevels}>
+        Levels
+      </button>
+    </div>
   );
 }
