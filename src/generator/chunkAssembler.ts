@@ -355,23 +355,34 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 2: {
-      // Niv 2 (He) : Autoroute speedrun fluide
-      width = 2200;
+      // Niv 2 (He) : Autoroute speedrun fluide (gouffre de 510 px impossible sans le boost speed)
+      width = 2500;
       height = 1100;
       awakeningChunk = createSpawnChunk({ originX: 120, originY: 600, width: 260 });
-      const rawHighway = createSpeedrunHighwayChunk({
-        steps: 4,
-        horizontalSpacing: 200,
-        verticalDrop: 38,
-        platformWidth: 190,
-        speedBoostParticle: true
-      });
-      accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawHighway, alpha, -10);
+
+      const p1: Platform = { x: 460, y: 600, width: 220, height: 20 };
+      const speedPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'speed' };
+      // 510 px chasm: standard reach = 450 px, speed-boosted reach = 630 px
+      const p2: Platform = { x: p1.x + p1.width + 510, y: 600, width: 240, height: 20 };
+      const accelPlats = [p1, p2];
+
+      accelerationChunk = {
+        id: 'chunk_speedrun_chasm',
+        name: 'Autoroute Quantique',
+        archetype: 'speedrun_highway',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p2.x + p2.width - 40, y: p2.y },
+        platforms: accelPlats,
+        pathPlatforms: accelPlats,
+        spikes: [],
+        particles: [speedPart],
+        bounds: computeChunkBounds(accelPlats, [], [speedPart])
+      };
 
       const rawClimax = createSpeedrunHighwayChunk({
         id: 'chunk_speedrun_climax',
         steps: 3,
-        horizontalSpacing: 190,
+        horizontalSpacing: 220,
         verticalDrop: 32,
         platformWidth: 180,
         speedBoostParticle: false
@@ -385,7 +396,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
 
     case 3: {
       // Niv 3 (Li) : Gouffre à électrons & lowGravity
-      width = 2200;
+      width = 2400;
       height = 1100;
       awakeningChunk = createSpawnChunk({ originX: 120, originY: 660, width: 240 });
       const rawChasm = createElectronChasmChunk({
@@ -413,14 +424,14 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 4: {
-      // Niv 4 (Be) : Clonage quantique (duplicate, uncertainty: 4) & barrière mécanique / dalle de pression
+      // Niv 4 (Be) : Clonage quantique (duplicate, uncertainty: 4) & dalle requireLock + porte pleine hauteur
       width = 2200;
       height = 1100;
       awakeningChunk = createSpawnChunk({ originX: 120, originY: 660, width: 240 });
 
       const p1: Platform = { x: 440, y: 640, width: 190, height: 20 };
       const p2: Platform = { x: 690, y: 620, width: 190, height: 20 };
-      const p3: Platform = { x: 940, y: 600, width: 190, height: 20 };
+      const p3: Platform = { x: 940, y: 600, width: 210, height: 20 };
       const dupPart: Particle = { x: p2.x + 95, y: p2.y - 30, type: 'duplicate' };
       const accelPlats = [p1, p2, p3];
 
@@ -454,17 +465,18 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       const gate: Gate = {
         id: 'gate_be_4',
         x: Math.round(resPlat.x + 60),
-        y: Math.round(resPlat.y - 120),
+        y: 0,
         width: 24,
-        height: 120
+        height: Math.round(resPlat.y)
       };
       const plate: PressurePlate = {
         id: 'plate_be_4',
-        x: p3.x + 55,
-        y: p3.y - 8,
-        width: 80,
-        height: 8,
-        targetGateId: 'gate_be_4'
+        x: p3.x + 60,
+        y: p3.y - 12,
+        width: 90,
+        height: 12,
+        targetGateId: 'gate_be_4',
+        requireLock: true
       };
       gates = [gate];
       pressurePlates = [plate];
@@ -487,8 +499,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawLeadIn, alpha, -10);
 
       const rawWell = createGravityWellChunk({
-        wellWidth: 380,
-        height: 420,
+        wellWidth: 320,
+        height: 600,
         steps: 2
       });
       climaxChunk = connectAndTranslateChunk(accelerationChunk, rawWell, alpha, 20);
@@ -648,11 +660,6 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       width = 2400;
       height = 1100;
       awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
-      awakeningChunk.particles.push({
-        x: awakeningChunk.platforms[0].x + 120,
-        y: awakeningChunk.platforms[0].y - 30,
-        type: 'timeDilation'
-      });
 
       const mp1: Platform = {
         x: 450,
@@ -692,12 +699,19 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         speedBoostParticle: false
       });
       climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -15);
+      // Place timeDilation mid-level on the first climax platform, after moving platforms & visible collapse
+      const midPlat = climaxChunk.platforms[0];
+      climaxChunk.particles.push({
+        x: midPlat.x + Math.round(midPlat.width / 2),
+        y: midPlat.y - 30,
+        type: 'timeDilation'
+      });
 
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
 
       collapseConfig = {
-        speedY: 8,
+        speedY: 42,
         delayMs: 1200
       };
       break;
@@ -757,7 +771,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     particles: allParticles,
     bounceWalls: true,
     gates,
-    pressurePlates
+    pressurePlates,
+    collapse: collapseConfig
   };
 
   const simulation = simulateFullLevel(world, player.position, door, fullPlatformPath);

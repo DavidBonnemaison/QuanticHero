@@ -70,10 +70,14 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     return this.isFocused ? base : `disabled-${base}`;
   }
 
-  public bounceOffLeftWall(): void {
+  public bounceOffLeftWall(isNeonWall = false): void {
     if (this.recoilVx <= 0) {
       this.recoilVx = PHYSICS.WALL_RECOIL_VX * this.velocityMultiplier;
       this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
+      if (isNeonWall) {
+        this.setVelocityY(-400 * this.upsideDown);
+        return;
+      }
       const touchingGround =
         this.upsideDown === 1
           ? this.body?.touching.down || this.body?.blocked.down
@@ -86,10 +90,14 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  public bounceOffRightWall(): void {
+  public bounceOffRightWall(isNeonWall = false): void {
     if (this.recoilVx >= 0) {
       this.recoilVx = -PHYSICS.WALL_RECOIL_VX * this.velocityMultiplier;
       this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
+      if (isNeonWall) {
+        this.setVelocityY(-400 * this.upsideDown);
+        return;
+      }
       const touchingGround =
         this.upsideDown === 1
           ? this.body?.touching.down || this.body?.blocked.down

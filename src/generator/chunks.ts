@@ -230,7 +230,7 @@ export function createGravityWellChunk(options: GravityWellOptions = {}): Chunk 
     x: originX,
     y: originY,
     width: wallThickness,
-    height: Math.max(120, height - 160),
+    height: Math.max(120, height - 290),
     kind: 'wall'
   });
 
@@ -269,7 +269,7 @@ export function createGravityWellChunk(options: GravityWellOptions = {}): Chunk 
   for (let i = 1; i <= steps; i++) {
     const ledgeY = Math.round(bottomY - i * stepYGap);
     const isRight = i % 2 === 1;
-    const ledgeWidth = 90;
+    const ledgeWidth = 120;
     const ledgeClearance = 12;
     const ledgeX = isRight
       ? originX + wellWidth - wallThickness - ledgeWidth - ledgeClearance

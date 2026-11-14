@@ -126,8 +126,11 @@ export default class GameScene extends Phaser.Scene {
   private pointerStartX = 0;
   private pointerStartY = 0;
   private startTime = 0;
+  private dilatedElapsedMs = 0;
   private timerStarted = false;
   private timerText!: Phaser.GameObjects.Text;
+  private phaseIndicatorText: Phaser.GameObjects.Text | null = null;
+  private dilationIndicatorText: Phaser.GameObjects.Text | null = null;
   private isLevelCompleted = false;
   private quantumEffects: QuantumEffectsManager | null = null;
 
@@ -150,9 +153,12 @@ export default class GameScene extends Phaser.Scene {
     this.authorTrajectory = undefined;
     this.personalTrajectory = undefined;
     this.startTime = 0;
+    this.dilatedElapsedMs = 0;
     this.timerStarted = false;
     this.splitDeltaText = null;
     this.ghostButton = null;
+    this.phaseIndicatorText = null;
+    this.dilationIndicatorText = null;
     this.isEntangled = false;
     this.betaHero = null;
     this.betaPortalSprite = null;
@@ -400,21 +406,27 @@ export default class GameScene extends Phaser.Scene {
       this.collapseConfig = this.levelData.collapse;
       this.collapseTopSpikes = this.add.rectangle(
         this.levelData.width / 2,
-        -20,
+        140,
         this.levelData.width + 40,
-        40,
-        hueColor
+        280,
+        0xef4444,
+        0.55
       );
+      this.collapseTopSpikes.setStrokeStyle(3, 0xffaa00);
+      this.collapseTopSpikes.setDepth(15);
       this.physics.add.existing(this.collapseTopSpikes, true);
       this.spikes.add(this.collapseTopSpikes);
 
       this.collapseBottomSpikes = this.add.rectangle(
         this.levelData.width / 2,
-        this.levelData.height + 20,
+        this.levelData.height - 60,
         this.levelData.width + 40,
-        40,
-        hueColor
+        160,
+        0xef4444,
+        0.55
       );
+      this.collapseBottomSpikes.setStrokeStyle(3, 0xffaa00);
+      this.collapseBottomSpikes.setDepth(15);
       this.physics.add.existing(this.collapseBottomSpikes, true);
       this.spikes.add(this.collapseBottomSpikes);
     }
@@ -565,9 +577,15 @@ export default class GameScene extends Phaser.Scene {
       this.entanglementGraphics = this.add.graphics();
       this.entanglementGraphics.setDepth(20);
 
-      // Initial camera positioning for centroid
+      // Initial camera positioning for centroid & zoom so both Alpha & Beta are visible immediately
       const cx = (initialHero.x + this.betaHero.x) / 2;
       const cy = (initialHero.y + this.betaHero.y) / 2;
+      const dx = Math.abs(initialHero.x - this.betaHero.x);
+      const dy = Math.abs(initialHero.y - this.betaHero.y);
+      const initZoomX = this.cameras.main.width / (dx + 240);
+      const initZoomY = this.cameras.main.height / (dy + 200);
+      const initZoom = Phaser.Math.Clamp(Math.min(initZoomX, initZoomY), 0.28, 1.0);
+      this.cameras.main.setZoom(initZoom);
       this.cameras.main.centerOn(cx, cy);
     } else {
       this.cameras.main.centerOn(initialHero.x, initialHero.y);
@@ -583,9 +601,9 @@ export default class GameScene extends Phaser.Scene {
       // 1. Neon Wall Rebound (kind === 'wall')
       if (plat.getData('kind') === 'wall') {
         if (hero.x < plat.x) {
-          hero.bounceOffRightWall();
+          hero.bounceOffRightWall(true);
         } else {
-          hero.bounceOffLeftWall();
+          hero.bounceOffLeftWall(true);
         }
         soundManager.playBounceSound();
         gameEvents.emit('hero:wall_bounce', { x: hero.x, y: hero.y });
@@ -627,7 +645,15 @@ export default class GameScene extends Phaser.Scene {
       } else if (type === 'right') {
         hero.bounceOffRightWall();
       } else if (type === 'ceiling') {
-        hero.bounceOffCeiling();
+        if (hero.upsideDown === -1) {
+          if (hero.isFocused || this.heroes.length <= 1) {
+            this.scene.restart();
+          } else {
+            this.killHero(hero);
+          }
+        } else {
+          hero.bounceOffCeiling();
+        }
       }
     });
     this.physics.add.overlap(this.heroGroup, this.spikes, (_heroObj) => {
@@ -782,7 +808,8 @@ export default class GameScene extends Phaser.Scene {
       const deltaY = pointer.y - this.pointerStartY;
       this.touchInput.left = deltaX < -20;
       this.touchInput.right = deltaX > 20;
-      this.touchInput.jump = deltaY < -20;
+      const inverted = this.physics.world.gravity.y < 0;
+      this.touchInput.jump = inverted ? deltaY > 20 : deltaY < -20;
     });
 
     this.input.on('pointerup', () => {
@@ -823,7 +850,7 @@ export default class GameScene extends Phaser.Scene {
       const label =
         mode === 'off' ? '[GHOST: OFF]' : mode === 'optimal' ? '[GHOST: OPTIMAL]' : '[GHOST: BEST]';
       this.ghostButton.setText(label);
-      this.ghostButton.setAlpha(mode !== 'off' ? 1 : 0.35);
+      this.ghostButton.setAlpha(mode !== 'off' ? 1 : 0.45);
       this.ghostButton.setVisible(this.hasAnyGhost);
     }
 
@@ -833,19 +860,25 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private createHUD(): void {
+    const camW = this.cameras.main.width;
+    const hudHeight = 54;
+
     const hudBar = this.add.graphics();
-    hudBar.fillStyle(0x333333, 0.4);
-    hudBar.fillRect(45, 0, this.cameras.main.width - 45, 45);
-    hudBar.fillStyle(0xe74c3c, 0.7);
-    hudBar.fillRect(0, 0, 45, 45);
+    hudBar.fillStyle(0x0b0f19, 0.85);
+    hudBar.fillRect(36, 0, camW - 36, hudHeight);
+    hudBar.fillStyle(0xe74c3c, 0.85);
+    hudBar.fillRect(0, 0, 36, hudHeight);
+    hudBar.lineStyle(1, 0x334155, 0.9);
+    hudBar.lineBetween(0, hudHeight, camW, hudHeight);
     hudBar.setScrollFactor(0);
     hudBar.setDepth(100);
 
-    const backButton = this.add.text(10, 6, '◄', {
+    const backButton = this.add.text(18, hudHeight / 2, '◄', {
       fontFamily: 'VT323',
-      fontSize: '28px',
+      fontSize: '26px',
       color: '#ffffff'
     });
+    backButton.setOrigin(0.5);
     backButton.setScrollFactor(0);
     backButton.setDepth(101);
     backButton.setInteractive({ useHandCursor: true });
@@ -860,11 +893,24 @@ export default class GameScene extends Phaser.Scene {
       push('/');
     });
 
+    // Restart level button
+    const restartButton = this.add.text(44, 5, '[RST]', {
+      fontFamily: 'VT323',
+      fontSize: '18px',
+      color: '#fbbf24'
+    });
+    restartButton.setScrollFactor(0);
+    restartButton.setDepth(101);
+    restartButton.setInteractive({ useHandCursor: true });
+    restartButton.on('pointerdown', () => {
+      this.scene.restart();
+    });
+
     // Sound toggle button
     const getSoundLabel = () => (useGameStore.getState().isMuted ? 'SND:OFF' : 'SND:ON');
-    const soundButton = this.add.text(46, 8, getSoundLabel(), {
+    const soundButton = this.add.text(92, 5, getSoundLabel(), {
       fontFamily: 'VT323',
-      fontSize: '20px',
+      fontSize: '18px',
       color: '#00ffcc'
     });
     soundButton.setScrollFactor(0);
@@ -877,9 +923,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Haptic feedback toggle button
     const getHapticLabel = () => (useGameStore.getState().hapticsEnabled ? 'HAP:ON' : 'HAP:OFF');
-    const hapticButton = this.add.text(118, 8, getHapticLabel(), {
+    const hapticButton = this.add.text(154, 5, getHapticLabel(), {
       fontFamily: 'VT323',
-      fontSize: '20px',
+      fontSize: '18px',
       color: '#00ffcc'
     });
     hapticButton.setScrollFactor(0);
@@ -892,9 +938,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Visual effects toggle button (FX:HI / FX:LO)
     const getFxLabel = () => (useGameStore.getState().reducedEffects ? 'FX:LO' : 'FX:HI');
-    const fxButton = this.add.text(190, 8, getFxLabel(), {
+    const fxButton = this.add.text(216, 5, getFxLabel(), {
       fontFamily: 'VT323',
-      fontSize: '20px',
+      fontSize: '18px',
       color: '#00ffcc'
     });
     fxButton.setScrollFactor(0);
@@ -905,7 +951,7 @@ export default class GameScene extends Phaser.Scene {
       fxButton.setText(getFxLabel());
     });
 
-    // Ghost replay toggle button [GHOST: OFF] / [GHOST: OPTIMAL] / [GHOST: BEST]
+    // Row 2: Ghost replay toggle button [GHOST: OFF] / [GHOST: OPTIMAL] / [GHOST: BEST]
     const currentMode =
       useGameStore.getState().ghostMode ??
       (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
@@ -915,14 +961,14 @@ export default class GameScene extends Phaser.Scene {
         : currentMode === 'optimal'
           ? '[GHOST: OPTIMAL]'
           : '[GHOST: BEST]';
-    this.ghostButton = this.add.text(252, 8, ghostLabel, {
+    this.ghostButton = this.add.text(44, 29, ghostLabel, {
       fontFamily: 'VT323',
-      fontSize: '20px',
+      fontSize: '18px',
       color: '#38bdf8'
     });
     this.ghostButton.setScrollFactor(0);
     this.ghostButton.setDepth(101);
-    this.ghostButton.setAlpha(currentMode !== 'off' ? 1 : 0.35);
+    this.ghostButton.setAlpha(currentMode !== 'off' ? 1 : 0.45);
     this.ghostButton.setVisible(this.hasAnyGhost);
     this.ghostButton.setInteractive({ useHandCursor: true });
     this.ghostButton.on('pointerdown', () => {
@@ -930,6 +976,34 @@ export default class GameScene extends Phaser.Scene {
       useGameStore.getState().toggleGhost(hasBest);
       this.applyGhostMode();
     });
+
+    // Row 2: Subtle environmental phase indicator (only if level has phase platforms)
+    if (this.hasPhasePlatforms) {
+      const phaseX = this.hasAnyGhost ? 186 : 44;
+      this.phaseIndicatorText = this.add.text(
+        phaseX,
+        29,
+        `[PHASE: ${this.currentPhase.toUpperCase()}]`,
+        {
+          fontFamily: 'VT323',
+          fontSize: '18px',
+          color: this.currentPhase === 'cyan' ? '#00ffff' : '#ec4899'
+        }
+      );
+      this.phaseIndicatorText.setScrollFactor(0);
+      this.phaseIndicatorText.setDepth(101);
+    }
+
+    // Row 2: Time dilation indicator (shown when active)
+    const dilationX = this.hasAnyGhost ? 186 : 44;
+    this.dilationIndicatorText = this.add.text(dilationX, 29, '[TIME: 0.25x]', {
+      fontFamily: 'VT323',
+      fontSize: '18px',
+      color: '#22d3ee'
+    });
+    this.dilationIndicatorText.setScrollFactor(0);
+    this.dilationIndicatorText.setDepth(101);
+    this.dilationIndicatorText.setVisible(false);
 
     const unsubStore = useGameStore.subscribe(() => {
       if (soundButton.active) {
@@ -953,26 +1027,25 @@ export default class GameScene extends Phaser.Scene {
       unsubStore();
     });
 
-    this.timerText = this.add.text(this.cameras.main.width - 15, 2, '00:00:00', {
+    // Right column: Timer (Row 1) & Split Delta (Row 2)
+    this.timerText = this.add.text(camW - 10, 3, '00:00:00', {
       fontFamily: 'VT323',
-      fontSize: '26px',
+      fontSize: '22px',
       color: '#ffffff'
     });
     this.timerText.setOrigin(1, 0);
     this.timerText.setScrollFactor(0);
     this.timerText.setDepth(101);
 
-    this.splitDeltaText = this.add.text(this.cameras.main.width - 15, 24, '--', {
+    this.splitDeltaText = this.add.text(camW - 10, 28, '--', {
       fontFamily: 'VT323',
-      fontSize: '20px',
+      fontSize: '18px',
       color: '#94a3b8'
     });
     this.splitDeltaText.setOrigin(1, 0);
     this.splitDeltaText.setScrollFactor(0);
     this.splitDeltaText.setDepth(101);
-    this.splitDeltaText.setVisible(
-      useGameStore.getState().ghostEnabled && this.ghostFrames.length > 0
-    );
+    this.splitDeltaText.setVisible(currentMode !== 'off' && this.ghostFrames.length > 0);
   }
 
   private showLevelTitle(): void {
@@ -1082,11 +1155,12 @@ export default class GameScene extends Phaser.Scene {
       case 'duplicate': {
         const uncertainty = this.levelData.uncertainty ?? 3;
         if (this.heroes.length < uncertainty) {
-          const spawnOffset = Phaser.Math.Between(-80, 80);
-          const clonedHero = new Hero(this, hero.x + spawnOffset, hero.y - 10, false);
+          const spawnX = Phaser.Math.Clamp(hero.x - 45, 32, this.levelData.width - 32);
+          const clonedHero = new Hero(this, spawnX, hero.y - 10, false);
           clonedHero.velocityMultiplier = hero.velocityMultiplier;
           clonedHero.setGravityInverted(this.physics.world.gravity.y < 0);
           clonedHero.pauliGraceUntil = this.time.now + 500;
+          clonedHero.setTint(0x38bdf8);
           this.heroes.push(clonedHero);
           this.heroGroup.add(clonedHero);
           gameEvents.emit('hero:duplicate', { count: this.heroes.length });
@@ -1110,7 +1184,7 @@ export default class GameScene extends Phaser.Scene {
         break;
       }
       case 'tunnel': {
-        hero.tunnelCharges = 2;
+        hero.tunnelCharges = 1;
         break;
       }
       case 'pauli': {
@@ -1158,7 +1232,10 @@ export default class GameScene extends Phaser.Scene {
     this.applyPhase(this.currentPhase);
     soundManager.playPhaseShiftSound();
     gameEvents.emit('phase:shift', { phase: this.currentPhase });
-    this.showRetroToast(`PHASE SHIFT: ${this.currentPhase.toUpperCase()} !`);
+    if (this.phaseIndicatorText?.active) {
+      this.phaseIndicatorText.setText(`[PHASE: ${this.currentPhase.toUpperCase()}]`);
+      this.phaseIndicatorText.setColor(this.currentPhase === 'cyan' ? '#00ffff' : '#ec4899');
+    }
   }
 
   public applyPhase(phase: PlatformPhase): void {
@@ -1199,7 +1276,10 @@ export default class GameScene extends Phaser.Scene {
     soundManager.stopBgm();
     gameEvents.emit('level:complete', { level: Number(this.levelData.id) || 0 });
 
-    const elapsedMs = Math.max(0, this.time.now - this.startTime);
+    const elapsedMs =
+      this.dilatedElapsedMs > 0
+        ? this.dilatedElapsedMs
+        : Math.max(0, this.time.now - this.startTime);
     const store = useGameStore.getState();
 
     // Record final frame at portal
@@ -1335,16 +1415,30 @@ export default class GameScene extends Phaser.Scene {
   update(time: number, delta: number): void {
     if (!this.timerStarted) {
       this.startTime = time;
+      this.dilatedElapsedMs = 0;
       this.timerStarted = true;
       if (this.ghostHero) {
         this.ghostHero.updateReplay(0);
       }
     }
+
+    // Time Dilation active check
+    if (this.isTimeDilationActive && time >= this.timeDilationUntil) {
+      this.isTimeDilationActive = false;
+      gameEvents.emit('time:dilation', { active: false, durationMs: 0 });
+    }
+    const timeDilationFactor = this.isTimeDilationActive ? 0.25 : 1.0;
+
+    this.dilatedElapsedMs += delta * timeDilationFactor;
     const elapsedMs = Math.max(0, time - this.startTime);
 
-    // Update timer
+    // Update timer (slowed during time dilation)
     if (this.timerText) {
-      this.timerText.setText(formatScore(elapsedMs));
+      this.timerText.setText(formatScore(this.dilatedElapsedMs));
+      this.timerText.setColor(this.isTimeDilationActive ? '#22d3ee' : '#ffffff');
+    }
+    if (this.dilationIndicatorText?.active) {
+      this.dilationIndicatorText.setVisible(this.isTimeDilationActive);
     }
 
     // Dynamic camera framing for entangled heroes
@@ -1364,7 +1458,7 @@ export default class GameScene extends Phaser.Scene {
 
         const requiredZoomX = viewW / (dx + paddingX);
         const requiredZoomY = viewH / (dy + paddingY);
-        const targetZoom = Phaser.Math.Clamp(Math.min(requiredZoomX, requiredZoomY), 0.6, 1.0);
+        const targetZoom = Phaser.Math.Clamp(Math.min(requiredZoomX, requiredZoomY), 0.28, 1.0);
 
         const currentZoom = this.cameras.main.zoom;
         const newZoom = Phaser.Math.Linear(currentZoom, targetZoom, 0.08);
@@ -1430,13 +1524,6 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Time Dilation active check
-    if (this.isTimeDilationActive && time >= this.timeDilationUntil) {
-      this.isTimeDilationActive = false;
-      gameEvents.emit('time:dilation', { active: false, durationMs: 0 });
-    }
-    const timeDilationFactor = this.isTimeDilationActive ? 0.25 : 1.0;
-
     // Update quantum visual effects (de Broglie waves, spacetime vortex & time dilation cyan trail)
     if (this.quantumEffects) {
       this.quantumEffects.update(
@@ -1452,8 +1539,8 @@ export default class GameScene extends Phaser.Scene {
     for (const hero of [...this.heroes]) {
       if (hero.active) {
         hero.updateControl(this.cursors, this.wasd, this.touchInput, delta);
-        // Restart if hero falls out through the bottom of the scene
-        if (hero.y > this.levelData.height + 20) {
+        // Restart if hero falls out through the bottom (or top when gravity is inverted)
+        if (hero.y > this.levelData.height + 20 || (hero.upsideDown === -1 && hero.y < -10)) {
           if (hero.isFocused || this.heroes.length <= 1) {
             this.scene.restart();
             return;
@@ -1631,27 +1718,31 @@ export default class GameScene extends Phaser.Scene {
       const body = mp.rect.body as Phaser.Physics.Arcade.Body;
       const targetX = mp.movesTo.x !== undefined ? mp.movesTo.x + mp.width / 2 : mp.startX;
       const targetY = mp.movesTo.y !== undefined ? mp.movesTo.y + mp.height / 2 : mp.startY;
+      const minX = Math.min(mp.startX, targetX);
+      const maxX = Math.max(mp.startX, targetX);
+      const minY = Math.min(mp.startY, targetY);
+      const maxY = Math.max(mp.startY, targetY);
 
       if (mp.direction.x === 'right') {
         body.setVelocityX(100 * timeDilationFactor);
-        if (mp.rect.x > targetX) {
+        if (mp.rect.x >= maxX) {
           mp.direction.x = 'left';
         }
       } else if (mp.direction.x === 'left') {
         body.setVelocityX(-100 * timeDilationFactor);
-        if (mp.rect.x < targetX) {
+        if (mp.rect.x <= minX) {
           mp.direction.x = 'right';
         }
       }
 
       if (mp.direction.y === 'bottom') {
         body.setVelocityY(20 * timeDilationFactor);
-        if (mp.rect.y > targetY) {
+        if (mp.rect.y >= maxY) {
           mp.direction.y = 'top';
         }
       } else if (mp.direction.y === 'top') {
         body.setVelocityY(-20 * timeDilationFactor);
-        if (mp.rect.y < targetY) {
+        if (mp.rect.y <= minY) {
           mp.direction.y = 'bottom';
         }
       }

@@ -248,6 +248,58 @@ async function run() {
     }
     console.log('✓ Ground platform position and immovability verified (y=720, immovable=true)');
 
+    // HUD NON-OVERLAP & RESTART BUTTON CHECK
+    const hudCheck = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return { ok: false, reason: 'No GameScene' };
+      const hudItems = [];
+      const children = gs.children?.list || [];
+      for (const obj of children) {
+        if (
+          obj.type === 'Text' &&
+          obj.visible &&
+          obj.scrollFactorX === 0 &&
+          obj.depth >= 100 &&
+          obj.text &&
+          obj.text.trim().length > 0
+        ) {
+          const b = obj.getBounds();
+          hudItems.push({
+            text: obj.text.trim(),
+            left: Math.round(b.left),
+            right: Math.round(b.right),
+            top: Math.round(b.top),
+            bottom: Math.round(b.bottom)
+          });
+        }
+      }
+      const overlaps = [];
+      for (let i = 0; i < hudItems.length; i++) {
+        for (let j = i + 1; j < hudItems.length; j++) {
+          const a = hudItems[i];
+          const b = hudItems[j];
+          if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) {
+            overlaps.push(
+              `${a.text} (${a.left}..${a.right},${a.top}..${a.bottom}) <-> ${b.text} (${b.left}..${b.right},${b.top}..${b.bottom})`
+            );
+          }
+        }
+      }
+      const hasRestart = hudItems.some((item) => item.text.includes('[RST]'));
+      return {
+        ok: overlaps.length === 0 && hasRestart,
+        overlaps,
+        hasRestart,
+        count: hudItems.length
+      };
+    });
+    if (!hudCheck.ok) {
+      throw new Error(`HUD check failed: ${JSON.stringify(hudCheck)}`);
+    }
+    console.log(
+      `✓ HUD non-overlap & [RST] verified (${hudCheck.count} visible HUD elements, 0 overlaps)!`
+    );
+
     // REGRESSION TEST: Verify Hero landed on the ground and did not fall into the void
     if (!gameState.hero) {
       throw new Error('Hero not found or has no physics body');
@@ -848,6 +900,9 @@ async function run() {
     const entanglementState = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
       if (!gs) return null;
+      const cam = gs.cameras.main;
+      const alphaHero = gs.heroes.find((h) => !h.isBeta);
+      const betaHero = gs.heroes.find((h) => h.isBeta);
       return {
         hasGame: true,
         isEntangled: Boolean(gs.isEntangled),
@@ -855,8 +910,11 @@ async function run() {
         hasEntanglementBeam: Boolean(gs.entanglementGraphics),
         hasAlphaPortal: Boolean(gs.portalSprite),
         hasBetaPortal: Boolean(gs.betaPortalSprite),
-        alphaX: gs.heroes[0]?.x,
-        betaX: gs.heroes[1]?.x
+        alphaX: alphaHero?.x,
+        betaX: betaHero?.x,
+        zoom: cam.zoom,
+        alphaInView: alphaHero ? cam.worldView.contains(alphaHero.x, alphaHero.y) : false,
+        betaInView: betaHero ? cam.worldView.contains(betaHero.x, betaHero.y) : false
       };
     });
     console.log('Entanglement Game State:', JSON.stringify(entanglementState, null, 2));
@@ -873,8 +931,13 @@ async function run() {
     if (!entanglementState.hasAlphaPortal || !entanglementState.hasBetaPortal) {
       throw new Error('Dual portals (Alpha and Beta) missing in entangled mode');
     }
+    if (!entanglementState.alphaInView || !entanglementState.betaInView) {
+      throw new Error(
+        `Entangled heroes not both visible in camera! zoom=${entanglementState.zoom}, alphaInView=${entanglementState.alphaInView}, betaInView=${entanglementState.betaInView}`
+      );
+    }
     console.log(
-      '✓ Verified: 2 entangled heroes (Alpha & Beta) spawned with laser beam and dual portals!'
+      `✓ Verified: 2 entangled heroes (Alpha & Beta) both visible in camera (zoom=${entanglementState.zoom.toFixed(2)}) with laser beam and dual portals!`
     );
 
     // Simulate entangled heroes reaching their respective portals

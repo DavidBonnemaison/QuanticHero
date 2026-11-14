@@ -1,6 +1,15 @@
+import { calculateCollapse } from '../mechanics/quantumMechanics';
 import { PHYSICS } from '../physics/constants';
 import { type GhostFrame, compressTrajectory } from '../tools/GhostRecorder';
-import type { Door, Gate, Particle, Platform, PressurePlate, Spike } from '../types';
+import type {
+  CollapseConfig,
+  Door,
+  Gate,
+  Particle,
+  Platform,
+  PressurePlate,
+  Spike
+} from '../types';
 
 export interface SimHeroState {
   x: number;
@@ -19,6 +28,9 @@ export interface SimHeroState {
   gravityMultiplier?: number;
   tunnelCharges?: number;
   isPauliCharged?: boolean;
+  hasClone?: boolean;
+  timeDilationUntilMs?: number;
+  collapseOffsetY?: number;
   activeGates?: string[];
   triggeredPlates?: string[];
   collectedParticleIndices?: number[];
@@ -40,6 +52,7 @@ export interface SimWorld {
   particles?: Particle[];
   gates?: Gate[];
   pressurePlates?: PressurePlate[];
+  collapse?: CollapseConfig;
   bounceWalls?: boolean;
 }
 
@@ -228,20 +241,12 @@ export function stepSimulation(
             newX = p.x - halfW;
             next.recoilVx = -PHYSICS.WALL_RECOIL_VX * mult;
             next.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
-            if (next.touchingGround || input.jump) {
-              next.vy = PHYSICS.WALL_RECOIL_VY_JUMP * next.upsideDown;
-            } else if (next.vy * next.upsideDown > -50) {
-              next.vy = PHYSICS.WALL_RECOIL_VY * next.upsideDown;
-            }
+            next.vy = -400 * next.upsideDown;
           } else {
             newX = p.x + p.width + halfW;
             next.recoilVx = PHYSICS.WALL_RECOIL_VX * mult;
             next.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
-            if (next.touchingGround || input.jump) {
-              next.vy = PHYSICS.WALL_RECOIL_VY_JUMP * next.upsideDown;
-            } else if (next.vy * next.upsideDown > -50) {
-              next.vy = PHYSICS.WALL_RECOIL_VY * next.upsideDown;
-            }
+            next.vy = -400 * next.upsideDown;
           }
         }
       }
@@ -278,11 +283,30 @@ export function stepSimulation(
         } else if (part.type === 'antiGravity') {
           next.upsideDown = -next.upsideDown;
         } else if (part.type === 'tunnel') {
-          next.tunnelCharges = 2;
+          next.tunnelCharges = 1;
         } else if (part.type === 'pauli') {
           next.isPauliCharged = true;
+        } else if (part.type === 'duplicate') {
+          next.hasClone = true;
+        } else if (part.type === 'timeDilation') {
+          next.timeDilationUntilMs = next.timeMs + 5000;
         }
       }
+    }
+  }
+
+  // Update gravitational collapse offset (slowed during time dilation)
+  if (world.collapse) {
+    const timeDilationFactor =
+      next.timeDilationUntilMs && next.timeMs < next.timeDilationUntilMs ? 0.25 : 1.0;
+    const { active, stepY } = calculateCollapse(
+      world.collapse,
+      next.timeMs,
+      deltaMs,
+      timeDilationFactor
+    );
+    if (active && stepY > 0) {
+      next.collapseOffsetY = (next.collapseOffsetY ?? 0) + stepY;
     }
   }
 
@@ -307,25 +331,28 @@ export function stepSimulation(
     }
   }
 
-  // 5b. Pressure plates detection
+  // 5b. Pressure plates detection (supports requireLock when no clone is holding the plate)
   if (world.pressurePlates && world.pressurePlates.length > 0) {
     for (const pl of world.pressurePlates) {
       const heroLeft = newX - halfW;
       const heroRight = newX + halfW;
       const heroTop = newY - halfH;
       const heroBottom = newY + halfH;
-      if (
+      const isOnPlate =
         heroRight > pl.x &&
         heroLeft < pl.x + pl.width &&
         heroBottom >= pl.y - 8 &&
-        heroTop <= pl.y + pl.height + 8
-      ) {
+        heroTop <= pl.y + pl.height + 8;
+
+      if (isOnPlate) {
         if (!next.activeGates?.includes(pl.targetGateId)) {
           next.activeGates = [...(next.activeGates ?? []), pl.targetGateId];
         }
         if (!next.triggeredPlates?.includes(pl.id)) {
           next.triggeredPlates = [...(next.triggeredPlates ?? []), pl.id];
         }
+      } else if (pl.requireLock && !next.hasClone) {
+        next.activeGates = (next.activeGates ?? []).filter((id) => id !== pl.targetGateId);
       }
     }
   }
@@ -345,6 +372,29 @@ export function stepSimulation(
             newX = g.x + g.width + halfW;
             next.vx = 0;
           }
+        }
+      }
+    }
+  }
+
+  // 5d. Solid platform horizontal wall collision (e.g. ceiling-to-floor tunneling barriers)
+  for (let idx = 0; idx < world.platforms.length; idx++) {
+    const p = world.platforms[idx];
+    if (p.kind === 'wall' || p.height < 60) continue;
+    if (p.phase && next.currentPhase && p.phase !== next.currentPhase) continue;
+    if (p.decayMs && p.decayMs > 0 && next.decayContactTime?.[idx] !== undefined) {
+      if (next.timeMs - next.decayContactTime[idx] >= p.decayMs) continue;
+    }
+    const vOverlap = newY + halfH > p.y + 8 && newY - halfH < p.y + p.height - 8;
+    if (vOverlap) {
+      const hOverlap = newX + halfW > p.x && newX - halfW < p.x + p.width;
+      if (hOverlap) {
+        if (hero.x < p.x + p.width / 2) {
+          newX = p.x - halfW;
+          next.vx = 0;
+        } else {
+          newX = p.x + p.width + halfW;
+          next.vx = 0;
         }
       }
     }
@@ -481,10 +531,11 @@ export function simulatePlatformTransition(
   const horizontalGap = isTargetRight
     ? toPlatform.x - (fromPlatform.x + fromPlatform.width)
     : fromPlatform.x - (toPlatform.x + toPlatform.width);
-  const isPauliChasm =
-    horizontalGap > 350 &&
-    Boolean(current.isPauliCharged || world.particles?.some((p) => p.type === 'pauli'));
+  let usedPauliChasm = false;
 
+  const hasBounceWall = world.platforms.some((p) => p.kind === 'wall');
+  const needsWallBounce = hasBounceWall && fromPlatform.y - toPlatform.y > 135;
+  let wallBounced = false;
   let jumped = false;
   let settled = false;
 
@@ -492,6 +543,10 @@ export function simulatePlatformTransition(
     const input: SimInput = { left: false, right: false, jump: false };
     const halfW = PHYSICS.HERO_WIDTH / 2;
     const halfH = PHYSICS.HERO_HEIGHT / 2;
+
+    if (current.recoilTimer > 0) {
+      wallBounced = true;
+    }
 
     if (!jumped) {
       // Phase 1: Move towards edge and trigger jump
@@ -502,7 +557,8 @@ export function simulatePlatformTransition(
         if (current.x >= jumpTriggerX || current.x >= targetCenterX - 20) {
           input.jump = true;
           jumped = true;
-          if (isPauliChasm) {
+          if (horizontalGap > 350 && current.isPauliCharged && current.hasClone) {
+            usedPauliChasm = true;
             current.touchingGround = false;
             current.vx = 580;
             current.vy = -600;
@@ -517,7 +573,8 @@ export function simulatePlatformTransition(
         if (current.x <= jumpTriggerX || current.x <= targetCenterX + 20) {
           input.jump = true;
           jumped = true;
-          if (isPauliChasm) {
+          if (horizontalGap > 350 && current.isPauliCharged && current.hasClone) {
+            usedPauliChasm = true;
             current.touchingGround = false;
             current.vx = -580;
             current.vy = -600;
@@ -537,19 +594,24 @@ export function simulatePlatformTransition(
         } else {
           settled = true;
         }
-      } else if (isPauliChasm && !current.touchingGround) {
+      } else if (usedPauliChasm && !current.touchingGround) {
         // Ballistic Pauli arc: do not steer with arrow keys, let momentum carry hero across the chasm
         input.right = false;
         input.left = false;
+      } else if (needsWallBounce && !wallBounced) {
+        // Keep steering into the vertical wall to trigger the neon wall-jump
+        if (isTargetRight) input.right = true;
+        else input.left = true;
       } else {
         // In air: steer towards target
         const dist = targetCenterX - current.x;
         // If we are over the target platform and moving fast, brake
         const overTarget =
-          current.x >= toPlatform.x && current.x <= toPlatform.x + toPlatform.width;
+          current.x + halfW > toPlatform.x && current.x - halfW < toPlatform.x + toPlatform.width;
         if (overTarget) {
-          if (dist > 10) input.right = true;
-          else if (dist < -10) input.left = true;
+          const margin = needsWallBounce ? Math.max(38, toPlatform.width / 2) : 10;
+          if (dist > margin) input.right = true;
+          else if (dist < -margin) input.left = true;
         } else {
           if (dist > 5) input.right = true;
           else if (dist < -5) input.left = true;
@@ -564,9 +626,17 @@ export function simulatePlatformTransition(
       return { success: true, history, finalState: current };
     }
 
-    // Abort if hero falls below screen or dies in spikes
+    // Abort if hero falls below screen or dies in spikes/collapse
     if (current.y > world.height + 50) {
       return { success: false, history, finalState: current };
+    }
+
+    if (world.collapse) {
+      const topSpikeBottom = 280 + (current.collapseOffsetY ?? 0);
+      const bottomSpikeTop = world.height - 140 - (current.collapseOffsetY ?? 0);
+      if (current.y - halfH <= topSpikeBottom || current.y + halfH >= bottomSpikeTop) {
+        return { success: false, history, finalState: current };
+      }
     }
 
     if (world.spikes && world.spikes.length > 0) {
@@ -626,6 +696,7 @@ export function simulateFullLevel(
   // Final step: Move to door if not already there
   if (success) {
     const doorTargetX = door.x;
+    const halfH = PHYSICS.HERO_HEIGHT / 2;
     for (let step = 0; step < 120; step++) {
       const dist = doorTargetX - hero.x;
       if (Math.abs(dist) < 15) {
@@ -634,6 +705,20 @@ export function simulateFullLevel(
       const input: SimInput = { left: dist < 0, right: dist > 0, jump: false };
       hero = stepSimulation(hero, input, world);
       allStates.push(hero);
+
+      if (world.collapse) {
+        const topSpikeBottom = 280 + (hero.collapseOffsetY ?? 0);
+        const bottomSpikeTop = world.height - 140 - (hero.collapseOffsetY ?? 0);
+        if (hero.y - halfH <= topSpikeBottom || hero.y + halfH >= bottomSpikeTop) {
+          success = false;
+          failureReason = 'Crushed by gravitational collapse before reaching door';
+          break;
+        }
+      }
+    }
+    if (success && Math.abs(doorTargetX - hero.x) >= 20) {
+      success = false;
+      failureReason = 'Blocked before reaching door';
     }
   }
 
