@@ -9,6 +9,7 @@ vi.mock('phaser', () => {
     public flipX = false;
     public flipY = false;
     public tint = 0;
+    public alpha = 1;
     public body: any;
     public anims: any;
 
@@ -64,6 +65,10 @@ vi.mock('phaser', () => {
     }
     clearTint() {
       this.tint = 0;
+      return this;
+    }
+    setAlpha(a: number) {
+      this.alpha = a;
       return this;
     }
     setVelocityX(vx: number) {
@@ -202,5 +207,36 @@ describe('Hero Quantum Entanglement Mechanics', () => {
 
     expect(hero.body.velocity.x).toBe(0);
     expect(hero.body.velocity.y).toBe(0);
+  });
+
+  it('handles quantum tunneling charges and alpha pulsing', () => {
+    const hero = new Hero(mockScene, 100, 200, true);
+    expect(hero.tunnelCharges).toBe(0);
+
+    hero.tunnelCharges = 2;
+    hero.updateControl(null, null, { left: false, right: false, jump: false });
+
+    // With tunnelCharges, alpha should have pulsed into translucent range [0.25, 0.75]
+    expect(hero.alpha).toBeLessThan(1.0);
+    expect(hero.alpha).toBeGreaterThanOrEqual(0.25);
+
+    // Charge decrement
+    hero.tunnelCharges -= 1;
+    expect(hero.tunnelCharges).toBe(1);
+
+    hero.tunnelCharges -= 1;
+    expect(hero.tunnelCharges).toBe(0);
+  });
+
+  it('triggers wall bounce recoil when hitting left or right boundaries', () => {
+    const hero = new Hero(mockScene, 100, 200, true);
+    hero.bounceOffLeftWall();
+    expect(hero.recoilVx).toBe(300);
+    expect(hero.recoilTimer).toBe(220);
+
+    const hero2 = new Hero(mockScene, 100, 200, true);
+    hero2.bounceOffRightWall();
+    expect(hero2.recoilVx).toBe(-300);
+    expect(hero2.recoilTimer).toBe(220);
   });
 });

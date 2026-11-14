@@ -1,7 +1,15 @@
 import LZString from 'lz-string';
 import type { LevelData, Particle, ParticleType, Platform, Spike } from '../types';
 
-export const PARTICLE_TYPES: ParticleType[] = ['duplicate', 'speed', 'lowGravity', 'antiGravity'];
+export const PARTICLE_TYPES: ParticleType[] = [
+  'duplicate',
+  'speed',
+  'lowGravity',
+  'antiGravity',
+  'tunnel',
+  'pauli',
+  'timeDilation'
+];
 
 /**
  * Minified representation of LevelData for compact URL transmission.
@@ -146,6 +154,7 @@ export function compressLevel(level: LevelData): string {
  * Validates, sanitizes, and unpacks an object into LevelData.
  * Returns null if the structure is corrupt, invalid, or missing required fields.
  */
+// biome-ignore lint/suspicious/noExplicitAny: parsing untyped external JSON
 function unpackAndValidateLevel(raw: any): LevelData | null {
   if (!raw || typeof raw !== 'object') {
     return null;
@@ -269,6 +278,15 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
             time: typeof item.movesTo.time === 'number' ? Math.max(100, item.movesTo.time) : 2000
           };
         }
+        if (item.kind === 'wall' || item.kind === 'standard') {
+          plat.kind = item.kind;
+        }
+        if (item.phase === 'cyan' || item.phase === 'magenta') {
+          plat.phase = item.phase;
+        }
+        if (typeof item.decayMs === 'number' && item.decayMs > 0) {
+          plat.decayMs = item.decayMs;
+        }
         platforms.push(plat);
       }
     }
@@ -379,7 +397,18 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
     spikes,
     ...(explanations.length > 0 ? { explanations } : {}),
     ...(authorGhost ? { authorGhost } : {}),
-    ...(authorTime ? { authorTime } : {})
+    ...(authorTime ? { authorTime } : {}),
+    ...(raw.collapse &&
+    typeof raw.collapse === 'object' &&
+    typeof raw.collapse.speedY === 'number' &&
+    typeof raw.collapse.delayMs === 'number'
+      ? {
+          collapse: {
+            speedY: raw.collapse.speedY,
+            delayMs: raw.collapse.delayMs
+          }
+        }
+      : {})
   };
 
   return level;

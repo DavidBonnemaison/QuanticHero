@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node scripts/test-e2e.js",
+    "generate:level": "tsx scripts/generate-quantum-level.ts",
+    "generate:campaign": "tsx scripts/generate-campaign.ts",
     "lint": "biome check src",
     "format": "biome format --write src",
     "check": "biome check --write src"
@@ -41,6 +43,7 @@
     "happy-dom": "^21.0.4",
     "jsdom": "^31.0.0",
     "puppeteer-core": "^25.17.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vite-plugin-pwa": "^2.0.0",

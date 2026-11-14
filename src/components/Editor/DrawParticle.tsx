@@ -13,7 +13,10 @@ const colors: Record<string, string> = {
   duplicate: 'blue',
   speed: 'red',
   lowGravity: 'green',
-  antiGravity: 'cyan'
+  antiGravity: 'cyan',
+  tunnel: '#eab308',
+  pauli: '#f97316',
+  timeDilation: '#a855f7'
 };
 
 export const DrawParticle: React.FC<DrawParticleProps> = ({ x, y, scale, type, i }) => (

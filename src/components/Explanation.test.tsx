@@ -29,7 +29,7 @@ describe('Explanation component', () => {
     renderWithRouter();
 
     expect(screen.getByText(/reduced to a veeery small size/i)).toBeInTheDocument();
-    expect(screen.getByText(/try to get that electron/i)).toBeInTheDocument();
+    expect(screen.getByText(/tiny floating spark/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /got it/i })).toBeInTheDocument();
   });
 

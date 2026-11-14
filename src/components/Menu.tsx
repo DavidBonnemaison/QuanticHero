@@ -2,10 +2,8 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { soundManager } from '../audio/SoundManager';
-import * as levels from '../data/levels';
 import { useGameStore } from '../store';
 import { hapticFeedback } from '../tools/HapticFeedback';
-import type { LevelData } from '../types';
 import styles from './Menu.module.css';
 import Molecules from './Molecules';
 
@@ -16,8 +14,6 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function Menu(): React.ReactElement {
   const navigate = useNavigate();
-  const customLevels = useGameStore((state) => state.customLevels);
-  const setLevels = useGameStore((state) => state.setLevels);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
   const isMuted = useGameStore((state) => state.isMuted);
   const toggleMute = useGameStore((state) => state.toggleMute);
@@ -30,9 +26,6 @@ export default function Menu(): React.ReactElement {
   useEffect(() => {
     Molecules.start();
     hapticFeedback.init();
-    if (!customLevels) {
-      setLevels(levels as unknown as Record<string, LevelData>);
-    }
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -51,7 +44,7 @@ export default function Menu(): React.ReactElement {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, [customLevels, setLevels]);
+  }, []);
 
   const handleNewGame = () => {
     useGameStore.getState().resetGame();

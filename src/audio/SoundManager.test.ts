@@ -163,6 +163,49 @@ describe('SoundManager', () => {
       expect(mockCtx.createOscillator).toHaveBeenCalled();
       expect(mockCtx.createBiquadFilter).toHaveBeenCalled();
     });
+
+    it('plays Tunnel sound with FM synthesis sweep 300 -> 900 Hz', () => {
+      soundManager.playTunnelSound();
+      expect(mockCtx.createOscillator).toHaveBeenCalled();
+      expect(mockCtx.createGain).toHaveBeenCalled();
+    });
+
+    it('plays Phase Shift resonant percussive stereo click', () => {
+      soundManager.playPhaseShiftSound();
+      expect(mockCtx.createBiquadFilter).toHaveBeenCalled();
+      expect(mockCtx.createOscillator).toHaveBeenCalled();
+    });
+
+    it('plays Pauli Blast overdriven square wave with lowpass resonance', () => {
+      soundManager.playPauliBlastSound();
+      expect(mockCtx.createOscillator).toHaveBeenCalled();
+      expect(mockCtx.createBiquadFilter).toHaveBeenCalled();
+    });
+
+    it('plays Time Dilation downward sweep with spatial beating', () => {
+      soundManager.playTimeDilationSound();
+      expect(mockCtx.createOscillator).toHaveBeenCalled();
+      expect(mockCtx.createBiquadFilter).toHaveBeenCalled();
+    });
+
+    it('plays Decay sound with noise bursts and discharging oscillator', () => {
+      soundManager.playDecaySound();
+      expect(mockCtx.createBufferSource).toHaveBeenCalled();
+      expect(mockCtx.createBiquadFilter).toHaveBeenCalled();
+    });
+
+    it('plays Wall Bounce sound with springy pitch rise and fall', () => {
+      soundManager.playBounceSound();
+      expect(mockCtx.createOscillator).toHaveBeenCalled();
+      expect(mockCtx.createGain).toHaveBeenCalled();
+    });
+
+    it('plays Particle Collect with chords for tunnel, pauli, and timeDilation', () => {
+      soundManager.playParticleCollect('tunnel');
+      soundManager.playParticleCollect('pauli');
+      soundManager.playParticleCollect('timeDilation');
+      expect(mockCtx.createOscillator).toHaveBeenCalled();
+    });
   });
 
   describe('GameEventBus integration', () => {
@@ -196,6 +239,37 @@ describe('SoundManager', () => {
       const playSpy = vi.spyOn(soundManager, 'playVictory');
       gameEvents.emit('level:complete', { level: 2 });
       expect(playSpy).toHaveBeenCalled();
+    });
+
+    it('responds to phase:shift, tunnel:use, pauli:blast, time:dilation, platform:decay, hero:wall_bounce events', () => {
+      const phaseSpy = vi.spyOn(soundManager, 'playPhaseShiftSound');
+      const tunnelSpy = vi.spyOn(soundManager, 'playTunnelSound');
+      const pauliSpy = vi.spyOn(soundManager, 'playPauliBlastSound');
+      const timeSpy = vi.spyOn(soundManager, 'playTimeDilationSound');
+      const decaySpy = vi.spyOn(soundManager, 'playDecaySound');
+      const bounceSpy = vi.spyOn(soundManager, 'playBounceSound');
+
+      gameEvents.emit('phase:shift', { phase: 'magenta' });
+      expect(phaseSpy).toHaveBeenCalled();
+
+      gameEvents.emit('tunnel:use', { remaining: 1 });
+      expect(tunnelSpy).toHaveBeenCalled();
+
+      gameEvents.emit('pauli:blast', { hero1Id: 1, hero2Id: 2 });
+      expect(pauliSpy).toHaveBeenCalled();
+
+      gameEvents.emit('time:dilation', { active: true, durationMs: 4000 });
+      expect(timeSpy).toHaveBeenCalled();
+
+      gameEvents.emit('platform:decay', { x: 100, y: 200 });
+      expect(decaySpy).toHaveBeenCalled();
+
+      gameEvents.emit('hero:wall_bounce', { x: 100, y: 200 });
+      expect(bounceSpy).toHaveBeenCalled();
+
+      const clickSpy = vi.spyOn(soundManager, 'playMechanicalClick');
+      gameEvents.emit('plate:trigger', { plateId: 'p1', gateId: 'g1' });
+      expect(clickSpy).toHaveBeenCalled();
     });
   });
 

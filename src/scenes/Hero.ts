@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { PHYSICS } from '../physics/constants';
 import { gameEvents } from '../tools/gameEvents';
 import type { EntanglementMode } from '../types';
 
@@ -19,6 +20,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public isBeta = false;
   public entanglementMode?: EntanglementMode;
   public enteredPortal = false;
+  public tunnelCharges = 0;
+  public pauliGraceUntil = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, isFocused = true) {
     super(scene, x, y, isFocused ? 'hero' : 'disabled');
@@ -67,43 +70,51 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     return this.isFocused ? base : `disabled-${base}`;
   }
 
-  public bounceOffLeftWall(): void {
+  public bounceOffLeftWall(isNeonWall = false): void {
     if (this.recoilVx <= 0) {
-      this.recoilVx = 300 * this.velocityMultiplier;
-      this.recoilTimer = 220;
+      this.recoilVx = PHYSICS.WALL_RECOIL_VX * this.velocityMultiplier;
+      this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
+      if (isNeonWall) {
+        this.setVelocityY(-400 * this.upsideDown);
+        return;
+      }
       const touchingGround =
         this.upsideDown === 1
           ? this.body?.touching.down || this.body?.blocked.down
           : this.body?.touching.up || this.body?.blocked.up;
       if (touchingGround) {
-        this.setVelocityY(-160 * this.upsideDown);
+        this.setVelocityY(PHYSICS.WALL_RECOIL_VY_JUMP * this.upsideDown);
       } else if (this.body && this.body.velocity.y * this.upsideDown > -50) {
-        this.setVelocityY(-100 * this.upsideDown);
+        this.setVelocityY(PHYSICS.WALL_RECOIL_VY * this.upsideDown);
       }
     }
   }
 
-  public bounceOffRightWall(): void {
+  public bounceOffRightWall(isNeonWall = false): void {
     if (this.recoilVx >= 0) {
-      this.recoilVx = -300 * this.velocityMultiplier;
-      this.recoilTimer = 220;
+      this.recoilVx = -PHYSICS.WALL_RECOIL_VX * this.velocityMultiplier;
+      this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
+      if (isNeonWall) {
+        this.setVelocityY(-400 * this.upsideDown);
+        return;
+      }
       const touchingGround =
         this.upsideDown === 1
           ? this.body?.touching.down || this.body?.blocked.down
           : this.body?.touching.up || this.body?.blocked.up;
       if (touchingGround) {
-        this.setVelocityY(-160 * this.upsideDown);
+        this.setVelocityY(PHYSICS.WALL_RECOIL_VY_JUMP * this.upsideDown);
       } else if (this.body && this.body.velocity.y * this.upsideDown > -50) {
-        this.setVelocityY(-100 * this.upsideDown);
+        this.setVelocityY(PHYSICS.WALL_RECOIL_VY * this.upsideDown);
       }
     }
   }
 
   public bounceOffCeiling(): void {
     if (this.upsideDown === 1 && (!this.body || this.body.velocity.y < 50)) {
-      this.setVelocityY(220);
+      this.setVelocityY(PHYSICS.CEILING_BOUNCE_VY);
     } else if (this.upsideDown === -1 && (!this.body || this.body.velocity.y > -50)) {
-      this.setVelocityY(-220);
+      this.setVelocityY(-PHYSICS.CEILING_BOUNCE_VY);
     }
   }
 
@@ -119,7 +130,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     cursors: Phaser.Types.Input.Keyboard.CursorKeys | null,
     wasd: { [key: string]: Phaser.Input.Keyboard.Key } | null,
     touch: TouchInputState,
-    delta = 16.6
+    delta = PHYSICS.DELTA_FIXED_MS
   ): void {
     if (!this.body) return;
 
@@ -156,15 +167,15 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     if (this.recoilTimer > 0) {
       this.recoilTimer -= delta;
       this.setVelocityX(this.recoilVx);
-      this.recoilVx *= 0.94;
+      this.recoilVx *= PHYSICS.WALL_RECOIL_DRAG_X;
 
       // Allow cancelling recoil early if player steers in the bounce direction
       if (this.recoilVx > 0 && goRight) {
         this.recoilTimer = 0;
-        this.setVelocityX(350 * this.velocityMultiplier);
+        this.setVelocityX(PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
       } else if (this.recoilVx < 0 && goLeft) {
         this.recoilTimer = 0;
-        this.setVelocityX(-350 * this.velocityMultiplier);
+        this.setVelocityX(-PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
       }
 
       this.play(this.getAnimKey('jump'), true);
@@ -176,14 +187,20 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     const isActive = this.isEntangled || this.isFocused;
 
     if (isActive) {
+      const isHighSpeed =
+        Math.abs(this.body.velocity.x) > PHYSICS.HERO_SPEED_X * this.velocityMultiplier;
       if (goLeft) {
-        this.setVelocityX(-350 * this.velocityMultiplier);
+        if (touchingGround || !isHighSpeed) {
+          this.setVelocityX(-PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
+        }
         this.setFlipX(true);
         if (touchingGround) {
           this.play(this.getAnimKey('left'), true);
         }
       } else if (goRight) {
-        this.setVelocityX(350 * this.velocityMultiplier);
+        if (touchingGround || !isHighSpeed) {
+          this.setVelocityX(PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
+        }
         this.setFlipX(false);
         if (touchingGround) {
           this.play(this.getAnimKey('right'), true);
@@ -193,24 +210,35 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
           this.setVelocityX(0);
           this.play(this.getAnimKey('idle'), true);
         } else {
-          this.body.velocity.x *= 0.98;
+          const drag = isHighSpeed ? 0.996 : PHYSICS.AIR_DRAG_X;
+          this.body.velocity.x *= drag;
         }
       }
 
       if (jump && touchingGround) {
-        this.setVelocityY(-450 * this.upsideDown);
+        this.setVelocityY(PHYSICS.HERO_JUMP_V0 * this.upsideDown);
         this.play(this.getAnimKey('jump'), true);
         gameEvents.emit('hero:jump');
       }
     } else {
-      this.setVelocityX(0);
       if (touchingGround) {
+        this.setVelocityX(0);
         this.play(this.getAnimKey('idle'), true);
       }
     }
 
     if (!touchingGround) {
       this.play(this.getAnimKey('jump'), true);
+    }
+
+    // Translucent shimmering pulse when quantum tunneling charges are active
+    if (this.tunnelCharges > 0) {
+      const pulseAlpha = 0.5 + 0.25 * Math.sin(Date.now() * 0.008);
+      if (typeof this.setAlpha === 'function') {
+        this.setAlpha(pulseAlpha);
+      }
+    } else if (this.alpha !== 1 && typeof this.setAlpha === 'function') {
+      this.setAlpha(1);
     }
   }
 }
