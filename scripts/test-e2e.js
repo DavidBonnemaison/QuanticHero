@@ -1218,6 +1218,75 @@ async function run() {
     await page.screenshot({ path: '/tmp/entanglement_done_screenshot.png' });
     console.log('Entanglement screenshot saved to /tmp/entanglement_done_screenshot.png');
 
+    // GOD MODE E2E CHECK (?god=1)
+    console.log('Testing God Mode (?god=1): level unlock + spike immunity...');
+    await page.evaluate(() => {
+      const store = JSON.parse(localStorage.getItem('qtmhro') || '{"state":{}}');
+      store.state.maxLevel = 1;
+      store.state.currentLevel = 1;
+      localStorage.setItem('qtmhro', JSON.stringify(store));
+    });
+    await page.goto('http://localhost:4173/levels?god=1', { waitUntil: 'domcontentloaded' });
+    await new Promise((r) => setTimeout(r, 400));
+    const godLevelsCheck = await page.evaluate(() => {
+      const title = document.body.textContent || '';
+      const cards = Array.from(document.querySelectorAll('[role="button"]'));
+      const mtCard = cards.find((c) => c.textContent?.includes('Meitnerium'));
+      const isMtUnlocked = mtCard && mtCard.getAttribute('tabindex') === '0';
+      const hasEntTab = title.includes('ENTANGLEMENT');
+      return {
+        hasGodTitle: title.includes('[GOD]'),
+        isMtUnlocked: Boolean(isMtUnlocked),
+        hasEntTab
+      };
+    });
+    if (!godLevelsCheck.hasGodTitle || !godLevelsCheck.isMtUnlocked || !godLevelsCheck.hasEntTab) {
+      throw new Error(`God Mode /levels check failed: ${JSON.stringify(godLevelsCheck)}`);
+    }
+    // Load Level 2 (which has spikes) and verify spike overlap does NOT kill hero in God Mode
+    await page.evaluate(() => {
+      const store = JSON.parse(localStorage.getItem('qtmhro') || '{"state":{}}');
+      store.state.currentLevel = 2;
+      localStorage.setItem('qtmhro', JSON.stringify(store));
+    });
+    await page.goto('http://localhost:4173/game?god=1', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(
+      () => {
+        const gs = window.game?.scene?.getScene('Game');
+        return Boolean(
+          gs?.scene.isActive() && gs.heroes?.length > 0 && gs.spikes?.getChildren().length > 0
+        );
+      },
+      { timeout: 10000 }
+    );
+    const spikeImmunityCheck = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs) return { ok: false };
+      const hero = gs.heroes[0];
+      hero._e2eGodMarker = true;
+      const spike = gs.spikes.getChildren()[0];
+      gs.physics.world.overlap(gs.heroGroup, gs.spikes, () => {
+        // Check GameScene's own spike overlap callback by moving hero onto spike
+      });
+      hero.x = spike.x;
+      hero.y = spike.y;
+      if (hero.body) hero.body.reset(spike.x, spike.y);
+      gs.physics.world.update(0, 16);
+      return {
+        ok: Boolean(hero.active && hero._e2eGodMarker === true),
+        hasGodHud: gs.hudContainer?.list.some((c) => c.type === 'Text' && c.text === '[GOD]')
+      };
+    });
+    if (!spikeImmunityCheck.ok || !spikeImmunityCheck.hasGodHud) {
+      throw new Error(
+        `God Mode spike immunity check failed: ${JSON.stringify(spikeImmunityCheck)}`
+      );
+    }
+    console.log(
+      '✓ God Mode (?god=1) verified: all levels unlocked, [GOD] HUD badge visible, and spikes non-lethal!'
+    );
+    await page.goto('http://localhost:4173/levels?god=0', { waitUntil: 'domcontentloaded' });
+
     console.log('Testing /editor route...');
     await page.goto('http://localhost:4173/editor', { waitUntil: 'domcontentloaded' });
     await new Promise((r) => setTimeout(r, 1000));

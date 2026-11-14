@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import * as levelsData from '../data/levels';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
+import { isGodMode } from '../tools/godMode';
 import type { LevelData } from '../types';
 import styles from './LevelSelection.module.css';
 
@@ -12,6 +13,7 @@ const allLevels = levelsData as unknown as Record<string, LevelData>;
 export const LevelSelection: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const godMode = isGodMode();
   const maxLevel = useGameStore((state) => state.maxLevel);
   const maxEntanglementLevel = useGameStore((state) => state.maxEntanglementLevel ?? 110);
   const scores = useGameStore((state) => state.scores);
@@ -32,7 +34,8 @@ export const LevelSelection: React.FC = () => {
         ? '[GHOST: OPTIMAL]'
         : '[GHOST: BEST]';
 
-  const isEntanglementUnlocked = maxLevel >= 10 || location.search.includes('entanglement=1');
+  const isEntanglementUnlocked =
+    godMode || maxLevel >= 10 || location.search.includes('entanglement=1');
   const [activeTab, setActiveTab] = useState<'classic' | 'entanglement'>(
     isEntanglementUnlocked &&
       (location.search.includes('tab=entanglement') || location.search.includes('entanglement=1'))
@@ -61,6 +64,7 @@ export const LevelSelection: React.FC = () => {
   }));
 
   const isDisabled = (id: string | number) => {
+    if (godMode) return false;
     const num = Number(id);
     if (num >= 110) {
       return num > maxEntanglementLevel;
@@ -85,7 +89,7 @@ export const LevelSelection: React.FC = () => {
         <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
           ◄ MENU
         </button>
-        <h1 className={styles.title}>Level Selection</h1>
+        <h1 className={styles.title}>Level Selection{godMode ? ' [GOD]' : ''}</h1>
         <button
           type="button"
           className={`${styles.ghostToggle} ${ghostMode !== 'off' ? styles.ghostToggleActive : ''}`}
