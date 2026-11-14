@@ -412,7 +412,23 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'qtmhro',
+      version: 2,
       storage: createJSONStorage(() => customStorage),
+      migrate: (persistedState: unknown, version: number) => {
+        const state = (persistedState ?? {}) as Record<string, unknown>;
+        if (version < 2 && state.customLevels && typeof state.customLevels === 'object') {
+          const filtered: Record<string, LevelData> = {};
+          for (const [k, v] of Object.entries(state.customLevels as Record<string, LevelData>)) {
+            const match = /^level(\d+)$/.exec(k);
+            // Keep only user-created/shared custom slots (level >= 1000); drop stale built-in cache
+            if (!match || Number.parseInt(match[1], 10) >= 1000) {
+              filtered[k] = v;
+            }
+          }
+          state.customLevels = Object.keys(filtered).length > 0 ? filtered : null;
+        }
+        return state;
+      },
       partialize: (state) => ({
         currentLevel: state.currentLevel,
         maxLevel: state.maxLevel,

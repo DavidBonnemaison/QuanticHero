@@ -362,8 +362,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
 
       const p1: Platform = { x: 460, y: 600, width: 220, height: 20 };
       const speedPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'speed' };
-      // 510 px chasm: standard reach = 450 px, speed-boosted reach = 630 px
-      const p2: Platform = { x: p1.x + p1.width + 510, y: 600, width: 240, height: 20 };
+      // 580 px chasm: edge-to-edge standard reach = 510 px max, speed-boosted reach = 690 px
+      const p2: Platform = { x: p1.x + p1.width + 580, y: 600, width: 240, height: 20 };
       const accelPlats = [p1, p2];
 
       accelerationChunk = {

@@ -96,6 +96,7 @@ export default class GameScene extends Phaser.Scene {
   public timeDilationUntil = 0;
   public currentPhase: PlatformPhase = 'cyan';
   public hasPhasePlatforms = false;
+  public hudContainer: Phaser.GameObjects.Container | null = null;
 
   private phasePlatforms: Array<{ rect: Phaser.GameObjects.Rectangle; phase: PlatformPhase }> = [];
   private decayPlatforms: Array<{
@@ -157,6 +158,7 @@ export default class GameScene extends Phaser.Scene {
     this.timerStarted = false;
     this.splitDeltaText = null;
     this.ghostButton = null;
+    this.hudContainer = null;
     this.phaseIndicatorText = null;
     this.dilationIndicatorText = null;
     this.isEntangled = false;
@@ -226,14 +228,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const currentLevel = store.currentLevel || 1;
-    let levels = store.customLevels;
-    if (!levels) {
-      levels = defaultLevels as unknown as Record<string, LevelData>;
-      store.setLevels(levels);
-    }
+    const builtInLevels = defaultLevels as unknown as Record<string, LevelData>;
     const levelKey = `level${currentLevel}`;
-    this.levelData = levels[levelKey] || levels.level1;
-    if (!levels[levelKey]) {
+    const selected = store.customLevels?.[levelKey] || builtInLevels[levelKey];
+    this.levelData = selected || builtInLevels.level1;
+    if (!selected) {
       store.updateCurrentLevel(1);
     }
   }
@@ -561,10 +560,15 @@ export default class GameScene extends Phaser.Scene {
       // Create Beta Portal if dual portal mode or betaDoor specified
       if (entanglement.portalMode === 'dual' || entanglement.betaDoor) {
         const betaDoorPos = entanglement.betaDoor || this.levelData.door;
+        const isBetaInverted =
+          entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity';
         const betaPortalX = betaDoorPos.x - 48;
-        const betaPortalY = betaDoorPos.y - 96;
+        const betaPortalY = isBetaInverted ? betaDoorPos.y + 32 : betaDoorPos.y - 96;
         this.betaPortalSprite = this.physics.add.sprite(betaPortalX, betaPortalY, 'portal');
         this.betaPortalSprite.setScale(0.15, 0.2);
+        if (isBetaInverted) {
+          this.betaPortalSprite.setFlipY(true);
+        }
         this.betaPortalSprite.setTint(0xec4899);
         const bpBody = this.betaPortalSprite.body as Phaser.Physics.Arcade.Body;
         bpBody.setImmovable(true);
@@ -863,6 +867,10 @@ export default class GameScene extends Phaser.Scene {
     const camW = this.cameras.main.width;
     const hudHeight = 54;
 
+    this.hudContainer = this.add.container(0, 0);
+    this.hudContainer.setScrollFactor(0);
+    this.hudContainer.setDepth(100);
+
     const hudBar = this.add.graphics();
     hudBar.fillStyle(0x0b0f19, 0.85);
     hudBar.fillRect(36, 0, camW - 36, hudHeight);
@@ -870,8 +878,7 @@ export default class GameScene extends Phaser.Scene {
     hudBar.fillRect(0, 0, 36, hudHeight);
     hudBar.lineStyle(1, 0x334155, 0.9);
     hudBar.lineBetween(0, hudHeight, camW, hudHeight);
-    hudBar.setScrollFactor(0);
-    hudBar.setDepth(100);
+    this.hudContainer.add(hudBar);
 
     const backButton = this.add.text(18, hudHeight / 2, '◄', {
       fontFamily: 'VT323',
@@ -879,8 +886,6 @@ export default class GameScene extends Phaser.Scene {
       color: '#ffffff'
     });
     backButton.setOrigin(0.5);
-    backButton.setScrollFactor(0);
-    backButton.setDepth(101);
     backButton.setInteractive({ useHandCursor: true });
     backButton.on('pointerdown', () => {
       soundManager.stopBgm();
@@ -892,6 +897,7 @@ export default class GameScene extends Phaser.Scene {
       window.game = null;
       push('/');
     });
+    this.hudContainer.add(backButton);
 
     // Restart level button
     const restartButton = this.add.text(44, 5, '[RST]', {
@@ -899,12 +905,11 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#fbbf24'
     });
-    restartButton.setScrollFactor(0);
-    restartButton.setDepth(101);
     restartButton.setInteractive({ useHandCursor: true });
     restartButton.on('pointerdown', () => {
       this.scene.restart();
     });
+    this.hudContainer.add(restartButton);
 
     // Sound toggle button
     const getSoundLabel = () => (useGameStore.getState().isMuted ? 'SND:OFF' : 'SND:ON');
@@ -913,13 +918,12 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#00ffcc'
     });
-    soundButton.setScrollFactor(0);
-    soundButton.setDepth(101);
     soundButton.setInteractive({ useHandCursor: true });
     soundButton.on('pointerdown', () => {
       useGameStore.getState().toggleMute();
       soundButton.setText(getSoundLabel());
     });
+    this.hudContainer.add(soundButton);
 
     // Haptic feedback toggle button
     const getHapticLabel = () => (useGameStore.getState().hapticsEnabled ? 'HAP:ON' : 'HAP:OFF');
@@ -928,13 +932,12 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#00ffcc'
     });
-    hapticButton.setScrollFactor(0);
-    hapticButton.setDepth(101);
     hapticButton.setInteractive({ useHandCursor: true });
     hapticButton.on('pointerdown', () => {
       useGameStore.getState().toggleHaptics();
       hapticButton.setText(getHapticLabel());
     });
+    this.hudContainer.add(hapticButton);
 
     // Visual effects toggle button (FX:HI / FX:LO)
     const getFxLabel = () => (useGameStore.getState().reducedEffects ? 'FX:LO' : 'FX:HI');
@@ -943,13 +946,12 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#00ffcc'
     });
-    fxButton.setScrollFactor(0);
-    fxButton.setDepth(101);
     fxButton.setInteractive({ useHandCursor: true });
     fxButton.on('pointerdown', () => {
       useGameStore.getState().toggleReducedEffects();
       fxButton.setText(getFxLabel());
     });
+    this.hudContainer.add(fxButton);
 
     // Row 2: Ghost replay toggle button [GHOST: OFF] / [GHOST: OPTIMAL] / [GHOST: BEST]
     const currentMode =
@@ -966,8 +968,6 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#38bdf8'
     });
-    this.ghostButton.setScrollFactor(0);
-    this.ghostButton.setDepth(101);
     this.ghostButton.setAlpha(currentMode !== 'off' ? 1 : 0.45);
     this.ghostButton.setVisible(this.hasAnyGhost);
     this.ghostButton.setInteractive({ useHandCursor: true });
@@ -976,6 +976,7 @@ export default class GameScene extends Phaser.Scene {
       useGameStore.getState().toggleGhost(hasBest);
       this.applyGhostMode();
     });
+    this.hudContainer.add(this.ghostButton);
 
     // Row 2: Subtle environmental phase indicator (only if level has phase platforms)
     if (this.hasPhasePlatforms) {
@@ -990,8 +991,7 @@ export default class GameScene extends Phaser.Scene {
           color: this.currentPhase === 'cyan' ? '#00ffff' : '#ec4899'
         }
       );
-      this.phaseIndicatorText.setScrollFactor(0);
-      this.phaseIndicatorText.setDepth(101);
+      this.hudContainer.add(this.phaseIndicatorText);
     }
 
     // Row 2: Time dilation indicator (shown when active)
@@ -1001,9 +1001,8 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#22d3ee'
     });
-    this.dilationIndicatorText.setScrollFactor(0);
-    this.dilationIndicatorText.setDepth(101);
     this.dilationIndicatorText.setVisible(false);
+    this.hudContainer.add(this.dilationIndicatorText);
 
     const unsubStore = useGameStore.subscribe(() => {
       if (soundButton.active) {
@@ -1034,8 +1033,7 @@ export default class GameScene extends Phaser.Scene {
       color: '#ffffff'
     });
     this.timerText.setOrigin(1, 0);
-    this.timerText.setScrollFactor(0);
-    this.timerText.setDepth(101);
+    this.hudContainer.add(this.timerText);
 
     this.splitDeltaText = this.add.text(camW - 10, 28, '--', {
       fontFamily: 'VT323',
@@ -1043,9 +1041,22 @@ export default class GameScene extends Phaser.Scene {
       color: '#94a3b8'
     });
     this.splitDeltaText.setOrigin(1, 0);
-    this.splitDeltaText.setScrollFactor(0);
-    this.splitDeltaText.setDepth(101);
     this.splitDeltaText.setVisible(currentMode !== 'off' && this.ghostFrames.length > 0);
+    this.hudContainer.add(this.splitDeltaText);
+
+    this.syncHudTransform();
+  }
+
+  private syncHudTransform(): void {
+    if (!this.hudContainer || !this.cameras?.main) return;
+    const z = this.cameras.main.zoom;
+    if (z <= 0) return;
+    const inv = 1 / z;
+    this.hudContainer.setScale(inv);
+    this.hudContainer.setPosition(
+      (this.cameras.main.width / 2) * (1 - inv),
+      (this.cameras.main.height / 2) * (1 - inv)
+    );
   }
 
   private showLevelTitle(): void {
@@ -1463,6 +1474,7 @@ export default class GameScene extends Phaser.Scene {
         const currentZoom = this.cameras.main.zoom;
         const newZoom = Phaser.Math.Linear(currentZoom, targetZoom, 0.08);
         this.cameras.main.setZoom(newZoom);
+        this.syncHudTransform();
 
         const currentMid = this.cameras.main.midPoint;
         const newCamX = Phaser.Math.Linear(currentMid.x, cx, 0.1);
