@@ -385,7 +385,8 @@ export default class GameScene extends Phaser.Scene {
 
     // 4. Spikes & Gravitational Collapse
     this.spikes = this.physics.add.staticGroup();
-    const hueColor = Phaser.Display.Color.HexStringToColor(this.levelData.hue).color;
+    const spikeGfx = this.add.graphics();
+    spikeGfx.setDepth(12);
 
     for (const s of this.levelData.spikes) {
       const width = s.width ?? 200;
@@ -395,10 +396,27 @@ export default class GameScene extends Phaser.Scene {
         s.y + height / 2,
         width,
         height,
-        hueColor
+        0xff2244,
+        0.15
       );
       this.physics.add.existing(spikeRect, true);
       this.spikes.add(spikeRect);
+
+      // Draw crisp, unmistakable neon red/amber sawtooth spikes
+      const toothWidth = width <= 40 ? Math.max(10, Math.round(width / 2)) : 16;
+      const count = Math.max(1, Math.floor(width / toothWidth));
+      const actualToothW = width / count;
+      spikeGfx.fillStyle(0xff2a55, 0.95);
+      spikeGfx.lineStyle(1.5, 0xffaa00, 0.95);
+      for (let i = 0; i < count; i++) {
+        const x0 = s.x + i * actualToothW;
+        const xMid = x0 + actualToothW / 2;
+        const x1 = x0 + actualToothW;
+        const yBase = s.y + height;
+        const yTip = s.y;
+        spikeGfx.fillTriangle(x0, yBase, xMid, yTip, x1, yBase);
+        spikeGfx.strokeTriangle(x0, yBase, xMid, yTip, x1, yBase);
+      }
     }
 
     if (this.levelData.collapse) {
