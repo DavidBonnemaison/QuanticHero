@@ -221,8 +221,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         gameEvents.emit('hero:jump');
       }
     } else {
-      this.setVelocityX(0);
       if (touchingGround) {
+        this.setVelocityX(0);
         this.play(this.getAnimKey('idle'), true);
       }
     }

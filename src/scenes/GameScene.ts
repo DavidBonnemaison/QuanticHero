@@ -550,12 +550,12 @@ export default class GameScene extends Phaser.Scene {
 
       this.betaHero = new Hero(this, betaX, betaY, true);
       this.betaHero.setEntangled(true, entanglement.mode);
-      if (entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity') {
-        const bBody = this.betaHero.body as Phaser.Physics.Arcade.Body;
-        bBody.gravity.y = -2 * PHYSICS.GRAVITY_Y;
-      }
       this.heroes.push(this.betaHero);
       this.heroGroup.add(this.betaHero);
+      if (entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity') {
+        const bBody = this.betaHero.body as Phaser.Physics.Arcade.Body;
+        bBody.setGravityY(-2 * PHYSICS.GRAVITY_Y);
+      }
 
       // Create Beta Portal if dual portal mode or betaDoor specified
       if (entanglement.portalMode === 'dual' || entanglement.betaDoor) {
@@ -1673,10 +1673,10 @@ export default class GameScene extends Phaser.Scene {
         const hA = activeHeroes.find((h) => h.id === ev.heroAId);
         const hB = activeHeroes.find((h) => h.id === ev.heroBId);
         if (hA && hB && hA.body && hB.body) {
-          hA.setVelocityX(hA.body.velocity.x + ev.impulseA.vx);
-          hA.setVelocityY(hA.body.velocity.y + ev.impulseA.vy);
-          hB.setVelocityX(hB.body.velocity.x + ev.impulseB.vx);
-          hB.setVelocityY(hB.body.velocity.y + ev.impulseB.vy);
+          hA.setVelocityX(ev.impulseA.vx);
+          hA.setVelocityY(ev.impulseA.vy);
+          hB.setVelocityX(ev.impulseB.vx);
+          hB.setVelocityY(ev.impulseB.vy);
           hA.pauliGraceUntil = ev.newGraceUntil;
           hB.pauliGraceUntil = ev.newGraceUntil;
           soundManager.playPauliBlastSound();

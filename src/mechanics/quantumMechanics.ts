@@ -92,14 +92,14 @@ export interface PauliRepulsionEvent {
 
 /**
  * Evaluates Pauli Exclusion repulsion between all active hero clones.
- * Threshold: distance < 60 px.
- * Ejection impulse: +/- 450 px/s on X and -200 px/s on Y (multiplied by upsideDown).
+ * Threshold: distance < 75 px.
+ * Ejection impulse: +/- 620 px/s on X and -580 px/s on Y (multiplied by upsideDown).
  * Grace period: 500 ms.
  */
 export function checkPauliRepulsion(
   heroes: PauliHeroCandidate[],
   currentTime: number,
-  minDistance = 60,
+  minDistance = 75,
   graceMs = 500
 ): PauliRepulsionEvent[] {
   const events: PauliRepulsionEvent[] = [];
@@ -129,12 +129,12 @@ export function checkPauliRepulsion(
           heroAId: heroA.id,
           heroBId: heroB.id,
           impulseA: {
-            vx: -450 * signX,
-            vy: -200 * upA
+            vx: -620 * signX,
+            vy: -580 * upA
           },
           impulseB: {
-            vx: 450 * signX,
-            vy: -200 * upB
+            vx: 620 * signX,
+            vy: -580 * upB
           },
           newGraceUntil: currentTime + graceMs
         });

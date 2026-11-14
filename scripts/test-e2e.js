@@ -1009,14 +1009,19 @@ async function run() {
       const betaHero = gs.heroes.find((h) => h.isBeta);
       const betaPortal = gs.betaPortalSprite;
       const cam = gs.cameras.main;
+      const betaGravityY = betaHero?.body?.gravity?.y ?? null;
       return {
         ok:
           Boolean(betaHero) &&
           betaHero.upsideDown === -1 &&
+          betaGravityY === -1400 &&
+          betaHero.y < 250 &&
           Boolean(betaPortal) &&
           betaPortal.y > 80 &&
           cam.worldView.contains(betaHero.x, betaHero.y),
         betaUpsideDown: betaHero?.upsideDown,
+        betaGravityY,
+        betaY: Math.round(betaHero?.y ?? -1),
         betaPortalY: betaPortal?.y,
         zoom: cam.zoom
       };
@@ -1025,7 +1030,7 @@ async function run() {
       throw new Error(`Entanglement 3 (Level 112) check failed: ${JSON.stringify(level112Check)}`);
     }
     console.log(
-      `✓ Entanglement 3 (Level 112) verified: betaUpsideDown=${level112Check.betaUpsideDown}, betaPortalY=${level112Check.betaPortalY} (below ceiling)!`
+      `✓ Entanglement 3 (Level 112) verified: betaUpsideDown=${level112Check.betaUpsideDown}, betaGravityY=${level112Check.betaGravityY}, betaY=${level112Check.betaY}, betaPortalY=${level112Check.betaPortalY}!`
     );
 
     // FORMAL NON-FEASIBILITY E2E CHECKS ON CAMPAIGN LEVELS (2, 4, 5, 7, 9, 10)

@@ -194,4 +194,34 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     );
     expect(res.success).toBe(false);
   });
+
+  it('Campaign 1-109: all levels have valid authorTime, no "!" in explanations, and Bosses combine multiple mechanics', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const bossLevels = [20, 26, 40, 46, 62, 68, 84, 88, 100, 109];
+
+    for (let lvl = 1; lvl <= 109; lvl++) {
+      const filePath = path.resolve(process.cwd(), `src/data/level${lvl}.json`);
+      expect(fs.existsSync(filePath)).toBe(true);
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as LevelData;
+      expect(data.authorTime).toBeGreaterThan(0);
+      expect(data.platforms.length).toBeGreaterThanOrEqual(6);
+
+      if (data.explanations) {
+        for (const line of data.explanations) {
+          expect(line).not.toContain('!');
+        }
+      }
+
+      if (bossLevels.includes(lvl)) {
+        expect(data.explanations?.length ?? 0).toBeGreaterThanOrEqual(2);
+        const mechanicCount =
+          new Set(data.particles.map((p) => p.type)).size +
+          (data.collapse ? 1 : 0) +
+          (data.platforms.some((p) => Boolean(p.phase)) ? 1 : 0) +
+          (data.platforms.some((p) => (p.decayMs ?? 0) > 0) ? 1 : 0);
+        expect(mechanicCount).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
 });

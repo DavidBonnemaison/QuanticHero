@@ -110,27 +110,27 @@ describe('Spec-02 Quantum Mechanics', () => {
   });
 
   describe('Pauli Exclusion Repulsion (type: "pauli")', () => {
-    it('repels two clones closer than 60 px with opposite +/- 450 px/s velocity and vertical kick', () => {
+    it('repels two clones closer than 75 px with opposite +/- 620 px/s velocity and -580 px/s vertical kick', () => {
       const currentTime = 1000;
       const heroes = [
         { id: 1, x: 200, y: 300, pauliGraceUntil: 0, upsideDown: 1 },
-        { id: 2, x: 230, y: 300, pauliGraceUntil: 0, upsideDown: 1 } // dist = 30 px (< 60)
+        { id: 2, x: 230, y: 300, pauliGraceUntil: 0, upsideDown: 1 } // dist = 30 px (< 75)
       ];
 
-      const events = checkPauliRepulsion(heroes, currentTime, 60, 500);
+      const events = checkPauliRepulsion(heroes, currentTime, 75, 500);
       expect(events).toHaveLength(1);
 
       const ev = events[0];
       expect(ev.heroAId).toBe(1);
       expect(ev.heroBId).toBe(2);
 
-      // Hero 1 (on the left) is pushed left (-450)
-      expect(ev.impulseA.vx).toBe(-450);
-      expect(ev.impulseA.vy).toBe(-200);
+      // Hero 1 (on the left) is pushed left (-620)
+      expect(ev.impulseA.vx).toBe(-620);
+      expect(ev.impulseA.vy).toBe(-580);
 
-      // Hero 2 (on the right) is pushed right (+450)
-      expect(ev.impulseB.vx).toBe(450);
-      expect(ev.impulseB.vy).toBe(-200);
+      // Hero 2 (on the right) is pushed right (+620)
+      expect(ev.impulseB.vx).toBe(620);
+      expect(ev.impulseB.vy).toBe(-580);
 
       // Grace period set to currentTime + 500ms
       expect(ev.newGraceUntil).toBe(1500);
@@ -167,9 +167,9 @@ describe('Spec-02 Quantum Mechanics', () => {
 
       const events = checkPauliRepulsion(heroes, currentTime, 60, 500);
       expect(events).toHaveLength(1);
-      // For upsideDown === -1, -200 * (-1) = +200 (kicks downwards away from ceiling)
-      expect(events[0].impulseA.vy).toBe(200);
-      expect(events[0].impulseB.vy).toBe(200);
+      // For upsideDown === -1, -580 * (-1) = +580 (kicks downwards away from ceiling)
+      expect(events[0].impulseA.vy).toBe(580);
+      expect(events[0].impulseB.vy).toBe(580);
     });
   });
 

@@ -86,28 +86,84 @@ export const LEVEL_NARRATIVES: Record<number, string[]> = {
     'Moving while everything else slows down could offer a way out.'
   ],
   11: [
-    'Sodium ignites with a golden doublet flare as you enter Period 3.',
-    'Beware of violent moisture reactions—maintain your momentum across alkali stepping stones.'
+    'Sodium flickers with a warm amber glow as the stellar forge awakens.',
+    'The air feels denser here, yet each leap still carries promise.'
   ],
-  12: [
-    'Magnesium burns with brilliant, blinding white pyrotechnic intensity.',
-    'Navigate through the high-temperature glare to reach the stellar gate.'
+  15: [
+    'Shifting cyan and magenta echoes drift between moving ledges.',
+    'Timing a step with the phase pulse might open a cleaner path.'
+  ],
+  20: [
+    'Calcium plates lock into a restless canyon of wind and thin barriers.',
+    'A burst of speed before phasing through stone could bridge the gap.'
   ],
   26: [
-    'You have reached Iron-56: the pinnacle of stellar nucleosynthesis and maximum nuclear binding energy.',
-    'Beyond this iron peak, stellar fusion ceases. Only supernova shockwaves can forge what lies ahead.'
+    'Iron marks the core of the stellar forge, where fusion reaches its peak.',
+    'Gravity, decay, and floating currents converge before the next expanse.'
+  ],
+  27: [
+    'Beyond iron, the forge gives way to the violent breath of a supernova.',
+    'Platforms tremble lightly under the shockwave of heavy nuclei.'
+  ],
+  33: [
+    'Arsenic crystallizes along neon walls that hum with reflected force.',
+    'Phase-shifted ledges await those who rebound upward.'
+  ],
+  40: [
+    'Zirconium splits the path into twin wavefunctions above a wide void.',
+    'Two identical selves forced together might launch one far across.'
+  ],
+  46: [
+    'Palladium guards the edge of the supernova cataclysm.',
+    'Speed, shifting phases, and a rising floor test every reflex at once.'
+  ],
+  47: [
+    'Silver shimmers in the aftermath of colliding neutron stars.',
+    'The kilonova echo leaves fragile footholds suspended in deep space.'
   ],
   55: [
-    'Caesium marks the transition to deep blue atomic resonance.',
-    'Its ultra-precise atomic oscillations govern the ticks of cosmic timekeeping.'
+    'Caesium ticks with atomic precision at the heart of the kilonova.',
+    'Slowing the world for a few moments may reveal hidden openings.'
+  ],
+  62: [
+    'Samarium warps both gravity and solid walls into a tight labyrinth.',
+    'Inverting weight before slipping through stone could unlock the exit.'
+  ],
+  68: [
+    'Erbium closes the kilonova sector beneath a cascade of decaying steps.',
+    'Clone repulsion and fleeting ground demand calm precision.'
+  ],
+  69: [
+    'Thulium ushers in the relativistic crucible, where orbitals contract.',
+    'Longer chasms and brisker rhythms demand steady momentum.'
   ],
   79: [
-    'Gold gleams with relativistic glory: inner electron velocities contract the s-orbitals.',
-    'Survive the cosmic kilonova furnace where neutron star collisions showered the universe in gold.'
+    'Gold gleams with relativistic brilliance across high-velocity spans.',
+    'Inner-shell electrons race faster here, and so must your stride.'
+  ],
+  84: [
+    'Polonium radiates an unstable aura over three distinct trials.',
+    'Speed, lightened weight, and tunneling intertwine toward the gate.'
+  ],
+  88: [
+    'Radium stands at the threshold of the transuranic frontier.',
+    'Inverted gravity, shifting phases, and collapsing chambers converge.'
+  ],
+  89: [
+    'Actinium opens the Island of Stability, far beyond classical bounds.',
+    'Every quantum effect you have met lingers in this outer expanse.'
   ],
   92: [
-    'Uranium: the primordial titan of nuclear fission, radiating emerald-green luminescent energy.',
-    'Tread carefully around radioactive decay cascades as you step onto the transuranic frontier.'
+    'Uranium hums with emerald fission energy across fragile bridges.',
+    'Keep moving before the glowing ledges dissolve beneath your feet.'
+  ],
+  100: [
+    'Fermium marks the hundredth element, a twin-state gauntlet.',
+    'Clones, Pauli repulsion, and a thin barrier stand before the final stretch.'
+  ],
+  109: [
+    'Meitnerium: the final synthetic crucible before the entangled realm.',
+    'Speed, tunneling, time dilation, and rising collapse unite in one trial.'
   ],
   110: [
     'Darmstadtium initiates the Quantum Entanglement Matrix (Ψ_A ⊗ Ψ_B).',
@@ -134,6 +190,14 @@ export const LEVEL_NARRATIVES: Record<number, string[]> = {
     'You have completed the Cosmic Odyssey from the Primordial Big Bang to the outermost edge of atomic physics.'
   ]
 };
+
+/**
+ * Returns explanations only for key story, transition, and boss levels.
+ * Intermediate levels return [] so gameplay flows without constant interruptions.
+ */
+export function getCampaignExplanations(z: number): string[] {
+  return LEVEL_NARRATIVES[z] ?? [];
+}
 
 /**
  * Returns the narrative lines for any given level (1 to 118).

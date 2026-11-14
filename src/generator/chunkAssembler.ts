@@ -1,4 +1,4 @@
-import { getNarrativeForLevel } from '../data/cosmicNarrative';
+import { getCampaignExplanations, getNarrativeForLevel } from '../data/cosmicNarrative';
 import { getElementSpectroscopy } from '../data/spectroscopy';
 import { PHYSICS } from '../physics/constants';
 import type {
@@ -296,7 +296,7 @@ export function assemblePacedLevel(options: PacedAssemblerOptions = {}): PacedLe
  */
 export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssembly {
   const elementInfo = getElementSpectroscopy(level);
-  const narrative = getNarrativeForLevel(level);
+  const narrative = getCampaignExplanations(level);
 
   let width = 2200;
   let height = 1100;
@@ -395,10 +395,13 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 3: {
-      // Niv 3 (Li) : Gouffre à électrons & lowGravity
-      width = 2400;
+      // Niv 3 (Li) : Approche puis gouffre à électrons & lowGravity
+      width = 2800;
       height = 1100;
-      awakeningChunk = createSpawnChunk({ originX: 120, originY: 660, width: 240 });
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 680, width: 240 });
+
+      const intro1: Platform = { x: 430, y: 660, width: 170, height: 20 };
+      const intro2: Platform = { x: 670, y: 640, width: 170, height: 20 };
       const rawChasm = createElectronChasmChunk({
         chasmWidth: 480,
         powerType: 'lowGravity',
@@ -406,13 +409,41 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         landingWidth: 200,
         verticalDrop: 20
       });
-      accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawChasm, alpha, -15);
+      const introChunk: Chunk = {
+        id: 'chunk_li_intro',
+        name: 'Approche',
+        archetype: 'speedrun_highway',
+        entry: { x: intro1.x + 40, y: intro1.y },
+        exit: { x: intro2.x + intro2.width - 40, y: intro2.y },
+        platforms: [intro1, intro2],
+        pathPlatforms: [intro1, intro2],
+        spikes: [],
+        particles: [],
+        bounds: computeChunkBounds([intro1, intro2])
+      };
+      const chasmTranslated = connectAndTranslateChunk(introChunk, rawChasm, alpha, -15);
+      accelerationChunk = {
+        id: 'chunk_li_accel',
+        name: 'Gouffre à Électrons',
+        archetype: 'electron_chasm',
+        entry: introChunk.entry,
+        exit: chasmTranslated.exit,
+        platforms: [...introChunk.platforms, ...chasmTranslated.platforms],
+        pathPlatforms: [...introChunk.pathPlatforms, ...chasmTranslated.pathPlatforms],
+        spikes: [...introChunk.spikes, ...chasmTranslated.spikes],
+        particles: [...introChunk.particles, ...chasmTranslated.particles],
+        bounds: computeChunkBounds(
+          [...introChunk.platforms, ...chasmTranslated.platforms],
+          [...introChunk.spikes, ...chasmTranslated.spikes],
+          [...introChunk.particles, ...chasmTranslated.particles]
+        )
+      };
 
       const rawClimax = createSpeedrunHighwayChunk({
         id: 'chunk_chasm_climax',
-        steps: 2,
-        horizontalSpacing: 180,
-        verticalDrop: 20,
+        steps: 3,
+        horizontalSpacing: 190,
+        verticalDrop: 22,
         platformWidth: 180,
         speedBoostParticle: false
       });
@@ -424,22 +455,24 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 4: {
-      // Niv 4 (Be) : Clonage quantique (duplicate, uncertainty: 4) & dalle requireLock + porte pleine hauteur
-      width = 2200;
+      // Niv 4 (Be) : Parcours d'approche puis clonage quantique (duplicate, uncertainty: 4) & dalle requireLock + porte
+      width = 2700;
       height = 1100;
-      awakeningChunk = createSpawnChunk({ originX: 120, originY: 660, width: 240 });
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
 
-      const p1: Platform = { x: 440, y: 640, width: 190, height: 20 };
-      const p2: Platform = { x: 690, y: 620, width: 190, height: 20 };
-      const p3: Platform = { x: 940, y: 600, width: 210, height: 20 };
+      const intro1: Platform = { x: 430, y: 680, width: 170, height: 20 };
+      const intro2: Platform = { x: 670, y: 660, width: 170, height: 20 };
+      const p1: Platform = { x: 910, y: 640, width: 190, height: 20 };
+      const p2: Platform = { x: 1160, y: 620, width: 190, height: 20 };
+      const p3: Platform = { x: 1410, y: 600, width: 210, height: 20 };
       const dupPart: Particle = { x: p2.x + 95, y: p2.y - 30, type: 'duplicate' };
-      const accelPlats = [p1, p2, p3];
+      const accelPlats = [intro1, intro2, p1, p2, p3];
 
       accelerationChunk = {
         id: 'chunk_cloning_accel',
         name: 'Clonage Quantique',
         archetype: 'speedrun_highway',
-        entry: { x: p1.x + 40, y: p1.y },
+        entry: { x: intro1.x + 40, y: intro1.y },
         exit: { x: p3.x + p3.width - 40, y: p3.y },
         platforms: accelPlats,
         pathPlatforms: accelPlats,
@@ -450,9 +483,9 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
 
       const rawClimax = createSpeedrunHighwayChunk({
         id: 'chunk_cloning_climax',
-        steps: 2,
+        steps: 3,
         horizontalSpacing: 190,
-        verticalDrop: 25,
+        verticalDrop: 22,
         platformWidth: 180,
         speedBoostParticle: false
       });
@@ -511,28 +544,31 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 6: {
-      // Niv 6 (C) : Inversion de gravité (antiGravity)
-      width = 2200;
+      // Niv 6 (C) : Parcours d'approche puis inversion de gravité (antiGravity)
+      width = 2900;
       height = 1100;
-      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 720, width: 240 });
 
-      const p1: Platform = { x: 440, y: 680, width: 200, height: 20 };
-      const antiGravPart: Particle = { x: 620, y: 550, type: 'antiGravity' };
+      const intro1: Platform = { x: 430, y: 700, width: 170, height: 20 };
+      const intro2: Platform = { x: 670, y: 680, width: 170, height: 20 };
+      const p1: Platform = { x: 910, y: 660, width: 200, height: 20 };
+      const antiGravPart: Particle = { x: 1090, y: 540, type: 'antiGravity' };
 
       // Inverted ceiling traversal (hero stands upside-down against bottom of platform)
-      const p2: Platform = { x: 740, y: 240, width: 240, height: 20 };
-      const p3: Platform = { x: 1060, y: 240, width: 240, height: 20 };
-      const restorePart: Particle = { x: 1340, y: 350, type: 'antiGravity' };
+      const p2: Platform = { x: 1210, y: 240, width: 240, height: 20 };
+      const p3: Platform = { x: 1530, y: 240, width: 240, height: 20 };
+      const p3b: Platform = { x: 1850, y: 240, width: 220, height: 20 };
+      const restorePart: Particle = { x: 2110, y: 350, type: 'antiGravity' };
 
-      const p4: Platform = { x: 1380, y: 640, width: 240, height: 20 };
-      const invPlats = [p1, p2, p3, p4];
+      const p4: Platform = { x: 2150, y: 640, width: 240, height: 20 };
+      const invPlats = [intro1, intro2, p1, p2, p3, p3b, p4];
       const invParts = [antiGravPart, restorePart];
 
       accelerationChunk = {
         id: 'chunk_antigravity',
         name: 'Inversion de Gravité',
         archetype: 'speedrun_highway',
-        entry: { x: p1.x + 40, y: p1.y },
+        entry: { x: intro1.x + 40, y: intro1.y },
         exit: { x: p4.x + p4.width - 40, y: p4.y },
         platforms: invPlats,
         pathPlatforms: invPlats,
@@ -548,29 +584,32 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 7: {
-      // Niv 7 (N) : Effet Tunnel (tunnel, barrière de potentiel étanche sol-plafond)
-      width = 2200;
+      // Niv 7 (N) : Parcours d'approche puis Effet Tunnel (barrière de potentiel étanche sol-plafond)
+      width = 2800;
       height = 1100;
-      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 720, width: 240 });
 
-      const p1: Platform = { x: 440, y: 680, width: 200, height: 20 };
+      const intro1: Platform = { x: 430, y: 700, width: 170, height: 20 };
+      const intro2: Platform = { x: 670, y: 680, width: 170, height: 20 };
+      const p1: Platform = { x: 910, y: 680, width: 200, height: 20 };
       const tunnelPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'tunnel' };
 
       // Barrière continue du sol au plafond (épaisseur 30 px <= 80 px) infranchissable par saut
-      const barrier: Platform = { x: 695, y: 0, width: 30, height: 1100 };
+      const barrier: Platform = { x: 1165, y: 0, width: 30, height: 1100 };
 
-      const p2: Platform = { x: 740, y: 680, width: 220, height: 20 };
-      const p3: Platform = { x: 1020, y: 660, width: 220, height: 20 };
-      const tunnelPlatforms = [p1, barrier, p2, p3];
+      const p2: Platform = { x: 1210, y: 680, width: 220, height: 20 };
+      const p3: Platform = { x: 1490, y: 660, width: 220, height: 20 };
+      const p4: Platform = { x: 1770, y: 640, width: 220, height: 20 };
+      const tunnelPlatforms = [intro1, intro2, p1, barrier, p2, p3, p4];
 
       accelerationChunk = {
         id: 'chunk_tunnel_barrier',
         name: 'Effet Tunnel',
         archetype: 'speedrun_highway',
-        entry: { x: p1.x + 40, y: p1.y },
-        exit: { x: p3.x + p3.width - 40, y: p3.y },
+        entry: { x: intro1.x + 40, y: intro1.y },
+        exit: { x: p4.x + p4.width - 40, y: p4.y },
         platforms: tunnelPlatforms,
-        pathPlatforms: [p1, p2, p3],
+        pathPlatforms: [intro1, intro2, p1, p2, p3, p4],
         spikes: [],
         particles: [tunnelPart],
         bounds: computeChunkBounds(tunnelPlatforms, [], [tunnelPart])
@@ -612,30 +651,33 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 9: {
-      // Niv 9 (F) : Répulsion de Pauli (pauli) obligatoire au-dessus d'un gouffre titanesque de 680 px
-      width = 2800;
+      // Niv 9 (F) : Parcours d'approche puis Répulsion de Pauli (pauli) au-dessus d'un gouffre de 680 px
+      width = 3300;
       height = 1100;
-      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: 720, width: 240 });
 
-      // Plateforme de départ avec duplication & particule de Pauli
-      const p1: Platform = { x: 440, y: 680, width: 280, height: 20 };
+      const intro1: Platform = { x: 430, y: 700, width: 170, height: 20 };
+      const intro2: Platform = { x: 670, y: 680, width: 170, height: 20 };
+
+      // Plateforme avec duplication & particule de Pauli après l'approche
+      const p1: Platform = { x: 910, y: 680, width: 280, height: 20 };
       const dupPart: Particle = { x: p1.x + 80, y: p1.y - 30, type: 'duplicate' };
       const pauliPart: Particle = { x: p1.x + 180, y: p1.y - 30, type: 'pauli' };
 
       // Gouffre de 680 px sans plateforme intermédiaire (infranchissable sans la propulsion de Pauli)
-      const p2: Platform = { x: 1400, y: 680, width: 260, height: 20 };
-      const chasmPlats = [p1, p2];
+      const p2: Platform = { x: 1870, y: 680, width: 260, height: 20 };
+      const chasmPlats = [intro1, intro2, p1, p2];
       const chasmParts = [dupPart, pauliPart];
 
       accelerationChunk = {
         id: 'chunk_pauli_chasm',
         name: 'Gouffre de Pauli',
         archetype: 'electron_chasm',
-        entry: { x: p1.x + 40, y: p1.y },
+        entry: { x: intro1.x + 40, y: intro1.y },
         exit: { x: p2.x + p2.width - 40, y: p2.y },
         platforms: chasmPlats,
-        pathPlatforms: [p1, p2],
-        spikes: [{ x: 720, y: height - 20, width: 680, height: 20 }],
+        pathPlatforms: [intro1, intro2, p1, p2],
+        spikes: [{ x: 1190, y: height - 20, width: 680, height: 20 }],
         particles: chasmParts,
         bounds: computeChunkBounds(chasmPlats, [], chasmParts)
       };
@@ -718,8 +760,413 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     default: {
-      // Fallback: general assemblePacedLevel
-      return assemblePacedLevel({ atom: level, seed });
+      // Levels 11-109: Progressive Universe Campaign + Multi-Power-Up Bosses
+      const rng = new SeededRandom(seed + level * 31);
+      const progress = Math.min(1, Math.max(0, (level - 11) / 98));
+      const levelAlpha = 0.74 + progress * 0.12;
+      const decayMs = Math.round(850 - progress * 280);
+      const speedChasm = Math.round(520 + progress * 70);
+      const lowGChasm = Math.round(450 + progress * 40);
+
+      height = 1250;
+      const baseY = 820;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 230 });
+
+      // Introductory 2-step approach before power-up so player earns it first
+      const intro1: Platform = { x: 420, y: baseY - 25, width: 165, height: 20 };
+      const intro2: Platform = { x: 655, y: baseY - 50, width: 165, height: 20 };
+      const introChunk: Chunk = {
+        id: `chunk_intro_${level}`,
+        name: 'Approche',
+        archetype: 'speedrun_highway',
+        entry: { x: intro1.x + 40, y: intro1.y },
+        exit: { x: intro2.x + intro2.width - 40, y: intro2.y },
+        platforms: [intro1, intro2],
+        pathPlatforms: [intro1, intro2],
+        spikes: [],
+        particles: [],
+        bounds: computeChunkBounds([intro1, intro2])
+      };
+
+      const isSpeedTunnelBoss = level === 20 || level === 84 || level === 109;
+      const isPauliBoss = level === 40 || level === 68 || level === 100;
+      const isAntiGravBoss = level === 26 || level === 62 || level === 88;
+      const isCollapsePhaseBoss = level === 46;
+
+      if (isSpeedTunnelBoss) {
+        // Boss combining speed chasm + 30px tunnel barrier (+ timeDilation & collapse on 109)
+        const p1: Platform = { x: 890, y: baseY - 60, width: 210, height: 20 };
+        const speedPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'speed' };
+        const p2: Platform = {
+          x: p1.x + p1.width + speedChasm,
+          y: baseY - 60,
+          width: 220,
+          height: 20
+        };
+        const tunnelPart: Particle = { x: p2.x + 100, y: p2.y - 30, type: 'tunnel' };
+        const barrier: Platform = { x: p2.x + p2.width + 25, y: 0, width: 30, height: height };
+        const p3: Platform = { x: barrier.x + 55, y: baseY - 60, width: 210, height: 20 };
+        const bossPlats = [intro1, intro2, p1, p2, barrier, p3];
+        const bossParts = [speedPart, tunnelPart];
+        if (level === 84) {
+          bossParts.push({ x: p3.x + 100, y: p3.y - 30, type: 'lowGravity' });
+        }
+
+        accelerationChunk = {
+          id: `chunk_boss_st_${level}`,
+          name: 'Creuset Vitesse-Tunnel',
+          archetype: 'speedrun_highway',
+          entry: introChunk.entry,
+          exit: { x: p3.x + p3.width - 40, y: p3.y },
+          platforms: bossPlats,
+          pathPlatforms: [intro1, intro2, p1, p2, p3],
+          spikes: [],
+          particles: bossParts,
+          bounds: computeChunkBounds(bossPlats, [], bossParts)
+        };
+
+        const rawClimax =
+          level === 109
+            ? createSpeedrunHighwayChunk({
+                steps: 4,
+                horizontalSpacing: 190,
+                verticalDrop: 24,
+                platformWidth: 165,
+                speedBoostParticle: false
+              })
+            : createDecayZoneChunk({
+                steps: 4,
+                decayMs,
+                stepSpacing: 175,
+                platformWidth: 150,
+                verticalDelta: -20,
+                includeStableExit: true
+              });
+        climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, levelAlpha, -15);
+        if (level === 109) {
+          const midP = climaxChunk.platforms[0];
+          climaxChunk.particles.push({
+            x: midP.x + Math.round(midP.width / 2),
+            y: midP.y - 30,
+            type: 'timeDilation'
+          });
+          collapseConfig = { speedY: 14, delayMs: 2000 };
+        }
+      } else if (isPauliBoss) {
+        // Boss combining duplicate + pauli 680px chasm + decay (+ tunnel barrier on 100)
+        const p1: Platform = { x: 890, y: baseY - 60, width: 270, height: 20 };
+        const dupPart: Particle = { x: p1.x + 80, y: p1.y - 30, type: 'duplicate' };
+        const pauliPart: Particle = { x: p1.x + 180, y: p1.y - 30, type: 'pauli' };
+        const p2: Platform = { x: p1.x + p1.width + 680, y: baseY - 60, width: 250, height: 20 };
+        const bossPlats = [intro1, intro2, p1, p2];
+        const bossParts = [dupPart, pauliPart];
+        const pathPlats = [intro1, intro2, p1, p2];
+
+        if (level === 100) {
+          const tunPart: Particle = { x: p2.x + 120, y: p2.y - 30, type: 'tunnel' };
+          const barrier: Platform = { x: p2.x + p2.width + 25, y: 0, width: 30, height: height };
+          const p3: Platform = { x: barrier.x + 55, y: baseY - 60, width: 200, height: 20 };
+          bossPlats.push(barrier, p3);
+          pathPlats.push(p3);
+          bossParts.push(tunPart);
+        }
+
+        const lastP = pathPlats[pathPlats.length - 1];
+        accelerationChunk = {
+          id: `chunk_boss_pauli_${level}`,
+          name: 'Gouffre de Pauli',
+          archetype: 'electron_chasm',
+          entry: introChunk.entry,
+          exit: { x: lastP.x + lastP.width - 40, y: lastP.y },
+          platforms: bossPlats,
+          pathPlatforms: pathPlats,
+          spikes: [{ x: p1.x + p1.width, y: height - 20, width: 680, height: 20 }],
+          particles: bossParts,
+          bounds: computeChunkBounds(bossPlats, [], bossParts)
+        };
+
+        const rawDecay = createDecayZoneChunk({
+          steps: 4,
+          decayMs,
+          stepSpacing: 175,
+          platformWidth: 150,
+          verticalDelta: -20,
+          includeStableExit: true
+        });
+        climaxChunk = connectAndTranslateChunk(accelerationChunk, rawDecay, levelAlpha, -15);
+      } else if (isAntiGravBoss) {
+        // Boss combining antiGravity ceiling run + phase or decay/collapse
+        const p1: Platform = { x: 890, y: baseY - 60, width: 200, height: 20 };
+        const antiGravPart: Particle = { x: p1.x + 170, y: p1.y - 120, type: 'antiGravity' };
+        const ceilingY = 260;
+        const p2: Platform = { x: 1180, y: ceilingY, width: 240, height: 20 };
+        const p3: Platform = { x: 1500, y: ceilingY, width: 240, height: 20 };
+        const restorePart: Particle = { x: 1790, y: ceilingY + 110, type: 'antiGravity' };
+        const p4: Platform = { x: 1830, y: baseY - 80, width: 230, height: 20 };
+        const bossPlats = [intro1, intro2, p1, p2, p3, p4];
+        const bossParts = [antiGravPart, restorePart];
+        const pathPlats = [intro1, intro2, p1, p2, p3, p4];
+
+        if (level === 88) {
+          bossParts.push({ x: p4.x + 115, y: p4.y - 30, type: 'tunnel' });
+          const barrier: Platform = { x: p4.x + p4.width + 25, y: 0, width: 30, height: height };
+          const p5: Platform = { x: barrier.x + 55, y: baseY - 80, width: 210, height: 20 };
+          bossPlats.push(barrier, p5);
+          pathPlats.push(p5);
+        }
+
+        const lastAgP = pathPlats[pathPlats.length - 1];
+        accelerationChunk = {
+          id: `chunk_boss_ag_${level}`,
+          name: 'Inversion Critique',
+          archetype: 'speedrun_highway',
+          entry: introChunk.entry,
+          exit: { x: lastAgP.x + lastAgP.width - 40, y: lastAgP.y },
+          platforms: bossPlats,
+          pathPlatforms: pathPlats,
+          spikes: [],
+          particles: bossParts,
+          bounds: computeChunkBounds(bossPlats, [], bossParts)
+        };
+
+        const rawClimax =
+          level === 88
+            ? createSuperpositionChamberChunk({
+                steps: 4,
+                stepSpacing: 185,
+                platformWidth: 155,
+                verticalStep: -20,
+                initialPhase: 'cyan'
+              })
+            : createDecayZoneChunk({
+                steps: 4,
+                decayMs,
+                stepSpacing: 175,
+                platformWidth: 150,
+                verticalDelta: -20,
+                includeStableExit: true
+              });
+        climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, levelAlpha, -15);
+      } else if (isCollapsePhaseBoss) {
+        // Boss 46: speed chasm + superposition phase + collapse
+        const p1: Platform = { x: 890, y: baseY - 60, width: 210, height: 20 };
+        const speedPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'speed' };
+        const p2: Platform = {
+          x: p1.x + p1.width + speedChasm,
+          y: baseY - 60,
+          width: 220,
+          height: 20
+        };
+        accelerationChunk = {
+          id: 'chunk_boss_46',
+          name: 'Cataclysme de Phase',
+          archetype: 'speedrun_highway',
+          entry: introChunk.entry,
+          exit: { x: p2.x + p2.width - 40, y: p2.y },
+          platforms: [intro1, intro2, p1, p2],
+          pathPlatforms: [intro1, intro2, p1, p2],
+          spikes: [],
+          particles: [speedPart],
+          bounds: computeChunkBounds([intro1, intro2, p1, p2], [], [speedPart])
+        };
+
+        const rawPhase = createSuperpositionChamberChunk({
+          steps: 4,
+          stepSpacing: 185,
+          platformWidth: 155,
+          verticalStep: -22,
+          initialPhase: 'magenta'
+        });
+        climaxChunk = connectAndTranslateChunk(accelerationChunk, rawPhase, levelAlpha, -15);
+        collapseConfig = { speedY: 14, delayMs: 2000 };
+      } else {
+        // Standard progressive levels 11-109 rotating across 6 archetypes
+        const variant = (level + Math.floor(rng.next() * 2)) % 6;
+        if (variant === 0) {
+          // Speed chasm + Superposition
+          const p1: Platform = { x: 890, y: baseY - 60, width: 200, height: 20 };
+          const speedPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'speed' };
+          const p2: Platform = {
+            x: p1.x + p1.width + speedChasm,
+            y: baseY - 60,
+            width: 220,
+            height: 20
+          };
+          accelerationChunk = {
+            id: `chunk_spd_${level}`,
+            name: 'Accélération',
+            archetype: 'speedrun_highway',
+            entry: introChunk.entry,
+            exit: { x: p2.x + p2.width - 40, y: p2.y },
+            platforms: [intro1, intro2, p1, p2],
+            pathPlatforms: [intro1, intro2, p1, p2],
+            spikes: [],
+            particles: [speedPart],
+            bounds: computeChunkBounds([intro1, intro2, p1, p2], [], [speedPart])
+          };
+          const rawPhase = createSuperpositionChamberChunk({
+            steps: 4,
+            stepSpacing: 185,
+            platformWidth: 160,
+            verticalStep: -22,
+            initialPhase: level % 2 === 0 ? 'cyan' : 'magenta'
+          });
+          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawPhase, levelAlpha, -15);
+        } else if (variant === 1) {
+          // Moving platforms + Decay zone (with timeDilation on 55 and every 12 levels)
+          const mp1: Platform = {
+            x: 890,
+            y: baseY - 60,
+            width: 175,
+            height: 20,
+            movesTo: { x: 960 }
+          };
+          const mp2: Platform = {
+            x: 1160,
+            y: baseY - 80,
+            width: 175,
+            height: 20,
+            movesTo: { y: baseY - 115 }
+          };
+          const accelPlats = [intro1, intro2, mp1, mp2];
+          accelerationChunk = {
+            id: `chunk_mov_${level}`,
+            name: 'Dérive Temporelle',
+            archetype: 'speedrun_highway',
+            entry: introChunk.entry,
+            exit: { x: mp2.x + mp2.width - 40, y: mp2.y },
+            platforms: accelPlats,
+            pathPlatforms: accelPlats,
+            spikes: [],
+            particles: [],
+            bounds: computeChunkBounds(accelPlats)
+          };
+          const rawDecay = createDecayZoneChunk({
+            steps: 4,
+            decayMs,
+            stepSpacing: 175,
+            platformWidth: 150,
+            verticalDelta: -20,
+            includeStableExit: true
+          });
+          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawDecay, levelAlpha, -15);
+          if (level === 55 || level % 12 === 0) {
+            const firstClimax = climaxChunk.platforms[0];
+            climaxChunk.particles.push({
+              x: firstClimax.x + Math.round(firstClimax.width / 2),
+              y: firstClimax.y - 30,
+              type: 'timeDilation'
+            });
+          }
+        } else if (variant === 2) {
+          // LowGravity chasm + Speedrun highway
+          const rawChasm = createElectronChasmChunk({
+            chasmWidth: lowGChasm,
+            powerType: 'lowGravity',
+            startWidth: 180,
+            landingWidth: 200,
+            verticalDrop: 20
+          });
+          const chasmT = connectAndTranslateChunk(introChunk, rawChasm, levelAlpha, -15);
+          accelerationChunk = {
+            id: `chunk_lg_${level}`,
+            name: 'Gouffre Léger',
+            archetype: 'electron_chasm',
+            entry: introChunk.entry,
+            exit: chasmT.exit,
+            platforms: [...introChunk.platforms, ...chasmT.platforms],
+            pathPlatforms: [...introChunk.pathPlatforms, ...chasmT.pathPlatforms],
+            spikes: [...introChunk.spikes, ...chasmT.spikes],
+            particles: [...introChunk.particles, ...chasmT.particles],
+            bounds: computeChunkBounds(
+              [...introChunk.platforms, ...chasmT.platforms],
+              [...introChunk.spikes, ...chasmT.spikes],
+              [...introChunk.particles, ...chasmT.particles]
+            )
+          };
+          const rawHigh = createSpeedrunHighwayChunk({
+            steps: 4,
+            horizontalSpacing: 195,
+            verticalDrop: 26,
+            platformWidth: 170,
+            speedBoostParticle: false
+          });
+          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawHigh, levelAlpha, -15);
+        } else if (variant === 3) {
+          // Neon bounce gravity well + Superposition
+          height = 1350;
+          accelerationChunk = introChunk;
+          const rawWell = createGravityWellChunk({
+            wellWidth: 320,
+            height: 540,
+            steps: 2
+          });
+          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawWell, levelAlpha, 15);
+        } else if (variant === 4) {
+          // Tunnel barrier + Decay zone
+          const p1: Platform = { x: 890, y: baseY - 60, width: 200, height: 20 };
+          const tunPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'tunnel' };
+          const barrier: Platform = { x: p1.x + p1.width + 25, y: 0, width: 30, height: height };
+          const p2: Platform = { x: barrier.x + 55, y: baseY - 60, width: 210, height: 20 };
+          const tunPlats = [intro1, intro2, p1, barrier, p2];
+          accelerationChunk = {
+            id: `chunk_tun_${level}`,
+            name: 'Barrière Quantique',
+            archetype: 'speedrun_highway',
+            entry: introChunk.entry,
+            exit: { x: p2.x + p2.width - 40, y: p2.y },
+            platforms: tunPlats,
+            pathPlatforms: [intro1, intro2, p1, p2],
+            spikes: [],
+            particles: [tunPart],
+            bounds: computeChunkBounds(tunPlats, [], [tunPart])
+          };
+          const rawDecay = createDecayZoneChunk({
+            steps: 4,
+            decayMs,
+            stepSpacing: 175,
+            platformWidth: 150,
+            verticalDelta: -20,
+            includeStableExit: true
+          });
+          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawDecay, levelAlpha, -15);
+        } else {
+          // AntiGravity ceiling run + Highway
+          const p1: Platform = { x: 890, y: baseY - 60, width: 200, height: 20 };
+          const ag1: Particle = { x: p1.x + 170, y: p1.y - 120, type: 'antiGravity' };
+          const p2: Platform = { x: 1180, y: 260, width: 230, height: 20 };
+          const p3: Platform = { x: 1490, y: 260, width: 230, height: 20 };
+          const ag2: Particle = { x: 1770, y: 370, type: 'antiGravity' };
+          const p4: Platform = { x: 1810, y: baseY - 80, width: 220, height: 20 };
+          const agPlats = [intro1, intro2, p1, p2, p3, p4];
+          const agParts = [ag1, ag2];
+          accelerationChunk = {
+            id: `chunk_ag_${level}`,
+            name: 'Plafond Inversé',
+            archetype: 'speedrun_highway',
+            entry: introChunk.entry,
+            exit: { x: p4.x + p4.width - 40, y: p4.y },
+            platforms: agPlats,
+            pathPlatforms: agPlats,
+            spikes: [],
+            particles: agParts,
+            bounds: computeChunkBounds(agPlats, [], agParts)
+          };
+          const rawHigh = createSpeedrunHighwayChunk({
+            steps: 3,
+            horizontalSpacing: 195,
+            verticalDrop: 24,
+            platformWidth: 170,
+            speedBoostParticle: false
+          });
+          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawHigh, levelAlpha, -15);
+        }
+      }
+
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, levelAlpha, -15);
+      width = Math.max(2600, Math.round(resolutionChunk.exit.x + 320));
+      break;
     }
   }
 
