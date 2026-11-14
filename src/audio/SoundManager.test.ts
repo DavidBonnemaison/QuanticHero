@@ -266,6 +266,10 @@ describe('SoundManager', () => {
 
       gameEvents.emit('hero:wall_bounce', { x: 100, y: 200 });
       expect(bounceSpy).toHaveBeenCalled();
+
+      const clickSpy = vi.spyOn(soundManager, 'playMechanicalClick');
+      gameEvents.emit('plate:trigger', { plateId: 'p1', gateId: 'g1' });
+      expect(clickSpy).toHaveBeenCalled();
     });
   });
 

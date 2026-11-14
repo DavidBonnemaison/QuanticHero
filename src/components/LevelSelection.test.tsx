@@ -101,23 +101,61 @@ describe('LevelSelection component', () => {
     expect(screen.getByText('00:12:34')).toBeInTheDocument();
   });
 
-  it('renders ghost toggle button and toggles state when clicked', () => {
-    useGameStore.setState({ ghostEnabled: true });
+  it('renders ghost toggle button and toggles 3-state when clicked', () => {
+    // When no personal best run is recorded: off -> optimal -> off
+    useGameStore.setState({ ghostMode: 'optimal', ghostEnabled: true, scores: {} });
     renderWithRouter();
 
     const ghostBtn = screen.getByRole('button', { name: /ghost enabled/i });
     expect(ghostBtn).toBeInTheDocument();
-    expect(ghostBtn).toHaveTextContent('[GHOST: ON]');
+    expect(ghostBtn).toHaveTextContent('[GHOST: OPTIMAL]');
 
     fireEvent.click(ghostBtn);
+    expect(useGameStore.getState().ghostMode).toBe('off');
     expect(useGameStore.getState().ghostEnabled).toBe(false);
     expect(screen.getByRole('button', { name: /ghost disabled/i })).toHaveTextContent(
       '[GHOST: OFF]'
     );
 
     fireEvent.click(screen.getByRole('button', { name: /ghost disabled/i }));
+    expect(useGameStore.getState().ghostMode).toBe('optimal');
     expect(useGameStore.getState().ghostEnabled).toBe(true);
-    expect(screen.getByRole('button', { name: /ghost enabled/i })).toHaveTextContent('[GHOST: ON]');
+    expect(screen.getByRole('button', { name: /ghost enabled/i })).toHaveTextContent(
+      '[GHOST: OPTIMAL]'
+    );
+  });
+
+  it('cycles through off -> optimal -> best -> off when personal best exists', () => {
+    useGameStore.setState({
+      ghostMode: 'optimal',
+      ghostEnabled: true,
+      scores: { 1: { best: 10000, last: 10000, ghostTrajectory: 'v1|0,10,20,0,i' } }
+    });
+    renderWithRouter();
+
+    const ghostBtn = screen.getByRole('button', { name: /ghost enabled/i });
+    expect(ghostBtn).toHaveTextContent('[GHOST: OPTIMAL]');
+
+    // Click optimal -> best
+    fireEvent.click(ghostBtn);
+    expect(useGameStore.getState().ghostMode).toBe('best');
+    expect(screen.getByRole('button', { name: /ghost enabled/i })).toHaveTextContent(
+      '[GHOST: BEST]'
+    );
+
+    // Click best -> off
+    fireEvent.click(screen.getByRole('button', { name: /ghost enabled/i }));
+    expect(useGameStore.getState().ghostMode).toBe('off');
+    expect(screen.getByRole('button', { name: /ghost disabled/i })).toHaveTextContent(
+      '[GHOST: OFF]'
+    );
+
+    // Click off -> optimal
+    fireEvent.click(screen.getByRole('button', { name: /ghost disabled/i }));
+    expect(useGameStore.getState().ghostMode).toBe('optimal');
+    expect(screen.getByRole('button', { name: /ghost enabled/i })).toHaveTextContent(
+      '[GHOST: OPTIMAL]'
+    );
   });
 
   it('hides Entanglement tab when maxLevel < 10', () => {

@@ -211,32 +211,18 @@ describe('Spec-03: 4-Act Cosmic Narrative & Odyssey Lore', () => {
     expect(level1Lines[0]).toBe(
       'Oops. Looks like you have been reduced to a veeery small size. Sorry for that...'
     );
-    expect(level1Lines[1]).toBe(
-      'Try to get that electron, it should give you enough energy to make the jump to the next atom.'
-    );
+    expect(level1Lines.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('provides thematic element introductions for mechanics in levels 2 to 10', () => {
-    // He (2)
-    expect(getNarrativeForLevel(2).some((l) => /helium|speedrun|speed/i.test(l))).toBe(true);
-    // Li (3)
-    expect(getNarrativeForLevel(3).some((l) => /lithium|gravity|chasm/i.test(l))).toBe(true);
-    // Be (4)
-    expect(getNarrativeForLevel(4).some((l) => /beryllium|duplication/i.test(l))).toBe(true);
-    // B (5)
-    expect(getNarrativeForLevel(5).some((l) => /boron|gravity|bounce|wall/i.test(l))).toBe(true);
-    // C (6)
-    expect(getNarrativeForLevel(6).some((l) => /carbon|inversion/i.test(l))).toBe(true);
-    // N (7)
-    expect(getNarrativeForLevel(7).some((l) => /nitrogen|tunnel/i.test(l))).toBe(true);
-    // O (8)
-    expect(getNarrativeForLevel(8).some((l) => /oxygen|superposition|cyan|magenta/i.test(l))).toBe(
-      true
-    );
-    // F (9)
-    expect(getNarrativeForLevel(9).some((l) => /fluorine|pauli|decay/i.test(l))).toBe(true);
-    // Ne (10)
-    expect(getNarrativeForLevel(10).some((l) => /neon|dilation|collapse/i.test(l))).toBe(true);
+  it('provides short, subtle narrative lines without exclamation marks for levels 1 to 10', () => {
+    for (let lvl = 1; lvl <= 10; lvl++) {
+      const lines = getNarrativeForLevel(lvl);
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      for (const l of lines) {
+        expect(l).not.toContain('!');
+        expect(l.length).toBeLessThanOrEqual(120);
+      }
+    }
   });
 
   it('generates consistent narrative lines for all 118 elements', () => {
@@ -258,7 +244,7 @@ describe('Spec-03: Generator & Level Assembly Integration', () => {
     expect(generated.levelData.antiHue).toBe('#48cae4');
     expect(generated.levelData.explanations).toBeDefined();
     expect(generated.levelData.explanations?.length).toBeGreaterThanOrEqual(2);
-    expect(generated.levelData.explanations?.[0]).toContain('Nitrogen');
+    expect(generated.levelData.explanations?.[0]).toMatch(/^[^!]+$/);
   });
 
   it('embeds spectroscopy colors and cosmic narrative in paced assembler output', () => {
@@ -269,7 +255,7 @@ describe('Spec-03: Generator & Level Assembly Integration', () => {
     expect(assembly.levelData.antiHue).toBe('#52b788');
     expect(assembly.levelData.explanations).toBeDefined();
     expect(assembly.levelData.explanations?.length).toBeGreaterThanOrEqual(2);
-    expect(assembly.levelData.explanations?.[0]).toContain('Oxygen');
+    expect(assembly.levelData.explanations?.[0]).toMatch(/^[^!]+$/);
   });
 
   it('ensures PERIODIC_ELEMENTS contains all 118 elements with exact coordinates', () => {

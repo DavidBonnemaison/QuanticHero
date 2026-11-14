@@ -8,8 +8,8 @@
   "hue": "#0f1416",
   "antiHue": "#70e000",
   "explanations": [
-    "Beryllium's hexagonal metallic lattice splits incoming quantum wavefunctions.",
-    "Collect the duplication particle to replicate yourself and chart multiple paths at once!"
+    "A rigid metallic lattice with a heavy barrier ahead.",
+    "Perhaps an identical self could stand where one cannot."
   ],
   "player": {
     "position": {
@@ -80,6 +80,25 @@
       "y": 655,
       "width": 260,
       "height": 20
+    }
+  ],
+  "gates": [
+    {
+      "id": "gate_be_4",
+      "x": 1970,
+      "y": 535,
+      "width": 24,
+      "height": 120
+    }
+  ],
+  "pressurePlates": [
+    {
+      "id": "plate_be_4",
+      "x": 995,
+      "y": 592,
+      "width": 80,
+      "height": 8,
+      "targetGateId": "gate_be_4"
     }
   ],
   "door": {

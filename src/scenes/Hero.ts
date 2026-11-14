@@ -179,14 +179,20 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     const isActive = this.isEntangled || this.isFocused;
 
     if (isActive) {
+      const isHighSpeed =
+        Math.abs(this.body.velocity.x) > PHYSICS.HERO_SPEED_X * this.velocityMultiplier;
       if (goLeft) {
-        this.setVelocityX(-PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
+        if (touchingGround || !isHighSpeed) {
+          this.setVelocityX(-PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
+        }
         this.setFlipX(true);
         if (touchingGround) {
           this.play(this.getAnimKey('left'), true);
         }
       } else if (goRight) {
-        this.setVelocityX(PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
+        if (touchingGround || !isHighSpeed) {
+          this.setVelocityX(PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
+        }
         this.setFlipX(false);
         if (touchingGround) {
           this.play(this.getAnimKey('right'), true);
@@ -196,7 +202,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
           this.setVelocityX(0);
           this.play(this.getAnimKey('idle'), true);
         } else {
-          this.body.velocity.x *= PHYSICS.AIR_DRAG_X;
+          const drag = isHighSpeed ? 0.996 : PHYSICS.AIR_DRAG_X;
+          this.body.velocity.x *= drag;
         }
       }
 

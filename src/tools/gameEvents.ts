@@ -13,6 +13,7 @@ export interface GameEventPayloads {
   'time:dilation': { active: boolean; durationMs: number };
   'platform:decay': { x: number; y: number };
   'hero:wall_bounce': { x: number; y: number };
+  'plate:trigger': { plateId: string; gateId: string };
 }
 
 export type GameEventName = keyof GameEventPayloads;

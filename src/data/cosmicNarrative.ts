@@ -50,43 +50,40 @@ export const COSMIC_ACTS: Record<1 | 2 | 3 | 4, CosmicAct> = {
 export const LEVEL_NARRATIVES: Record<number, string[]> = {
   1: [
     'Oops. Looks like you have been reduced to a veeery small size. Sorry for that...',
-    'Try to get that electron, it should give you enough energy to make the jump to the next atom.'
+    'The tiny floating spark looks like it might carry enough momentum to leap through the anomaly.'
   ],
   2: [
-    'Welcome to Helium: an ultra-light noble gas drifting weightlessly through space.',
-    'Snag that speed particle to kickstart your first cosmic speedrun before the universe cools!'
+    'Light and weightless noble air drifting in silence.',
+    'The golden spark seems to urge swift movement before the trail fades.'
   ],
   3: [
-    'Behold Lithium: an ultra-reactive alkali metal leaping across the primordial sea.',
-    'Harness reduced gravity to bound across gaping quantum chasms and conquer the void.'
+    'A reactive floor floating over an expansive vacuum.',
+    'A strange low-gravity current hovers in the open air.'
   ],
   4: [
-    "Beryllium's hexagonal metallic lattice splits incoming quantum wavefunctions.",
-    'Collect the duplication particle to replicate yourself and chart multiple paths at once!'
+    'A rigid metallic lattice with a heavy barrier ahead.',
+    'Perhaps an identical self could stand where one cannot.'
   ],
   5: [
-    'Boron forms an unyielding refractory metalloid forged under intense cosmic pressure.',
-    'Watch out for deep gravity wells, and use the vertical neon walls to bounce toward safety!'
+    'Dense vertical chasms and polished neon facets.',
+    'Kinetic energy feels like it could bounce upward.'
   ],
-  6: [
-    'Carbon: the versatile four-valent foundation of organic life, graphite sheets, and diamond stars.',
-    'Master gravity inversion to walk upside down along celestial ceilings without falling into the void!'
-  ],
+  6: ['An upside-down expanse of diamond sheets.', 'Gravity behaves like a mere suggestion here.'],
   7: [
-    'Nitrogen fills the stellar atmospheres, guarded by stubborn and unyielding triple bonds.',
-    'Channel quantum tunneling to glide effortlessly straight through impenetrable energy barriers!'
+    'A solid unyielding wall standing between two chambers.',
+    'Matter is mostly empty space after all.'
   ],
   8: [
-    'Oxygen: the fiery fuel of stellar fusion, lighting auroral skies in shimmering emerald green.',
-    'Synchronize with quantum phase superposition—time your jumps across alternating cyan and magenta platforms!'
+    'Alternating echoes of cyan and magenta.',
+    'Every leap seems to rearrange which ground exists.'
   ],
   9: [
-    'Fluorine is the most ravenous electronegative predator in the entire periodic table.',
-    'Beware of Pauli exclusion repulsions, and tread lightly as radioactive platforms decay beneath your feet!'
+    'Two identical fermions cannot occupy the same state.',
+    'Forcing them together might yield quite a push across crumbling ground.'
   ],
   10: [
-    'Neon blazes in glorious crimson-orange discharge, sealing the triumphant close of Period 2.',
-    'Activate relativistic time dilation to slow down reality before the collapsing chamber crushes you!'
+    'The chamber core trembles as walls draw closer.',
+    'Moving while everything else slows down could offer a way out.'
   ],
   11: [
     'Sodium ignites with a golden doublet flare as you enter Period 3.',
@@ -114,7 +111,7 @@ export const LEVEL_NARRATIVES: Record<number, string[]> = {
   ],
   110: [
     'Darmstadtium initiates the Quantum Entanglement Matrix (Ψ_A ⊗ Ψ_B).',
-    'Control twin wavefunctions simultaneously—your actions resonate across quantum mirror space!'
+    'Control twin wavefunctions simultaneously—your actions resonate across quantum mirror space.'
   ],
   111: [
     'Roentgenium challenges your entangled reflexes across inverted gravitational fields.',
@@ -130,11 +127,11 @@ export const LEVEL_NARRATIVES: Record<number, string[]> = {
   ],
   114: [
     'Flerovium: the fabled core of the Island of Stability.',
-    'Coordinate Alpha and Beta to navigate crossed finish portals and achieve ultimate quantum synthesis!'
+    'Coordinate Alpha and Beta to navigate crossed finish portals and achieve ultimate quantum synthesis.'
   ],
   118: [
     'Oganesson: the 118th and final element of the Periodic Table, where relativistic electron clouds smear into pure quantum chaos.',
-    'You have completed the Cosmic Odyssey from the Primordial Big Bang to the outermost edge of atomic physics!'
+    'You have completed the Cosmic Odyssey from the Primordial Big Bang to the outermost edge of atomic physics.'
   ]
 };
 

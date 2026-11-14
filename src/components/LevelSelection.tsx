@@ -16,8 +16,21 @@ export const LevelSelection: React.FC = () => {
   const maxEntanglementLevel = useGameStore((state) => state.maxEntanglementLevel ?? 110);
   const scores = useGameStore((state) => state.scores);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
-  const ghostEnabled = useGameStore((state) => state.ghostEnabled);
+  const ghostMode = useGameStore(
+    (state) => state.ghostMode ?? (state.ghostEnabled ? 'optimal' : 'off')
+  );
   const toggleGhost = useGameStore((state) => state.toggleGhost);
+
+  const hasPersonalRun = Object.values(scores).some(
+    (s) => s.best > 0 && Boolean(s.ghostTrajectory)
+  );
+
+  const ghostLabel =
+    ghostMode === 'off'
+      ? '[GHOST: OFF]'
+      : ghostMode === 'optimal'
+        ? '[GHOST: OPTIMAL]'
+        : '[GHOST: BEST]';
 
   const isEntanglementUnlocked = maxLevel >= 10 || location.search.includes('entanglement=1');
   const [activeTab, setActiveTab] = useState<'classic' | 'entanglement'>(
@@ -75,12 +88,12 @@ export const LevelSelection: React.FC = () => {
         <h1 className={styles.title}>Level Selection</h1>
         <button
           type="button"
-          className={`${styles.ghostToggle} ${ghostEnabled ? styles.ghostToggleActive : ''}`}
-          onClick={toggleGhost}
-          title={ghostEnabled ? 'Ghost replay enabled' : 'Ghost replay disabled'}
-          aria-label={ghostEnabled ? 'Ghost enabled' : 'Ghost disabled'}
+          className={`${styles.ghostToggle} ${ghostMode !== 'off' ? styles.ghostToggleActive : ''}`}
+          onClick={() => toggleGhost(hasPersonalRun)}
+          title={`Ghost replay mode: ${ghostMode}`}
+          aria-label={ghostMode === 'off' ? 'Ghost disabled' : `Ghost enabled (${ghostMode})`}
         >
-          {ghostEnabled ? '[GHOST: ON]' : '[GHOST: OFF]'}
+          {ghostLabel}
         </button>
       </div>
 

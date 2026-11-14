@@ -64,6 +64,9 @@ export class SoundManager {
       }),
       gameEvents.on('hero:wall_bounce', () => {
         this.playBounceSound();
+      }),
+      gameEvents.on('plate:trigger', () => {
+        this.playMechanicalClick();
       })
     );
 
@@ -716,6 +719,40 @@ export class SoundManager {
 
       osc.start(now);
       osc.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Mechanical Pressure Plate & Gate Click
+   * Crisp, metallic contact latch click
+   */
+  public playMechanicalClick(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.04);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.2, now + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.045);
     } catch {
       // safe fallback
     }

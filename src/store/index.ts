@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import * as levelsData from '../data/levels';
 import type { LevelData, ScoreItem } from '../types';
+import type { GhostMode } from '../types';
 
 export interface UpdateLevelFieldParams {
   level: number;
@@ -10,6 +11,8 @@ export interface UpdateLevelFieldParams {
   prop?: string;
   value: any;
 }
+
+export type { GhostMode };
 
 export interface GameStoreState {
   currentLevel: number;
@@ -20,6 +23,7 @@ export interface GameStoreState {
   isMuted: boolean;
   hapticsEnabled: boolean;
   reducedEffects: boolean;
+  ghostMode: GhostMode;
   ghostEnabled: boolean;
   sharedLevel: LevelData | null;
 }
@@ -45,7 +49,8 @@ export interface GameStoreActions {
   setHapticsEnabled: (enabled: boolean) => void;
   toggleReducedEffects: () => void;
   setReducedEffects: (reduced: boolean) => void;
-  toggleGhost: () => void;
+  toggleGhost: (hasPersonalBest?: boolean) => void;
+  setGhostMode: (mode: GhostMode) => void;
   setGhostEnabled: (enabled: boolean) => void;
 }
 
@@ -105,7 +110,11 @@ const customStorage = {
           isMuted: parsed.isMuted ?? false,
           hapticsEnabled: parsed.hapticsEnabled ?? true,
           reducedEffects: parsed.reducedEffects ?? false,
-          ghostEnabled: parsed.ghostEnabled ?? true
+          ghostMode: (parsed.state?.ghostMode ??
+            (parsed.state?.ghostEnabled === false ? 'off' : 'optimal')) as GhostMode,
+          ghostEnabled:
+            parsed.state?.ghostEnabled ??
+            (parsed.state?.ghostMode ? parsed.state.ghostMode !== 'off' : true)
         },
         version: 0
       };
@@ -138,6 +147,7 @@ export const useGameStore = create<GameStore>()(
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
+      ghostMode: 'optimal',
       ghostEnabled: true,
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
@@ -149,8 +159,41 @@ export const useGameStore = create<GameStore>()(
       toggleReducedEffects: () => set((state) => ({ reducedEffects: !state.reducedEffects })),
       setReducedEffects: (reduced: boolean) => set({ reducedEffects: reduced }),
 
-      toggleGhost: () => set((state) => ({ ghostEnabled: !state.ghostEnabled })),
-      setGhostEnabled: (enabled: boolean) => set({ ghostEnabled: enabled }),
+      toggleGhost: (hasPersonalBest?: boolean) =>
+        set((state) => {
+          let canUseBest = hasPersonalBest;
+          if (canUseBest === undefined) {
+            const curScore = state.scores[state.currentLevel];
+            canUseBest = Boolean(curScore?.ghostTrajectory && curScore?.best && curScore.best > 0);
+          }
+
+          let nextMode: GhostMode;
+          const currentMode = state.ghostMode ?? (state.ghostEnabled ? 'optimal' : 'off');
+          if (currentMode === 'off') {
+            nextMode = 'optimal';
+          } else if (currentMode === 'optimal') {
+            nextMode = canUseBest ? 'best' : 'off';
+          } else {
+            nextMode = 'off';
+          }
+
+          return {
+            ghostMode: nextMode,
+            ghostEnabled: nextMode !== 'off'
+          };
+        }),
+
+      setGhostMode: (mode: GhostMode) =>
+        set({
+          ghostMode: mode,
+          ghostEnabled: mode !== 'off'
+        }),
+
+      setGhostEnabled: (enabled: boolean) =>
+        set({
+          ghostEnabled: enabled,
+          ghostMode: enabled ? 'optimal' : 'off'
+        }),
 
       updateCurrentLevel: (lvl: number) => set({ currentLevel: Number(lvl) }),
 
@@ -379,6 +422,7 @@ export const useGameStore = create<GameStore>()(
         isMuted: state.isMuted,
         hapticsEnabled: state.hapticsEnabled,
         reducedEffects: state.reducedEffects,
+        ghostMode: state.ghostMode,
         ghostEnabled: state.ghostEnabled
       })
     }

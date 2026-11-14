@@ -1,24 +1,26 @@
+import { spawn } from 'node:child_process';
+import http from 'node:http';
 import puppeteer from 'puppeteer-core';
-import { spawn } from 'child_process';
-import http from 'http';
 
 function waitForServer(port, timeoutMs = 15000) {
   const start = Date.now();
   return new Promise((resolve, reject) => {
     const check = () => {
-      http.get(`http://localhost:${port}/`, (res) => {
-        if (res.statusCode === 200) {
-          resolve();
-        } else {
-          setTimeout(check, 200);
-        }
-      }).on('error', () => {
-        if (Date.now() - start > timeoutMs) {
-          reject(new Error(`Timeout waiting for server on port ${port}`));
-        } else {
-          setTimeout(check, 200);
-        }
-      });
+      http
+        .get(`http://localhost:${port}/`, (res) => {
+          if (res.statusCode === 200) {
+            resolve();
+          } else {
+            setTimeout(check, 200);
+          }
+        })
+        .on('error', () => {
+          if (Date.now() - start > timeoutMs) {
+            reject(new Error(`Timeout waiting for server on port ${port}`));
+          } else {
+            setTimeout(check, 200);
+          }
+        });
     };
     check();
   });
@@ -33,8 +35,8 @@ async function run() {
     stdio: 'pipe'
   });
 
-  server.stdout.on('data', d => console.log(`[server] ${d.toString().trim()}`));
-  server.stderr.on('data', d => console.error(`[server-err] ${d.toString().trim()}`));
+  server.stdout.on('data', (d) => console.log(`[server] ${d.toString().trim()}`));
+  server.stderr.on('data', (d) => console.error(`[server-err] ${d.toString().trim()}`));
 
   try {
     await waitForServer(4173);
@@ -43,7 +45,13 @@ async function run() {
     console.log('Launching headless Chromium...');
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--ignore-certificate-errors'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--ignore-certificate-errors'
+      ],
       headless: true
     });
 
@@ -51,16 +59,16 @@ async function run() {
     const errors = [];
     const logs = [];
 
-    page.on('requestfailed', req => {
+    page.on('requestfailed', (req) => {
       console.error('[REQUEST FAILED]', req.url(), req.failure() ? req.failure().errorText : '');
     });
 
-    page.on('pageerror', err => {
+    page.on('pageerror', (err) => {
       console.error('[PAGE ERROR]', err.message);
       errors.push(err.message);
     });
 
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const text = msg.text();
       logs.push(text);
       if (msg.type() === 'error') {
@@ -70,7 +78,7 @@ async function run() {
       }
     });
 
-    page.on('response', res => {
+    page.on('response', (res) => {
       if (res.status() >= 400) {
         console.error('[HTTP ERROR]', res.status(), res.url());
       }
@@ -89,7 +97,7 @@ async function run() {
     const menuThemeCheck = await page.evaluate(() => {
       const text = document.body.textContent || '';
       const forbiddenEmojis = ['🔊', '🔇', '📳', '📴', '✨', '⚡', '👻', '📤', '✏️', '📱'];
-      const foundEmojis = forbiddenEmojis.filter(emoji => text.includes(emoji));
+      const foundEmojis = forbiddenEmojis.filter((emoji) => text.includes(emoji));
       const hasSoundBtn = text.includes('SND:');
       const hasHapticBtn = text.includes('HAP:');
       const hasFxBtn = text.includes('FX:');
@@ -106,7 +114,9 @@ async function run() {
     if (!menuThemeCheck.hasSoundBtn || !menuThemeCheck.hasHapticBtn || !menuThemeCheck.hasFxBtn) {
       throw new Error(`Retro arcade controls missing: ${JSON.stringify(menuThemeCheck)}`);
     }
-    console.log('✓ Retro arcade theme verified on menu (no modern emojis, [SND:], [HAP:], [FX:] active)!');
+    console.log(
+      '✓ Retro arcade theme verified on menu (no modern emojis, [SND:], [HAP:], [FX:] active)!'
+    );
 
     // Look for New game clickable element
     const newGameFound = await page.evaluate(() => {
@@ -125,7 +135,7 @@ async function run() {
     }
 
     console.log('Clicked "New game"!');
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
     console.log('Current URL after New Game click:', page.url());
 
     // Look for "Got it" clickable element
@@ -145,11 +155,11 @@ async function run() {
     }
 
     console.log('Clicked "Got it"!');
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
     console.log('Current URL after "Got it" click:', page.url());
 
     console.log('Waiting 5 seconds for Phaser Boot -> Splash -> Game state transition...');
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise((r) => setTimeout(r, 5000));
 
     // Verify canvas exists
     const canvas = await page.$('canvas');
@@ -167,39 +177,45 @@ async function run() {
         const canvasRect = canvas ? canvas.getBoundingClientRect() : null;
         const p = gs ? gs.portalSprite : null;
         const cam = gs ? gs.cameras.main : null;
-        const hero = gs && gs.heroes ? gs.heroes[0] : null;
-        const platforms = gs && gs.platforms ? gs.platforms.getChildren() : [];
+        const hero = gs?.heroes ? gs.heroes[0] : null;
+        const platforms = gs?.platforms ? gs.platforms.getChildren() : [];
         const ground = platforms[0];
 
         return {
           hasGame: true,
-          currentState: gs && gs.scene.isActive() ? 'Game' : null,
-          heroesCount: gs && gs.heroes ? gs.heroes.length : null,
-          ghostFramesCount: gs && gs.ghostFrames ? gs.ghostFrames.length : 0,
+          currentState: gs?.scene.isActive() ? 'Game' : null,
+          heroesCount: gs?.heroes ? gs.heroes.length : null,
+          ghostFramesCount: gs?.ghostFrames ? gs.ghostFrames.length : 0,
           portalKey: g.textures.exists('portal'),
           canvasTop: canvasRect ? canvasRect.top : null,
           portalX: p ? p.x : null,
           portalY: p ? p.y : null,
-          portalMoves: p && p.body ? p.body.moves : null,
-          ground: ground && ground.body ? {
-            x: ground.body.x,
-            y: ground.body.y,
-            immovable: ground.body.immovable,
-            allowGravity: ground.body.allowGravity
-          } : null,
-          hero: hero && hero.body ? {
-            x: Math.round(hero.x),
-            y: Math.round(hero.y),
-            vy: Math.round(hero.body.velocity.y),
-            blockedDown: hero.body.blocked.down,
-            touchingDown: hero.body.touching.down
-          } : null,
-          camera: cam ? {
-            scrollX: cam.scrollX,
-            scrollY: cam.scrollY,
-            midX: cam.midPoint.x,
-            midY: cam.midPoint.y
-          } : null
+          portalMoves: p?.body ? p.body.moves : null,
+          ground: ground?.body
+            ? {
+                x: ground.body.x,
+                y: ground.body.y,
+                immovable: ground.body.immovable,
+                allowGravity: ground.body.allowGravity
+              }
+            : null,
+          hero: hero?.body
+            ? {
+                x: Math.round(hero.x),
+                y: Math.round(hero.y),
+                vy: Math.round(hero.body.velocity.y),
+                blockedDown: hero.body.blocked.down,
+                touchingDown: hero.body.touching.down
+              }
+            : null,
+          camera: cam
+            ? {
+                scrollX: cam.scrollX,
+                scrollY: cam.scrollY,
+                midX: cam.midPoint.x,
+                midY: cam.midPoint.y
+              }
+            : null
         };
       }
       return { hasGame: false };
@@ -207,7 +223,9 @@ async function run() {
     console.log('Game state evaluation:', JSON.stringify(gameState, null, 2));
 
     if (gameState.ghostFramesCount > 0) {
-      throw new Error(`Ghost should NOT be active on first level run, but found ${gameState.ghostFramesCount} frames`);
+      throw new Error(
+        `Ghost should NOT be active on first level run, but found ${gameState.ghostFramesCount} frames`
+      );
     }
     console.log('✓ Ghost run logic verified: ghost is strictly inactive on first run');
 
@@ -235,18 +253,24 @@ async function run() {
       throw new Error('Hero not found or has no physics body');
     }
     if (gameState.hero.y > 700 || gameState.hero.y < 670) {
-      throw new Error(`Hero position out of bounds: expected y around 688, got ${gameState.hero.y}`);
+      throw new Error(
+        `Hero position out of bounds: expected y around 688, got ${gameState.hero.y}`
+      );
     }
     if (!gameState.hero.touchingDown && !gameState.hero.blockedDown) {
       throw new Error('Hero is not grounded on the platform (touchingDown/blockedDown is false)');
     }
-    console.log(`✓ Hero landed stably on platform (hero.y=${gameState.hero.y}, touchingDown=${gameState.hero.touchingDown})`);
+    console.log(
+      `✓ Hero landed stably on platform (hero.y=${gameState.hero.y}, touchingDown=${gameState.hero.touchingDown})`
+    );
 
     // REGRESSION TEST: Verify Camera is centered on hero and within scene bounds (not drifting)
     if (!gameState.camera) {
       throw new Error('Camera main not found');
     }
-    console.log(`✓ Camera scroll verified (scrollY=${gameState.camera.scrollY}, midY=${gameState.camera.midY})`);
+    console.log(
+      `✓ Camera scroll verified (scrollY=${gameState.camera.scrollY}, midY=${gameState.camera.midY})`
+    );
 
     // REGRESSION TEST: Verify dedicated scene boundary walls and zero floor/platform bounce
     const boundsConfig = await page.evaluate(() => {
@@ -254,7 +278,7 @@ async function run() {
       if (!gs) return null;
       const hero = gs.heroes[0];
       const bounds = gs.sceneBounds?.getChildren() || [];
-      const boundaryTypes = bounds.map(b => b.getData('boundary'));
+      const boundaryTypes = bounds.map((b) => b.getData('boundary'));
       return {
         hasSceneBounds: !!gs.sceneBounds,
         boundsCount: bounds.length,
@@ -295,7 +319,12 @@ async function run() {
 
       // Test active updateControl under left bounce with user trying to press left:
       hero.updateControl(
-        { left: { isDown: true }, right: { isDown: false }, up: { isDown: false }, down: { isDown: false } },
+        {
+          left: { isDown: true },
+          right: { isDown: false },
+          up: { isDown: false },
+          down: { isDown: false }
+        },
         null,
         { left: true, right: false, jump: false },
         16.6
@@ -313,7 +342,12 @@ async function run() {
 
       // Test active updateControl under right bounce with user trying to press right:
       hero.updateControl(
-        { left: { isDown: false }, right: { isDown: true }, up: { isDown: false }, down: { isDown: false } },
+        {
+          left: { isDown: false },
+          right: { isDown: true },
+          up: { isDown: false },
+          down: { isDown: false }
+        },
         null,
         { left: false, right: true, jump: false },
         16.6
@@ -364,8 +398,8 @@ async function run() {
       const dummyParticle = gs.physics.add.sprite(hero.x, hero.y, 'blue');
       dummyParticle.setData('type', 'lowGravity');
       gs.collectParticle(hero, dummyParticle);
-      const texts = gs.children.list.filter(c => c.type === 'Text');
-      const toast = texts.find(t => t.text === 'LOW GRAVITY !');
+      const texts = gs.children.list.filter((c) => c.type === 'Text');
+      const toast = texts.find((t) => t.text === 'LOW GRAVITY !');
       return {
         found: !!toast,
         fontSize: toast?.style?.fontSize,
@@ -376,7 +410,9 @@ async function run() {
     if (!powerUpResult || !powerUpResult.found || powerUpResult.fontSize !== '150px') {
       throw new Error(`PowerUp text invalid: ${JSON.stringify(powerUpResult)}`);
     }
-    console.log(`✓ PowerUp banner verified (fontSize=150px, startX=${powerUpResult.x}, alpha=${powerUpResult.alpha})`);
+    console.log(
+      `✓ PowerUp banner verified (fontSize=150px, startX=${powerUpResult.x}, alpha=${powerUpResult.alpha})`
+    );
 
     // REGRESSION TEST: Verify restart when hero falls out through the bottom
     const restartResult = await page.evaluate(() => {
@@ -386,7 +422,9 @@ async function run() {
       const origRestart = gs.scene.restart.bind(gs.scene);
       const origY = hero.y;
       let restarted = false;
-      gs.scene.restart = () => { restarted = true; };
+      gs.scene.restart = () => {
+        restarted = true;
+      };
       hero.y = gs.levelData.height + 30;
       gs.update();
       hero.y = origY;
@@ -425,13 +463,19 @@ async function run() {
     await page.waitForFunction(() => window.location.pathname === '/done', { timeout: 5000 });
     console.log('✓ Successfully arrived at /done via portal arrival!');
 
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 500));
     const donePageInfo = await page.evaluate(() => {
-      const shareBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Share'));
+      const shareBtn = Array.from(document.querySelectorAll('button')).find((b) =>
+        b.textContent.includes('Share')
+      );
       const text = document.body.textContent || '';
       return {
         hasShareButton: !!shareBtn,
-        hasTitle: text.includes('Hydrogen') || text.includes('Terminé') || text.includes('Completed') || text.includes('1')
+        hasTitle:
+          text.includes('Hydrogen') ||
+          text.includes('Terminé') ||
+          text.includes('Completed') ||
+          text.includes('1')
       };
     });
     console.log('Level completion screen info:', JSON.stringify(donePageInfo));
@@ -463,12 +507,17 @@ async function run() {
       }, lvl);
 
       await page.goto('http://localhost:4173/game', { waitUntil: 'domcontentloaded' });
-      await page.waitForFunction(() => {
-        const gs = window.game?.scene?.getScene('Game');
-        return Boolean(gs && gs.scene.isActive() && gs.heroes && gs.heroes.length > 0 && gs.portalSprite);
-      }, { timeout: 15000 });
+      await page.waitForFunction(
+        () => {
+          const gs = window.game?.scene?.getScene('Game');
+          return Boolean(
+            gs?.scene.isActive() && gs.heroes && gs.heroes.length > 0 && gs.portalSprite
+          );
+        },
+        { timeout: 15000 }
+      );
 
-      const levelInfo = await page.evaluate((lvlNum) => {
+      const levelInfo = await page.evaluate((_lvlNum) => {
         const gs = window.game?.scene?.getScene('Game');
         if (!gs) return null;
         const ld = gs.levelData;
@@ -484,10 +533,12 @@ async function run() {
           hasPortal: Boolean(gs.portalSprite),
           hasGhost: Boolean(ld.authorGhost),
           hasMeta: Boolean(ld.meta?.seed),
+          gatesCount: ld.gates?.length ?? 0,
+          pressurePlatesCount: ld.pressurePlates?.length ?? 0,
+          hasTallBarrier: ld.platforms?.some((p) => p.height >= 1000 && p.width <= 80),
           explanationsCount: ld.explanations?.length ?? 0,
           heroGrounded: Boolean(
-            hero &&
-              hero.body &&
+            hero?.body &&
               (hero.body.touching.down ||
                 hero.body.blocked.down ||
                 hero.body.touching.up ||
@@ -505,12 +556,23 @@ async function run() {
       if (!levelInfo.hasGhost || !levelInfo.hasMeta) {
         throw new Error(`Level ${lvl} missing authorGhost or meta: ${JSON.stringify(levelInfo)}`);
       }
+      if (lvl === 4 && (levelInfo.gatesCount < 1 || levelInfo.pressurePlatesCount < 1)) {
+        throw new Error(`Level 4 missing Gate or PressurePlate: ${JSON.stringify(levelInfo)}`);
+      }
+      if (lvl === 7 && !levelInfo.hasTallBarrier) {
+        throw new Error(
+          `Level 7 missing continuous ceiling-to-floor barrier: ${JSON.stringify(levelInfo)}`
+        );
+      }
+      if (lvl === 9 && levelInfo.particlesCount < 2) {
+        throw new Error(`Level 9 missing particles for Pauli chasm: ${JSON.stringify(levelInfo)}`);
+      }
 
       console.log(
         `✓ Level ${lvl} [${levelInfo.symbol} - ${levelInfo.atom}] validated: ` +
           `${levelInfo.platformsCount} platforms, ` +
           `${levelInfo.particlesCount} particles, ` +
-          `authorGhost: YES, ` +
+          'authorGhost: YES, ' +
           `grounded: ${levelInfo.heroGrounded}`
       );
 
@@ -540,11 +602,18 @@ async function run() {
 
     // SPEC-05 DELIVERABLE 2: Test Procedural Debug Route /game?seed=1337&atom=7
     console.log('\n--- TESTING PROCEDURAL DEBUG ROUTE /game?seed=1337&atom=7 ---');
-    await page.goto('http://localhost:4173/game?seed=1337&atom=7', { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(() => {
-      const gs = window.game?.scene?.getScene('Game');
-      return Boolean(gs && gs.scene.isActive() && gs.heroes && gs.heroes.length > 0 && gs.portalSprite);
-    }, { timeout: 15000 });
+    await page.goto('http://localhost:4173/game?seed=1337&atom=7', {
+      waitUntil: 'domcontentloaded'
+    });
+    await page.waitForFunction(
+      () => {
+        const gs = window.game?.scene?.getScene('Game');
+        return Boolean(
+          gs?.scene.isActive() && gs.heroes && gs.heroes.length > 0 && gs.portalSprite
+        );
+      },
+      { timeout: 15000 }
+    );
 
     const debugRouteInfo = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
@@ -572,7 +641,9 @@ async function run() {
       throw new Error('/levels page did not load "Level Selection"');
     }
     const hydrogenVisible = await page.evaluate(() => {
-      const el = Array.from(document.querySelectorAll('*')).find(e => e.textContent.trim() === 'Hydrogen');
+      const el = Array.from(document.querySelectorAll('*')).find(
+        (e) => e.textContent.trim() === 'Hydrogen'
+      );
       if (!el) return false;
       const rect = el.getBoundingClientRect();
       return rect.top >= 0 && rect.bottom <= window.innerHeight;
@@ -582,7 +653,87 @@ async function run() {
     }
     console.log('/levels verified successfully (Level 1 Hydrogen visible at top)!');
 
-    // VERIFY ENTANGLEMENT TAB IS HIDDEN WHEN maxLevel < 10
+    // VERIFY 3-STATE GHOST TOGGLE
+    console.log('Verifying 3-state ghost toggle on Level Selection...');
+    await page.evaluate(() => {
+      const storageKey = 'qtmhro';
+      const raw = localStorage.getItem(storageKey);
+      const stored = raw ? JSON.parse(raw) : { state: {} };
+      stored.state = {
+        ...stored.state,
+        maxLevel: 5,
+        currentLevel: 2,
+        scores: {
+          1: { best: 7.5, ghostTrajectory: 'mock_trajectory_data' }
+        },
+        ghostMode: 'off'
+      };
+      localStorage.setItem(storageKey, JSON.stringify(stored));
+    });
+
+    await page.goto('http://localhost:4173/levels', { waitUntil: 'domcontentloaded' });
+    await new Promise((r) => setTimeout(r, 400));
+
+    // 1. Initial state: [GHOST: OFF]
+    let ghostBtnText = await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const btn = btns.find((b) => b.textContent?.includes('GHOST:'));
+      return btn ? btn.textContent.trim() : null;
+    });
+    if (ghostBtnText !== '[GHOST: OFF]') {
+      throw new Error(`Expected [GHOST: OFF], got: ${ghostBtnText}`);
+    }
+
+    // 2. Click -> [GHOST: OPTIMAL]
+    await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const btn = btns.find((b) => b.textContent?.includes('GHOST:'));
+      btn?.click();
+    });
+    await new Promise((r) => setTimeout(r, 200));
+    ghostBtnText = await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const btn = btns.find((b) => b.textContent?.includes('GHOST:'));
+      return btn ? btn.textContent.trim() : null;
+    });
+    if (ghostBtnText !== '[GHOST: OPTIMAL]') {
+      throw new Error(`Expected [GHOST: OPTIMAL], got: ${ghostBtnText}`);
+    }
+
+    // 3. Click -> [GHOST: BEST]
+    await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const btn = btns.find((b) => b.textContent?.includes('GHOST:'));
+      btn?.click();
+    });
+    await new Promise((r) => setTimeout(r, 200));
+    ghostBtnText = await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const btn = btns.find((b) => b.textContent?.includes('GHOST:'));
+      return btn ? btn.textContent.trim() : null;
+    });
+    if (ghostBtnText !== '[GHOST: BEST]') {
+      throw new Error(`Expected [GHOST: BEST], got: ${ghostBtnText}`);
+    }
+
+    // 4. Click -> [GHOST: OFF]
+    await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const btn = btns.find((b) => b.textContent?.includes('GHOST:'));
+      btn?.click();
+    });
+    await new Promise((r) => setTimeout(r, 200));
+    ghostBtnText = await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const btn = btns.find((b) => b.textContent?.includes('GHOST:'));
+      return btn ? btn.textContent.trim() : null;
+    });
+    if (ghostBtnText !== '[GHOST: OFF]') {
+      throw new Error(`Expected cycle back to [GHOST: OFF], got: ${ghostBtnText}`);
+    }
+    console.log(
+      '✓ 3-state ghost toggle verified: [GHOST: OFF] -> [GHOST: OPTIMAL] -> [GHOST: BEST] -> [GHOST: OFF]!'
+    );
     console.log('Verifying Entanglement tab is hidden when maxLevel < 10...');
     await page.evaluate(() => {
       const storageKey = 'qtmhro';
@@ -603,7 +754,9 @@ async function run() {
     if (!isEntanglementHidden) {
       throw new Error('Entanglement tab should be hidden when maxLevel < 10');
     }
-    console.log('✓ Entanglement tab is strictly hidden when player has unlocked fewer than 10 levels');
+    console.log(
+      '✓ Entanglement tab is strictly hidden when player has unlocked fewer than 10 levels'
+    );
 
     // UNLOCK 10 LEVELS AND VERIFY ENTANGLEMENT MODE
     console.log('Unlocking 10 levels and verifying Entanglement tab appears...');
@@ -621,11 +774,11 @@ async function run() {
     });
 
     await page.goto('http://localhost:4173/levels', { waitUntil: 'domcontentloaded' });
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 600));
 
     const entanglementTabClicked = await page.evaluate(() => {
       const btns = Array.from(document.querySelectorAll('button'));
-      const tab = btns.find(b => b.textContent && b.textContent.includes('ENTANGLEMENT'));
+      const tab = btns.find((b) => b.textContent?.includes('ENTANGLEMENT'));
       if (tab) {
         tab.click();
         return true;
@@ -636,12 +789,12 @@ async function run() {
       throw new Error('Entanglement tab button not found after unlocking 10 levels');
     }
     console.log('✓ Entanglement tab unlocked and switched!');
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 600));
 
     // Verify Darmstadtium (Level 110) is visible and click it
     const darmstadtiumClicked = await page.evaluate(() => {
       const cards = Array.from(document.querySelectorAll('[role="button"]'));
-      const card = cards.find(e => e.textContent && e.textContent.includes('Darmstadtium'));
+      const card = cards.find((e) => e.textContent?.includes('Darmstadtium'));
       if (card) {
         card.click();
         return true;
@@ -649,19 +802,24 @@ async function run() {
       return false;
     });
     if (!darmstadtiumClicked) {
-      throw new Error('Darmstadtium (Level 110) card not found or not clickable in entanglement tab');
+      throw new Error(
+        'Darmstadtium (Level 110) card not found or not clickable in entanglement tab'
+      );
     }
     console.log('✓ Clicked Level 110 Darmstadtium card!');
 
     // Wait for navigation to /explanation or /game
-    await page.waitForFunction(() => window.location.pathname === '/explanation' || window.location.pathname === '/game', { timeout: 5000 });
+    await page.waitForFunction(
+      () => window.location.pathname === '/explanation' || window.location.pathname === '/game',
+      { timeout: 5000 }
+    );
     console.log('Current URL after selecting level 110:', page.url());
 
     if (page.url().includes('/explanation')) {
       console.log('Level 110 explanation displayed, clicking "Got it"...');
       const gotItClicked = await page.evaluate(() => {
         const btns = Array.from(document.querySelectorAll('button'));
-        const btn = btns.find(b => b.textContent && b.textContent.includes('Got it'));
+        const btn = btns.find((b) => b.textContent?.includes('Got it'));
         if (btn) {
           btn.click();
           return true;
@@ -676,10 +834,15 @@ async function run() {
     }
 
     console.log('Waiting for Phaser Quantum Entanglement scene to load and be active...');
-    await page.waitForFunction(() => {
-      const gs = window.game?.scene?.getScene('Game');
-      return Boolean(gs && gs.scene.isActive() && gs.isEntangled && gs.heroes && gs.heroes.length === 2);
-    }, { timeout: 10000 });
+    await page.waitForFunction(
+      () => {
+        const gs = window.game?.scene?.getScene('Game');
+        return Boolean(
+          gs?.scene.isActive() && gs.isEntangled && gs.heroes && gs.heroes.length === 2
+        );
+      },
+      { timeout: 10000 }
+    );
 
     // Verify Entanglement scene state
     const entanglementState = await page.evaluate(() => {
@@ -710,15 +873,18 @@ async function run() {
     if (!entanglementState.hasAlphaPortal || !entanglementState.hasBetaPortal) {
       throw new Error('Dual portals (Alpha and Beta) missing in entangled mode');
     }
-    console.log('✓ Verified: 2 entangled heroes (Alpha & Beta) spawned with laser beam and dual portals!');
+    console.log(
+      '✓ Verified: 2 entangled heroes (Alpha & Beta) spawned with laser beam and dual portals!'
+    );
 
     // Simulate entangled heroes reaching their respective portals
     console.log('Simulating dual heroes docking into Alpha and Beta portals...');
     const dualDockTriggered = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
-      if (!gs || !gs.portalSprite || !gs.betaPortalSprite || !gs.heroes || gs.heroes.length < 2) return false;
-      const alphaHero = gs.heroes.find(h => !h.isBeta);
-      const betaHero = gs.heroes.find(h => h.isBeta);
+      if (!gs || !gs.portalSprite || !gs.betaPortalSprite || !gs.heroes || gs.heroes.length < 2)
+        return false;
+      const alphaHero = gs.heroes.find((h) => !h.isBeta);
+      const betaHero = gs.heroes.find((h) => h.isBeta);
       if (!alphaHero || !betaHero) return false;
 
       // Position alpha hero at alpha portal and beta hero at beta portal
@@ -739,12 +905,12 @@ async function run() {
     await page.waitForFunction(() => window.location.pathname === '/done', { timeout: 6000 });
     console.log('✓ Successfully arrived at /done after Quantum Entanglement completion!');
 
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 600));
     const entanglementDoneInfo = await page.evaluate(() => {
       const text = document.body.textContent || '';
       return {
         hasDarmstadtium: text.includes('Darmstadtium'),
-        buttons: Array.from(document.querySelectorAll('button')).map(b => b.textContent.trim())
+        buttons: Array.from(document.querySelectorAll('button')).map((b) => b.textContent.trim())
       };
     });
     console.log('Entanglement completion info:', JSON.stringify(entanglementDoneInfo));
@@ -758,7 +924,7 @@ async function run() {
 
     console.log('Testing /editor route...');
     await page.goto('http://localhost:4173/editor', { waitUntil: 'domcontentloaded' });
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
     console.log('/editor verified successfully!');
 
     await browser.close();
@@ -787,7 +953,7 @@ async function run() {
   }
 }
 
-run().catch(err => {
+run().catch((err) => {
   console.error('E2E Test execution failed:', err);
   process.exit(1);
 });

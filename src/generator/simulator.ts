@@ -1,6 +1,6 @@
 import { PHYSICS } from '../physics/constants';
 import { type GhostFrame, compressTrajectory } from '../tools/GhostRecorder';
-import type { Door, Platform, Spike } from '../types';
+import type { Door, Gate, Particle, Platform, PressurePlate, Spike } from '../types';
 
 export interface SimHeroState {
   x: number;
@@ -18,6 +18,9 @@ export interface SimHeroState {
   currentPhase?: 'cyan' | 'magenta';
   gravityMultiplier?: number;
   tunnelCharges?: number;
+  isPauliCharged?: boolean;
+  activeGates?: string[];
+  triggeredPlates?: string[];
   collectedParticleIndices?: number[];
   decayContactTime?: Record<number, number>;
 }
@@ -34,7 +37,9 @@ export interface SimWorld {
   gravityY?: number;
   platforms: Platform[];
   spikes?: Spike[];
-  particles?: import('../types').Particle[];
+  particles?: Particle[];
+  gates?: Gate[];
+  pressurePlates?: PressurePlate[];
   bounceWalls?: boolean;
 }
 
@@ -79,6 +84,9 @@ export function createInitialHeroState(
     animState: 'idle',
     currentPhase: 'cyan',
     gravityMultiplier: 1,
+    activeGates: [],
+    triggeredPlates: [],
+    isPauliCharged: false,
     collectedParticleIndices: [],
     decayContactTime: {}
   };
@@ -115,14 +123,19 @@ export function stepSimulation(
     next.flipX = next.recoilVx < 0;
   } else {
     // Normal directional controls
+    const isHighSpeed = Math.abs(next.vx) > PHYSICS.HERO_SPEED_X * mult;
     if (input.left) {
-      next.vx = -PHYSICS.HERO_SPEED_X * mult;
+      if (next.touchingGround || !isHighSpeed) {
+        next.vx = -PHYSICS.HERO_SPEED_X * mult;
+      }
       next.flipX = true;
       if (next.touchingGround) {
         next.animState = 'left';
       }
     } else if (input.right) {
-      next.vx = PHYSICS.HERO_SPEED_X * mult;
+      if (next.touchingGround || !isHighSpeed) {
+        next.vx = PHYSICS.HERO_SPEED_X * mult;
+      }
       next.flipX = false;
       if (next.touchingGround) {
         next.animState = 'right';
@@ -132,7 +145,8 @@ export function stepSimulation(
         next.vx = 0;
         next.animState = 'idle';
       } else {
-        next.vx *= PHYSICS.AIR_DRAG_X;
+        const drag = isHighSpeed ? 0.996 : PHYSICS.AIR_DRAG_X;
+        next.vx *= drag;
       }
     }
 
@@ -265,6 +279,8 @@ export function stepSimulation(
           next.upsideDown = -next.upsideDown;
         } else if (part.type === 'tunnel') {
           next.tunnelCharges = 2;
+        } else if (part.type === 'pauli') {
+          next.isPauliCharged = true;
         }
       }
     }
@@ -285,6 +301,49 @@ export function stepSimulation(
             newX = p.x - halfW - 6;
             next.tunnelCharges--;
             break;
+          }
+        }
+      }
+    }
+  }
+
+  // 5b. Pressure plates detection
+  if (world.pressurePlates && world.pressurePlates.length > 0) {
+    for (const pl of world.pressurePlates) {
+      const heroLeft = newX - halfW;
+      const heroRight = newX + halfW;
+      const heroTop = newY - halfH;
+      const heroBottom = newY + halfH;
+      if (
+        heroRight > pl.x &&
+        heroLeft < pl.x + pl.width &&
+        heroBottom >= pl.y - 8 &&
+        heroTop <= pl.y + pl.height + 8
+      ) {
+        if (!next.activeGates?.includes(pl.targetGateId)) {
+          next.activeGates = [...(next.activeGates ?? []), pl.targetGateId];
+        }
+        if (!next.triggeredPlates?.includes(pl.id)) {
+          next.triggeredPlates = [...(next.triggeredPlates ?? []), pl.id];
+        }
+      }
+    }
+  }
+
+  // 5c. Gates barrier collision (solid if not unlocked)
+  if (world.gates && world.gates.length > 0) {
+    for (const g of world.gates) {
+      if (next.activeGates?.includes(g.id)) continue;
+      const vOverlap = newY + halfH > g.y && newY - halfH < g.y + g.height;
+      if (vOverlap) {
+        const hOverlap = newX + halfW >= g.x && newX - halfW <= g.x + g.width;
+        if (hOverlap) {
+          if (hero.x < g.x + g.width / 2) {
+            newX = g.x - halfW;
+            next.vx = 0;
+          } else {
+            newX = g.x + g.width + halfW;
+            next.vx = 0;
           }
         }
       }
@@ -419,6 +478,12 @@ export function simulatePlatformTransition(
   // Target landing center
   const targetCenterX = toPlatform.x + toPlatform.width / 2;
   const isTargetRight = targetCenterX > current.x;
+  const horizontalGap = isTargetRight
+    ? toPlatform.x - (fromPlatform.x + fromPlatform.width)
+    : fromPlatform.x - (toPlatform.x + toPlatform.width);
+  const isPauliChasm =
+    horizontalGap > 350 &&
+    Boolean(current.isPauliCharged || world.particles?.some((p) => p.type === 'pauli'));
 
   let jumped = false;
   let settled = false;
@@ -437,6 +502,13 @@ export function simulatePlatformTransition(
         if (current.x >= jumpTriggerX || current.x >= targetCenterX - 20) {
           input.jump = true;
           jumped = true;
+          if (isPauliChasm) {
+            current.touchingGround = false;
+            current.vx = 580;
+            current.vy = -600;
+            input.jump = false;
+            input.right = false;
+          }
         }
       } else {
         input.left = true;
@@ -445,6 +517,13 @@ export function simulatePlatformTransition(
         if (current.x <= jumpTriggerX || current.x <= targetCenterX + 20) {
           input.jump = true;
           jumped = true;
+          if (isPauliChasm) {
+            current.touchingGround = false;
+            current.vx = -580;
+            current.vy = -600;
+            input.jump = false;
+            input.left = false;
+          }
         }
       }
     } else {
@@ -458,6 +537,10 @@ export function simulatePlatformTransition(
         } else {
           settled = true;
         }
+      } else if (isPauliChasm && !current.touchingGround) {
+        // Ballistic Pauli arc: do not steer with arrow keys, let momentum carry hero across the chasm
+        input.right = false;
+        input.left = false;
       } else {
         // In air: steer towards target
         const dist = targetCenterX - current.x;

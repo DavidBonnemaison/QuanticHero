@@ -1,7 +1,16 @@
 import { getNarrativeForLevel } from '../data/cosmicNarrative';
 import { getElementSpectroscopy } from '../data/spectroscopy';
 import { PHYSICS } from '../physics/constants';
-import type { CollapseConfig, Door, LevelData, Particle, Platform, Spike } from '../types';
+import type {
+  CollapseConfig,
+  Door,
+  Gate,
+  LevelData,
+  Particle,
+  Platform,
+  PressurePlate,
+  Spike
+} from '../types';
 import {
   type Chunk,
   type ChunkArchetype,
@@ -298,6 +307,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
   let climaxChunk: Chunk;
   let resolutionChunk: Chunk;
   let collapseConfig: CollapseConfig | undefined;
+  let gates: Gate[] | undefined;
+  let pressurePlates: PressurePlate[] | undefined;
 
   switch (level) {
     case 1: {
@@ -402,7 +413,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 4: {
-      // Niv 4 (Be) : Clonage quantique (duplicate, uncertainty: 4)
+      // Niv 4 (Be) : Clonage quantique (duplicate, uncertainty: 4) & barrière mécanique / dalle de pression
       width = 2200;
       height = 1100;
       awakeningChunk = createSpawnChunk({ originX: 120, originY: 660, width: 240 });
@@ -438,6 +449,25 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
 
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+
+      const resPlat = resolutionChunk.platforms[0];
+      const gate: Gate = {
+        id: 'gate_be_4',
+        x: Math.round(resPlat.x + 60),
+        y: Math.round(resPlat.y - 120),
+        width: 24,
+        height: 120
+      };
+      const plate: PressurePlate = {
+        id: 'plate_be_4',
+        x: p3.x + 55,
+        y: p3.y - 8,
+        width: 80,
+        height: 8,
+        targetGateId: 'gate_be_4'
+      };
+      gates = [gate];
+      pressurePlates = [plate];
       break;
     }
 
@@ -506,7 +536,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 7: {
-      // Niv 7 (N) : Effet Tunnel (tunnel, barrière de potentiel)
+      // Niv 7 (N) : Effet Tunnel (tunnel, barrière de potentiel étanche sol-plafond)
       width = 2200;
       height = 1100;
       awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
@@ -514,11 +544,11 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       const p1: Platform = { x: 440, y: 680, width: 200, height: 20 };
       const tunnelPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'tunnel' };
 
-      // Potential barrier between p1 and p2
-      const barrier: Platform = { x: 695, y: 590, width: 24, height: 110 };
+      // Barrière continue du sol au plafond (épaisseur 30 px <= 80 px) infranchissable par saut
+      const barrier: Platform = { x: 695, y: 0, width: 30, height: 1100 };
 
-      const p2: Platform = { x: 725, y: 680, width: 220, height: 20 };
-      const p3: Platform = { x: 1010, y: 660, width: 220, height: 20 };
+      const p2: Platform = { x: 740, y: 680, width: 220, height: 20 };
+      const p3: Platform = { x: 1020, y: 660, width: 220, height: 20 };
       const tunnelPlatforms = [p1, barrier, p2, p3];
 
       accelerationChunk = {
@@ -570,34 +600,43 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 9: {
-      // Niv 9 (F) : Répulsion de Pauli (pauli) + Plateformes de demi-vie (decayMs)
-      width = 2400;
+      // Niv 9 (F) : Répulsion de Pauli (pauli) obligatoire au-dessus d'un gouffre titanesque de 680 px
+      width = 2800;
       height = 1100;
       awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
-      awakeningChunk.particles.push({
-        x: awakeningChunk.platforms[0].x + 120,
-        y: awakeningChunk.platforms[0].y - 30,
-        type: 'pauli'
-      });
 
-      const rawLead = createSpeedrunHighwayChunk({
-        steps: 2,
-        horizontalSpacing: 180,
-        verticalDrop: 25,
-        platformWidth: 180,
-        speedBoostParticle: false
-      });
-      accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawLead, alpha, -15);
+      // Plateforme de départ avec duplication & particule de Pauli
+      const p1: Platform = { x: 440, y: 680, width: 280, height: 20 };
+      const dupPart: Particle = { x: p1.x + 80, y: p1.y - 30, type: 'duplicate' };
+      const pauliPart: Particle = { x: p1.x + 180, y: p1.y - 30, type: 'pauli' };
+
+      // Gouffre de 680 px sans plateforme intermédiaire (infranchissable sans la propulsion de Pauli)
+      const p2: Platform = { x: 1400, y: 680, width: 260, height: 20 };
+      const chasmPlats = [p1, p2];
+      const chasmParts = [dupPart, pauliPart];
+
+      accelerationChunk = {
+        id: 'chunk_pauli_chasm',
+        name: 'Gouffre de Pauli',
+        archetype: 'electron_chasm',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p2.x + p2.width - 40, y: p2.y },
+        platforms: chasmPlats,
+        pathPlatforms: [p1, p2],
+        spikes: [{ x: 720, y: height - 20, width: 680, height: 20 }],
+        particles: chasmParts,
+        bounds: computeChunkBounds(chasmPlats, [], chasmParts)
+      };
 
       const rawDecay = createDecayZoneChunk({
-        steps: 4,
+        steps: 3,
         decayMs: 750,
         stepSpacing: 170,
         platformWidth: 150,
         verticalDelta: -20,
         includeStableExit: true
       });
-      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawDecay, alpha, -20);
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawDecay, alpha, -15);
 
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
@@ -716,7 +755,9 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     platforms: allPlatforms,
     spikes: allSpikes,
     particles: allParticles,
-    bounceWalls: true
+    bounceWalls: true,
+    gates,
+    pressurePlates
   };
 
   const simulation = simulateFullLevel(world, player.position, door, fullPlatformPath);
@@ -735,6 +776,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     spikes: allSpikes,
     particles: allParticles,
     platforms: allPlatforms,
+    gates,
+    pressurePlates,
     door,
     collapse: collapseConfig,
     authorGhost: simulation.authorGhost,

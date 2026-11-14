@@ -25,9 +25,27 @@ import { hapticFeedback } from '../tools/HapticFeedback';
 import { formatScore } from '../tools/formatScore';
 import { gameEvents } from '../tools/gameEvents';
 import { decodeLevelFromUrl } from '../tools/levelCodec';
-import type { CollapseConfig, LevelData, ParticleType, PlatformPhase } from '../types';
+import type { CollapseConfig, GhostMode, LevelData, ParticleType, PlatformPhase } from '../types';
 import { GhostHero } from './GhostHero';
 import Hero, { type TouchInputState } from './Hero';
+
+export interface Gate {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface PressurePlate {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  targetGateId: string;
+  requireLock?: boolean; // quand un héros se place dessus, la barrière s'ouvre
+}
 
 interface MovingPlatform {
   rect: Phaser.GameObjects.Rectangle;
@@ -51,6 +69,15 @@ export default class GameScene extends Phaser.Scene {
   public heroes: Hero[] = [];
   public heroGroup!: Phaser.Physics.Arcade.Group;
   public platforms!: Phaser.Physics.Arcade.StaticGroup;
+  public gatesGroup!: Phaser.Physics.Arcade.StaticGroup;
+  public gatesMap: Map<string, { rect: Phaser.GameObjects.Rectangle; data: Gate }> = new Map();
+  public pressurePlatesList: Array<{
+    baseRect: Phaser.GameObjects.Rectangle;
+    padRect: Phaser.GameObjects.Rectangle;
+    data: PressurePlate;
+    isPressed: boolean;
+    startY: number;
+  }> = [];
   public movingPlatformsGroup!: Phaser.Physics.Arcade.Group;
   public sceneBounds!: Phaser.Physics.Arcade.StaticGroup;
   public spikes!: Phaser.Physics.Arcade.StaticGroup;
@@ -59,6 +86,10 @@ export default class GameScene extends Phaser.Scene {
   public isEntangled = false;
   public betaHero: Hero | null = null;
   public betaPortalSprite: Phaser.Physics.Arcade.Sprite | null = null;
+
+  public hasAnyGhost = false;
+  private authorTrajectory?: string;
+  private personalTrajectory?: string;
 
   public isPauliActive = false;
   public isTimeDilationActive = false;
@@ -106,6 +137,8 @@ export default class GameScene extends Phaser.Scene {
 
   init(): void {
     this.heroes = [];
+    this.gatesMap.clear();
+    this.pressurePlatesList = [];
     this.movingPlatforms = [];
     this.molecules = [];
     this.isLevelCompleted = false;
@@ -113,6 +146,9 @@ export default class GameScene extends Phaser.Scene {
     this.ghostHero = null;
     this.ghostRecorder.reset();
     this.ghostFrames = [];
+    this.hasAnyGhost = false;
+    this.authorTrajectory = undefined;
+    this.personalTrajectory = undefined;
     this.startTime = 0;
     this.timerStarted = false;
     this.splitDeltaText = null;
@@ -434,6 +470,54 @@ export default class GameScene extends Phaser.Scene {
     portalBody.moves = false;
     this.portalSprite.play('spin');
 
+    // 6b. Gates (Solid Barriers)
+    this.gatesGroup = this.physics.add.staticGroup();
+    this.gatesMap.clear();
+    if (this.levelData.gates && this.levelData.gates.length > 0) {
+      for (const g of this.levelData.gates) {
+        const gateRect = this.add.rectangle(
+          g.x + g.width / 2,
+          g.y + g.height / 2,
+          g.width,
+          g.height,
+          0xef4444
+        );
+        gateRect.setStrokeStyle(2, 0xff7777);
+        this.physics.add.existing(gateRect, true);
+        this.gatesGroup.add(gateRect);
+        this.gatesMap.set(g.id, { rect: gateRect, data: g });
+      }
+    }
+
+    // 6c. Pressure Plates
+    this.pressurePlatesList = [];
+    if (this.levelData.pressurePlates && this.levelData.pressurePlates.length > 0) {
+      for (const pl of this.levelData.pressurePlates) {
+        const baseRect = this.add.rectangle(
+          pl.x + pl.width / 2,
+          pl.y + pl.height - 2,
+          pl.width + 4,
+          4,
+          0x334155
+        );
+        const padRect = this.add.rectangle(
+          pl.x + pl.width / 2,
+          pl.y + pl.height / 2,
+          pl.width,
+          pl.height,
+          0x10b981
+        );
+        padRect.setStrokeStyle(1, 0x34d399);
+        this.pressurePlatesList.push({
+          baseRect,
+          padRect,
+          data: pl,
+          isPressed: false,
+          startY: padRect.y
+        });
+      }
+    }
+
     // 7. Heroes & Entanglement Setup
     this.heroGroup = this.physics.add.group();
     const startX = this.levelData.player.position.x;
@@ -491,6 +575,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Collisions and Overlaps
+    this.physics.add.collider(this.heroGroup, this.gatesGroup);
     this.physics.add.collider(this.heroGroup, this.platforms, (heroObj, platObj) => {
       const hero = heroObj as Hero;
       const plat = platObj as Phaser.GameObjects.Rectangle;
@@ -574,34 +659,24 @@ export default class GameScene extends Phaser.Scene {
     const currentLvlNum = Number(this.levelData.id);
     const scoreItem = store.scores[currentLvlNum];
 
-    let trajectoryToReplay: string | undefined;
+    const isShared = Boolean(store.sharedLevel);
+    const sharedScore = store.scores[0];
+    const isReplay = Boolean(
+      (scoreItem?.best && scoreItem.best > 0 && store.maxLevel > currentLvlNum) ||
+        (isShared &&
+          (store.sharedLevel?.authorGhost || (sharedScore?.best && sharedScore.best > 0)))
+    );
 
-    if (store.sharedLevel?.authorGhost) {
-      // Shared challenge with author ghost
-      trajectoryToReplay = store.sharedLevel.authorGhost;
-    } else if (store.sharedLevel) {
-      // Shared level without author ghost: check if player already beat it before
-      const sharedScore = store.scores[0];
-      if (sharedScore?.best && sharedScore.best > 0 && sharedScore.ghostTrajectory) {
-        trajectoryToReplay = sharedScore.ghostTrajectory;
-      }
-    } else {
-      // Standard career level: only show ghost if replaying a completed level (best > 0 and level < maxLevel)
-      const isReplay = Boolean(
-        scoreItem?.best && scoreItem.best > 0 && store.maxLevel > currentLvlNum
-      );
-      if (isReplay && scoreItem?.ghostTrajectory) {
-        trajectoryToReplay = scoreItem.ghostTrajectory;
-      }
-    }
+    this.authorTrajectory = store.sharedLevel?.authorGhost ?? this.levelData.authorGhost;
+    this.personalTrajectory = isShared
+      ? store.sharedLevel?.authorGhost
+        ? undefined
+        : sharedScore?.ghostTrajectory
+      : scoreItem?.ghostTrajectory;
 
-    if (trajectoryToReplay) {
-      this.ghostFrames = decompressTrajectory(trajectoryToReplay);
-      if (this.ghostFrames.length > 0) {
-        this.ghostHero = new GhostHero(this, this.ghostFrames);
-        this.ghostHero.setVisible(store.ghostEnabled);
-      }
-    }
+    this.hasAnyGhost = isReplay && Boolean(this.authorTrajectory || this.personalTrajectory);
+
+    this.applyGhostMode();
 
     // 8. Controls
     if (this.input.keyboard) {
@@ -718,6 +793,45 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  public applyGhostMode(): void {
+    const store = useGameStore.getState();
+    const mode = store.ghostMode ?? (store.ghostEnabled ? 'optimal' : 'off');
+
+    let trajectoryToLoad: string | undefined;
+    if (mode === 'optimal') {
+      trajectoryToLoad = this.authorTrajectory ?? this.personalTrajectory;
+    } else if (mode === 'best') {
+      trajectoryToLoad = this.personalTrajectory ?? this.authorTrajectory;
+    }
+
+    if (this.ghostHero) {
+      this.ghostHero.destroy();
+      this.ghostHero = null;
+    }
+
+    if (this.hasAnyGhost && mode !== 'off' && trajectoryToLoad) {
+      this.ghostFrames = decompressTrajectory(trajectoryToLoad);
+      if (this.ghostFrames.length > 0) {
+        this.ghostHero = new GhostHero(this, this.ghostFrames);
+        this.ghostHero.setVisible(true);
+      }
+    } else {
+      this.ghostFrames = [];
+    }
+
+    if (this.ghostButton?.active) {
+      const label =
+        mode === 'off' ? '[GHOST: OFF]' : mode === 'optimal' ? '[GHOST: OPTIMAL]' : '[GHOST: BEST]';
+      this.ghostButton.setText(label);
+      this.ghostButton.setAlpha(mode !== 'off' ? 1 : 0.35);
+      this.ghostButton.setVisible(this.hasAnyGhost);
+    }
+
+    if (this.splitDeltaText?.active) {
+      this.splitDeltaText.setVisible(mode !== 'off' && this.ghostFrames.length > 0);
+    }
+  }
+
   private createHUD(): void {
     const hudBar = this.add.graphics();
     hudBar.fillStyle(0x333333, 0.4);
@@ -791,28 +905,30 @@ export default class GameScene extends Phaser.Scene {
       fxButton.setText(getFxLabel());
     });
 
-    // Ghost replay toggle button [GHOST]
-    const getGhostAlpha = () => (useGameStore.getState().ghostEnabled ? 1 : 0.35);
-    this.ghostButton = this.add.text(252, 8, '[GHOST]', {
+    // Ghost replay toggle button [GHOST: OFF] / [GHOST: OPTIMAL] / [GHOST: BEST]
+    const currentMode =
+      useGameStore.getState().ghostMode ??
+      (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
+    const ghostLabel =
+      currentMode === 'off'
+        ? '[GHOST: OFF]'
+        : currentMode === 'optimal'
+          ? '[GHOST: OPTIMAL]'
+          : '[GHOST: BEST]';
+    this.ghostButton = this.add.text(252, 8, ghostLabel, {
       fontFamily: 'VT323',
       fontSize: '20px',
       color: '#38bdf8'
     });
     this.ghostButton.setScrollFactor(0);
     this.ghostButton.setDepth(101);
-    this.ghostButton.setAlpha(getGhostAlpha());
-    this.ghostButton.setVisible(this.ghostFrames.length > 0);
+    this.ghostButton.setAlpha(currentMode !== 'off' ? 1 : 0.35);
+    this.ghostButton.setVisible(this.hasAnyGhost);
     this.ghostButton.setInteractive({ useHandCursor: true });
     this.ghostButton.on('pointerdown', () => {
-      useGameStore.getState().toggleGhost();
-      const isEnabled = useGameStore.getState().ghostEnabled;
-      this.ghostButton?.setAlpha(getGhostAlpha());
-      if (this.ghostHero) {
-        this.ghostHero.setVisible(isEnabled && this.ghostFrames.length > 0);
-      }
-      if (this.splitDeltaText) {
-        this.splitDeltaText.setVisible(isEnabled && this.ghostFrames.length > 0);
-      }
+      const hasBest = Boolean(this.personalTrajectory);
+      useGameStore.getState().toggleGhost(hasBest);
+      this.applyGhostMode();
     });
 
     const unsubStore = useGameStore.subscribe(() => {
@@ -826,15 +942,7 @@ export default class GameScene extends Phaser.Scene {
         fxButton.setText(getFxLabel());
       }
       if (this.ghostButton?.active) {
-        const isEnabled = useGameStore.getState().ghostEnabled;
-        this.ghostButton.setAlpha(getGhostAlpha());
-        this.ghostButton.setVisible(this.ghostFrames.length > 0);
-        if (this.ghostHero) {
-          this.ghostHero.setVisible(isEnabled && this.ghostFrames.length > 0);
-        }
-        if (this.splitDeltaText) {
-          this.splitDeltaText.setVisible(isEnabled && this.ghostFrames.length > 0);
-        }
+        this.applyGhostMode();
       }
     });
 
@@ -1287,8 +1395,13 @@ export default class GameScene extends Phaser.Scene {
       this.drawEntanglementBeam(time);
     }
 
+    const currentGhostMode =
+      useGameStore.getState().ghostMode ??
+      (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
+    const isGhostActive = currentGhostMode !== 'off';
+
     // Update ghost replay
-    if (this.ghostHero && useGameStore.getState().ghostEnabled) {
+    if (this.ghostHero && isGhostActive) {
       this.ghostHero.updateReplay(elapsedMs);
     }
 
@@ -1304,11 +1417,7 @@ export default class GameScene extends Phaser.Scene {
         focusedHero.flipY
       );
 
-      if (
-        this.splitDeltaText &&
-        this.ghostFrames.length > 0 &&
-        useGameStore.getState().ghostEnabled
-      ) {
+      if (this.splitDeltaText && this.ghostFrames.length > 0 && isGhostActive) {
         const deltaSec = calculateSplitDelta(
           this.ghostFrames,
           focusedHero.x,
@@ -1354,6 +1463,80 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
+    // Pressure Plates & Gates interaction
+    if (this.pressurePlatesList.length > 0) {
+      for (const item of this.pressurePlatesList) {
+        const pl = item.data;
+        const pad = item.padRect;
+
+        // Check if any active hero is overlapping the plate
+        let hasHeroOnPlate = false;
+        let triggeringHero: Hero | null = null;
+
+        for (const h of this.heroes) {
+          if (!h.active || !h.body) continue;
+          const hLeft = h.x - 16;
+          const hRight = h.x + 16;
+          const hBottom = h.y + 20;
+          const hTop = h.y - 20;
+
+          const pLeft = pl.x;
+          const pRight = pl.x + pl.width;
+          const pTop = pl.y - 6;
+          const pBottom = pl.y + pl.height + 6;
+
+          if (hRight > pLeft && hLeft < pRight && hBottom >= pTop && hTop <= pBottom) {
+            hasHeroOnPlate = true;
+            triggeringHero = h;
+            break;
+          }
+        }
+
+        const gateEntry = this.gatesMap.get(pl.targetGateId);
+
+        if (hasHeroOnPlate) {
+          if (!item.isPressed) {
+            item.isPressed = true;
+            pad.setY(item.startY + 3);
+            pad.setFillStyle(0x059669);
+            soundManager.playMechanicalClick();
+            gameEvents.emit('plate:trigger', { plateId: pl.id, gateId: pl.targetGateId });
+
+            // If hero stepping on plate is focused and there are multiple heroes, switch focus to another hero
+            if (triggeringHero?.isFocused && this.heroes.length > 1) {
+              const otherHero = this.heroes.find((hero) => hero !== triggeringHero && hero.active);
+              if (otherHero) {
+                triggeringHero.setFocus(false);
+                otherHero.setFocus(true);
+                this.cameras.main.startFollow(otherHero, true, 0.1, 0.1);
+              }
+            }
+          }
+
+          // Open target gate
+          if (gateEntry) {
+            gateEntry.rect.setAlpha(0);
+            const body = gateEntry.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+            if (body) body.enable = false;
+          }
+        } else {
+          // No hero on plate
+          if (pl.requireLock) {
+            if (item.isPressed) {
+              item.isPressed = false;
+              pad.setY(item.startY);
+              pad.setFillStyle(0x10b981);
+            }
+            if (gateEntry) {
+              gateEntry.rect.setAlpha(1);
+              const body = gateEntry.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+              if (body) body.enable = true;
+            }
+          }
+        }
+      }
+    }
+
     // Quantum Tunneling check
     for (const hero of this.heroes) {
       if (hero.active && hero.tunnelCharges > 0 && hero.body) {
@@ -1390,11 +1573,11 @@ export default class GameScene extends Phaser.Scene {
       for (const ev of repulsionEvents) {
         const hA = activeHeroes.find((h) => h.id === ev.heroAId);
         const hB = activeHeroes.find((h) => h.id === ev.heroBId);
-        if (hA && hB) {
-          hA.setVelocityX(ev.impulseA.vx);
-          hA.setVelocityY(ev.impulseA.vy);
-          hB.setVelocityX(ev.impulseB.vx);
-          hB.setVelocityY(ev.impulseB.vy);
+        if (hA && hB && hA.body && hB.body) {
+          hA.setVelocityX(hA.body.velocity.x + ev.impulseA.vx);
+          hA.setVelocityY(hA.body.velocity.y + ev.impulseA.vy);
+          hB.setVelocityX(hB.body.velocity.x + ev.impulseB.vx);
+          hB.setVelocityY(hB.body.velocity.y + ev.impulseB.vy);
           hA.pauliGraceUntil = ev.newGraceUntil;
           hB.pauliGraceUntil = ev.newGraceUntil;
           soundManager.playPauliBlastSound();

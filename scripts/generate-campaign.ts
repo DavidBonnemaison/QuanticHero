@@ -96,7 +96,9 @@ export function generateCampaign(options: CampaignOptions): void {
   }
 
   console.log('---------------------------------------------------------------');
-  console.log(`Successfully generated and verified ${generatedLevels.length} levels with 100% solver pass!`);
+  console.log(
+    `Successfully generated and verified ${generatedLevels.length} levels with 100% solver pass!`
+  );
 }
 
 function main() {

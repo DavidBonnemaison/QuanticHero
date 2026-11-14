@@ -72,6 +72,24 @@ export interface CollapseConfig {
   delayMs: number; // Delay before collapse starts
 }
 
+export interface Gate {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface PressurePlate {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  targetGateId: string;
+  requireLock?: boolean; // quand un héros se place dessus, la barrière s'ouvre
+}
+
 export interface LevelData {
   id: string;
   symbol: string;
@@ -87,6 +105,8 @@ export interface LevelData {
   particles: Particle[];
   platforms: Platform[];
   door: Door;
+  gates?: Gate[];
+  pressurePlates?: PressurePlate[];
   entanglement?: EntanglementConfig;
   collapse?: CollapseConfig;
   authorGhost?: string;
@@ -115,3 +135,5 @@ export interface RootState {
   score: ScoreState;
   routing?: unknown;
 }
+
+export type GhostMode = 'off' | 'optimal' | 'best';
