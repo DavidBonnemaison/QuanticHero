@@ -20,8 +20,16 @@ function buildSimWorld(levelData: LevelData): SimWorld {
 }
 
 describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
-  it('Level 2 (He): passes with speed, FAILS without speed particle', () => {
-    const assembly = assembleCampaignLevel(2, 49);
+  it('Levels 1-4 (H to Be): pure platforming with 0 power-up particles', () => {
+    for (let lvl = 1; lvl <= 4; lvl++) {
+      const assembly = assembleCampaignLevel(lvl, 35 + lvl * 7);
+      expect(assembly.simulation.success).toBe(true);
+      expect(assembly.levelData.particles.length).toBe(0);
+    }
+  });
+
+  it('Level 5 (B): passes with speed, FAILS without speed particle', () => {
+    const assembly = assembleCampaignLevel(5, 70);
     expect(assembly.simulation.success).toBe(true);
 
     const worldWithoutSpeed: SimWorld = {
@@ -37,8 +45,8 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     expect(res.success).toBe(false);
   });
 
-  it('Level 3 (Li): passes with lowGravity, FAILS without lowGravity particle', () => {
-    const assembly = assembleCampaignLevel(3, 56);
+  it('Level 9 (F): passes with lowGravity, FAILS without lowGravity particle', () => {
+    const assembly = assembleCampaignLevel(9, 98);
     expect(assembly.simulation.success).toBe(true);
 
     const worldWithoutLowG: SimWorld = {
@@ -54,8 +62,8 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     expect(res.success).toBe(false);
   });
 
-  it('Level 4 (Be): passes with duplicate + requireLock plate, FAILS without duplicate', () => {
-    const assembly = assembleCampaignLevel(4, 63);
+  it('Level 14 (Si): passes with duplicate + requireLock plate, FAILS without duplicate', () => {
+    const assembly = assembleCampaignLevel(14, 133);
     expect(assembly.simulation.success).toBe(true);
     expect(assembly.levelData.pressurePlates?.some((pl) => pl.requireLock)).toBe(true);
 
@@ -72,8 +80,8 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     expect(res.success).toBe(false);
   });
 
-  it('Level 5 (B): passes with neon bounce walls, FAILS if kind=wall is removed', () => {
-    const assembly = assembleCampaignLevel(5, 70);
+  it('Level 18 (Ar): passes with neon bounce walls, FAILS if kind=wall is removed', () => {
+    const assembly = assembleCampaignLevel(18, 161);
     expect(assembly.simulation.success).toBe(true);
     expect(assembly.levelData.platforms.some((p) => p.kind === 'wall')).toBe(true);
 
@@ -93,8 +101,8 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     expect(res.success).toBe(false);
   });
 
-  it('Level 6 (C): passes with antiGravity, FAILS without antiGravity particle', () => {
-    const assembly = assembleCampaignLevel(6, 77);
+  it('Level 22 (Ti): passes with antiGravity, FAILS without antiGravity particle', () => {
+    const assembly = assembleCampaignLevel(22, 189);
     expect(assembly.simulation.success).toBe(true);
 
     const worldWithoutAntiG: SimWorld = {
@@ -110,8 +118,8 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     expect(res.success).toBe(false);
   });
 
-  it('Level 7 (N): passes with 1 tunnel charge, FAILS without tunnel particle', () => {
-    const assembly = assembleCampaignLevel(7, 84);
+  it('Level 29 (Cu): passes with 1 tunnel charge, FAILS without tunnel particle', () => {
+    const assembly = assembleCampaignLevel(29, 238);
     expect(assembly.simulation.success).toBe(true);
 
     const worldWithoutTunnel: SimWorld = {
@@ -127,8 +135,8 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     expect(res.success).toBe(false);
   });
 
-  it('Level 8 (O): passes with Phase Shift, FAILS if magenta phase platforms are non-solid', () => {
-    const assembly = assembleCampaignLevel(8, 91);
+  it('Level 36 (Kr): passes with Phase Shift, FAILS if magenta phase platforms are non-solid', () => {
+    const assembly = assembleCampaignLevel(36, 287);
     expect(assembly.simulation.success).toBe(true);
     expect(assembly.levelData.platforms.some((p) => p.phase === 'magenta')).toBe(true);
 
@@ -146,8 +154,8 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     expect(res.success).toBe(false);
   });
 
-  it('Level 9 (F): passes with duplicate + pauli, FAILS if either duplicate or pauli is removed', () => {
-    const assembly = assembleCampaignLevel(9, 98);
+  it('Level 52 (Te): passes with duplicate + pauli, FAILS if either duplicate or pauli is removed', () => {
+    const assembly = assembleCampaignLevel(52, 399);
     expect(assembly.simulation.success).toBe(true);
 
     const worldWithoutPauli: SimWorld = {
@@ -177,8 +185,8 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     ).toBe(false);
   });
 
-  it('Level 10 (Ne): passes with timeDilation + collapse, FAILS without timeDilation', () => {
-    const assembly = assembleCampaignLevel(10, 105);
+  it('Level 74 (W): passes with timeDilation + collapse, FAILS without timeDilation', () => {
+    const assembly = assembleCampaignLevel(74, 553);
     expect(assembly.simulation.success).toBe(true);
     expect(assembly.levelData.collapse).toBeDefined();
 
@@ -198,7 +206,7 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
   it('Campaign 1-109: all levels have valid authorTime, no "!" in explanations, and Bosses combine multiple mechanics', async () => {
     const fs = await import('node:fs');
     const path = await import('node:path');
-    const bossLevels = [20, 26, 40, 46, 62, 68, 84, 88, 100, 109];
+    const bossLevels = [12, 26, 46, 68, 84, 88, 100, 109];
 
     for (let lvl = 1; lvl <= 109; lvl++) {
       const filePath = path.resolve(process.cwd(), `src/data/level${lvl}.json`);

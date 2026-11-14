@@ -52,82 +52,69 @@ export const LEVEL_NARRATIVES: Record<number, string[]> = {
     'Oops. Looks like you have been reduced to a veeery small size. Sorry for that...',
     'The tiny floating spark looks like it might carry enough momentum to leap through the anomaly.'
   ],
-  2: [
-    'Light and weightless noble air drifting in silence.',
-    'The golden spark seems to urge swift movement before the trail fades.'
-  ],
-  3: [
-    'A reactive floor floating over an expansive vacuum.',
-    'A strange low-gravity current hovers in the open air.'
-  ],
-  4: [
-    'A rigid metallic lattice with a heavy barrier ahead.',
-    'Perhaps an identical self could stand where one cannot.'
-  ],
   5: [
-    'Dense vertical chasms and polished neon facets.',
-    'Kinetic energy feels like it could bounce upward.'
-  ],
-  6: ['An upside-down expanse of diamond sheets.', 'Gravity behaves like a mere suggestion here.'],
-  7: [
-    'A solid unyielding wall standing between two chambers.',
-    'Matter is mostly empty space after all.'
-  ],
-  8: [
-    'Alternating echoes of cyan and magenta.',
-    'Every leap seems to rearrange which ground exists.'
+    'Boron hums with a golden current just beyond the first ledges.',
+    'Catching that spark might carry you across wider voids ahead.'
   ],
   9: [
-    'Two identical fermions cannot occupy the same state.',
-    'Forcing them together might yield quite a push across crumbling ground.'
+    'Fluorine drifts in a thin, weightless pocket above the chasm.',
+    'A lighter step could let a single leap span far more vacuum.'
   ],
-  10: [
-    'The chamber core trembles as walls draw closer.',
-    'Moving while everything else slows down could offer a way out.'
+  12: [
+    'Magnesium closes the primordial dawn with a twin trial.',
+    'Swift momentum and lightened weight converge before the stellar forge.'
   ],
-  11: [
-    'Sodium flickers with a warm amber glow as the stellar forge awakens.',
-    'The air feels denser here, yet each leap still carries promise.'
+  13: [
+    'Aluminium marks the threshold of the Stellar Forge.',
+    'Denser lattices and higher climbs await inside the core.'
   ],
-  15: [
-    'Shifting cyan and magenta echoes drift between moving ledges.',
-    'Timing a step with the phase pulse might open a cleaner path.'
+  14: [
+    'Silicon guards a heavy barrier that will not yield on its own.',
+    'Perhaps an identical self could hold the plate while you pass.'
   ],
-  20: [
-    'Calcium plates lock into a restless canyon of wind and thin barriers.',
-    'A burst of speed before phasing through stone could bridge the gap.'
+  18: [
+    'Argon rises through vertical shafts lined with glowing neon walls.',
+    'Kinetic energy feels like it could rebound upward from the sides.'
+  ],
+  22: [
+    'Titanium bends the rules of weight along an inverted ceiling.',
+    'Gravity behaves like a mere suggestion in this chamber.'
   ],
   26: [
-    'Iron marks the core of the stellar forge, where fusion reaches its peak.',
-    'Gravity, decay, and floating currents converge before the next expanse.'
+    'Iron marks the core of the Stellar Forge, where fusion reaches its peak.',
+    'Inverted weight and buoyant currents unite before the supernova.'
   ],
   27: [
-    'Beyond iron, the forge gives way to the violent breath of a supernova.',
-    'Platforms tremble lightly under the shockwave of heavy nuclei.'
+    'Beyond iron, the forge gives way to the breath of a supernova.',
+    'Shockwaves scatter thin barriers and shifting echoes ahead.'
   ],
-  33: [
-    'Arsenic crystallizes along neon walls that hum with reflected force.',
-    'Phase-shifted ledges await those who rebound upward.'
+  29: [
+    'Copper seals the corridor behind a solid, unyielding wall.',
+    'Matter is mostly empty space after all.'
   ],
-  40: [
-    'Zirconium splits the path into twin wavefunctions above a wide void.',
-    'Two identical selves forced together might launch one far across.'
+  36: [
+    'Krypton flickers between alternating echoes of cyan and magenta.',
+    'Every leap seems to rearrange which ground exists.'
   ],
   46: [
     'Palladium guards the edge of the supernova cataclysm.',
-    'Speed, shifting phases, and a rising floor test every reflex at once.'
+    'Speed, tunneling, and shifting phases converge in one trial.'
   ],
   47: [
     'Silver shimmers in the aftermath of colliding neutron stars.',
     'The kilonova echo leaves fragile footholds suspended in deep space.'
   ],
+  48: [
+    'Cadmium ledges glow briefly before dissolving into the void.',
+    'Hesitation costs the ground beneath your feet.'
+  ],
+  52: [
+    'Tellurium brings two identical fermions face to face.',
+    'Forcing them together might yield quite a push across the abyss.'
+  ],
   55: [
     'Caesium ticks with atomic precision at the heart of the kilonova.',
     'Slowing the world for a few moments may reveal hidden openings.'
-  ],
-  62: [
-    'Samarium warps both gravity and solid walls into a tight labyrinth.',
-    'Inverting weight before slipping through stone could unlock the exit.'
   ],
   68: [
     'Erbium closes the kilonova sector beneath a cascade of decaying steps.',
@@ -137,9 +124,9 @@ export const LEVEL_NARRATIVES: Record<number, string[]> = {
     'Thulium ushers in the relativistic crucible, where orbitals contract.',
     'Longer chasms and brisker rhythms demand steady momentum.'
   ],
-  79: [
-    'Gold gleams with relativistic brilliance across high-velocity spans.',
-    'Inner-shell electrons race faster here, and so must your stride.'
+  74: [
+    'Tungsten trembles as walls begin to close around the chamber.',
+    'Moving while everything else slows down could offer a way out.'
   ],
   84: [
     'Polonium radiates an unstable aura over three distinct trials.',
@@ -147,15 +134,11 @@ export const LEVEL_NARRATIVES: Record<number, string[]> = {
   ],
   88: [
     'Radium stands at the threshold of the transuranic frontier.',
-    'Inverted gravity, shifting phases, and collapsing chambers converge.'
+    'Inverted gravity, tunneling, and shifting phases converge.'
   ],
   89: [
     'Actinium opens the Island of Stability, far beyond classical bounds.',
     'Every quantum effect you have met lingers in this outer expanse.'
-  ],
-  92: [
-    'Uranium hums with emerald fission energy across fragile bridges.',
-    'Keep moving before the glowing ledges dissolve beneath your feet.'
   ],
   100: [
     'Fermium marks the hundredth element, a twin-state gauntlet.',
@@ -213,7 +196,10 @@ export function getNarrativeForLevel(z: number): string[] {
   const act = COSMIC_ACTS[element.act];
 
   const line1 = `Entering ${element.name} (${element.symbol}, Z=${element.z}) — ${act.title}.`;
-  const line2 = `${element.description} Navigate this quantum sector to advance the cosmic synthesis.`;
+  const line2 =
+    element.description.length <= 120
+      ? element.description
+      : `${element.description.slice(0, 117)}...`;
 
   return [line1, line2];
 }

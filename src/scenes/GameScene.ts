@@ -886,6 +886,7 @@ export default class GameScene extends Phaser.Scene {
       color: '#ffffff'
     });
     backButton.setOrigin(0.5);
+    backButton.setScrollFactor(0);
     backButton.setInteractive({ useHandCursor: true });
     backButton.on('pointerdown', () => {
       soundManager.stopBgm();
@@ -905,6 +906,7 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#fbbf24'
     });
+    restartButton.setScrollFactor(0);
     restartButton.setInteractive({ useHandCursor: true });
     restartButton.on('pointerdown', () => {
       this.scene.restart();
@@ -918,6 +920,7 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#00ffcc'
     });
+    soundButton.setScrollFactor(0);
     soundButton.setInteractive({ useHandCursor: true });
     soundButton.on('pointerdown', () => {
       useGameStore.getState().toggleMute();
@@ -932,6 +935,7 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#00ffcc'
     });
+    hapticButton.setScrollFactor(0);
     hapticButton.setInteractive({ useHandCursor: true });
     hapticButton.on('pointerdown', () => {
       useGameStore.getState().toggleHaptics();
@@ -946,6 +950,7 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#00ffcc'
     });
+    fxButton.setScrollFactor(0);
     fxButton.setInteractive({ useHandCursor: true });
     fxButton.on('pointerdown', () => {
       useGameStore.getState().toggleReducedEffects();
@@ -968,6 +973,7 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#38bdf8'
     });
+    this.ghostButton.setScrollFactor(0);
     this.ghostButton.setAlpha(currentMode !== 'off' ? 1 : 0.45);
     this.ghostButton.setVisible(this.hasAnyGhost);
     this.ghostButton.setInteractive({ useHandCursor: true });

@@ -554,7 +554,12 @@ export function simulatePlatformTransition(
         input.right = true;
         // Jump when approaching the right edge of fromPlatform or already past it
         const jumpTriggerX = fromPlatform.x + fromPlatform.width - halfW - 10;
-        if (current.x >= jumpTriggerX || current.x >= targetCenterX - 20) {
+        const pastEdge = current.x >= fromPlatform.x + fromPlatform.width - 4;
+        if (
+          (current.touchingGround &&
+            (current.x >= jumpTriggerX || current.x >= targetCenterX - 20)) ||
+          pastEdge
+        ) {
           input.jump = true;
           jumped = true;
           if (horizontalGap > 350 && current.isPauliCharged && current.hasClone) {
@@ -570,7 +575,12 @@ export function simulatePlatformTransition(
         input.left = true;
         // Jump when approaching the left edge of fromPlatform
         const jumpTriggerX = fromPlatform.x + halfW + 10;
-        if (current.x <= jumpTriggerX || current.x <= targetCenterX + 20) {
+        const pastEdge = current.x <= fromPlatform.x + 4;
+        if (
+          (current.touchingGround &&
+            (current.x <= jumpTriggerX || current.x <= targetCenterX + 20)) ||
+          pastEdge
+        ) {
           input.jump = true;
           jumped = true;
           if (horizontalGap > 350 && current.isPauliCharged && current.hasClone) {
@@ -615,6 +625,28 @@ export function simulatePlatformTransition(
         } else {
           if (dist > 5) input.right = true;
           else if (dist < -5) input.left = true;
+        }
+      }
+    }
+
+    // Reflexively jump over any spike directly ahead on the current platform
+    if (current.touchingGround && world.spikes && world.spikes.length > 0) {
+      const dir = input.right ? 1 : input.left ? -1 : 0;
+      if (dir !== 0) {
+        const spikeAhead = world.spikes.some((s) => {
+          const sw = s.width ?? 32;
+          const sh = s.height ?? 32;
+          const vertOverlap = s.y < current.y + halfH && s.y + sh > current.y - halfH;
+          if (!vertOverlap) return false;
+          if (dir > 0) {
+            const dist = s.x - (current.x + halfW);
+            return dist > 0 && dist < 52;
+          }
+          const dist = current.x - halfW - (s.x + sw);
+          return dist > 0 && dist < 52;
+        });
+        if (spikeAhead) {
+          input.jump = true;
         }
       }
     }

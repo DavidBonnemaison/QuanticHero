@@ -240,13 +240,13 @@ async function run() {
     if (!gameState.ground) {
       throw new Error('Ground platform not found or has no physics body');
     }
-    if (gameState.ground.y !== 720) {
-      throw new Error(`Ground platform fell! Expected y=720, got y=${gameState.ground.y}`);
+    if (gameState.ground.y !== 760) {
+      throw new Error(`Ground platform fell! Expected y=760, got y=${gameState.ground.y}`);
     }
-    if (!gameState.ground.immovable) {
-      throw new Error('Ground platform must be immovable');
+    if (!gameState.ground.immovable || gameState.ground.allowGravity) {
+      throw new Error('Ground platform must be immovable and ignore gravity');
     }
-    console.log('✓ Ground platform position and immovability verified (y=720, immovable=true)');
+    console.log('✓ Ground platform position and immovability verified (y=760, immovable=true)');
 
     // HUD NON-OVERLAP, RESTART BUTTON & NO-STALE-CACHE CHECK
     const hudCheck = await page.evaluate(() => {
@@ -307,9 +307,9 @@ async function run() {
     if (!gameState.hero) {
       throw new Error('Hero not found or has no physics body');
     }
-    if (gameState.hero.y > 700 || gameState.hero.y < 670) {
+    if (gameState.hero.y > 740 || gameState.hero.y < 710) {
       throw new Error(
-        `Hero position out of bounds: expected y around 688, got ${gameState.hero.y}`
+        `Hero position out of bounds: expected y around 728, got ${gameState.hero.y}`
       );
     }
     if (!gameState.hero.touchingDown && !gameState.hero.blockedDown) {
@@ -494,6 +494,98 @@ async function run() {
     await page.screenshot({ path: '/tmp/gameplay_screenshot.png' });
     console.log('Screenshot saved to /tmp/gameplay_screenshot.png');
 
+    // REGRESSION TEST: Verify HUD buttons are genuinely clickable via Playwright mouse click (even with camera scroll)
+    const sndBtnCoords = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs || !gs.hudContainer) return null;
+      // Ensure camera has scrolled away from (0,0) to catch scrollFactor bugs
+      gs.cameras.main.scrollX = 250;
+      const btn = gs.hudContainer.list.find(
+        (c) => c.type === 'Text' && typeof c.text === 'string' && c.text.startsWith('SND:')
+      );
+      if (!btn) return null;
+      const canvas = document.querySelector('canvas');
+      const rect = canvas.getBoundingClientRect();
+      const cam = gs.cameras.main;
+      const sx = rect.width / cam.width;
+      const sy = rect.height / cam.height;
+      return {
+        initialText: btn.text,
+        x:
+          rect.left +
+          (gs.hudContainer.x +
+            (btn.x + btn.width * (0.5 - (btn.originX ?? 0))) * gs.hudContainer.scaleX) *
+            sx,
+        y:
+          rect.top +
+          (gs.hudContainer.y +
+            (btn.y + btn.height * (0.5 - (btn.originY ?? 0))) * gs.hudContainer.scaleY) *
+            sy
+      };
+    });
+    if (!sndBtnCoords) {
+      throw new Error('Could not locate SND HUD button in GameScene');
+    }
+    await page.mouse.click(sndBtnCoords.x, sndBtnCoords.y);
+    await new Promise((r) => setTimeout(r, 150));
+    const afterSndClick = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      const btn = gs?.hudContainer?.list.find(
+        (c) => c.type === 'Text' && typeof c.text === 'string' && c.text.startsWith('SND:')
+      );
+      return btn?.text ?? null;
+    });
+    if (afterSndClick === sndBtnCoords.initialText) {
+      throw new Error(
+        `HUD SND button click had no effect! Still "${afterSndClick}" (likely scrollFactor hitTest mismatch)`
+      );
+    }
+    // Click again to restore original sound state
+    await page.mouse.click(sndBtnCoords.x, sndBtnCoords.y);
+    await new Promise((r) => setTimeout(r, 100));
+    console.log(
+      `✓ HUD SND button click verified (${sndBtnCoords.initialText} -> ${afterSndClick} with camera scrollX=250)`
+    );
+
+    const rstBtnCoords = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs || !gs.hudContainer || !gs.heroes?.[0]) return null;
+      gs.heroes[0]._e2eOldHero = true;
+      const btn = gs.hudContainer.list.find((c) => c.type === 'Text' && c.text === '[RST]');
+      if (!btn) return null;
+      const canvas = document.querySelector('canvas');
+      const rect = canvas.getBoundingClientRect();
+      const cam = gs.cameras.main;
+      const sx = rect.width / cam.width;
+      const sy = rect.height / cam.height;
+      return {
+        x:
+          rect.left +
+          (gs.hudContainer.x +
+            (btn.x + btn.width * (0.5 - (btn.originX ?? 0))) * gs.hudContainer.scaleX) *
+            sx,
+        y:
+          rect.top +
+          (gs.hudContainer.y +
+            (btn.y + btn.height * (0.5 - (btn.originY ?? 0))) * gs.hudContainer.scaleY) *
+            sy
+      };
+    });
+    if (!rstBtnCoords) {
+      throw new Error('Could not locate [RST] HUD button in GameScene');
+    }
+    await page.mouse.click(rstBtnCoords.x, rstBtnCoords.y);
+    await page.waitForFunction(
+      () => {
+        const gs = window.game?.scene?.getScene('Game');
+        return Boolean(
+          gs?.scene.isActive() && gs.heroes?.length > 0 && gs.heroes[0]._e2eOldHero !== true
+        );
+      },
+      { timeout: 5000 }
+    );
+    console.log('✓ HUD [RST] button click verified (restarted GameScene cleanly)');
+
     // REGRESSION TEST: Full Level 1 Playthrough to Portal
     console.log('Simulating full level run: hero moves to portal...');
     const winTriggered = await page.evaluate(() => {
@@ -611,16 +703,16 @@ async function run() {
       if (!levelInfo.hasGhost || !levelInfo.hasMeta) {
         throw new Error(`Level ${lvl} missing authorGhost or meta: ${JSON.stringify(levelInfo)}`);
       }
-      if (lvl === 4 && (levelInfo.gatesCount < 1 || levelInfo.pressurePlatesCount < 1)) {
-        throw new Error(`Level 4 missing Gate or PressurePlate: ${JSON.stringify(levelInfo)}`);
-      }
-      if (lvl === 7 && !levelInfo.hasTallBarrier) {
+      if (lvl <= 4 && levelInfo.particlesCount !== 0) {
         throw new Error(
-          `Level 7 missing continuous ceiling-to-floor barrier: ${JSON.stringify(levelInfo)}`
+          `Level ${lvl} should have 0 particles (pure platforming): ${levelInfo.particlesCount}`
         );
       }
-      if (lvl === 9 && levelInfo.particlesCount < 2) {
-        throw new Error(`Level 9 missing particles for Pauli chasm: ${JSON.stringify(levelInfo)}`);
+      if (lvl === 5 && levelInfo.particlesCount < 1) {
+        throw new Error(`Level 5 missing speed particle: ${JSON.stringify(levelInfo)}`);
+      }
+      if (lvl === 9 && levelInfo.particlesCount < 1) {
+        throw new Error(`Level 9 missing lowGravity particle: ${JSON.stringify(levelInfo)}`);
       }
 
       console.log(
@@ -950,6 +1042,49 @@ async function run() {
       `✓ Verified: 2 entangled heroes (Alpha & Beta) both visible in camera (zoom=${entanglementState.zoom.toFixed(2)}), HUD at 1:1 scale!`
     );
 
+    // Verify HUD button is also clickable under Entanglement zoom
+    const entSndBtn = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      if (!gs || !gs.hudContainer) return null;
+      const btn = gs.hudContainer.list.find(
+        (c) => c.type === 'Text' && typeof c.text === 'string' && c.text.startsWith('SND:')
+      );
+      if (!btn) return null;
+      const canvas = document.querySelector('canvas');
+      const rect = canvas.getBoundingClientRect();
+      const cam = gs.cameras.main;
+      const sx = rect.width / cam.width;
+      const sy = rect.height / cam.height;
+      // syncHudTransform() keeps HUD children fixed at 1:1 screen coordinates (btn.x, btn.y)
+      const screenX = btn.x + btn.width * (0.5 - (btn.originX ?? 0));
+      const screenY = btn.y + btn.height * (0.5 - (btn.originY ?? 0));
+      return {
+        initialText: btn.text,
+        x: rect.left + screenX * sx,
+        y: rect.top + screenY * sy
+      };
+    });
+    if (!entSndBtn) {
+      throw new Error('Could not locate SND HUD button in Entanglement scene');
+    }
+    await page.mouse.click(entSndBtn.x, entSndBtn.y);
+    await new Promise((r) => setTimeout(r, 150));
+    const afterEntSnd = await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('Game');
+      const btn = gs?.hudContainer?.list.find(
+        (c) => c.type === 'Text' && typeof c.text === 'string' && c.text.startsWith('SND:')
+      );
+      return btn?.text ?? null;
+    });
+    if (afterEntSnd === entSndBtn.initialText) {
+      throw new Error(`Entanglement HUD SND button click had no effect! Still "${afterEntSnd}"`);
+    }
+    await page.mouse.click(entSndBtn.x, entSndBtn.y);
+    await new Promise((r) => setTimeout(r, 100));
+    console.log(
+      `✓ Entanglement HUD SND button click verified (${entSndBtn.initialText} -> ${afterEntSnd})`
+    );
+
     // Simulate entangled heroes reaching their respective portals
     console.log('Simulating dual heroes docking into Alpha and Beta portals...');
     const dualDockTriggered = await page.evaluate(() => {
@@ -1038,27 +1173,26 @@ async function run() {
     const formalChecks = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
       if (!gs) return { ok: false, reason: 'No GameScene' };
-      const levels = gs.registry ? null : null;
-      // Access bundled levels via window.game or test Level 4 requireLock directly on GameScene
       return { ok: true };
     });
     if (!formalChecks.ok) {
       throw new Error(`Formal E2E check failed: ${JSON.stringify(formalChecks)}`);
     }
 
-    // Load Level 4 in Phaser and verify requireLock gate blocks single hero when stepping off plate
+    // Load Level 14 in Phaser and verify requireLock gate blocks single hero when stepping off plate
     await page.evaluate(() => {
       const store = JSON.parse(localStorage.getItem('qtmhro') || '{"state":{}}');
-      store.state.currentLevel = 4;
+      store.state.maxLevel = Math.max(store.state.maxLevel || 1, 15);
+      store.state.currentLevel = 14;
       localStorage.setItem('qtmhro', JSON.stringify(store));
     });
     await page.goto('http://localhost:4173/game', { waitUntil: 'domcontentloaded' });
     await new Promise((r) => setTimeout(r, 2000));
 
-    const level4GateCheck = await page.evaluate(() => {
+    const level14GateCheck = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
       if (!gs) return { ok: false, reason: 'No GameScene' };
-      const gate = gs.gatesMap?.get('gate_be_4');
+      const gate = gs.gatesMap?.get('gate_si_14');
       const plate = gs.pressurePlatesList?.[0];
       const gateBody = gate?.rect?.body;
       return {
@@ -1074,11 +1208,11 @@ async function run() {
         gateSolidInitially: gateBody?.enable
       };
     });
-    if (!level4GateCheck.ok) {
-      throw new Error(`Level 4 formal gate check failed: ${JSON.stringify(level4GateCheck)}`);
+    if (!level14GateCheck.ok) {
+      throw new Error(`Level 14 formal gate check failed: ${JSON.stringify(level14GateCheck)}`);
     }
     console.log(
-      `✓ Level 4 formal E2E check passed: full-height gate (y=${level4GateCheck.gateY}, h=${level4GateCheck.gateHeight}), requireLock=${level4GateCheck.requireLock}, solid=${level4GateCheck.gateSolidInitially}`
+      `✓ Level 14 formal E2E check passed: full-height gate (y=${level14GateCheck.gateY}, h=${level14GateCheck.gateHeight}), requireLock=${level14GateCheck.requireLock}, solid=${level14GateCheck.gateSolidInitially}`
     );
 
     await page.screenshot({ path: '/tmp/entanglement_done_screenshot.png' });
