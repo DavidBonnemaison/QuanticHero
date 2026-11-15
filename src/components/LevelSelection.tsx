@@ -25,6 +25,7 @@ export const LevelSelection: React.FC = () => {
   const unlockedMolecules = useGameStore((state) => state.unlockedMolecules ?? []);
   const unlockMolecule = useGameStore((state) => state.unlockMolecule);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
+  const setSharedLevel = useGameStore((state) => state.setSharedLevel);
   const ghostMode = useGameStore(
     (state) => state.ghostMode ?? (state.ghostEnabled ? 'optimal' : 'off')
   );
@@ -79,7 +80,7 @@ export const LevelSelection: React.FC = () => {
       if (activeTab === 'entanglement') {
         return idNum >= 110 && idNum <= 114;
       }
-      return idNum < 110;
+      return idNum < 110 || idNum >= 115;
     })
     .map(({ id, hue, antiHue, symbol, atom }) => ({ id, hue, antiHue, symbol, atom }));
 
@@ -133,6 +134,7 @@ export const LevelSelection: React.FC = () => {
 
   const handleSelect = (n: string | number) => {
     if (isDisabled(n)) return;
+    setSharedLevel(null);
     updateCurrentLevel(Number(n));
     const targetLevel = getLevelMetadata(n);
     if (targetLevel?.explanations && targetLevel.explanations.length > 0) {

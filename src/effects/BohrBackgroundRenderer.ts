@@ -239,6 +239,24 @@ export class BohrBackgroundRenderer {
     return this.shells[valenceIdx];
   }
 
+  /**
+   * Removes all bonus valence electrons added via particle collection and restores
+   * the ground-state shell counts (used on quickRespawn).
+   */
+  public resetValenceElectrons(): void {
+    const remaining: OrbitingElectron[] = [];
+    for (const el of this.electrons) {
+      if (el.isValenceAdded) {
+        el.circle.destroy();
+      } else {
+        remaining.push(el);
+      }
+    }
+    this.electrons = remaining;
+    this.shells = getElectronShells(this.z);
+    this.beatPulse = 0;
+  }
+
   public update(_time: number, delta: number): void {
     const dt = Math.min(delta, 50) / 1000;
 

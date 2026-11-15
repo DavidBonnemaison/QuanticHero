@@ -71,6 +71,9 @@ export const GameContainer: React.FC = () => {
 
     return () => {
       cancelled = true;
+      if (moleculeId) {
+        useGameStore.getState().setSharedLevel(null);
+      }
       if (gameRef.current) {
         try {
           gameRef.current.destroy(true);
@@ -81,7 +84,7 @@ export const GameContainer: React.FC = () => {
         window.game = null;
       }
     };
-  }, []);
+  }, [moleculeId]);
 
   return <div id="game" />;
 };

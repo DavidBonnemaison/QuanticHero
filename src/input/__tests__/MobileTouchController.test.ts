@@ -211,4 +211,45 @@ describe('Spec-03 MobileTouchController', () => {
       expect(ctrl.state.diveRequested).toBe(false);
     });
   });
+
+  describe('Multi-touch pointerId isolation', () => {
+    it('ignores secondary pointer down/move/up while primary pointer is active', () => {
+      const ctrl = new MobileTouchController();
+
+      // Primary thumb (pointerId = 1) starts running right
+      const primaryDown = ctrl.onPointerDown(100, 500, 100, 1);
+      expect(primaryDown.isPrimary).toBe(true);
+      expect(ctrl.activePointerId).toBe(1);
+      ctrl.onPointerMove(120, 500, 120, true, 1);
+      expect(ctrl.state.right).toBe(true);
+      expect(ctrl.anchorX).toBe(100);
+
+      // 2nd finger (pointerId = 2) touches down elsewhere -> must NOT overwrite anchor or stop running
+      const secondaryDown = ctrl.onPointerDown(400, 300, 140, 2);
+      expect(secondaryDown.isPrimary).toBe(false);
+      expect(secondaryDown.doubleTap).toBe(false);
+      expect(ctrl.activePointerId).toBe(1);
+      expect(ctrl.anchorX).toBe(100);
+      expect(ctrl.anchorY).toBe(500);
+      expect(ctrl.state.right).toBe(true);
+
+      // 2nd finger moves -> must NOT affect Thumb-Ribbon state
+      ctrl.onPointerMove(350, 200, 160, false, 2);
+      expect(ctrl.state.right).toBe(true);
+      expect(ctrl.state.left).toBe(false);
+      expect(ctrl.state.jump).toBe(false);
+
+      // 2nd finger releases -> must NOT release primary Thumb-Ribbon
+      ctrl.onPointerUp(2);
+      expect(ctrl.isPointerDown).toBe(true);
+      expect(ctrl.activePointerId).toBe(1);
+      expect(ctrl.state.right).toBe(true);
+
+      // Primary thumb releases -> releases Thumb-Ribbon
+      ctrl.onPointerUp(1);
+      expect(ctrl.isPointerDown).toBe(false);
+      expect(ctrl.activePointerId).toBeNull();
+      expect(ctrl.state.right).toBe(false);
+    });
+  });
 });

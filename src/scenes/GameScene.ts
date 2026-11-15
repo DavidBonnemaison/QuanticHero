@@ -243,6 +243,7 @@ export default class GameScene extends Phaser.Scene {
   private hasCondenseAbility = false;
   private fKey: Phaser.Input.Keyboard.Key | null = null;
   private activePinPointerWorld: { x: number; y: number } | null = null;
+  private activePinPointerId: number | null = null;
   private alphaArrivalTimeMs: number | null = null;
   private betaArrivalTimeMs: number | null = null;
   private bubbleHarvestHits: Array<{ molIndex: number; x: number; y: number; timeMs: number }> = [];
@@ -1605,21 +1606,39 @@ export default class GameScene extends Phaser.Scene {
         return;
       }
 
-      // 2-finger tap: Broglie Wave-Trail Solidification
-      if (this.input.pointer1?.isDown && this.input.pointer2?.isDown) {
-        this.tryCrystallizeBroglieTrail();
+      const worldPt = this.getPointerWorldCoords(pointer);
+      const touchedPinnable = Boolean(
+        findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)
+      );
+
+      // Multi-touch: if primary Thumb-Ribbon pointer is already active, handle 2nd finger independently
+      if (
+        this.touchController.isPointerDown &&
+        this.touchController.activePointerId !== null &&
+        this.touchController.activePointerId !== pointer.id
+      ) {
+        if (touchedPinnable) {
+          // 2nd finger on a pinnable platform: activate Quantum Pinning without overwriting anchorX/Y or triggering Broglie
+          this.activePinPointerWorld = worldPt;
+          this.activePinPointerId = pointer.id;
+        } else {
+          // 2nd finger elsewhere: trigger Broglie crystallization without interrupting primary thumb
+          this.tryCrystallizeBroglieTrail();
+        }
+        return;
       }
 
       // Quantum Pinning: holding pointer directly on a decayMs or phase platform
-      const worldPt = this.getPointerWorldCoords(pointer);
-      if (findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)) {
+      if (touchedPinnable) {
         this.activePinPointerWorld = worldPt;
+        this.activePinPointerId = pointer.id;
       }
 
       const { doubleTap } = this.touchController.onPointerDown(
         pointer.x,
         pointer.y,
-        this.time.now
+        this.time.now,
+        pointer.id
       );
       if (doubleTap) {
         if (this.tryInFlightFission()) {
@@ -1636,26 +1655,48 @@ export default class GameScene extends Phaser.Scene {
       if (!this.isLevelCompleted && !this.isTransitioningLevel) {
         this.trackBubblePointerMove(worldPt.x, worldPt.y, this.time?.now ?? Date.now());
       }
-      if (pointer.isDown) {
+      if (pointer.isDown && (this.activePinPointerId === null || this.activePinPointerId === pointer.id)) {
         if (findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)) {
           this.activePinPointerWorld = worldPt;
-        } else if (this.activePinPointerWorld) {
+          this.activePinPointerId = pointer.id;
+        } else if (this.activePinPointerId === pointer.id) {
           this.activePinPointerWorld = null;
+          this.activePinPointerId = null;
         }
       }
-      if (!this.touchController.isPointerDown) return;
+      if (
+        !this.touchController.isPointerDown ||
+        (this.touchController.activePointerId !== null &&
+          this.touchController.activePointerId !== pointer.id)
+      ) {
+        return;
+      }
       const focused = this.heroes.find((h) => h.isFocused) || this.heroes[0];
       const touchingGround = focused?.body
         ? focused.upsideDown === 1
           ? focused.body.touching.down || focused.body.blocked.down
           : focused.body.touching.up || focused.body.blocked.up
         : false;
-      this.touchController.onPointerMove(pointer.x, pointer.y, this.time.now, touchingGround);
+      this.touchController.onPointerMove(
+        pointer.x,
+        pointer.y,
+        this.time.now,
+        touchingGround,
+        pointer.id
+      );
     });
 
-    this.input.on('pointerup', () => {
-      this.activePinPointerWorld = null;
-      this.touchController.onPointerUp();
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (this.activePinPointerId === null || this.activePinPointerId === pointer.id) {
+        this.activePinPointerWorld = null;
+        this.activePinPointerId = null;
+      }
+      if (
+        this.touchController.activePointerId === null ||
+        this.touchController.activePointerId === pointer.id
+      ) {
+        this.touchController.onPointerUp(pointer.id);
+      }
     });
   }
 
@@ -1782,6 +1823,7 @@ export default class GameScene extends Phaser.Scene {
     backButton.on('pointerdown', () => {
       this.uiPointerConsumed = true;
       soundManager.stopBgm();
+      useGameStore.getState().setSharedLevel(null);
       try {
         this.game.destroy(true);
       } catch {
@@ -2180,6 +2222,7 @@ export default class GameScene extends Phaser.Scene {
     this.quantumPinGraphics?.clear();
     this.quantumPinningState = createQuantumPinningState();
     this.activePinPointerWorld = null;
+    this.activePinPointerId = null;
     this.hasCondenseAbility = false;
     for (const crystal of this.broglieCrystals) {
       crystal.rect.destroy();
@@ -2215,6 +2258,7 @@ export default class GameScene extends Phaser.Scene {
         }
       }
     }
+    this.bohrBackground?.resetValenceElectrons();
 
     // 4. Restore phase platforms to 'cyan'
     if (this.hasPhasePlatforms) {
@@ -2960,6 +3004,7 @@ export default class GameScene extends Phaser.Scene {
         this.advanceToNextLevel();
       } else {
         soundManager.stopBgm();
+        useGameStore.getState().setSharedLevel(null);
         try {
           this.game.destroy(true);
         } catch {
@@ -2983,6 +3028,7 @@ export default class GameScene extends Phaser.Scene {
     codexBtn.on('pointerdown', () => {
       this.uiPointerConsumed = true;
       soundManager.stopBgm();
+      useGameStore.getState().setSharedLevel(null);
       try {
         this.game.destroy(true);
       } catch {

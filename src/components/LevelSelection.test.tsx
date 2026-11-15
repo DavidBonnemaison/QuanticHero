@@ -271,4 +271,44 @@ describe('LevelSelection component', () => {
     expect(useGameStore.getState().unlockedMolecules).toContain('H2O');
     expect(screen.getByText('Molecule Game Page')).toBeInTheDocument();
   });
+
+  it('exposes levels 115-118 (Mc, Lv, Ts, Og) in Classic view and allows combining Og (118) + H (1) for OgH', () => {
+    renderWithRouter();
+
+    expect(screen.getByText('Moscovium')).toBeInTheDocument();
+    expect(screen.getByText('Livermorium')).toBeInTheDocument();
+    expect(screen.getByText('Tennessine')).toBeInTheDocument();
+    expect(screen.getByText('Oganesson')).toBeInTheDocument();
+
+    const oganesson = screen.getByText('Oganesson').closest('[role="button"]') as HTMLElement;
+    const hydrogen = screen.getByText('Hydrogen').closest('[role="button"]') as HTMLElement;
+
+    fireEvent.click(oganesson, { shiftKey: true });
+    fireEvent.click(hydrogen, { shiftKey: true });
+
+    expect(useGameStore.getState().unlockedMolecules).toContain('OgH');
+    expect(screen.getByText('Molecule Game Page')).toBeInTheDocument();
+  });
+
+  it('clears sharedLevel when selecting a normal level', () => {
+    useGameStore.setState({
+      sharedLevel: {
+        id: 0,
+        atom: 'H2O',
+        symbol: 'H₂O',
+        hue: '#000',
+        antiHue: '#fff',
+        heroSpawn: { x: 0, y: 0 },
+        goal: { x: 100, y: 0 },
+        platforms: []
+      } as any
+    });
+    renderWithRouter();
+
+    const hydrogen = screen.getByText('Hydrogen').closest('[role="button"]') as HTMLElement;
+    fireEvent.click(hydrogen);
+
+    expect(useGameStore.getState().sharedLevel).toBeNull();
+    expect(useGameStore.getState().currentLevel).toBe(1);
+  });
 });
