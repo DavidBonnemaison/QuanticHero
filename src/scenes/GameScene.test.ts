@@ -197,6 +197,8 @@ vi.mock('phaser', () => {
     fillTriangle = vi.fn().mockReturnThis();
     strokeTriangle = vi.fn().mockReturnThis();
     strokeCircle = vi.fn().mockReturnThis();
+    strokeEllipse = vi.fn().mockReturnThis();
+    strokeRect = vi.fn().mockReturnThis();
     fillCircle = vi.fn().mockReturnThis();
     beginPath = vi.fn().mockReturnThis();
     moveTo = vi.fn().mockReturnThis();
@@ -286,6 +288,8 @@ vi.mock('phaser', () => {
               setAllowGravity: vi.fn(),
               setGravityY: vi.fn(),
               setVelocity: vi.fn(),
+              setVelocityX: vi.fn(),
+              setVelocityY: vi.fn(),
               reset: vi.fn(),
               updateFromGameObject: vi.fn(),
               isStatic
@@ -925,6 +929,100 @@ describe('GameScene Spec-10: Curiosity Secrets (HUD Phase, Bubble Antigravity & 
     expect(score110?.bellSync).toBe(true);
     expect(score110?.medal).toBe('gold');
   });
+
+  it('Spec-11 #1: allowHeroCollision registers heroGroup-to-heroGroup collider for Living Floor', () => {
+    scene.levelData = {
+      ...makeTestLevel('112', 'Copernicium', 'Cn'),
+      entanglement: {
+        mode: 'inverted_gravity',
+        allowHeroCollision: true,
+        betaSpawn: { x: 100, y: 120 },
+        portalMode: 'dual',
+        betaDoor: { x: 700, y: 120 }
+      }
+    };
+    scene.create();
+
+    const colliderCalls = (scene.physics.add.collider as any).mock.calls;
+    const hasHeroToHero = colliderCalls.some(
+      (args: unknown[]) => args[0] === scene.heroGroup && args[1] === scene.heroGroup
+    );
+    expect(hasHeroToHero).toBe(true);
+  });
+
+  it('Spec-11 WOW #1: revealAtX starts zoomed at 1.0 on Alpha and zooms out to 0.45 when Alpha crosses revealAtX', () => {
+    scene.levelData = {
+      ...makeTestLevel('110', 'Darmstadtium', 'Ds'),
+      width: 1400,
+      height: 800,
+      entanglement: {
+        mode: 'mirror_x',
+        betaSpawn: { x: 1200, y: 400 },
+        portalMode: 'dual',
+        betaDoor: { x: 850, y: 400 },
+        revealAtX: 500
+      }
+    };
+    scene.create();
+
+    expect(scene.cameras.main.setZoom).toHaveBeenCalledWith(1);
+
+    const revealEvents: Array<{ revealAtX: number }> = [];
+    const unsub = gameEvents.on('entanglement:reveal', (p) => revealEvents.push(p));
+
+    const alpha = scene.heroes.find((h) => !h.isBeta)!;
+    alpha.x = 520;
+    scene.update(1000, 16);
+    unsub();
+
+    expect(revealEvents).toHaveLength(1);
+    expect(revealEvents[0]).toEqual({ revealAtX: 500 });
+    expect(scene.cameras.main.setZoom).toHaveBeenCalledWith(0.45);
+  });
+
+  it('Spec-11 #6: Conservation Cage vanishes #f1c40f platforms on touch and restoreEphemeralPlatforms restores them', () => {
+    scene.levelData = {
+      ...makeTestLevel('88', 'Radium', 'Ra'),
+      platforms: [
+        { x: 0, y: 500, width: 800, height: 28 },
+        { x: 600, y: 400, width: 24, height: 100, color: '#f1c40f', ephemeral: true }
+      ]
+    };
+    scene.create();
+
+    expect(scene.ephemeralPlatforms).toHaveLength(1);
+    const cagePlat = scene.ephemeralPlatforms[0];
+    scene.vanishEphemeralPlatform(cagePlat);
+    expect(cagePlat.visible).toBe(false);
+    expect(cagePlat.alpha).toBe(0);
+
+    const restored = scene.restoreEphemeralPlatforms();
+    expect(restored).toBe(1);
+    expect(cagePlat.visible).toBe(true);
+    expect(cagePlat.alpha).toBe(1);
+  });
+
+  it('Spec-11 WOW #3: GameScene.update teleports hero across screen edge and consumes 1 tunnel charge', () => {
+    scene.levelData = {
+      ...makeTestLevel('50', 'Tin', 'Sn'),
+      width: 1000,
+      height: 600
+    };
+    scene.create();
+
+    const hero = scene.heroes[0];
+    hero.tunnelCharges = 1;
+    hero.x = 980;
+    hero.y = 400;
+    if (!hero.body) {
+      hero.body = { x: 960, y: 380, width: 32, height: 40, velocity: { x: 0, y: 0 } } as any;
+    }
+
+    (scene as any).touchController.state.right = true;
+    scene.update(1000, 16);
+    (scene as any).touchController.state.right = false;
+
+    expect(hero.x).toBe(28);
+    expect(hero.tunnelCharges).toBe(0);
+  });
 });
-
-

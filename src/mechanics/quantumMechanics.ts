@@ -7,8 +7,36 @@ export interface TunnelResult {
 }
 
 /**
- * Checks whether a hero pressing against a platform can quantum-tunnel through it.
- * Condition: platform thickness in movement direction must be <= 80 px.
+ * Checks whether a hero pressing against a screen boundary can quantum-tunnel
+ * through the frame of the screen to the opposite edge.
+ */
+export function checkScreenEdgeTunnel(
+  heroX: number,
+  dir: 'left' | 'right',
+  levelWidth: number
+): TunnelResult | null {
+  if (dir === 'right' && heroX >= levelWidth - 24) {
+    return {
+      canTunnel: true,
+      exitX: 28,
+      thickness: 0
+    };
+  }
+  if (dir === 'left' && heroX <= 24) {
+    return {
+      canTunnel: true,
+      exitX: levelWidth - 28,
+      thickness: 0
+    };
+  }
+  return null;
+}
+
+/**
+ * Checks whether a hero pressing against a platform (or screen edge when platform is null)
+ * can quantum-tunnel through it.
+ * Condition: platform thickness in movement direction must be <= 80 px,
+ * or hero is pressing against the screen boundary (x <= 24 or x >= levelWidth - 24).
  */
 export function checkTunnelObstacle(
   heroX: number,
@@ -16,8 +44,16 @@ export function checkTunnelObstacle(
   heroWidth: number,
   heroHeight: number,
   dir: 'left' | 'right',
-  platform: Platform
+  platform: Platform | null,
+  levelWidth?: number
 ): TunnelResult | null {
+  if (!platform) {
+    if (levelWidth !== undefined) {
+      return checkScreenEdgeTunnel(heroX, dir, levelWidth);
+    }
+    return null;
+  }
+
   const heroLeft = heroX - heroWidth / 2;
   const heroRight = heroX + heroWidth / 2;
   const heroTop = heroY - heroHeight / 2;

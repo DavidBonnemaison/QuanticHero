@@ -98,6 +98,7 @@ export interface PressurePlate {
   height: number;
   targetGateId: string;
   requireLock?: boolean; // quand un héros se place dessus, la barrière s'ouvre
+  autoSwitchOnTrigger?: boolean;
 }
 
 interface MovingPlatform {
@@ -251,6 +252,11 @@ export default class GameScene extends Phaser.Scene {
     expiresAtMs: number;
     graphic: Phaser.GameObjects.Arc;
   }> = [];
+  public ephemeralPlatforms: Phaser.GameObjects.Rectangle[] = [];
+  private entanglementRevealed = false;
+  private constellationGraphics: Phaser.GameObjects.Graphics | null = null;
+  private periodicTableGraphics: Phaser.GameObjects.Graphics | null = null;
+  private previousCompletedLevelId: number | null = null;
 
   constructor() {
     super('Game');
@@ -262,6 +268,8 @@ export default class GameScene extends Phaser.Scene {
     this.isTransitioningLevel = false;
     this.canAdvanceLevel = false;
     this.nextLevelNumberPending = null;
+    this.ephemeralPlatforms = [];
+    this.entanglementRevealed = false;
     this.touchController.reset();
     this.uiPointerConsumed = false;
     this.ghostRecorder.reset();
@@ -616,10 +624,13 @@ export default class GameScene extends Phaser.Scene {
       const matterState = normalizeMatterState(p.matterState);
 
       const isWall = p.kind === 'wall';
+      const isEphemeral = Boolean(p.ephemeral || p.color?.toLowerCase() === '#f1c40f');
       let fillColor = antiHueColor;
       let fillAlpha = 1;
       if (isWall) {
         fillColor = 0x00e5ff;
+      } else if (isEphemeral) {
+        fillColor = 0xf1c40f;
       } else if (p.phase === 'cyan') {
         fillColor = 0x00e5ff;
       } else if (p.phase === 'magenta') {
@@ -645,6 +656,11 @@ export default class GameScene extends Phaser.Scene {
         fillAlpha
       );
       rect.setData('matterState', matterState);
+      if (isEphemeral) {
+        rect.setData('ephemeral', true);
+        rect.setStrokeStyle(2, 0xfef08a, 0.95);
+        this.ephemeralPlatforms.push(rect);
+      }
 
       if (isWall) {
         rect.setStrokeStyle(2, 0xffffff);
@@ -845,6 +861,9 @@ export default class GameScene extends Phaser.Scene {
       sprite.setData('type', part.type);
       sprite.setData('startX', part.x);
       sprite.setData('startY', part.y);
+      if (part.restoresEphemeral) {
+        sprite.setData('restoresEphemeral', true);
+      }
       if (part.type === 'pauli') {
         sprite.setTint(0xff6600);
       } else if (part.type === 'timeDilation') {
@@ -959,12 +978,25 @@ export default class GameScene extends Phaser.Scene {
 
     // Collisions and Overlaps
     this.physics.add.collider(this.heroGroup, this.gatesGroup);
+    if (
+      entanglement &&
+      (entanglement.allowHeroCollision === true ||
+        entanglement.mode === 'inverted_gravity' ||
+        entanglement.mode === 'mirror_and_gravity')
+    ) {
+      this.physics.add.collider(this.heroGroup, this.heroGroup);
+    }
     this.physics.add.collider(
       this.heroGroup,
       this.platforms,
       (heroObj, platObj) => {
         const hero = heroObj as Hero;
         const plat = platObj as Phaser.GameObjects.Rectangle;
+
+        // 0. Ephemeral Cage Platform (vanishes on contact)
+        if (plat.getData('ephemeral') === true) {
+          this.vanishEphemeralPlatform(plat);
+        }
 
         // 1. Neon Wall Rebound (kind === 'wall')
         if (plat.getData('kind') === 'wall') {
@@ -1155,6 +1187,14 @@ export default class GameScene extends Phaser.Scene {
       this.tetherPylonGraphics.setDepth(16);
       this.drawTetherPylons();
     }
+
+    const builtLvlNum = Number(this.levelData.id);
+    if (builtLvlNum === 27 && this.previousCompletedLevelId === 26) {
+      this.triggerSupernovaShockwave();
+    }
+    if (builtLvlNum === 118) {
+      this.renderOganessonConstellation();
+    }
   }
 
   private spawnHeroes(): void {
@@ -1203,15 +1243,23 @@ export default class GameScene extends Phaser.Scene {
         bBody?.setGravityY?.(-2 * PHYSICS.GRAVITY_Y);
       }
 
-      const cx = (initialHero.x + this.betaHero.x) / 2;
-      const cy = (initialHero.y + this.betaHero.y) / 2;
-      const dx = Math.abs(initialHero.x - this.betaHero.x);
-      const dy = Math.abs(initialHero.y - this.betaHero.y);
-      const initZoomX = this.cameras.main.width / (dx + 240);
-      const initZoomY = this.cameras.main.height / (dy + 200);
-      const initZoom = Phaser.Math.Clamp(Math.min(initZoomX, initZoomY), 0.28, 1.0);
-      this.cameras.main.setZoom(initZoom);
-      this.cameras.main.centerOn(cx, cy);
+      if (entanglement.revealAtX !== undefined) {
+        this.entanglementRevealed = false;
+        this.cameras.main.setZoom(1);
+        this.cameras.main.followOffset?.set?.(0, 0);
+        this.cameras.main.centerOn(initialHero.x, initialHero.y);
+        this.cameras.main.startFollow(initialHero, true, 0.1, 0.1);
+      } else {
+        const cx = (initialHero.x + this.betaHero.x) / 2;
+        const cy = (initialHero.y + this.betaHero.y) / 2;
+        const dx = Math.abs(initialHero.x - this.betaHero.x);
+        const dy = Math.abs(initialHero.y - this.betaHero.y);
+        const initZoomX = this.cameras.main.width / (dx + 240);
+        const initZoomY = this.cameras.main.height / (dy + 200);
+        const initZoom = Phaser.Math.Clamp(Math.min(initZoomX, initZoomY), 0.28, 1.0);
+        this.cameras.main.setZoom(initZoom);
+        this.cameras.main.centerOn(cx, cy);
+      }
     } else {
       this.cameras.main.setZoom(1);
       this.cameras.main.followOffset?.set?.(0, 0);
@@ -1294,6 +1342,16 @@ export default class GameScene extends Phaser.Scene {
     }
     this.screenWrapGhosts = [];
     this.crackedPlatforms = [];
+    this.ephemeralPlatforms = [];
+    this.entanglementRevealed = false;
+    if (this.constellationGraphics) {
+      this.constellationGraphics.destroy();
+      this.constellationGraphics = null;
+    }
+    if (this.periodicTableGraphics) {
+      this.periodicTableGraphics.destroy();
+      this.periodicTableGraphics = null;
+    }
     this.hookedTetherPylon = null;
     if (this.unsubJump) {
       this.unsubJump();
@@ -2118,6 +2176,15 @@ export default class GameScene extends Phaser.Scene {
         body.updateFromGameObject?.();
       }
     }
+    this.restoreEphemeralPlatforms();
+
+    if (this.levelData.entanglement?.revealAtX !== undefined) {
+      this.entanglementRevealed = false;
+      this.cameras?.main?.setZoom?.(1);
+      if (this.heroes[0]) {
+        this.cameras?.main?.startFollow?.(this.heroes[0], true, 0.1, 0.1);
+      }
+    }
 
     // 6. Restore moving platforms
     for (const mp of this.movingPlatforms) {
@@ -2386,6 +2453,13 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
+    if (particle.getData('restoresEphemeral') === true || this.ephemeralPlatforms.length > 0) {
+      const restored = this.restoreEphemeralPlatforms();
+      if (restored > 0) {
+        this.showRetroToast('CONSERVATION ! CAGE RESTORED');
+      }
+    }
+
     this.bohrBackground?.addValenceElectron();
     this.showRetroToast(powerUpNames[type] || '');
   }
@@ -2600,6 +2674,14 @@ export default class GameScene extends Phaser.Scene {
 
     const isShared = Boolean(store.sharedLevel);
     const currentLvl = Number(this.levelData.id);
+    if (!Number.isNaN(currentLvl)) {
+      this.previousCompletedLevelId = currentLvl;
+    }
+    if (currentLvl === 26) {
+      this.triggerIronCoreCollapse();
+    } else if (currentLvl === 118) {
+      this.revealPeriodicTableSilhouette();
+    }
     const prevBest = isShared
       ? (store.scores[0]?.best ?? 0)
       : (store.scores[currentLvl]?.best ?? 0);
@@ -3123,6 +3205,181 @@ export default class GameScene extends Phaser.Scene {
         });
       }
     }
+  }
+
+  public vanishEphemeralPlatform(plat: Phaser.GameObjects.Rectangle): void {
+    if (!plat.visible) return;
+    const body = plat.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (body) {
+      body.checkCollision.none = true;
+      body.enable = false;
+    }
+    plat.setAlpha(0);
+    plat.setVisible(false);
+    gameEvents.emit('platform:ephemeral_vanish', { x: plat.x, y: plat.y });
+  }
+
+  public restoreEphemeralPlatforms(): number {
+    let restoredCount = 0;
+    for (const ep of this.ephemeralPlatforms) {
+      if (!ep.visible || ep.alpha === 0) {
+        restoredCount++;
+      }
+      ep.setAlpha(1);
+      ep.setVisible(true);
+      const body = ep.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.checkCollision.none = false;
+        body.enable = true;
+        body.updateFromGameObject?.();
+      }
+    }
+    if (restoredCount > 0) {
+      gameEvents.emit('platform:ephemeral_restore', { count: restoredCount });
+    }
+    return restoredCount;
+  }
+
+  private triggerIronCoreCollapse(): void {
+    // Silent 150ms white flash on Iron Core (Z=26) collapse
+    this.cameras?.main?.flash?.(150, 255, 255, 255, false);
+    if (this.collapseTopSpikes && this.collapseBottomSpikes) {
+      const midY = this.levelData.height / 2;
+      if (this.tweens?.add) {
+        this.tweens.add({
+          targets: this.collapseTopSpikes,
+          y: midY - 40,
+          duration: 140,
+          ease: 'Cubic.easeIn'
+        });
+        this.tweens.add({
+          targets: this.collapseBottomSpikes,
+          y: midY + 40,
+          duration: 140,
+          ease: 'Cubic.easeIn'
+        });
+      }
+    }
+    gameEvents.emit('wow:iron_collapse', { level: 26 });
+  }
+
+  private triggerSupernovaShockwave(): void {
+    const hero = this.heroes[0];
+    const cx = hero ? hero.x : this.levelData.player.position.x;
+    const cy = hero ? hero.y : this.levelData.player.position.y;
+
+    if (this.add?.circle && this.tweens?.add) {
+      const ring = this.add.circle(cx, cy, 24, 0x3b82f6, 0.35);
+      ring.setStrokeStyle(4, 0xfbbf24, 0.95);
+      ring.setDepth(30);
+      this.tweens.add({
+        targets: ring,
+        scaleX: 28,
+        scaleY: 28,
+        alpha: 0,
+        duration: 650,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
+
+      // Assemble Level 27 platforms around the hero in real-time
+      const platChildren =
+        (this.platforms as unknown as { getChildren?: () => Phaser.GameObjects.Rectangle[] })?.getChildren?.() ?? [];
+      for (const plat of platChildren) {
+        if (!plat) continue;
+        plat.setAlpha(0);
+        plat.setScale(0.85, 0.85);
+        this.tweens.add({
+          targets: plat,
+          alpha: 1,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 380,
+          ease: 'Back.easeOut'
+        });
+      }
+    }
+    gameEvents.emit('wow:supernova_shockwave', { level: 27 });
+  }
+
+  private renderOganessonConstellation(): void {
+    if (!this.add?.graphics) return;
+    if (this.constellationGraphics) {
+      this.constellationGraphics.destroy();
+    }
+    const g = this.add.graphics();
+    g.setDepth(2);
+    g.setScrollFactor(0.5);
+    g.setAlpha(0.25);
+    this.constellationGraphics = g;
+
+    const scores = useGameStore.getState().scores;
+    const colors = [0x00e5ff, 0xfbbf24, 0xec4899, 0x38bdf8, 0xa855f7];
+    let colorIdx = 0;
+
+    for (let z = 1; z < 118; z++) {
+      const raw = scores[z]?.ghostTrajectory;
+      if (!raw) continue;
+      const frames = decompressTrajectory(raw);
+      if (frames.length < 2) continue;
+
+      g.lineStyle(2, colors[colorIdx % colors.length], 0.85);
+      colorIdx++;
+      g.beginPath();
+      g.moveTo(frames[0].x, frames[0].y);
+      for (let i = 1; i < frames.length; i += 2) {
+        g.lineTo(frames[i].x, frames[i].y);
+      }
+      g.strokePath();
+    }
+  }
+
+  private revealPeriodicTableSilhouette(): void {
+    if (this.cameras?.main) {
+      const cam = this.cameras.main as unknown as {
+        zoomTo?: (zoom: number, duration?: number, ease?: string) => void;
+        setZoom: (zoom: number) => void;
+      };
+      if (typeof cam.zoomTo === 'function') {
+        cam.zoomTo(0.35, 1200, 'Sine.easeInOut');
+      } else {
+        cam.setZoom(0.35);
+      }
+    }
+
+    if (this.add?.graphics) {
+      if (this.periodicTableGraphics) {
+        this.periodicTableGraphics.destroy();
+      }
+      const g = this.add.graphics();
+      g.setDepth(3);
+      g.setScrollFactor(0.2);
+      this.periodicTableGraphics = g;
+
+      const startX = 120;
+      const startY = 80;
+      const cellW = 28;
+      const cellH = 28;
+      const gap = 4;
+
+      g.lineStyle(1.5, 0x38bdf8, 0.65);
+      g.fillStyle(0x00e5ff, 0.16);
+
+      // 18 columns x 7 rows periodic table silhouette
+      for (let row = 0; row < 7; row++) {
+        for (let col = 0; col < 18; col++) {
+          const skipRow0 = row === 0 && col > 0 && col < 17;
+          const skipRow12 = (row === 1 || row === 2) && col > 1 && col < 12;
+          if (skipRow0 || skipRow12) continue;
+          const x = startX + col * (cellW + gap);
+          const y = startY + row * (cellH + gap);
+          g.fillRect(x, y, cellW, cellH);
+          g.strokeRect(x, y, cellW, cellH);
+        }
+      }
+    }
+
+    gameEvents.emit('wow:oganesson_constellation', { level: 118 });
   }
 
   public tryCloneFusion(nowMs = this.time?.now ?? 0): boolean {
@@ -3960,11 +4217,11 @@ export default class GameScene extends Phaser.Scene {
             pad.setFillStyle(0x059669);
             gameEvents.emit('plate:trigger', { plateId: pl.id, gateId: pl.targetGateId });
 
-            // If hero stepping on plate is focused and there are multiple heroes, switch focus to another hero
-            if (triggeringHero?.isFocused && this.heroes.length > 1) {
+            // If hero stepping on plate is focused (or autoSwitchOnTrigger is set) and there are multiple heroes, switch focus to another hero
+            if ((triggeringHero?.isFocused || pl.autoSwitchOnTrigger) && this.heroes.length > 1) {
               const otherHero = this.heroes.find((hero) => hero !== triggeringHero && hero.active);
               if (otherHero) {
-                triggeringHero.setFocus(false);
+                triggeringHero?.setFocus(false);
                 otherHero.setFocus(true);
                 this.cameras.main.startFollow(otherHero, true, 0.1, 0.1);
                 this.updateEdgePips();
@@ -3996,7 +4253,33 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Quantum Tunneling check
+    // WOW #1: Entanglement reveal zoom-out when Alpha reaches revealAtX
+    const revealAtX = this.levelData.entanglement?.revealAtX;
+    if (this.isEntangled && revealAtX !== undefined && !this.entanglementRevealed) {
+      const alphaHero = this.heroes.find((h) => !h.isBeta && h.active);
+      if (alphaHero && alphaHero.x >= revealAtX) {
+        this.entanglementRevealed = true;
+        const cam = this.cameras?.main as unknown as {
+          zoomTo?: (zoom: number, duration?: number, ease?: string) => void;
+          setZoom?: (zoom: number) => void;
+          centerOn?: (x: number, y: number) => void;
+          stopFollow?: () => void;
+        };
+        if (typeof cam?.zoomTo === 'function') {
+          cam.zoomTo(0.45, 900, 'Sine.easeInOut');
+        } else {
+          cam?.setZoom?.(0.45);
+        }
+        if (this.betaHero) {
+          cam?.stopFollow?.();
+          cam?.centerOn?.((alphaHero.x + this.betaHero.x) / 2, (alphaHero.y + this.betaHero.y) / 2);
+        }
+        gameEvents.emit('entanglement:reveal', { revealAtX });
+        this.showRetroToast('ENTANGLEMENT REVEALED !');
+      }
+    }
+
+    // Quantum Tunneling check (platforms + screen frame edges)
     for (const hero of this.heroes) {
       if (hero.active && hero.tunnelCharges > 0 && hero.body) {
         const rawLeft =
@@ -4009,6 +4292,7 @@ export default class GameScene extends Phaser.Scene {
           this.touchController.state.right;
         const dir = rawLeft ? 'left' : rawRight ? 'right' : null;
         if (dir) {
+          let tunneled = false;
           for (const p of this.levelData.platforms) {
             const result = checkTunnelObstacle(hero.x, hero.y, 40, 40, dir, p);
             if (result?.canTunnel) {
@@ -4017,7 +4301,26 @@ export default class GameScene extends Phaser.Scene {
               hero.tunnelCharges--;
               gameEvents.emit('tunnel:use', { remaining: hero.tunnelCharges });
               this.showRetroToast(`TUNNELING ! (${hero.tunnelCharges} LEFT)`);
+              tunneled = true;
               break;
+            }
+          }
+          if (!tunneled) {
+            const edgeResult = checkTunnelObstacle(
+              hero.x,
+              hero.y,
+              40,
+              40,
+              dir,
+              null,
+              this.levelData.width
+            );
+            if (edgeResult?.canTunnel) {
+              hero.x = edgeResult.exitX;
+              hero.body.x = hero.x - hero.body.width / 2;
+              hero.tunnelCharges--;
+              gameEvents.emit('tunnel:use', { remaining: hero.tunnelCharges, screenEdge: true });
+              this.showRetroToast(`FRAME TUNNELING ! (${hero.tunnelCharges} LEFT)`);
             }
           }
         }

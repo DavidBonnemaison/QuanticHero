@@ -12,6 +12,8 @@ export interface Platform {
   decayMs?: number; // Half-life decay platform: collapses N ms after initial contact
   cracked?: boolean;
   matterState?: MatterState;
+  color?: string;
+  ephemeral?: boolean;
   movesTo?: {
     x?: number;
     y?: number;
@@ -44,6 +46,7 @@ export interface Particle {
   x: number;
   y: number;
   type: ParticleType;
+  restoresEphemeral?: boolean;
 }
 
 export interface Spike {
@@ -83,6 +86,8 @@ export interface EntanglementConfig {
   betaDoor?: { x: number; y: number };
   tetherPhysical?: boolean;
   tetherMaxLength?: number;
+  allowHeroCollision?: boolean;
+  revealAtX?: number;
 }
 
 export interface LevelMeta {
@@ -112,6 +117,7 @@ export interface PressurePlate {
   height: number;
   targetGateId: string;
   requireLock?: boolean; // quand un héros se place dessus, la barrière s'ouvre
+  autoSwitchOnTrigger?: boolean;
 }
 
 export interface LevelData {
@@ -123,6 +129,7 @@ export interface LevelData {
   height: number;
   hue: string;
   antiHue: string;
+  archetype?: string;
   explanations?: string[];
   player: Player;
   spikes: Spike[];

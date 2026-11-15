@@ -8,7 +8,7 @@ export interface GameEventPayloads {
   'hero:portal_docked': { isBeta: boolean };
   'level:complete': { level: number };
   'phase:shift': { phase: PlatformPhase };
-  'tunnel:use': { remaining: number };
+  'tunnel:use': { remaining: number; screenEdge?: boolean };
   'pauli:blast': { hero1Id: number; hero2Id: number };
   'time:dilation': { active: boolean; durationMs: number };
   'platform:decay': { x: number; y: number };
@@ -34,6 +34,12 @@ export interface GameEventPayloads {
   'hero:ghost_surf': { x: number; y: number };
   'bell:violation': { level: number; deltaMs: number };
   'bubble:harvest': { x: number; y: number };
+  'platform:ephemeral_vanish': { x: number; y: number };
+  'platform:ephemeral_restore': { count: number };
+  'entanglement:reveal': { revealAtX: number };
+  'wow:iron_collapse': { level: number };
+  'wow:supernova_shockwave': { level: number };
+  'wow:oganesson_constellation': { level: number };
 }
 
 export type GameEventName = keyof GameEventPayloads;
