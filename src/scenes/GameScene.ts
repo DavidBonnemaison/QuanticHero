@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
+import { getNarrativeForLevel } from '../data/cosmicNarrative';
 import * as defaultLevels from '../data/levels';
 import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
 import { assembleCampaignLevel, assemblePacedLevel } from '../generator/chunkAssembler';
@@ -58,6 +59,7 @@ interface MovingPlatform {
   rect: Phaser.GameObjects.Rectangle;
   movesTo: { x?: number; y?: number };
   direction: { x: 'left' | 'right' | null; y: 'top' | 'bottom' | null };
+  initialDirection: { x: 'left' | 'right' | null; y: 'top' | 'bottom' | null };
   width: number;
   height: number;
   startX: number;
@@ -116,7 +118,9 @@ export default class GameScene extends Phaser.Scene {
   private collapseBottomSpikes: Phaser.GameObjects.Rectangle | null = null;
   private collapseConfig?: CollapseConfig;
   private pauliGraphics: Phaser.GameObjects.Graphics | null = null;
+  private spikeGfx: Phaser.GameObjects.Graphics | null = null;
   private unsubJump: (() => void) | null = null;
+  private unsubHudStore: (() => void) | null = null;
 
   private entanglementGraphics: Phaser.GameObjects.Graphics | null = null;
   private alphaEnteredPortal = false;
@@ -152,6 +156,13 @@ export default class GameScene extends Phaser.Scene {
   private phaseIndicatorText: Phaser.GameObjects.Text | null = null;
   private dilationIndicatorText: Phaser.GameObjects.Text | null = null;
   private isLevelCompleted = false;
+  private isRespawning = false;
+  private isTransitioningLevel = false;
+  private canAdvanceLevel = false;
+  private nextLevelNumberPending: number | null = null;
+  private lastShownLevelId: string | null = null;
+  private deathEchoes: Phaser.GameObjects.Sprite[] = [];
+  private levelCompleteOverlay: Phaser.GameObjects.Container | null = null;
   private quantumEffects: QuantumEffectsManager | null = null;
 
   constructor() {
@@ -159,59 +170,17 @@ export default class GameScene extends Phaser.Scene {
   }
 
   init(): void {
-    this.heroes = [];
-    this.gatesMap.clear();
-    this.pressurePlatesList = [];
-    this.movingPlatforms = [];
-    this.molecules = [];
     this.isLevelCompleted = false;
-    this.quantumEffects = null;
+    this.isRespawning = false;
+    this.isTransitioningLevel = false;
+    this.canAdvanceLevel = false;
+    this.nextLevelNumberPending = null;
     this.touchController.reset();
     this.uiPointerConsumed = false;
-    this.thumbRibbonGraphics = null;
-    this.diveTrailGraphics = null;
-    this.focusArcGraphics = null;
-    this.focusBulletTimeUntil = 0;
-    this.edgePips = [];
-    this.ghostHero = null;
     this.ghostRecorder.reset();
-    this.ghostFrames = [];
-    this.hasAnyGhost = false;
-    this.authorTrajectory = undefined;
-    this.personalTrajectory = undefined;
     this.startTime = 0;
     this.dilatedElapsedMs = 0;
     this.timerStarted = false;
-    this.lastTimerString = '';
-    this.lastTimerColor = '';
-    this.lastSplitString = '';
-    this.lastSplitColor = '';
-    this.lastSplitUpdateMs = 0;
-    this.splitDeltaText = null;
-    this.ghostButton = null;
-    this.hudContainer = null;
-    this.phaseIndicatorText = null;
-    this.dilationIndicatorText = null;
-    this.isEntangled = false;
-    this.betaHero = null;
-    this.betaPortalSprite = null;
-    this.alphaEnteredPortal = false;
-    this.betaEnteredPortal = false;
-    this.isPauliActive = false;
-    this.isTimeDilationActive = false;
-    this.timeDilationUntil = 0;
-    this.currentPhase = 'cyan';
-    this.hasPhasePlatforms = false;
-    this.phasePlatforms = [];
-    this.decayPlatforms = [];
-    this.collapseTopSpikes = null;
-    this.collapseBottomSpikes = null;
-    this.collapseConfig = undefined;
-    this.pauliGraphics = null;
-    if (this.unsubJump) {
-      this.unsubJump();
-      this.unsubJump = null;
-    }
 
     const store = useGameStore.getState();
 
@@ -259,22 +228,163 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const currentLevel = store.currentLevel || 1;
-    const builtInLevels = defaultLevels as unknown as Record<string, LevelData>;
-    const levelKey = `level${currentLevel}`;
-    const selected = store.customLevels?.[levelKey] || builtInLevels[levelKey];
-    this.levelData = selected || builtInLevels.level1;
+    const selected = this.resolveLevelData(currentLevel);
+    this.levelData = selected || (defaultLevels as unknown as Record<string, LevelData>).level1;
     if (!selected) {
       store.updateCurrentLevel(1);
     }
   }
 
+  public resolveLevelData(levelNumber: number): LevelData | undefined {
+    const store = useGameStore.getState();
+    const builtInLevels = defaultLevels as unknown as Record<string, LevelData>;
+    const levelKey = `level${levelNumber}`;
+    return store.customLevels?.[levelKey] || builtInLevels[levelKey];
+  }
+
   create(): void {
+    // One-time keyboard & pointer controls setup
+    if (this.input?.keyboard) {
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.wasd = this.input.keyboard.addKeys({
+        W: Phaser.Input.Keyboard.KeyCodes.W,
+        A: Phaser.Input.Keyboard.KeyCodes.A,
+        S: Phaser.Input.Keyboard.KeyCodes.S,
+        D: Phaser.Input.Keyboard.KeyCodes.D
+      }) as { [key: string]: Phaser.Input.Keyboard.Key };
+
+      const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+      tabKey.on('down', (_key: Phaser.Input.Keyboard.Key, event?: KeyboardEvent) => {
+        event?.preventDefault?.();
+        this.cycleFocusNext();
+      });
+
+      const eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+      eKey.on('down', () => this.cycleFocusNext());
+
+      const oneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
+      oneKey.on('down', () => this.switchFocusByIndex(0));
+
+      const twoKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+      twoKey.on('down', () => this.switchFocusByIndex(1));
+
+      const threeKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE);
+      threeKey.on('down', () => this.switchFocusByIndex(2));
+
+      const rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+      rKey.on('down', () => {
+        if (!this.isLevelCompleted && !this.isTransitioningLevel) {
+          this.quickRespawn();
+        }
+      });
+
+      const spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      spaceKey.on('down', () => {
+        if (this.isLevelCompleted && this.canAdvanceLevel) {
+          this.advanceToNextLevel();
+        }
+      });
+
+      const enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+      enterKey.on('down', () => {
+        if (this.isLevelCompleted && this.canAdvanceLevel) {
+          this.advanceToNextLevel();
+        }
+      });
+    }
+
+    this.setupPointerControls();
+
+    this.events.on('hero-clicked', (clickedHero: Hero) => {
+      this.uiPointerConsumed = true;
+      this.switchFocusTo(clickedHero);
+    });
+
+    // Audio & Haptics (initialized once)
+    soundManager.init();
+    hapticFeedback.init();
+
+    const cleanupScene = () => {
+      soundManager.stopBgm();
+      this.clearLevelObjects();
+    };
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupScene);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanupScene);
+
+    this.buildLevel();
+  }
+
+  private buildLevel(): void {
+    this.heroes = [];
+    this.gatesMap.clear();
+    this.pressurePlatesList = [];
+    this.movingPlatforms = [];
+    this.molecules = [];
+    this.phasePlatforms = [];
+    this.decayPlatforms = [];
+    this.edgePips = [];
+    this.isLevelCompleted = false;
+    this.isRespawning = false;
+    this.isTransitioningLevel = false;
+    this.canAdvanceLevel = false;
+    this.nextLevelNumberPending = null;
+    this.quantumEffects = null;
+    this.touchController.reset();
+    this.uiPointerConsumed = false;
+    this.thumbRibbonGraphics = null;
+    this.diveTrailGraphics = null;
+    this.focusArcGraphics = null;
+    this.focusBulletTimeUntil = 0;
+    this.ghostHero = null;
+    this.ghostRecorder.reset();
+    this.ghostFrames = [];
+    this.hasAnyGhost = false;
+    this.authorTrajectory = undefined;
+    this.personalTrajectory = undefined;
+    this.startTime = 0;
+    this.dilatedElapsedMs = 0;
+    this.timerStarted = false;
+    this.lastTimerString = '';
+    this.lastTimerColor = '';
+    this.lastSplitString = '';
+    this.lastSplitColor = '';
+    this.lastSplitUpdateMs = 0;
+    this.splitDeltaText = null;
+    this.ghostButton = null;
+    this.hudContainer = null;
+    this.levelCompleteOverlay = null;
+    this.phaseIndicatorText = null;
+    this.dilationIndicatorText = null;
+    this.isEntangled = false;
+    this.betaHero = null;
+    this.betaPortalSprite = null;
+    this.alphaEnteredPortal = false;
+    this.betaEnteredPortal = false;
+    this.isPauliActive = false;
+    this.isTimeDilationActive = false;
+    this.timeDilationUntil = 0;
+    this.currentPhase = 'cyan';
+    this.hasPhasePlatforms = false;
+    this.collapseTopSpikes = null;
+    this.collapseBottomSpikes = null;
+    this.collapseConfig = undefined;
+    this.pauliGraphics = null;
+    this.spikeGfx = null;
+    if (this.unsubJump) {
+      this.unsubJump();
+      this.unsubJump = null;
+    }
+
     // 1. Physics & Bounds
     this.physics.world.gravity.y = PHYSICS.GRAVITY_Y;
+    this.physics.world.timeScale = 1.0;
     this.physics.world.setBounds(0, 0, this.levelData.width, this.levelData.height);
     this.physics.world.setBoundsCollision(false, false, false, false);
     this.cameras.main.setBounds(0, 0, this.levelData.width, this.levelData.height);
     this.cameras.main.setBackgroundColor(this.levelData.hue);
+    this.cameras.main.setZoom(1);
+    this.cameras.main.followOffset.set(0, 0);
 
     // Dedicated scene boundary walls (left, right, ceiling) for exclusive boundary bouncing
     this.sceneBounds = this.physics.add.staticGroup();
@@ -400,6 +510,7 @@ export default class GameScene extends Phaser.Scene {
           rect,
           movesTo: p.movesTo,
           direction: { x: dirX, y: dirY },
+          initialDirection: { x: dirX, y: dirY },
           width,
           height,
           startX: p.x + width / 2,
@@ -420,6 +531,7 @@ export default class GameScene extends Phaser.Scene {
     this.spikes = this.physics.add.staticGroup();
     const spikeGfx = this.add.graphics();
     spikeGfx.setDepth(12);
+    this.spikeGfx = spikeGfx;
 
     for (const s of this.levelData.spikes) {
       const width = s.width ?? 200;
@@ -501,6 +613,8 @@ export default class GameScene extends Phaser.Scene {
       const sprite = this.physics.add.sprite(part.x, part.y, textureKey);
       sprite.setScale(0.2, 0.2);
       sprite.setData('type', part.type);
+      sprite.setData('startX', part.x);
+      sprite.setData('startY', part.y);
       if (part.type === 'pauli') {
         sprite.setTint(0xff6600);
       } else if (part.type === 'timeDilation') {
@@ -582,32 +696,10 @@ export default class GameScene extends Phaser.Scene {
 
     // 7. Heroes & Entanglement Setup
     this.heroGroup = this.physics.add.group();
-    const startX = this.levelData.player.position.x;
-    const startY = this.levelData.player.position.y;
-    const initialHero = new Hero(this, startX, startY, true);
-    this.heroes.push(initialHero);
-    this.heroGroup.add(initialHero);
-
     const entanglement = this.levelData.entanglement;
     this.isEntangled = Boolean(entanglement);
 
     if (entanglement) {
-      initialHero.setEntangled(false, entanglement.mode);
-
-      const betaX = entanglement.betaSpawn
-        ? entanglement.betaSpawn.x
-        : this.levelData.width - startX;
-      const betaY = entanglement.betaSpawn ? entanglement.betaSpawn.y : startY;
-
-      this.betaHero = new Hero(this, betaX, betaY, true);
-      this.betaHero.setEntangled(true, entanglement.mode);
-      this.heroes.push(this.betaHero);
-      this.heroGroup.add(this.betaHero);
-      if (entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity') {
-        const bBody = this.betaHero.body as Phaser.Physics.Arcade.Body;
-        bBody.setGravityY(-2 * PHYSICS.GRAVITY_Y);
-      }
-
       // Create Beta Portal if dual portal mode or betaDoor specified
       if (entanglement.portalMode === 'dual' || entanglement.betaDoor) {
         const betaDoorPos = entanglement.betaDoor || this.levelData.door;
@@ -631,21 +723,9 @@ export default class GameScene extends Phaser.Scene {
       // Entanglement laser beam graphics
       this.entanglementGraphics = this.add.graphics();
       this.entanglementGraphics.setDepth(20);
-
-      // Initial camera positioning for centroid & zoom so both Alpha & Beta are visible immediately
-      const cx = (initialHero.x + this.betaHero.x) / 2;
-      const cy = (initialHero.y + this.betaHero.y) / 2;
-      const dx = Math.abs(initialHero.x - this.betaHero.x);
-      const dy = Math.abs(initialHero.y - this.betaHero.y);
-      const initZoomX = this.cameras.main.width / (dx + 240);
-      const initZoomY = this.cameras.main.height / (dy + 200);
-      const initZoom = Phaser.Math.Clamp(Math.min(initZoomX, initZoomY), 0.28, 1.0);
-      this.cameras.main.setZoom(initZoom);
-      this.cameras.main.centerOn(cx, cy);
-    } else {
-      this.cameras.main.centerOn(initialHero.x, initialHero.y);
-      this.cameras.main.startFollow(initialHero, true, 0.1, 0.1);
     }
+
+    this.spawnHeroes();
 
     // Collisions and Overlaps
     this.physics.add.collider(this.heroGroup, this.gatesGroup);
@@ -707,7 +787,8 @@ export default class GameScene extends Phaser.Scene {
       } else if (type === 'ceiling') {
         if (hero.upsideDown === -1) {
           if (hero.isFocused || this.heroes.length <= 1) {
-            this.scene.restart();
+            gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: this.isEntangled });
+            this.quickRespawn({ x: hero.x, y: hero.y });
           } else {
             this.killHero(hero);
           }
@@ -765,56 +846,14 @@ export default class GameScene extends Phaser.Scene {
 
     this.applyGhostMode();
 
-    // 8. Controls
-    if (this.input.keyboard) {
-      this.cursors = this.input.keyboard.createCursorKeys();
-      this.wasd = this.input.keyboard.addKeys({
-        W: Phaser.Input.Keyboard.KeyCodes.W,
-        A: Phaser.Input.Keyboard.KeyCodes.A,
-        S: Phaser.Input.Keyboard.KeyCodes.S,
-        D: Phaser.Input.Keyboard.KeyCodes.D
-      }) as { [key: string]: Phaser.Input.Keyboard.Key };
-
-      const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
-      tabKey.on('down', (_key: Phaser.Input.Keyboard.Key, event?: KeyboardEvent) => {
-        event?.preventDefault?.();
-        this.cycleFocusNext();
-      });
-
-      const eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
-      eKey.on('down', () => this.cycleFocusNext());
-
-      const oneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
-      oneKey.on('down', () => this.switchFocusByIndex(0));
-
-      const twoKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
-      twoKey.on('down', () => this.switchFocusByIndex(1));
-
-      const threeKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE);
-      threeKey.on('down', () => this.switchFocusByIndex(2));
-
-      const rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
-      rKey.on('down', () => this.scene.restart());
-    }
-
-    this.setupPointerControls();
-
-    this.events.on('hero-clicked', (clickedHero: Hero) => {
-      this.uiPointerConsumed = true;
-      this.switchFocusTo(clickedHero);
-    });
-
     // 9. HUD and Timer
     this.createHUD();
 
-    // 10. Level Title Overlay
+    // 10. Level Title Overlay (only on first entry to this level)
     this.showLevelTitle();
 
-    // 11. Audio & Haptics
-    soundManager.init();
+    // 11. Audio clone modulation
     soundManager.setClonesCount(this.heroes.length);
-
-    hapticFeedback.init();
 
     // 12. Quantum Visual Effects (de Broglie waves & spacetime vortex)
     this.quantumEffects = new QuantumEffectsManager(this);
@@ -822,39 +861,163 @@ export default class GameScene extends Phaser.Scene {
     this.diveTrailGraphics.setDepth(18);
     this.focusArcGraphics = this.add.graphics();
     this.focusArcGraphics.setDepth(26);
+  }
 
-    const cleanupScene = () => {
-      soundManager.stopBgm();
-      this.quantumEffects?.destroy();
-      this.quantumEffects = null;
-      if (this.entanglementGraphics) {
-        this.entanglementGraphics.destroy();
-        this.entanglementGraphics = null;
+  private spawnHeroes(): void {
+    if (this.heroGroup) {
+      this.heroGroup.clear(true, true);
+    } else {
+      for (const h of this.heroes) {
+        h.destroy();
       }
-      if (this.pauliGraphics) {
-        this.pauliGraphics.destroy();
-        this.pauliGraphics = null;
-      }
-      if (this.diveTrailGraphics) {
-        this.diveTrailGraphics.destroy();
-        this.diveTrailGraphics = null;
-      }
-      if (this.focusArcGraphics) {
-        this.focusArcGraphics.destroy();
-        this.focusArcGraphics = null;
-      }
-      if (this.thumbRibbonGraphics) {
-        this.thumbRibbonGraphics.destroy();
-        this.thumbRibbonGraphics = null;
-      }
-      if (this.unsubJump) {
-        this.unsubJump();
-        this.unsubJump = null;
-      }
-    };
+    }
+    this.heroes = [];
+    this.betaHero = null;
+    this.alphaEnteredPortal = false;
+    this.betaEnteredPortal = false;
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupScene);
-    this.events.once(Phaser.Scenes.Events.DESTROY, cleanupScene);
+    const startX = this.levelData.player.position.x;
+    const startY = this.levelData.player.position.y;
+    const initialHero = new Hero(this, startX, startY, true);
+    this.heroes.push(initialHero);
+    this.heroGroup.add(initialHero);
+
+    const entanglement = this.levelData.entanglement;
+    this.isEntangled = Boolean(entanglement);
+
+    if (entanglement) {
+      initialHero.setEntangled(false, entanglement.mode);
+
+      const betaX = entanglement.betaSpawn
+        ? entanglement.betaSpawn.x
+        : this.levelData.width - startX;
+      const betaY = entanglement.betaSpawn ? entanglement.betaSpawn.y : startY;
+
+      this.betaHero = new Hero(this, betaX, betaY, true);
+      this.betaHero.setEntangled(true, entanglement.mode);
+      this.heroes.push(this.betaHero);
+      this.heroGroup.add(this.betaHero);
+      if (entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity') {
+        const bBody = this.betaHero.body as Phaser.Physics.Arcade.Body;
+        bBody?.setGravityY?.(-2 * PHYSICS.GRAVITY_Y);
+      }
+
+      const cx = (initialHero.x + this.betaHero.x) / 2;
+      const cy = (initialHero.y + this.betaHero.y) / 2;
+      const dx = Math.abs(initialHero.x - this.betaHero.x);
+      const dy = Math.abs(initialHero.y - this.betaHero.y);
+      const initZoomX = this.cameras.main.width / (dx + 240);
+      const initZoomY = this.cameras.main.height / (dy + 200);
+      const initZoom = Phaser.Math.Clamp(Math.min(initZoomX, initZoomY), 0.28, 1.0);
+      this.cameras.main.setZoom(initZoom);
+      this.cameras.main.centerOn(cx, cy);
+    } else {
+      this.cameras.main.setZoom(1);
+      this.cameras.main.followOffset?.set?.(0, 0);
+      this.cameras.main.centerOn(initialHero.x, initialHero.y);
+      this.cameras.main.startFollow(initialHero, true, 0.1, 0.1);
+    }
+
+    soundManager.setClonesCount(this.heroes.length);
+  }
+
+  private clearLevelObjects(): void {
+    this.tweens?.killAll?.();
+    this.physics?.world?.colliders?.destroy?.();
+
+    this.quantumEffects?.destroy();
+    this.quantumEffects = null;
+
+    if (this.entanglementGraphics) {
+      this.entanglementGraphics.destroy();
+      this.entanglementGraphics = null;
+    }
+    if (this.pauliGraphics) {
+      this.pauliGraphics.destroy();
+      this.pauliGraphics = null;
+    }
+    if (this.spikeGfx) {
+      this.spikeGfx.destroy();
+      this.spikeGfx = null;
+    }
+    if (this.diveTrailGraphics) {
+      this.diveTrailGraphics.destroy();
+      this.diveTrailGraphics = null;
+    }
+    if (this.focusArcGraphics) {
+      this.focusArcGraphics.destroy();
+      this.focusArcGraphics = null;
+    }
+    if (this.thumbRibbonGraphics) {
+      this.thumbRibbonGraphics.destroy();
+      this.thumbRibbonGraphics = null;
+    }
+    if (this.unsubJump) {
+      this.unsubJump();
+      this.unsubJump = null;
+    }
+    if (this.unsubHudStore) {
+      this.unsubHudStore();
+      this.unsubHudStore = null;
+    }
+
+    for (const pip of this.edgePips) {
+      pip.bg.destroy();
+      pip.label.destroy();
+      pip.hitArea.destroy();
+    }
+    this.edgePips = [];
+
+    if (this.hudContainer) {
+      this.hudContainer.destroy(true);
+      this.hudContainer = null;
+    }
+    if (this.levelCompleteOverlay) {
+      this.levelCompleteOverlay.destroy(true);
+      this.levelCompleteOverlay = null;
+    }
+    if (this.ghostHero) {
+      this.ghostHero.destroy();
+      this.ghostHero = null;
+    }
+    if (this.betaPortalSprite) {
+      this.betaPortalSprite.destroy();
+      this.betaPortalSprite = null;
+    }
+    if (this.portalSprite) {
+      this.portalSprite.destroy();
+    }
+
+    for (const echo of this.deathEchoes) {
+      echo.destroy();
+    }
+    this.deathEchoes = [];
+
+    for (const item of this.pressurePlatesList) {
+      item.baseRect.destroy();
+      item.padRect.destroy();
+    }
+    this.pressurePlatesList = [];
+
+    for (const mol of this.molecules) {
+      mol.circle.destroy();
+    }
+    this.molecules = [];
+
+    this.heroGroup?.clear?.(true, true);
+    this.platforms?.clear?.(true, true);
+    this.movingPlatformsGroup?.clear?.(true, true);
+    this.sceneBounds?.clear?.(true, true);
+    this.spikes?.clear?.(true, true);
+    this.particles?.clear?.(true, true);
+    this.gatesGroup?.clear?.(true, true);
+
+    this.heroes = [];
+    this.betaHero = null;
+    this.gatesMap.clear();
+    this.movingPlatforms = [];
+    this.phasePlatforms = [];
+    this.decayPlatforms = [];
   }
 
   private createMolecules(): void {
@@ -878,6 +1041,12 @@ export default class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.uiPointerConsumed) {
         this.uiPointerConsumed = false;
+        return;
+      }
+      if (this.isLevelCompleted) {
+        if (this.canAdvanceLevel) {
+          this.advanceToNextLevel();
+        }
         return;
       }
       if (pointer.y <= 54) {
@@ -1001,7 +1170,9 @@ export default class GameScene extends Phaser.Scene {
     restartButton.setInteractive({ useHandCursor: true });
     restartButton.on('pointerdown', () => {
       this.uiPointerConsumed = true;
-      this.scene.restart();
+      if (!this.isLevelCompleted && !this.isTransitioningLevel) {
+        this.quickRespawn();
+      }
     });
     this.hudContainer.add(restartButton);
 
@@ -1115,7 +1286,10 @@ export default class GameScene extends Phaser.Scene {
       this.hudContainer.add(godBadge);
     }
 
-    const unsubStore = useGameStore.subscribe(() => {
+    if (this.unsubHudStore) {
+      this.unsubHudStore();
+    }
+    this.unsubHudStore = useGameStore.subscribe(() => {
       if (soundButton.active) {
         soundButton.setText(getSoundLabel());
       }
@@ -1128,13 +1302,6 @@ export default class GameScene extends Phaser.Scene {
       if (this.ghostButton?.active) {
         this.applyGhostMode();
       }
-    });
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      unsubStore();
-    });
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      unsubStore();
     });
 
     // Right column: Timer (Row 1) & Split Delta (Row 2)
@@ -1169,7 +1336,9 @@ export default class GameScene extends Phaser.Scene {
     thumbRestartZone.setInteractive({ useHandCursor: true });
     thumbRestartZone.on('pointerdown', () => {
       this.uiPointerConsumed = true;
-      this.scene.restart();
+      if (!this.isLevelCompleted && !this.isTransitioningLevel) {
+        this.quickRespawn();
+      }
     });
     this.hudContainer.add(thumbRestartBg);
     this.hudContainer.add(thumbRestartLabel);
@@ -1301,6 +1470,11 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private showLevelTitle(): void {
+    if (this.lastShownLevelId === this.levelData.id) {
+      return;
+    }
+    this.lastShownLevelId = this.levelData.id;
+
     const title = this.add.text(
       this.cameras.main.width / 2,
       this.cameras.main.height / 2,
@@ -1325,12 +1499,181 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  private spawnDeathEcho(x: number, y: number): void {
+    if (!this.add?.sprite) return;
+    const antiHueColor = Phaser.Display.Color.HexStringToColor(this.levelData.antiHue).color;
+    const clampedY = Phaser.Math.Clamp(y, 16, Math.max(16, this.levelData.height - 16));
+    const echo = this.add.sprite(x, clampedY, 'hero', 0);
+    echo.setAlpha(0.16);
+    echo.setTint(antiHueColor);
+    echo.setDepth(8);
+    this.deathEchoes.push(echo);
+  }
+
+  public quickRespawn(deathPosition?: { x: number; y: number }): void {
+    if (this.isRespawning || this.isLevelCompleted || this.isTransitioningLevel) {
+      return;
+    }
+    this.isRespawning = true;
+
+    if (deathPosition) {
+      this.spawnDeathEcho(deathPosition.x, deathPosition.y);
+    }
+
+    // 1. Reset physics world & active power-up states
+    if (this.physics?.world) {
+      this.physics.world.gravity.y = PHYSICS.GRAVITY_Y;
+      this.physics.world.timeScale = 1.0;
+    }
+    this.isPauliActive = false;
+    this.isTimeDilationActive = false;
+    this.timeDilationUntil = 0;
+    this.focusBulletTimeUntil = 0;
+    this.pauliGraphics?.clear();
+    this.diveTrailGraphics?.clear();
+    this.focusArcGraphics?.clear();
+    if (this.dilationIndicatorText?.active) {
+      this.dilationIndicatorText.setVisible(false);
+    }
+
+    // 2. Respawn heroes at initial spawn (destroys secondary clones)
+    this.spawnHeroes();
+    this.updateEdgePips();
+
+    // 3. Reactivate all collected particles at their original coordinates
+    if (this.particles?.getChildren) {
+      for (const child of this.particles.getChildren()) {
+        const sprite = child as Phaser.Physics.Arcade.Sprite;
+        const px = (sprite.getData('startX') as number | undefined) ?? sprite.x;
+        const py = (sprite.getData('startY') as number | undefined) ?? sprite.y;
+        if (typeof sprite.enableBody === 'function') {
+          sprite.enableBody(true, px, py, true, true);
+        } else {
+          sprite.setActive?.(true);
+          sprite.setVisible?.(true);
+          sprite.setPosition?.(px, py);
+          if (sprite.body) {
+            (sprite.body as Phaser.Physics.Arcade.Body).enable = true;
+          }
+        }
+      }
+    }
+
+    // 4. Restore phase platforms to 'cyan'
+    if (this.hasPhasePlatforms) {
+      this.currentPhase = 'cyan';
+      this.applyPhase('cyan');
+      if (this.phaseIndicatorText?.active) {
+        this.phaseIndicatorText.setText('[PHASE: CYAN]');
+        this.phaseIndicatorText.setColor('#00ffff');
+      }
+    }
+
+    // 5. Restore half-life decay platforms
+    for (const dp of this.decayPlatforms) {
+      dp.state.timerMs = 0;
+      dp.state.triggered = false;
+      dp.state.collapsed = false;
+      dp.state.respawnTimerMs = 0;
+      dp.rect.setAlpha(1);
+      dp.rect.setPosition(dp.startX, dp.startY);
+      const body = dp.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.checkCollision.none = false;
+        body.updateFromGameObject?.();
+      }
+    }
+
+    // 6. Restore moving platforms
+    for (const mp of this.movingPlatforms) {
+      mp.rect.setPosition(mp.startX, mp.startY);
+      mp.direction = { ...mp.initialDirection };
+      const body = mp.rect.body as Phaser.Physics.Arcade.Body | null;
+      if (body) {
+        body.setVelocity(0, 0);
+        body.reset?.(mp.startX, mp.startY);
+      }
+    }
+
+    // 7. Restore pressure plates & gates
+    for (const item of this.pressurePlatesList) {
+      item.isPressed = false;
+      item.padRect.setY(item.startY);
+      item.padRect.setFillStyle(0x10b981);
+    }
+    for (const [, gateEntry] of this.gatesMap) {
+      gateEntry.rect.setAlpha(1);
+      const body = gateEntry.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.enable = true;
+      }
+    }
+
+    // 8. Restore gravitational collapse jaws
+    if (this.collapseConfig && this.collapseTopSpikes && this.collapseBottomSpikes) {
+      this.collapseTopSpikes.y = PHYSICS.COLLAPSE_TOP_START_Y / 2;
+      this.collapseBottomSpikes.y = this.levelData.height - PHYSICS.COLLAPSE_BOTTOM_MARGIN_Y + 80;
+      (this.collapseTopSpikes.body as Phaser.Physics.Arcade.StaticBody | null)?.updateFromGameObject?.();
+      (this.collapseBottomSpikes.body as Phaser.Physics.Arcade.StaticBody | null)?.updateFromGameObject?.();
+    }
+
+    // 9. Reset timer, split delta, ghost replay & touch state
+    this.timerStarted = false;
+    this.startTime = 0;
+    this.dilatedElapsedMs = 0;
+    this.lastTimerString = '';
+    this.lastTimerColor = '';
+    this.lastSplitString = '';
+    this.lastSplitColor = '';
+    this.lastSplitUpdateMs = 0;
+    if (this.timerText?.active) {
+      this.timerText.setText('00:00:00');
+      this.timerText.setColor('#ffffff');
+    }
+    if (this.splitDeltaText?.active) {
+      this.splitDeltaText.setText('--');
+      this.splitDeltaText.setColor('#94a3b8');
+    }
+    this.ghostRecorder.reset();
+    if (this.ghostHero) {
+      this.ghostHero.updateReplay(0);
+    }
+    this.touchController.reset();
+
+    // 10. Quantum implosion flash (120 ms)
+    const startX = this.levelData.player.position.x;
+    const startY = this.levelData.player.position.y;
+    if (this.add?.circle && this.tweens?.add) {
+      const implosionRing = this.add.circle(startX, startY, 34, 0x00e5ff, 0.65);
+      implosionRing.setDepth(30);
+      this.tweens.add({
+        targets: implosionRing,
+        scale: 0.1,
+        alpha: 0,
+        duration: 120,
+        ease: 'Quad.easeIn',
+        onComplete: () => implosionRing.destroy()
+      });
+    }
+    this.cameras?.main?.flash?.(120, 0, 229, 255, false);
+
+    if (this.time?.delayedCall) {
+      this.time.delayedCall(120, () => {
+        this.isRespawning = false;
+      });
+    } else {
+      this.isRespawning = false;
+    }
+  }
+
   private killHero(hero: Hero): void {
-    if (!hero || !hero.active) return;
+    if (!hero || !hero.active || this.isRespawning || this.isLevelCompleted) return;
+
+    const deathPos = { x: hero.x, y: hero.y };
 
     if (this.isEntangled) {
       gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: true });
-      this.scene.restart();
+      this.quickRespawn(deathPos);
       return;
     }
 
@@ -1339,7 +1682,7 @@ export default class GameScene extends Phaser.Scene {
     gameEvents.emit('hero:death', { remaining: this.heroes.length });
 
     if (this.heroes.length === 0) {
-      this.scene.restart();
+      this.quickRespawn(deathPos);
     } else {
       const anyFocused = this.heroes.some((h) => h.isFocused);
       if (!anyFocused && this.heroes.length > 0) {
@@ -1391,7 +1734,15 @@ export default class GameScene extends Phaser.Scene {
   private collectParticle(hero: Hero, particle: Phaser.Physics.Arcade.Sprite): void {
     if (!particle.active) return;
     const type = particle.getData('type') as ParticleType;
-    particle.destroy();
+    if (typeof particle.disableBody === 'function') {
+      particle.disableBody(true, true);
+    } else {
+      particle.setActive(false);
+      particle.setVisible(false);
+      if (particle.body) {
+        (particle.body as Phaser.Physics.Arcade.Body).enable = false;
+      }
+    }
     gameEvents.emit('particle:collect', { type });
 
     const powerUpNames: Record<ParticleType, string> = {
@@ -1529,9 +1880,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private completeLevel(): void {
-    if (this.isLevelCompleted) return;
+    if (this.isLevelCompleted || this.isTransitioningLevel) return;
     this.isLevelCompleted = true;
-    soundManager.stopBgm();
     gameEvents.emit('level:complete', { level: Number(this.levelData.id) || 0 });
 
     const elapsedMs =
@@ -1555,11 +1905,16 @@ export default class GameScene extends Phaser.Scene {
     }
     const trajectory = this.ghostRecorder.getSerialized();
 
-    if (store.sharedLevel) {
-      // Record score for shared level under slot 0
+    const isShared = Boolean(store.sharedLevel);
+    const currentLvl = Number(this.levelData.id);
+    const prevBest = isShared
+      ? (store.scores[0]?.best ?? 0)
+      : (store.scores[currentLvl]?.best ?? 0);
+
+    let nextLevelNumber: number | null = null;
+    if (isShared) {
       store.recordScore(0, elapsedMs, trajectory);
     } else {
-      const currentLvl = Number(this.levelData.id);
       store.recordScore(currentLvl, elapsedMs, trajectory);
       const nextLevel = currentLvl + 1;
       store.updateCurrentLevel(nextLevel);
@@ -1572,15 +1927,228 @@ export default class GameScene extends Phaser.Scene {
           store.updateMaxLevel(nextLevel);
         }
       }
+      if (this.resolveLevelData(nextLevel)) {
+        nextLevelNumber = nextLevel;
+      }
+    }
+    this.nextLevelNumberPending = nextLevelNumber;
+
+    const newBest = isShared
+      ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
+      : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
+
+    // 1. Vortex suction animation (280 ms: scale 1 -> 0, rotation 360 deg)
+    for (const hero of this.heroes) {
+      if (!hero.active) continue;
+      if (hero.body) {
+        (hero.body as Phaser.Physics.Arcade.Body).enable = false;
+        hero.setVelocity(0, 0);
+      }
+      const targetPortal =
+        hero.isBeta && this.betaPortalSprite ? this.betaPortalSprite : this.portalSprite;
+      if (this.tweens?.add && targetPortal) {
+        this.tweens.add({
+          targets: hero,
+          x: targetPortal.x,
+          y: targetPortal.y,
+          scaleX: 0,
+          scaleY: 0,
+          angle: 360,
+          alpha: 0.2,
+          duration: 280,
+          ease: 'Cubic.easeIn'
+        });
+      }
     }
 
-    try {
-      this.game.destroy(true);
-    } catch {
-      // safe
+    // 2. Show in-canvas Element Synthesized HUD banner & narrative overlay
+    this.showLevelCompleteOverlay(elapsedMs, newBest, prevBest, nextLevelNumber);
+
+    if (this.time?.delayedCall) {
+      this.time.delayedCall(280, () => {
+        this.canAdvanceLevel = true;
+      });
+    } else {
+      this.canAdvanceLevel = true;
     }
-    window.game = null;
-    push('/done');
+  }
+
+  private showLevelCompleteOverlay(
+    elapsedMs: number,
+    bestMs: number,
+    prevBestMs: number,
+    nextLevelNumber: number | null
+  ): void {
+    if (!this.add?.container || !this.cameras?.main) return;
+
+    const camW = this.cameras.main.width;
+    const camH = this.cameras.main.height;
+
+    const overlay = this.add.container(0, 0);
+    overlay.setScrollFactor(0);
+    overlay.setDepth(200);
+    overlay.setAlpha(0);
+    this.levelCompleteOverlay = overlay;
+
+    const backdrop = this.add.rectangle(camW / 2, camH / 2, camW, camH, 0x050814, 0.72);
+    backdrop.setInteractive();
+    backdrop.on('pointerdown', () => {
+      if (this.canAdvanceLevel && nextLevelNumber !== null) {
+        this.advanceToNextLevel();
+      }
+    });
+    overlay.add(backdrop);
+
+    const cardW = Math.min(620, camW - 48);
+    const cardH = 250;
+    const cardBg = this.add.rectangle(camW / 2, camH / 2, cardW, cardH, 0x0b0f19, 0.94);
+    cardBg.setStrokeStyle(2, 0x00e5ff, 0.9);
+    overlay.add(cardBg);
+
+    const symbol = this.levelData.symbol || '?';
+    const atom = this.levelData.atom || 'Element';
+    const headerText = this.add.text(
+      camW / 2,
+      camH / 2 - 86,
+      `ELEMENT SYNTHESIZED — ${symbol} ${atom.toUpperCase()}`,
+      {
+        fontFamily: 'VT323',
+        fontSize: '28px',
+        color: '#00e5ff',
+        align: 'center'
+      }
+    );
+    headerText.setOrigin(0.5);
+    overlay.add(headerText);
+
+    let deltaLabel = 'NEW RECORD';
+    if (prevBestMs > 0) {
+      const diffSec = (elapsedMs - prevBestMs) / 1000;
+      const sign = diffSec <= 0 ? '-' : '+';
+      deltaLabel = `${sign}${Math.abs(diffSec).toFixed(2)}s`;
+    }
+
+    const statsText = this.add.text(
+      camW / 2,
+      camH / 2 - 48,
+      `${formatScore(elapsedMs)}  •  REC ${formatScore(bestMs)}  •  ${deltaLabel}`,
+      {
+        fontFamily: 'VT323',
+        fontSize: '22px',
+        color: prevBestMs === 0 || elapsedMs <= prevBestMs ? '#34d399' : '#f8fafc',
+        align: 'center'
+      }
+    );
+    statsText.setOrigin(0.5);
+    overlay.add(statsText);
+
+    const currentLvl = Number(this.levelData.id) || 1;
+    const narrativeLines =
+      this.levelData.explanations && this.levelData.explanations.length > 0
+        ? this.levelData.explanations.slice(0, 2)
+        : getNarrativeForLevel(currentLvl).slice(0, 2);
+
+    const narrativeText = this.add.text(camW / 2, camH / 2 + 2, narrativeLines.join('\n'), {
+      fontFamily: 'VT323',
+      fontSize: '18px',
+      color: '#cbd5e1',
+      align: 'center',
+      wordWrap: { width: cardW - 48 }
+    });
+    narrativeText.setOrigin(0.5);
+    overlay.add(narrativeText);
+
+    const nextLevelData =
+      nextLevelNumber !== null ? this.resolveLevelData(nextLevelNumber) : undefined;
+    const primaryLabel = nextLevelData
+      ? `[SPACE / TAP] NEXT: ${nextLevelData.symbol} ${nextLevelData.atom}`
+      : '[LEVELS]';
+
+    const nextBtn = this.add.text(camW / 2 - 115, camH / 2 + 78, primaryLabel, {
+      fontFamily: 'VT323',
+      fontSize: '22px',
+      color: '#00ffcc',
+      backgroundColor: '#083344',
+      padding: { x: 12, y: 6 }
+    });
+    nextBtn.setOrigin(0.5);
+    nextBtn.setInteractive({ useHandCursor: true });
+    nextBtn.on('pointerdown', () => {
+      this.uiPointerConsumed = true;
+      if (nextLevelNumber !== null) {
+        this.advanceToNextLevel();
+      } else {
+        soundManager.stopBgm();
+        try {
+          this.game.destroy(true);
+        } catch {
+          // safe
+        }
+        window.game = null;
+        push('/levels');
+      }
+    });
+    overlay.add(nextBtn);
+
+    const codexBtn = this.add.text(camW / 2 + 135, camH / 2 + 78, '[SPECTROSCOPIE / CODEX]', {
+      fontFamily: 'VT323',
+      fontSize: '20px',
+      color: '#fbbf24',
+      backgroundColor: '#1e293b',
+      padding: { x: 10, y: 6 }
+    });
+    codexBtn.setOrigin(0.5);
+    codexBtn.setInteractive({ useHandCursor: true });
+    codexBtn.on('pointerdown', () => {
+      this.uiPointerConsumed = true;
+      soundManager.stopBgm();
+      try {
+        this.game.destroy(true);
+      } catch {
+        // safe
+      }
+      window.game = null;
+      push('/explanation');
+    });
+    overlay.add(codexBtn);
+
+    if (this.tweens?.add) {
+      this.tweens.add({
+        targets: overlay,
+        alpha: 1,
+        duration: 280,
+        ease: 'Sine.easeOut'
+      });
+    } else {
+      overlay.setAlpha(1);
+    }
+  }
+
+  public advanceToNextLevel(): void {
+    if (!this.isLevelCompleted || this.isTransitioningLevel) return;
+    if (this.nextLevelNumberPending === null) return;
+
+    const nextData = this.resolveLevelData(this.nextLevelNumberPending);
+    if (!nextData) return;
+
+    this.isTransitioningLevel = true;
+    this.canAdvanceLevel = false;
+
+    if (this.cameras?.main?.fadeOut && this.cameras?.main?.once) {
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.rebuildForLevel(nextData);
+        this.cameras.main.fadeIn(300, 0, 0, 0);
+      });
+      this.cameras.main.fadeOut(300, 0, 0, 0);
+    } else {
+      this.rebuildForLevel(nextData);
+    }
+  }
+
+  public rebuildForLevel(nextLevelData: LevelData): void {
+    this.clearLevelObjects();
+    this.levelData = nextLevelData;
+    this.buildLevel();
   }
 
   private drawEntanglementBeam(time: number): void {
@@ -1730,6 +2298,19 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
+    if (this.isLevelCompleted || this.isTransitioningLevel || this.isRespawning) {
+      if (this.quantumEffects) {
+        this.quantumEffects.update(
+          time,
+          delta,
+          this.heroes,
+          this.portalSprite,
+          this.isTimeDilationActive
+        );
+      }
+      return;
+    }
+
     if (!this.timerStarted) {
       this.startTime = time;
       this.dilatedElapsedMs = 0;
@@ -1922,7 +2503,8 @@ export default class GameScene extends Phaser.Scene {
         // Restart if hero falls out through the bottom (or top when gravity is inverted)
         if (hero.y > this.levelData.height + 20 || (hero.upsideDown === -1 && hero.y < -10)) {
           if (hero.isFocused || this.heroes.length <= 1) {
-            this.scene.restart();
+            gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: this.isEntangled });
+            this.quickRespawn({ x: hero.x, y: hero.y });
             return;
           }
           this.killHero(hero);
