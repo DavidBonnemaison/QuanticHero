@@ -131,6 +131,11 @@ export default class GameScene extends Phaser.Scene {
   private dilatedElapsedMs = 0;
   private timerStarted = false;
   private timerText!: Phaser.GameObjects.Text;
+  private lastTimerString = '';
+  private lastTimerColor = '';
+  private lastSplitString = '';
+  private lastSplitColor = '';
+  private lastSplitUpdateMs = 0;
   private phaseIndicatorText: Phaser.GameObjects.Text | null = null;
   private dilationIndicatorText: Phaser.GameObjects.Text | null = null;
   private isLevelCompleted = false;
@@ -157,6 +162,11 @@ export default class GameScene extends Phaser.Scene {
     this.startTime = 0;
     this.dilatedElapsedMs = 0;
     this.timerStarted = false;
+    this.lastTimerString = '';
+    this.lastTimerColor = '';
+    this.lastSplitString = '';
+    this.lastSplitColor = '';
+    this.lastSplitUpdateMs = 0;
     this.splitDeltaText = null;
     this.ghostButton = null;
     this.hudContainer = null;
@@ -629,7 +639,6 @@ export default class GameScene extends Phaser.Scene {
         } else {
           hero.bounceOffLeftWall(true);
         }
-        soundManager.playBounceSound();
         gameEvents.emit('hero:wall_bounce', { x: hero.x, y: hero.y });
       }
 
@@ -1242,7 +1251,6 @@ export default class GameScene extends Phaser.Scene {
       case 'timeDilation': {
         this.isTimeDilationActive = true;
         this.timeDilationUntil = this.time.now + 4000;
-        soundManager.playTimeDilationSound();
         gameEvents.emit('time:dilation', { active: true, durationMs: 4000 });
         break;
       }
@@ -1275,7 +1283,6 @@ export default class GameScene extends Phaser.Scene {
     if (!this.hasPhasePlatforms) return;
     this.currentPhase = togglePhase(this.currentPhase);
     this.applyPhase(this.currentPhase);
-    soundManager.playPhaseShiftSound();
     gameEvents.emit('phase:shift', { phase: this.currentPhase });
     if (this.phaseIndicatorText?.active) {
       this.phaseIndicatorText.setText(`[PHASE: ${this.currentPhase.toUpperCase()}]`);
@@ -1479,8 +1486,16 @@ export default class GameScene extends Phaser.Scene {
 
     // Update timer (slowed during time dilation)
     if (this.timerText) {
-      this.timerText.setText(formatScore(this.dilatedElapsedMs));
-      this.timerText.setColor(this.isTimeDilationActive ? '#22d3ee' : '#ffffff');
+      const nextTimerStr = formatScore(this.dilatedElapsedMs);
+      if (nextTimerStr !== this.lastTimerString) {
+        this.lastTimerString = nextTimerStr;
+        this.timerText.setText(nextTimerStr);
+      }
+      const nextTimerColor = this.isTimeDilationActive ? '#22d3ee' : '#ffffff';
+      if (nextTimerColor !== this.lastTimerColor) {
+        this.lastTimerColor = nextTimerColor;
+        this.timerText.setColor(nextTimerColor);
+      }
     }
     if (this.dilationIndicatorText?.active) {
       this.dilationIndicatorText.setVisible(this.isTimeDilationActive);
@@ -1557,7 +1572,13 @@ export default class GameScene extends Phaser.Scene {
         focusedHero.flipY
       );
 
-      if (this.splitDeltaText && this.ghostFrames.length > 0 && isGhostActive) {
+      if (
+        this.splitDeltaText &&
+        this.ghostFrames.length > 0 &&
+        isGhostActive &&
+        time - this.lastSplitUpdateMs >= 100
+      ) {
+        this.lastSplitUpdateMs = time;
         const deltaSec = calculateSplitDelta(
           this.ghostFrames,
           focusedHero.x,
@@ -1565,8 +1586,14 @@ export default class GameScene extends Phaser.Scene {
           elapsedMs
         );
         const { text, color } = formatSplitDelta(deltaSec);
-        this.splitDeltaText.setText(text);
-        this.splitDeltaText.setColor(color);
+        if (text !== this.lastSplitString) {
+          this.lastSplitString = text;
+          this.splitDeltaText.setText(text);
+        }
+        if (color !== this.lastSplitColor) {
+          this.lastSplitColor = color;
+          this.splitDeltaText.setColor(color);
+        }
       }
     }
 
@@ -1632,7 +1659,6 @@ export default class GameScene extends Phaser.Scene {
             item.isPressed = true;
             pad.setY(item.startY + 3);
             pad.setFillStyle(0x059669);
-            soundManager.playMechanicalClick();
             gameEvents.emit('plate:trigger', { plateId: pl.id, gateId: pl.targetGateId });
 
             // If hero stepping on plate is focused and there are multiple heroes, switch focus to another hero
@@ -1689,7 +1715,6 @@ export default class GameScene extends Phaser.Scene {
               hero.x = result.exitX;
               hero.body.x = hero.x - hero.body.width / 2;
               hero.tunnelCharges--;
-              soundManager.playTunnelSound();
               gameEvents.emit('tunnel:use', { remaining: hero.tunnelCharges });
               this.showRetroToast(`TUNNELING ! (${hero.tunnelCharges} LEFT)`);
               break;
@@ -1713,7 +1738,6 @@ export default class GameScene extends Phaser.Scene {
           hB.setVelocityY(ev.impulseB.vy);
           hA.pauliGraceUntil = ev.newGraceUntil;
           hB.pauliGraceUntil = ev.newGraceUntil;
-          soundManager.playPauliBlastSound();
           gameEvents.emit('pauli:blast', { hero1Id: hA.id, hero2Id: hB.id });
           this.showRetroToast('PAULI BLAST !');
           this.drawPauliFlash(hA.x, hA.y, hB.x, hB.y);
@@ -1736,7 +1760,6 @@ export default class GameScene extends Phaser.Scene {
         dp.rect.x = dp.startX;
       }
       if (!prevCollapsed && decayUpdate.collapsed) {
-        soundManager.playDecaySound();
         gameEvents.emit('platform:decay', { x: dp.rect.x, y: dp.rect.y });
       }
     }

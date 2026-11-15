@@ -9,25 +9,23 @@ class Molecule {
   x: number;
   y: number;
   speed: { x: number; y: number };
-  opacity: number;
-  motion?: ReturnType<typeof setInterval>;
-  opacityMore?: ReturnType<typeof setInterval>;
-  opacityLess?: ReturnType<typeof setInterval>;
-  opacityTimeout1?: ReturnType<typeof setTimeout>;
-  opacityTimeout2?: ReturnType<typeof setTimeout>;
+  baseOpacity: number;
+  phaseOffset: number;
+  el: HTMLDivElement | null = null;
 
   constructor({ container }: { container: string }) {
     this.id = random(1000, 9999);
     this.container = container;
     this.size = sample([random(5, 10), random(10, 50)]) || 20;
     this.color = randomColor();
-    this.x = random(0, window.innerWidth);
-    this.y = random(0, window.innerHeight);
+    this.x = random(0, typeof window !== 'undefined' ? window.innerWidth : 1024);
+    this.y = random(0, typeof window !== 'undefined' ? window.innerHeight : 768);
     this.speed = {
       x: (random(-20, 20) * this.size) / 1000,
       y: (random(-20, 20) * this.size) / 1000
     };
-    this.opacity = Math.max(random(50, 1000) / this.size ** 2, 0.2) || 0.5;
+    this.baseOpacity = Math.max(random(50, 1000) / this.size ** 2, 0.2) || 0.5;
+    this.phaseOffset = Math.random() * Math.PI * 2;
   }
 
   getTemplate(): HTMLDivElement {
@@ -37,45 +35,6 @@ class Molecule {
     return elm;
   }
 
-  setMotion(): void {
-    this.motion = setInterval(() => {
-      const el = document.getElementById(String(this.id));
-      if (!el) {
-        if (this.motion) clearInterval(this.motion);
-        return;
-      }
-      let topPosition = Number(el.style.top.slice(0, -2));
-      if (topPosition > window.innerHeight) topPosition = this.size * -1;
-      if (topPosition < this.size * -1) topPosition = window.innerHeight;
-      let leftPosition = Number(el.style.left.slice(0, -2));
-      if (leftPosition > window.innerWidth) leftPosition = this.size * -1;
-      if (leftPosition < this.size * -1) leftPosition = window.innerWidth;
-      el.style.left = `${leftPosition + this.speed.x}px`;
-      el.style.top = `${topPosition + this.speed.y}px`;
-    }, 30);
-  }
-
-  setOpacity(): void {
-    this.opacityMore = setInterval(() => {
-      const el = document.getElementById(String(this.id));
-      if (!el) {
-        if (this.opacityMore) clearInterval(this.opacityMore);
-        return;
-      }
-      el.style.opacity = '0.4';
-    }, 2000);
-    this.opacityTimeout2 = setTimeout(() => {
-      this.opacityLess = setInterval(() => {
-        const el = document.getElementById(String(this.id));
-        if (!el) {
-          if (this.opacityLess) clearInterval(this.opacityLess);
-          return;
-        }
-        el.style.opacity = '0';
-      }, 2000);
-    }, 1000);
-  }
-
   create(): this {
     const containerElm = document.querySelector(this.container);
     if (!containerElm) return this;
@@ -83,46 +42,90 @@ class Molecule {
     newMolecule.style.width = `${this.size}px`;
     newMolecule.style.height = `${this.size}px`;
     newMolecule.style.background = this.color;
-    newMolecule.style.opacity = String(this.opacity);
-    newMolecule.style.left = `${this.x}px`;
-    newMolecule.style.top = `${this.y}px`;
+    newMolecule.style.opacity = String(this.baseOpacity);
+    newMolecule.style.left = '0px';
+    newMolecule.style.top = '0px';
+    newMolecule.style.transform = `translate3d(${this.x}px, ${this.y}px, 0)`;
+    newMolecule.style.willChange = 'transform, opacity';
     newMolecule.style.zIndex = String(300 + this.size);
     newMolecule.style.borderRadius = '50%';
     newMolecule.style.position = 'absolute';
     newMolecule.style.pointerEvents = 'none';
-    newMolecule.style.transition = '1s opacity ease-in-out';
     containerElm.appendChild(newMolecule);
-    this.setMotion();
-    this.opacityTimeout1 = setTimeout(
-      () => {
-        this.setOpacity();
-      },
-      random(100, 1500)
-    );
+    this.el = newMolecule;
     return this;
   }
 
+  step(dtFactor: number, timeSec: number, winW: number, winH: number): void {
+    if (!this.el || !this.el.isConnected) return;
+
+    this.x += this.speed.x * dtFactor;
+    this.y += this.speed.y * dtFactor;
+
+    if (this.y > winH) this.y = -this.size;
+    else if (this.y < -this.size) this.y = winH;
+
+    if (this.x > winW) this.x = -this.size;
+    else if (this.x < -this.size) this.x = winW;
+
+    this.el.style.transform = `translate3d(${this.x}px, ${this.y}px, 0)`;
+    const pulse = 0.2 + 0.2 * Math.sin(timeSec * 1.5 + this.phaseOffset);
+    this.el.style.opacity = pulse.toFixed(3);
+  }
+
   destroy(): void {
-    if (this.opacityTimeout1) clearTimeout(this.opacityTimeout1);
-    if (this.opacityTimeout2) clearTimeout(this.opacityTimeout2);
-    if (this.motion) clearInterval(this.motion);
-    if (this.opacityLess) clearInterval(this.opacityLess);
-    if (this.opacityMore) clearInterval(this.opacityMore);
-    const el = document.getElementById(String(this.id));
-    if (el) {
-      el.remove();
+    if (this.el) {
+      this.el.remove();
+      this.el = null;
+    } else {
+      const el = document.getElementById(String(this.id));
+      if (el) el.remove();
     }
   }
 }
 
 let Molecules: Molecule[] = [];
+let rafId: number | null = null;
+let lastFrameTime = 0;
+
+function tick(now: number): void {
+  if (Molecules.length === 0) {
+    rafId = null;
+    return;
+  }
+
+  const dtMs = lastFrameTime ? Math.min(now - lastFrameTime, 100) : 16.67;
+  lastFrameTime = now;
+  const dtFactor = dtMs / 30; // preserve original 30ms step speed
+  const timeSec = now / 1000;
+  const winW = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const winH = typeof window !== 'undefined' ? window.innerHeight : 768;
+
+  for (let i = 0; i < Molecules.length; i++) {
+    Molecules[i].step(dtFactor, timeSec, winW, winH);
+  }
+
+  rafId = requestAnimationFrame(tick);
+}
 
 export default {
-  start: () =>
-    range(0, 20).forEach(() => {
-      Molecules.push(new Molecule({ container: '#container' }).create());
-    }),
+  start: () => {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    Molecules.forEach((mol) => mol.destroy());
+    Molecules = range(0, 20).map(() => new Molecule({ container: '#container' }).create());
+    lastFrameTime = 0;
+    if (typeof requestAnimationFrame !== 'undefined') {
+      rafId = requestAnimationFrame(tick);
+    }
+  },
   end: () => {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
     Molecules.forEach((mol) => mol.destroy());
     Molecules = [];
   }

@@ -241,35 +241,41 @@ describe('SoundManager', () => {
       expect(playSpy).toHaveBeenCalled();
     });
 
-    it('responds to phase:shift, tunnel:use, pauli:blast, time:dilation, platform:decay, hero:wall_bounce events', () => {
+    it('responds to phase:shift, tunnel:use, pauli:blast, time:dilation, platform:decay, hero:wall_bounce, plate:trigger events exactly once', () => {
       const phaseSpy = vi.spyOn(soundManager, 'playPhaseShiftSound');
       const tunnelSpy = vi.spyOn(soundManager, 'playTunnelSound');
       const pauliSpy = vi.spyOn(soundManager, 'playPauliBlastSound');
       const timeSpy = vi.spyOn(soundManager, 'playTimeDilationSound');
+      const restoreSpy = vi.spyOn(soundManager, 'playTimeRestoreSound');
       const decaySpy = vi.spyOn(soundManager, 'playDecaySound');
       const bounceSpy = vi.spyOn(soundManager, 'playBounceSound');
+      const clickSpy = vi.spyOn(soundManager, 'playMechanicalClick');
 
       gameEvents.emit('phase:shift', { phase: 'magenta' });
-      expect(phaseSpy).toHaveBeenCalled();
+      expect(phaseSpy).toHaveBeenCalledTimes(1);
 
       gameEvents.emit('tunnel:use', { remaining: 1 });
-      expect(tunnelSpy).toHaveBeenCalled();
+      expect(tunnelSpy).toHaveBeenCalledTimes(1);
 
       gameEvents.emit('pauli:blast', { hero1Id: 1, hero2Id: 2 });
-      expect(pauliSpy).toHaveBeenCalled();
+      expect(pauliSpy).toHaveBeenCalledTimes(1);
 
       gameEvents.emit('time:dilation', { active: true, durationMs: 4000 });
-      expect(timeSpy).toHaveBeenCalled();
+      expect(timeSpy).toHaveBeenCalledTimes(1);
+      expect(restoreSpy).not.toHaveBeenCalled();
+
+      gameEvents.emit('time:dilation', { active: false, durationMs: 0 });
+      expect(timeSpy).toHaveBeenCalledTimes(1);
+      expect(restoreSpy).toHaveBeenCalledTimes(1);
 
       gameEvents.emit('platform:decay', { x: 100, y: 200 });
-      expect(decaySpy).toHaveBeenCalled();
+      expect(decaySpy).toHaveBeenCalledTimes(1);
 
       gameEvents.emit('hero:wall_bounce', { x: 100, y: 200 });
-      expect(bounceSpy).toHaveBeenCalled();
+      expect(bounceSpy).toHaveBeenCalledTimes(1);
 
-      const clickSpy = vi.spyOn(soundManager, 'playMechanicalClick');
       gameEvents.emit('plate:trigger', { plateId: 'p1', gateId: 'g1' });
-      expect(clickSpy).toHaveBeenCalled();
+      expect(clickSpy).toHaveBeenCalledTimes(1);
     });
   });
 

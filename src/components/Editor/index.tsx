@@ -4,7 +4,7 @@ import { DndProvider, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useNavigate } from 'react-router-dom';
 import * as levelsData from '../../data/levels';
-import { useGameStore } from '../../store';
+import { getEffectiveLevel, useGameStore } from '../../store';
 import { range } from '../../tools/math';
 import type { LevelData } from '../../types';
 import DrawParticle from './DrawParticle';
@@ -167,7 +167,7 @@ export const EditorView: React.FC = () => {
 
   const customLevels = useGameStore((state) => state.customLevels);
   const currentLevel = useGameStore((state) => state.currentLevel);
-  const setLevels = useGameStore((state) => state.setLevels);
+  const resetCustomLevel = useGameStore((state) => state.resetCustomLevel);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
   const updateLevelField = useGameStore((state) => state.updateLevelField);
   const addPlatform = useGameStore((state) => state.addPlatform);
@@ -179,21 +179,16 @@ export const EditorView: React.FC = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!customLevels) {
-      setLevels(levelsData as unknown as Record<string, LevelData>);
-    }
     if (currentLevel) {
       setCurrentLevelNumber(currentLevel);
     }
-  }, [customLevels, currentLevel, setLevels]);
+  }, [currentLevel]);
 
-  const levels = customLevels;
-  if (!levels) {
-    return null;
-  }
+  const builtInLevels = levelsData as unknown as Record<string, LevelData>;
+  const levels = customLevels ? { ...builtInLevels, ...customLevels } : builtInLevels;
 
   const levelKey = `level${currentLevelNumber}`;
-  const level = levels[levelKey];
+  const level = getEffectiveLevel(levelKey, customLevels);
   if (!level) {
     return null;
   }
@@ -226,7 +221,7 @@ export const EditorView: React.FC = () => {
   };
 
   const handleResetLevels = () => {
-    setLevels(levelsData as unknown as Record<string, LevelData>);
+    resetCustomLevel(levelKey);
   };
 
   const handleDeletePlatform = (e: React.MouseEvent<HTMLDivElement>) => {

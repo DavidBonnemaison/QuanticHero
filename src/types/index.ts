@@ -9,6 +9,8 @@ export interface Platform {
   kind?: PlatformKind; // 'wall' = vertical neon wall bounce surface
   phase?: PlatformPhase; // 'cyan' | 'magenta' = active according to global phase
   decayMs?: number; // Half-life decay platform: collapses N ms after initial contact
+  cracked?: boolean;
+  matterState?: string;
   movesTo?: {
     x?: number;
     y?: number;
@@ -64,7 +66,7 @@ export interface EntanglementConfig {
 export interface LevelMeta {
   seed: number;
   generatorVersion: string;
-  path: { x: number; y: number; t: number }[];
+  path?: { x: number; y: number; t: number }[];
 }
 
 export interface CollapseConfig {
@@ -109,6 +111,8 @@ export interface LevelData {
   pressurePlates?: PressurePlate[];
   entanglement?: EntanglementConfig;
   collapse?: CollapseConfig;
+  screenWrap?: boolean;
+  wormholes?: Array<Record<string, unknown>>;
   authorGhost?: string;
   authorTime?: number;
   meta?: LevelMeta;

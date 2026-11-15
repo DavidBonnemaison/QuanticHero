@@ -36,6 +36,7 @@ export interface GameStoreActions {
   recordScore: (level: number, score: number, ghostTrajectory?: string) => void;
   saveGhostTrajectory: (level: number, trajectory: string) => void;
   setLevels: (data: Record<string, LevelData> | null) => void;
+  resetCustomLevel: (id: string) => void;
   setSharedLevel: (level: LevelData | null) => void;
   saveSharedLevelToCustom: (slot?: number) => void;
   updateLevelField: (params: UpdateLevelFieldParams) => void;
@@ -68,6 +69,18 @@ const defaultParticle = {
   y: 100,
   type: 'duplicate' as const
 };
+
+const builtInLevels = levelsData as unknown as Record<string, LevelData>;
+
+export function getEffectiveLevel(
+  id: string | number,
+  customLevels?: Record<string, LevelData> | null
+): LevelData | undefined {
+  const strId = String(id);
+  const key = strId.startsWith('level') ? strId : `level${strId}`;
+  const custom = customLevels !== undefined ? customLevels : useGameStore.getState().customLevels;
+  return custom?.[key] ?? builtInLevels[key];
+}
 
 const customStorage = {
   getItem: (name: string): string | null => {
@@ -260,14 +273,24 @@ export const useGameStore = create<GameStore>()(
 
       setLevels: (data: Record<string, LevelData> | null) => set({ customLevels: data }),
 
+      resetCustomLevel: (id: string) =>
+        set((state) => {
+          if (!state.customLevels) return state;
+          const key = id.startsWith('level') ? id : `level${id}`;
+          if (!(key in state.customLevels)) return state;
+          const next = { ...state.customLevels };
+          delete next[key];
+          return {
+            customLevels: Object.keys(next).length > 0 ? next : null
+          };
+        }),
+
       setSharedLevel: (level: LevelData | null) => set({ sharedLevel: level }),
 
       saveSharedLevelToCustom: (slot = 1) =>
         set((state) => {
           if (!state.sharedLevel) return state;
-          const customLevels = state.customLevels
-            ? { ...state.customLevels }
-            : ({ ...levelsData } as unknown as Record<string, LevelData>);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
           const levelKey = `level${slot}`;
           customLevels[levelKey] = {
             ...state.sharedLevel,
@@ -278,12 +301,14 @@ export const useGameStore = create<GameStore>()(
 
       updateLevelField: ({ level, type, n, prop, value }: UpdateLevelFieldParams) =>
         set((state) => {
-          const customLevels = state.customLevels
-            ? { ...state.customLevels }
-            : ({ ...levelsData } as unknown as Record<string, LevelData>);
           const levelKey = `level${level}`;
-          const targetLevel = customLevels[levelKey];
-          if (!targetLevel) return state;
+          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          if (!sourceLevel) return state;
+
+          const targetLevel = state.customLevels?.[levelKey]
+            ? sourceLevel
+            : structuredClone(sourceLevel);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
 
           const updatedLevel = { ...targetLevel };
 
@@ -348,12 +373,14 @@ export const useGameStore = create<GameStore>()(
 
       addPlatform: ({ level }: { level: number }) =>
         set((state) => {
-          const customLevels = state.customLevels
-            ? { ...state.customLevels }
-            : ({ ...levelsData } as unknown as Record<string, LevelData>);
           const levelKey = `level${level}`;
-          const targetLevel = customLevels[levelKey];
-          if (!targetLevel) return state;
+          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          if (!sourceLevel) return state;
+
+          const targetLevel = state.customLevels?.[levelKey]
+            ? sourceLevel
+            : structuredClone(sourceLevel);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
 
           customLevels[levelKey] = {
             ...targetLevel,
@@ -364,12 +391,14 @@ export const useGameStore = create<GameStore>()(
 
       deletePlatform: ({ level, n }: { level: number; n: number | string }) =>
         set((state) => {
-          const customLevels = state.customLevels
-            ? { ...state.customLevels }
-            : ({ ...levelsData } as unknown as Record<string, LevelData>);
           const levelKey = `level${level}`;
-          const targetLevel = customLevels[levelKey];
-          if (!targetLevel) return state;
+          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          if (!sourceLevel) return state;
+
+          const targetLevel = state.customLevels?.[levelKey]
+            ? sourceLevel
+            : structuredClone(sourceLevel);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
 
           customLevels[levelKey] = {
             ...targetLevel,
@@ -380,12 +409,14 @@ export const useGameStore = create<GameStore>()(
 
       addParticle: ({ level }: { level: number }) =>
         set((state) => {
-          const customLevels = state.customLevels
-            ? { ...state.customLevels }
-            : ({ ...levelsData } as unknown as Record<string, LevelData>);
           const levelKey = `level${level}`;
-          const targetLevel = customLevels[levelKey];
-          if (!targetLevel) return state;
+          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          if (!sourceLevel) return state;
+
+          const targetLevel = state.customLevels?.[levelKey]
+            ? sourceLevel
+            : structuredClone(sourceLevel);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
 
           customLevels[levelKey] = {
             ...targetLevel,
@@ -396,12 +427,14 @@ export const useGameStore = create<GameStore>()(
 
       deleteParticle: ({ level, n }: { level: number; n: number | string }) =>
         set((state) => {
-          const customLevels = state.customLevels
-            ? { ...state.customLevels }
-            : ({ ...levelsData } as unknown as Record<string, LevelData>);
           const levelKey = `level${level}`;
-          const targetLevel = customLevels[levelKey];
-          if (!targetLevel) return state;
+          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          if (!sourceLevel) return state;
+
+          const targetLevel = state.customLevels?.[levelKey]
+            ? sourceLevel
+            : structuredClone(sourceLevel);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
 
           customLevels[levelKey] = {
             ...targetLevel,

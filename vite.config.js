@@ -1,4 +1,3 @@
-import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -88,13 +87,7 @@ export default defineConfig({
     })
   ],
   resolve: {
-    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
-    alias: [
-      {
-        find: /^react-router-redux$/,
-        replacement: path.resolve(import.meta.dirname, 'src/shims/react-router-redux.js')
-      }
-    ]
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']
   },
   define: {
     __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),

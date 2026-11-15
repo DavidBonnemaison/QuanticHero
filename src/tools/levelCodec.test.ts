@@ -98,6 +98,76 @@ describe('levelCodec', () => {
       expect(decoded?.atom).toBe('Quantumium');
       expect(decoded?.player.position.x).toBe(80);
     });
+
+    it('losslessly preserves kind, phase, decayMs, cracked, matterState, gates, pressurePlates, collapse, entanglement, screenWrap, and wormholes', () => {
+      const v3Level: LevelData = {
+        ...sampleLevel,
+        platforms: [
+          { x: 0, y: 760, width: 1200, height: 40, kind: 'standard' },
+          { x: 100, y: 400, width: 20, height: 200, kind: 'wall' },
+          { x: 300, y: 550, width: 120, height: 20, phase: 'cyan' },
+          { x: 450, y: 500, width: 120, height: 20, phase: 'magenta', decayMs: 1200 },
+          {
+            x: 600,
+            y: 450,
+            width: 100,
+            height: 20,
+            cracked: true,
+            matterState: 'antimatter',
+            movesTo: { x: 750, y: 450, time: 1500 }
+          }
+        ],
+        gates: [{ id: 'g1', x: 800, y: 300, width: 20, height: 120 }],
+        pressurePlates: [
+          { id: 'p1', x: 320, y: 530, width: 40, height: 10, targetGateId: 'g1', requireLock: true }
+        ],
+        collapse: { speedY: 18, delayMs: 2500 },
+        entanglement: {
+          mode: 'mirror_and_gravity',
+          betaSpawn: { x: 80, y: 120 },
+          portalMode: 'dual',
+          betaDoor: { x: 1100, y: 600 }
+        },
+        screenWrap: true,
+        wormholes: [{ id: 'w1', x: 200, y: 300, targetX: 900, targetY: 300 }]
+      };
+
+      const compressed = compressLevel(v3Level);
+      const decoded = decompressLevel(compressed);
+
+      expect(decoded).not.toBeNull();
+      if (!decoded) return;
+
+      expect(decoded.platforms).toEqual(v3Level.platforms);
+      expect(decoded.gates).toEqual(v3Level.gates);
+      expect(decoded.pressurePlates).toEqual(v3Level.pressurePlates);
+      expect(decoded.collapse).toEqual(v3Level.collapse);
+      expect(decoded.entanglement).toEqual(v3Level.entanglement);
+      expect(decoded.screenWrap).toBe(true);
+      expect(decoded.wormholes).toEqual(v3Level.wormholes);
+    });
+
+    it('maintains backward compatibility with legacy v1 payloads', () => {
+      const v1Payload = {
+        v: 1,
+        w: 1000,
+        h: 1000,
+        c: '#070737',
+        ac: '#c56805',
+        pl: [80, 910],
+        d: [750, 750],
+        p: [
+          [0, 950, 1000, 50],
+          [300, 700, 100, 20, 500, 700, 2000]
+        ]
+      };
+      const decoded = decompressLevel(JSON.stringify(v1Payload));
+      expect(decoded).not.toBeNull();
+      expect(decoded?.platforms).toEqual([
+        { x: 0, y: 950, width: 1000, height: 50 },
+        { x: 300, y: 700, width: 100, height: 20, movesTo: { x: 500, y: 700, time: 2000 } }
+      ]);
+    });
   });
 
   describe('URL length optimization (acceptance criteria)', () => {

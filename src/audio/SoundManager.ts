@@ -56,8 +56,12 @@ export class SoundManager {
       gameEvents.on('pauli:blast', () => {
         this.playPauliBlastSound();
       }),
-      gameEvents.on('time:dilation', () => {
-        this.playTimeDilationSound();
+      gameEvents.on('time:dilation', ({ active }) => {
+        if (active) {
+          this.playTimeDilationSound();
+        } else {
+          this.playTimeRestoreSound();
+        }
       }),
       gameEvents.on('platform:decay', () => {
         this.playDecaySound();
@@ -623,6 +627,49 @@ export class SoundManager {
       osc2.start(now);
       osc1.stop(now + duration + 0.01);
       osc2.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Time Dilation Restore
+   * Court balayage fréquentiel ascendant de retour au temps normal
+   */
+  public playTimeRestoreSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.24;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(660, now + duration);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(500, now);
+      filter.frequency.exponentialRampToValueAtTime(2400, now + duration);
+      filter.Q.setValueAtTime(2, now);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(now);
+      osc.stop(now + duration + 0.01);
     } catch {
       // safe fallback
     }

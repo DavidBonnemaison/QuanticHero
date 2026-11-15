@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { LevelData } from '../types';
-import { useGameStore } from './index';
+import { getEffectiveLevel, useGameStore } from './index';
 
 describe('useGameStore', () => {
   beforeEach(() => {
@@ -362,6 +362,33 @@ describe('useGameStore', () => {
       expect(store.customLevels?.level1.atom).toBe('Slotium');
       expect(store.customLevels?.level1.id).toBe('1');
       expect(store.currentLevel).toBe(1);
+    });
+
+    it('stores only the modified level in customLevels (differential storage < 15 KB)', () => {
+      expect(useGameStore.getState().customLevels).toBeNull();
+
+      useGameStore.getState().updateLevelField({ level: 1, type: 'width', value: 1450 });
+
+      const customLevels = useGameStore.getState().customLevels;
+      expect(customLevels).not.toBeNull();
+      expect(Object.keys(customLevels ?? {})).toEqual(['level1']);
+      expect(customLevels?.level1.width).toBe(1450);
+
+      const serialized = window.localStorage.getItem('qtmhro') ?? '';
+      expect(serialized.length).toBeLessThan(15 * 1024);
+
+      expect(getEffectiveLevel(1)?.width).toBe(1450);
+      expect(getEffectiveLevel(2)?.id).toBe('2');
+    });
+
+    it('restores a modified level to built-in original via resetCustomLevel', () => {
+      const originalWidth = getEffectiveLevel(1)?.width;
+      useGameStore.getState().updateLevelField({ level: 1, type: 'width', value: 1999 });
+      expect(getEffectiveLevel('1')?.width).toBe(1999);
+
+      useGameStore.getState().resetCustomLevel('1');
+      expect(useGameStore.getState().customLevels).toBeNull();
+      expect(getEffectiveLevel(1)?.width).toBe(originalWidth);
     });
   });
 });

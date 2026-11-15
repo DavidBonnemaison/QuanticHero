@@ -55,7 +55,18 @@ function main() {
     ` - Simulation Result: ${simulation.success ? 'PASSED (100% physically reach verified)' : 'FAILED'}`
   );
 
-  const jsonString = JSON.stringify(levelData, null, 2);
+  const { meta, ...restLevelData } = levelData;
+  const outputLevelData = meta
+    ? {
+        ...restLevelData,
+        meta: {
+          seed: meta.seed,
+          generatorVersion: meta.generatorVersion
+        }
+      }
+    : restLevelData;
+
+  const jsonString = JSON.stringify(outputLevelData, null, 2);
 
   if (options.out) {
     const resolvedPath = path.resolve(process.cwd(), options.out);
