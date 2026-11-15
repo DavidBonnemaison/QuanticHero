@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
 import { getNarrativeForLevel } from '../data/cosmicNarrative';
-import * as defaultLevels from '../data/levels';
+import { getCachedLevel, getLevelMetadata, loadLevel, preloadLevel } from '../data/levels';
 import { getMoleculeById } from '../data/molecules';
 import { getAtomicMass, getElementSpectroscopy } from '../data/spectroscopy';
 import { BohrBackgroundRenderer } from '../effects/BohrBackgroundRenderer';
@@ -342,17 +342,17 @@ export default class GameScene extends Phaser.Scene {
 
     const currentLevel = store.currentLevel || 1;
     const selected = this.resolveLevelData(currentLevel);
-    this.levelData = selected || (defaultLevels as unknown as Record<string, LevelData>).level1;
+    this.levelData = selected || (getCachedLevel(1) as LevelData);
     if (!selected) {
       store.updateCurrentLevel(1);
     }
+    preloadLevel(currentLevel + 1);
   }
 
   public resolveLevelData(levelNumber: number): LevelData | undefined {
     const store = useGameStore.getState();
-    const builtInLevels = defaultLevels as unknown as Record<string, LevelData>;
     const levelKey = `level${levelNumber}`;
-    return store.customLevels?.[levelKey] || builtInLevels[levelKey];
+    return store.customLevels?.[levelKey] || getCachedLevel(levelKey);
   }
 
   create(): void {
@@ -2784,8 +2784,9 @@ export default class GameScene extends Phaser.Scene {
           store.updateMaxLevel(nextLevel);
         }
       }
-      if (this.resolveLevelData(nextLevel)) {
+      if (this.resolveLevelData(nextLevel) || getLevelMetadata(nextLevel)) {
         nextLevelNumber = nextLevel;
+        preloadLevel(nextLevel);
       }
     }
     this.nextLevelNumberPending = nextLevelNumber;
@@ -2937,7 +2938,9 @@ export default class GameScene extends Phaser.Scene {
     overlay.add(narrativeText);
 
     const nextLevelData =
-      nextLevelNumber !== null ? this.resolveLevelData(nextLevelNumber) : undefined;
+      nextLevelNumber !== null
+        ? this.resolveLevelData(nextLevelNumber) || getLevelMetadata(nextLevelNumber)
+        : undefined;
     const primaryLabel = nextLevelData
       ? `[SPACE / TAP] NEXT: ${nextLevelData.symbol} ${nextLevelData.atom}`
       : '[LEVELS]';
@@ -3006,11 +3009,29 @@ export default class GameScene extends Phaser.Scene {
     if (!this.isLevelCompleted || this.isTransitioningLevel) return;
     if (this.nextLevelNumberPending === null) return;
 
-    const nextData = this.resolveLevelData(this.nextLevelNumberPending);
-    if (!nextData) return;
+    const nextNumber = this.nextLevelNumberPending;
+    const nextData = this.resolveLevelData(nextNumber);
+    if (nextData) {
+      this.performLevelTransition(nextData, nextNumber);
+      return;
+    }
 
     this.isTransitioningLevel = true;
     this.canAdvanceLevel = false;
+    void loadLevel(nextNumber).then((loaded) => {
+      if (loaded) {
+        this.performLevelTransition(loaded, nextNumber);
+      } else {
+        this.isTransitioningLevel = false;
+        this.canAdvanceLevel = true;
+      }
+    });
+  }
+
+  private performLevelTransition(nextData: LevelData, nextNumber: number): void {
+    this.isTransitioningLevel = true;
+    this.canAdvanceLevel = false;
+    preloadLevel(nextNumber + 1);
 
     if (this.cameras?.main?.fadeOut && this.cameras?.main?.once) {
       this.cameras.main.once('camerafadeoutcomplete', () => {

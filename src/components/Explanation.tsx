@@ -1,7 +1,7 @@
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNarrativeForLevel } from '../data/cosmicNarrative';
-import * as levels from '../data/levels';
+import { getLevelMetadata } from '../data/levels';
 import { useGameStore } from '../store';
 import styles from './Explanation.module.css';
 
@@ -16,9 +16,8 @@ export default function Explanation(): React.ReactElement {
     string,
     LevelLike
   > | null;
-  const levelMap = levels as unknown as Record<string, LevelLike | undefined>;
 
-  const staticLevel = levelMap[`level${currentLevel}`];
+  const staticLevel = getLevelMetadata(currentLevel);
   const customLevel = customLevels?.[`level${currentLevel}`];
 
   let explanations: string[] = [];

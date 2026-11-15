@@ -1,9 +1,16 @@
-import { describe, expect, it } from 'vitest';
-import * as allLevels from '../data/levels';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { loadLevel } from '../data/levels';
 import type { LevelData } from '../types';
 
 describe('Quantum Entanglement Mode & Physics', () => {
-  const levels = allLevels as unknown as Record<string, LevelData>;
+  const levels: Record<string, LevelData> = {};
+
+  beforeAll(async () => {
+    for (const id of [110, 111, 112, 113, 114]) {
+      const lvl = await loadLevel(id);
+      if (lvl) levels[`level${id}`] = lvl;
+    }
+  });
 
   describe('5 Dedicated Entanglement Levels Validation', () => {
     it('defines levels 110 to 114 with proper symbols and atoms', () => {

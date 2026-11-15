@@ -1,7 +1,7 @@
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import * as levelsData from '../data/levels';
+import { getAllLevelMetadata, getLevelMetadata } from '../data/levels';
 import { findMoleculeByElements, getMoleculeById } from '../data/molecules';
 import { getElementSpectroscopy } from '../data/spectroscopy';
 import {
@@ -12,10 +12,8 @@ import {
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
 import { isGodMode } from '../tools/godMode';
-import type { IsotopeMedal, LevelData } from '../types';
+import type { IsotopeMedal } from '../types';
 import styles from './LevelSelection.module.css';
-
-const allLevels = levelsData as unknown as Record<string, LevelData>;
 
 export const LevelSelection: React.FC = () => {
   const navigate = useNavigate();
@@ -75,20 +73,15 @@ export const LevelSelection: React.FC = () => {
       : 'classic'
   );
 
-  const raw = Object.keys(allLevels)
-    .filter((key) => key.startsWith('level'))
-    .sort((a, b) => Number(allLevels[a].id) - Number(allLevels[b].id))
-    .filter((key) => {
-      const idNum = Number(allLevels[key].id);
+  const raw = getAllLevelMetadata()
+    .filter((meta) => {
+      const idNum = Number(meta.id);
       if (activeTab === 'entanglement') {
         return idNum >= 110 && idNum <= 114;
       }
       return idNum < 110;
     })
-    .map((key) => {
-      const { id, hue, antiHue, symbol, atom } = allLevels[key];
-      return { id, hue, antiHue, symbol, atom };
-    });
+    .map(({ id, hue, antiHue, symbol, atom }) => ({ id, hue, antiHue, symbol, atom }));
 
   const enriched = raw.map((r) => {
     const scoreEntry = scores[Number(r.id)];
@@ -141,7 +134,7 @@ export const LevelSelection: React.FC = () => {
   const handleSelect = (n: string | number) => {
     if (isDisabled(n)) return;
     updateCurrentLevel(Number(n));
-    const targetLevel = allLevels[`level${n}`];
+    const targetLevel = getLevelMetadata(n);
     if (targetLevel?.explanations && targetLevel.explanations.length > 0) {
       navigate('/explanation');
     } else {

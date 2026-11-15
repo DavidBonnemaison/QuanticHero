@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import * as levelsData from '../data/levels';
+import { getCachedLevel } from '../data/levels';
 import type { GhostMode, IsotopeMedal, LevelData, ScoreItem } from '../types';
 import { bestMedal } from '../services/MedalService';
 
@@ -84,8 +84,6 @@ const defaultParticle = {
   type: 'duplicate' as const
 };
 
-const builtInLevels = levelsData as unknown as Record<string, LevelData>;
-
 export function getEffectiveLevel(
   id: string | number,
   customLevels?: Record<string, LevelData> | null
@@ -93,7 +91,7 @@ export function getEffectiveLevel(
   const strId = String(id);
   const key = strId.startsWith('level') ? strId : `level${strId}`;
   const custom = customLevels !== undefined ? customLevels : useGameStore.getState().customLevels;
-  return custom?.[key] ?? builtInLevels[key];
+  return custom?.[key] ?? getCachedLevel(key);
 }
 
 const customStorage = {
@@ -372,7 +370,7 @@ export const useGameStore = create<GameStore>()(
       updateLevelField: ({ level, type, n, prop, value }: UpdateLevelFieldParams) =>
         set((state) => {
           const levelKey = `level${level}`;
-          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          const sourceLevel = state.customLevels?.[levelKey] ?? getCachedLevel(levelKey);
           if (!sourceLevel) return state;
 
           const targetLevel = state.customLevels?.[levelKey]
@@ -444,7 +442,7 @@ export const useGameStore = create<GameStore>()(
       addPlatform: ({ level }: { level: number }) =>
         set((state) => {
           const levelKey = `level${level}`;
-          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          const sourceLevel = state.customLevels?.[levelKey] ?? getCachedLevel(levelKey);
           if (!sourceLevel) return state;
 
           const targetLevel = state.customLevels?.[levelKey]
@@ -462,7 +460,7 @@ export const useGameStore = create<GameStore>()(
       deletePlatform: ({ level, n }: { level: number; n: number | string }) =>
         set((state) => {
           const levelKey = `level${level}`;
-          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          const sourceLevel = state.customLevels?.[levelKey] ?? getCachedLevel(levelKey);
           if (!sourceLevel) return state;
 
           const targetLevel = state.customLevels?.[levelKey]
@@ -480,7 +478,7 @@ export const useGameStore = create<GameStore>()(
       addParticle: ({ level }: { level: number }) =>
         set((state) => {
           const levelKey = `level${level}`;
-          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          const sourceLevel = state.customLevels?.[levelKey] ?? getCachedLevel(levelKey);
           if (!sourceLevel) return state;
 
           const targetLevel = state.customLevels?.[levelKey]
@@ -498,7 +496,7 @@ export const useGameStore = create<GameStore>()(
       deleteParticle: ({ level, n }: { level: number; n: number | string }) =>
         set((state) => {
           const levelKey = `level${level}`;
-          const sourceLevel = state.customLevels?.[levelKey] ?? builtInLevels[levelKey];
+          const sourceLevel = state.customLevels?.[levelKey] ?? getCachedLevel(levelKey);
           if (!sourceLevel) return state;
 
           const targetLevel = state.customLevels?.[levelKey]
