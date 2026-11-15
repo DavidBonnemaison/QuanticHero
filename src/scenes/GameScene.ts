@@ -12,6 +12,7 @@ import {
   updateDecayPlatform
 } from '../mechanics/quantumMechanics';
 import { PHYSICS } from '../physics/constants';
+import { applyLowGravity, isHeroOnPressurePlate } from '../physics/stepHeroPhysics';
 import { push } from '../shims/navigation';
 import { useGameStore } from '../store';
 import {
@@ -435,9 +436,9 @@ export default class GameScene extends Phaser.Scene {
       this.collapseConfig = this.levelData.collapse;
       this.collapseTopSpikes = this.add.rectangle(
         this.levelData.width / 2,
-        140,
+        PHYSICS.COLLAPSE_TOP_START_Y / 2,
         this.levelData.width + 40,
-        280,
+        PHYSICS.COLLAPSE_TOP_START_Y,
         0xef4444,
         0.55
       );
@@ -448,7 +449,7 @@ export default class GameScene extends Phaser.Scene {
 
       this.collapseBottomSpikes = this.add.rectangle(
         this.levelData.width / 2,
-        this.levelData.height - 60,
+        this.levelData.height - PHYSICS.COLLAPSE_BOTTOM_MARGIN_Y + 80,
         this.levelData.width + 40,
         160,
         0xef4444,
@@ -1226,7 +1227,10 @@ export default class GameScene extends Phaser.Scene {
         break;
       }
       case 'lowGravity': {
-        this.physics.world.gravity.y /= 2;
+        const sign = this.physics.world.gravity.y < 0 ? -1 : 1;
+        const currentMult = Math.abs(this.physics.world.gravity.y) / PHYSICS.GRAVITY_Y;
+        const nextMult = applyLowGravity(currentMult);
+        this.physics.world.gravity.y = sign * PHYSICS.GRAVITY_Y * nextMult;
         break;
       }
       case 'antiGravity': {
@@ -1250,8 +1254,11 @@ export default class GameScene extends Phaser.Scene {
       }
       case 'timeDilation': {
         this.isTimeDilationActive = true;
-        this.timeDilationUntil = this.time.now + 4000;
-        gameEvents.emit('time:dilation', { active: true, durationMs: 4000 });
+        this.timeDilationUntil = this.time.now + PHYSICS.TIME_DILATION_DURATION_MS;
+        gameEvents.emit('time:dilation', {
+          active: true,
+          durationMs: PHYSICS.TIME_DILATION_DURATION_MS
+        });
         break;
       }
     }
@@ -1635,17 +1642,7 @@ export default class GameScene extends Phaser.Scene {
 
         for (const h of this.heroes) {
           if (!h.active || !h.body) continue;
-          const hLeft = h.x - 16;
-          const hRight = h.x + 16;
-          const hBottom = h.y + 20;
-          const hTop = h.y - 20;
-
-          const pLeft = pl.x;
-          const pRight = pl.x + pl.width;
-          const pTop = pl.y - 6;
-          const pBottom = pl.y + pl.height + 6;
-
-          if (hRight > pLeft && hLeft < pRight && hBottom >= pTop && hTop <= pBottom) {
+          if (isHeroOnPressurePlate(h.x, h.y, pl)) {
             hasHeroOnPlate = true;
             triggeringHero = h;
             break;
@@ -1793,24 +1790,24 @@ export default class GameScene extends Phaser.Scene {
       const maxY = Math.max(mp.startY, targetY);
 
       if (mp.direction.x === 'right') {
-        body.setVelocityX(100 * timeDilationFactor);
+        body.setVelocityX(PHYSICS.MOVING_PLATFORM_SPEED_X * timeDilationFactor);
         if (mp.rect.x >= maxX) {
           mp.direction.x = 'left';
         }
       } else if (mp.direction.x === 'left') {
-        body.setVelocityX(-100 * timeDilationFactor);
+        body.setVelocityX(-PHYSICS.MOVING_PLATFORM_SPEED_X * timeDilationFactor);
         if (mp.rect.x <= minX) {
           mp.direction.x = 'right';
         }
       }
 
       if (mp.direction.y === 'bottom') {
-        body.setVelocityY(20 * timeDilationFactor);
+        body.setVelocityY(PHYSICS.MOVING_PLATFORM_SPEED_Y * timeDilationFactor);
         if (mp.rect.y >= maxY) {
           mp.direction.y = 'top';
         }
       } else if (mp.direction.y === 'top') {
-        body.setVelocityY(-20 * timeDilationFactor);
+        body.setVelocityY(-PHYSICS.MOVING_PLATFORM_SPEED_Y * timeDilationFactor);
         if (mp.rect.y <= minY) {
           mp.direction.y = 'bottom';
         }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PHYSICS } from '../physics/constants';
+import { stepHeroControl } from '../physics/stepHeroPhysics';
 import { gameEvents } from '../tools/gameEvents';
 import type { EntanglementMode } from '../types';
 
@@ -163,72 +164,38 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         ? this.body.touching.down || this.body.blocked.down
         : this.body.touching.up || this.body.blocked.up;
 
-    // Active bounce recoil handling (triggered only by scene boundaries)
-    if (this.recoilTimer > 0) {
-      this.recoilTimer -= delta;
-      this.setVelocityX(this.recoilVx);
-      this.recoilVx *= PHYSICS.WALL_RECOIL_DRAG_X;
-
-      // Allow cancelling recoil early if player steers in the bounce direction
-      if (this.recoilVx > 0 && goRight) {
-        this.recoilTimer = 0;
-        this.setVelocityX(PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
-      } else if (this.recoilVx < 0 && goLeft) {
-        this.recoilTimer = 0;
-        this.setVelocityX(-PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
-      }
-
-      this.play(this.getAnimKey('jump'), true);
-      this.setFlipX(this.recoilVx < 0);
-      return;
-    }
-
-    // Normal controls
+    const wasRecoiling = this.recoilTimer > 0;
     const isActive = this.isEntangled || this.isFocused;
 
-    if (isActive) {
-      const isHighSpeed =
-        Math.abs(this.body.velocity.x) > PHYSICS.HERO_SPEED_X * this.velocityMultiplier;
-      if (goLeft) {
-        if (touchingGround || !isHighSpeed) {
-          this.setVelocityX(-PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
-        }
-        this.setFlipX(true);
-        if (touchingGround) {
-          this.play(this.getAnimKey('left'), true);
-        }
-      } else if (goRight) {
-        if (touchingGround || !isHighSpeed) {
-          this.setVelocityX(PHYSICS.HERO_SPEED_X * this.velocityMultiplier);
-        }
-        this.setFlipX(false);
-        if (touchingGround) {
-          this.play(this.getAnimKey('right'), true);
-        }
-      } else {
-        if (touchingGround) {
-          this.setVelocityX(0);
-          this.play(this.getAnimKey('idle'), true);
-        } else {
-          const drag = isHighSpeed ? 0.996 : PHYSICS.AIR_DRAG_X;
-          this.body.velocity.x *= drag;
-        }
-      }
+    const res = stepHeroControl(
+      {
+        vx: this.body.velocity.x,
+        vy: this.body.velocity.y,
+        touchingGround,
+        recoilTimer: this.recoilTimer,
+        recoilVx: this.recoilVx,
+        velocityMultiplier: this.velocityMultiplier,
+        upsideDown: this.upsideDown,
+        flipX: this.flipX,
+        animState: this.getAnimState(),
+        isActive
+      },
+      { left: goLeft, right: goRight, jump },
+      delta
+    );
 
-      if (jump && touchingGround) {
-        this.setVelocityY(PHYSICS.HERO_JUMP_V0 * this.upsideDown);
-        this.play(this.getAnimKey('jump'), true);
-        gameEvents.emit('hero:jump');
-      }
-    } else {
-      if (touchingGround) {
-        this.setVelocityX(0);
-        this.play(this.getAnimKey('idle'), true);
-      }
+    this.recoilTimer = res.recoilTimer;
+    this.recoilVx = res.recoilVx;
+    this.setVelocityX(res.vx);
+    if (res.jumped) {
+      this.setVelocityY(res.vy);
+      gameEvents.emit('hero:jump');
     }
+    this.setFlipX(res.flipX);
+    this.play(this.getAnimKey(res.animState), true);
 
-    if (!touchingGround) {
-      this.play(this.getAnimKey('jump'), true);
+    if (wasRecoiling) {
+      return;
     }
 
     // Translucent shimmering pulse when quantum tunneling charges are active
