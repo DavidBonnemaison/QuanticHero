@@ -305,6 +305,79 @@ describe('SoundManager', () => {
     });
   });
 
+  describe('Spec-07: Musical Synesthesia & Harmonic Quantization', () => {
+    it('selects the matching musical profile for all 7 chemical families', () => {
+      soundManager.setAtomicNumber(2); // Helium -> Noble Gas
+      expect(soundManager.getCurrentFamily()).toBe('noble_gas');
+      expect(soundManager.getCurrentProfile().mode).toBe('lydian');
+
+      soundManager.setAtomicNumber(11); // Sodium -> Alkali
+      expect(soundManager.getCurrentFamily()).toBe('alkali_alkaline_earth');
+      expect(soundManager.getCurrentProfile().baseBpm).toBe(128);
+      expect(soundManager.getCurrentProfile().bassOscType).toBe('sawtooth');
+
+      soundManager.setAtomicNumber(26); // Iron -> Transition Metal
+      expect(soundManager.getCurrentFamily()).toBe('transition_metal');
+      expect(soundManager.getCurrentProfile().mode).toBe('dorian');
+
+      soundManager.setAtomicNumber(17); // Chlorine -> Non-Metal & Halogen
+      expect(soundManager.getCurrentFamily()).toBe('nonmetal_halogen');
+      expect(soundManager.getCurrentProfile().useFmArp).toBe(true);
+      expect(soundManager.getCurrentProfile().syncopated).toBe(true);
+
+      soundManager.setAtomicNumber(92); // Uranium -> Lanthanide & Actinide
+      expect(soundManager.getCurrentFamily()).toBe('lanthanide_actinide');
+      expect(soundManager.getCurrentProfile().mode).toBe('phrygian');
+      expect(soundManager.getCurrentProfile().geigerPulse).toBe(true);
+
+      soundManager.setAtomicNumber(14); // Silicon -> Metalloid
+      expect(soundManager.getCurrentFamily()).toBe('metalloid');
+      expect(soundManager.getCurrentProfile().mode).toBe('mixolydian');
+
+      soundManager.setAtomicNumber(82); // Lead -> Post-Transition
+      expect(soundManager.getCurrentFamily()).toBe('post_transition');
+      expect(soundManager.getCurrentProfile().mode).toBe('aeolian');
+    });
+
+    it('quantizes playJump, playBounceSound, playSynthLandingSound, and playParticleCollect onto active chord degrees', () => {
+      soundManager.setAtomicNumber(10); // Neon (Noble Gas, Lydian Maj7)
+      const chord = soundManager.getActiveChordFrequencies();
+      expect(chord).toHaveLength(5);
+
+      soundManager.playJump();
+      const jumpOsc = mockCtx.createOscillator.mock.results.at(-1)?.value;
+      const jumpStartFreq = jumpOsc.frequency.setValueAtTime.mock.calls[0][0];
+      expect(chord).toContain(jumpStartFreq);
+
+      soundManager.playSynthLandingSound();
+      const landOsc = mockCtx.createOscillator.mock.results.at(-1)?.value;
+      const landFreq = landOsc.frequency.setValueAtTime.mock.calls[0][0];
+      expect(chord.some((f) => Math.abs(f * 2 - landFreq) < 0.05)).toBe(true);
+
+      soundManager.playBounceSound();
+      const bounceOsc = mockCtx.createOscillator.mock.results.at(-1)?.value;
+      const bounceFreq = bounceOsc.frequency.setValueAtTime.mock.calls[0][0];
+      expect(chord).toContain(bounceFreq);
+
+      const synthSpy = vi.spyOn(soundManager, 'playSynthLandingSound');
+      gameEvents.emit('synth:land', { x: 50, y: 100 });
+      expect(synthSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('emits bgm:beat on quarter-note steps during BGM playback', () => {
+      const beatSpy = vi.fn();
+      gameEvents.on('bgm:beat', beatSpy);
+
+      soundManager.setAtomicNumber(57); // Lanthanum (Geiger + Phrygian)
+      soundManager.startBgm();
+      vi.advanceTimersByTime(150);
+
+      expect(beatSpy).toHaveBeenCalled();
+      expect(beatSpy.mock.calls[0][0].step % 4).toBe(0);
+      soundManager.stopBgm();
+    });
+  });
+
   describe('destroy', () => {
     it('stops BGM, unhooks listeners, and closes audio context', () => {
       soundManager.startBgm();

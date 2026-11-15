@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
 import { getNarrativeForLevel } from '../data/cosmicNarrative';
 import * as defaultLevels from '../data/levels';
+import { getAtomicMass, getElementSpectroscopy } from '../data/spectroscopy';
+import { BohrBackgroundRenderer } from '../effects/BohrBackgroundRenderer';
 import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
 import { assembleCampaignLevel, assemblePacedLevel } from '../generator/chunkAssembler';
 import {
@@ -148,6 +150,8 @@ export default class GameScene extends Phaser.Scene {
   private ghostButton: Phaser.GameObjects.Text | null = null;
   private movingPlatforms: MovingPlatform[] = [];
   private molecules: MoleculeParticle[] = [];
+  public bohrBackground: BohrBackgroundRenderer | null = null;
+  public muralObjects: Phaser.GameObjects.GameObject[] = [];
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
   private wasd: { [key: string]: Phaser.Input.Keyboard.Key } | null = null;
   private touchController: MobileTouchController = new MobileTouchController();
@@ -353,6 +357,9 @@ export default class GameScene extends Phaser.Scene {
     this.canAdvanceLevel = false;
     this.nextLevelNumberPending = null;
     this.quantumEffects = null;
+    this.bohrBackground = null;
+    this.muralObjects = [];
+    soundManager.setAtomicNumber(this.getCurrentAtomicNumber());
     this.touchController.reset();
     this.uiPointerConsumed = false;
     this.thumbRibbonGraphics = null;
@@ -961,6 +968,14 @@ export default class GameScene extends Phaser.Scene {
     this.quantumEffects?.destroy();
     this.quantumEffects = null;
 
+    this.bohrBackground?.destroy();
+    this.bohrBackground = null;
+
+    for (const mural of this.muralObjects) {
+      mural.destroy();
+    }
+    this.muralObjects = [];
+
     if (this.entanglementGraphics) {
       this.entanglementGraphics.destroy();
       this.entanglementGraphics = null;
@@ -1054,14 +1069,76 @@ export default class GameScene extends Phaser.Scene {
     this.decayPlatforms = [];
   }
 
+  private getCurrentAtomicNumber(): number {
+    const raw =
+      this.levelData?.symbol ||
+      this.levelData?.id ||
+      useGameStore.getState().currentLevel ||
+      1;
+    return getElementSpectroscopy(raw).z;
+  }
+
   private createMolecules(): void {
-    const numMolecules = 25;
+    const z = this.getCurrentAtomicNumber();
+    const viewW = this.cameras.main?.width || 800;
+    const viewH = this.cameras.main?.height || 600;
+    this.bohrBackground = new BohrBackgroundRenderer(this, z, viewW / 2, viewH / 2);
+
+    // Holographic Mural Inscription in background (depth: 2, alpha: 0.35)
+    const spec = getElementSpectroscopy(z);
+    const mass = getAtomicMass(z);
+    const narrativeLines = getNarrativeForLevel(z);
+    const verse = narrativeLines[0] || spec.description;
+
+    const muralX = Math.min(this.levelData.width * 0.5, viewW * 0.5);
+    const muralY = Math.min(this.levelData.height * 0.45, viewH * 0.44);
+
+    const symbolText = this.add.text(muralX, muralY - 24, spec.symbol, {
+      fontFamily: 'Orbitron',
+      fontSize: '96px',
+      color: spec.antiHue,
+      fontStyle: 'bold'
+    });
+    symbolText.setOrigin(0.5);
+    symbolText.setAlpha(0.35);
+    symbolText.setDepth(2);
+    symbolText.setScrollFactor(0.35);
+    this.muralObjects.push(symbolText);
+
+    const metaText = this.add.text(
+      muralX,
+      muralY + 38,
+      `Z=${spec.z} • ${spec.name.toUpperCase()} • ${mass} u`,
+      {
+        fontFamily: 'Orbitron',
+        fontSize: '14px',
+        color: spec.antiHue
+      }
+    );
+    metaText.setOrigin(0.5);
+    metaText.setAlpha(0.35);
+    metaText.setDepth(2);
+    metaText.setScrollFactor(0.35);
+    this.muralObjects.push(metaText);
+
+    const verseText = this.add.text(muralX, muralY + 62, verse, {
+      fontFamily: 'VT323',
+      fontSize: '20px',
+      color: '#ffffff'
+    });
+    verseText.setOrigin(0.5);
+    verseText.setAlpha(0.35);
+    verseText.setDepth(2);
+    verseText.setScrollFactor(0.35);
+    this.muralObjects.push(verseText);
+
+    const numMolecules = 12;
     for (let i = 0; i < numMolecules; i++) {
       const rx = Phaser.Math.Between(0, this.levelData.width);
       const ry = Phaser.Math.Between(0, this.levelData.height);
-      const radius = Phaser.Math.Between(15, 60);
+      const radius = Phaser.Math.Between(12, 42);
       const color = Phaser.Display.Color.HexStringToColor(this.levelData.antiHue).color;
-      const circle = this.add.circle(rx, ry, radius, color, Phaser.Math.FloatBetween(0.05, 0.15));
+      const circle = this.add.circle(rx, ry, radius, color, Phaser.Math.FloatBetween(0.04, 0.1));
       circle.setDepth(1);
       this.molecules.push({
         circle,
@@ -1918,25 +1995,33 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
+    this.bohrBackground?.addValenceElectron();
     this.showRetroToast(powerUpNames[type] || '');
   }
 
   public showRetroToast(message: string): void {
     if (!message) return;
-    const toast = this.add.text(this.cameras.main.width, 100, message, {
+    const anchorHero = this.heroes.find((h) => h.isFocused && h.active) || this.heroes[0];
+    const startX = anchorHero ? anchorHero.x : (this.cameras.main?.width || 800) / 2;
+    const startY = anchorHero ? anchorHero.y - 36 : (this.cameras.main?.height || 600) / 2 - 36;
+
+    const toast = this.add.text(startX, startY, message, {
       fontFamily: 'VT323',
-      fontSize: '150px',
-      color: '#ffffff'
+      fontSize: '24px',
+      color: this.levelData?.antiHue || '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3
     });
-    toast.setAlpha(0.6);
-    toast.setScrollFactor(0);
-    toast.setDepth(150);
+    toast.setOrigin(0.5);
+    toast.setAlpha(0.95);
+    toast.setDepth(25);
 
     this.tweens.add({
       targets: toast,
-      x: -toast.width,
-      duration: 2200,
-      ease: 'Linear',
+      y: startY - 44,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Cubic.easeOut',
       onComplete: () => toast.destroy()
     });
   }
@@ -2389,6 +2474,7 @@ export default class GameScene extends Phaser.Scene {
     isStatic: boolean
   ): void {
     if (!plat.active) return;
+    gameEvents.emit('synth:land', { x: hero.x, y: hero.y });
 
     // 1. Vertical elastic flexion (+3 * hero.upsideDown px, yoyo back in 160 ms Sine.easeOut)
     if (isStatic && plat.getData('kind') !== 'wall') {
@@ -2880,6 +2966,9 @@ export default class GameScene extends Phaser.Scene {
         }
       }
     }
+
+    // Update Bohr orbital background
+    this.bohrBackground?.update(time, delta);
 
     // Update ambient molecules
     for (const mol of this.molecules) {

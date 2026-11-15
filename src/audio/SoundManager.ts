@@ -1,6 +1,154 @@
+import { type ChemicalFamily, getChemicalFamily } from '../data/spectroscopy';
 import { useGameStore } from '../store';
 import { gameEvents } from '../tools/gameEvents';
 import type { ParticleType } from '../types';
+
+export interface FamilyMusicalProfile {
+  family: ChemicalFamily;
+  label: string;
+  mode: 'lydian' | 'acid_minor' | 'dorian' | 'mixolydian' | 'phrygian' | 'aeolian' | 'pentatonic_syncopated';
+  baseBpm: number;
+  rootHz: number;
+  /** Semitone offsets for scale degrees */
+  scaleSemitones: readonly number[];
+  /** Chord progression root offsets in semitones (4 bars / 4 beats per 16-step bar) */
+  progressionSemitones: readonly [number, number, number, number];
+  /** Intervals (in semitones from chord root) for 1st, 3rd, 5th, 7th, 9th */
+  chordIntervals: readonly [number, number, number, number, number];
+  bassOscType: OscillatorType;
+  arpOscType: OscillatorType;
+  bassFilterCutoff: number;
+  bassFilterQ: number;
+  useFmArp: boolean;
+  syncopated: boolean;
+  geigerPulse: boolean;
+}
+
+export const FAMILY_MUSICAL_PROFILES: Record<ChemicalFamily, FamilyMusicalProfile> = {
+  noble_gas: {
+    family: 'noble_gas',
+    label: 'Gaz Nobles (Lydien Maj7)',
+    mode: 'lydian',
+    baseBpm: 108,
+    rootHz: 130.81, // C3
+    scaleSemitones: [0, 2, 4, 6, 7, 9, 11],
+    progressionSemitones: [0, 7, 5, 2], // I - V - IV - II
+    chordIntervals: [0, 4, 7, 11, 14], // Maj7(9)
+    bassOscType: 'sine',
+    arpOscType: 'triangle',
+    bassFilterCutoff: 900,
+    bassFilterQ: 1.5,
+    useFmArp: false,
+    syncopated: false,
+    geigerPulse: false
+  },
+  alkali_alkaline_earth: {
+    family: 'alkali_alkaline_earth',
+    label: 'Métaux Alcalins & Alcalino-Terreux (Acid 128 BPM)',
+    mode: 'acid_minor',
+    baseBpm: 128,
+    rootHz: 110.0, // A2
+    scaleSemitones: [0, 2, 3, 5, 7, 8, 10],
+    progressionSemitones: [0, 0, 5, 7], // i - i - iv - v
+    chordIntervals: [0, 3, 7, 10, 14], // m7(9)
+    bassOscType: 'sawtooth',
+    arpOscType: 'sawtooth',
+    bassFilterCutoff: 1400,
+    bassFilterQ: 8,
+    useFmArp: false,
+    syncopated: false,
+    geigerPulse: false
+  },
+  transition_metal: {
+    family: 'transition_metal',
+    label: 'Métaux de Transition (Dorien Synthwave)',
+    mode: 'dorian',
+    baseBpm: 120,
+    rootHz: 146.83, // D3
+    scaleSemitones: [0, 2, 3, 5, 7, 9, 10],
+    progressionSemitones: [0, 5, 7, 10], // i - IV - v - bVII
+    chordIntervals: [0, 3, 7, 10, 14], // m7(9)
+    bassOscType: 'triangle',
+    arpOscType: 'sawtooth',
+    bassFilterCutoff: 1200,
+    bassFilterQ: 2.5,
+    useFmArp: false,
+    syncopated: false,
+    geigerPulse: false
+  },
+  nonmetal_halogen: {
+    family: 'nonmetal_halogen',
+    label: 'Non-Métaux & Halogènes (FM Syncopé)',
+    mode: 'pentatonic_syncopated',
+    baseBpm: 124,
+    rootHz: 164.81, // E3
+    scaleSemitones: [0, 3, 5, 7, 10, 12],
+    progressionSemitones: [0, 3, 7, 5],
+    chordIntervals: [0, 3, 7, 10, 14],
+    bassOscType: 'square',
+    arpOscType: 'sine',
+    bassFilterCutoff: 1100,
+    bassFilterQ: 2,
+    useFmArp: true,
+    syncopated: true,
+    geigerPulse: false
+  },
+  lanthanide_actinide: {
+    family: 'lanthanide_actinide',
+    label: 'Lanthanides & Actinides (Phrygien & Geiger)',
+    mode: 'phrygian',
+    baseBpm: 112,
+    rootHz: 87.31, // F2
+    scaleSemitones: [0, 1, 3, 5, 7, 8, 10],
+    progressionSemitones: [0, 1, 3, 1], // i - bII - bIII - bII
+    chordIntervals: [0, 3, 7, 10, 13], // m7(b9)
+    bassOscType: 'sine',
+    arpOscType: 'triangle',
+    bassFilterCutoff: 500,
+    bassFilterQ: 3,
+    useFmArp: false,
+    syncopated: false,
+    geigerPulse: true
+  },
+  metalloid: {
+    family: 'metalloid',
+    label: 'Métalloïdes (Mixolydien Modulaire)',
+    mode: 'mixolydian',
+    baseBpm: 116,
+    rootHz: 98.0, // G2
+    scaleSemitones: [0, 2, 4, 5, 7, 9, 10],
+    progressionSemitones: [0, 10, 5, 0], // I - bVII - IV - I
+    chordIntervals: [0, 4, 7, 10, 14], // 7(9)
+    bassOscType: 'triangle',
+    arpOscType: 'square',
+    bassFilterCutoff: 1300,
+    bassFilterQ: 2,
+    useFmArp: false,
+    syncopated: false,
+    geigerPulse: false
+  },
+  post_transition: {
+    family: 'post_transition',
+    label: 'Métaux Post-Transition (Éolien Industriel)',
+    mode: 'aeolian',
+    baseBpm: 114,
+    rootHz: 123.47, // B2
+    scaleSemitones: [0, 2, 3, 5, 7, 8, 10],
+    progressionSemitones: [0, 8, 5, 7], // i - bVI - iv - v
+    chordIntervals: [0, 3, 7, 10, 14],
+    bassOscType: 'sawtooth',
+    arpOscType: 'triangle',
+    bassFilterCutoff: 850,
+    bassFilterQ: 2,
+    useFmArp: false,
+    syncopated: true,
+    geigerPulse: false
+  }
+};
+
+function semitonesToHz(baseHz: number, semitones: number): number {
+  return baseHz * 2 ** (semitones / 12);
+}
 
 export class SoundManager {
   private ctx: AudioContext | null = null;
@@ -17,8 +165,17 @@ export class SoundManager {
   private clonesCount = 1;
   private isInitialized = false;
 
+  private atomicNumber = 1;
+  private currentFamily: ChemicalFamily = getChemicalFamily(1);
+  private activeChordFrequencies: number[] = [];
+  private sfxDegreeCursor = 0;
+
   private unsubStore: (() => void) | null = null;
   private unsubEvents: Array<() => void> = [];
+
+  constructor() {
+    this.updateActiveChordFrequencies(0);
+  }
 
   public init(): void {
     if (this.isInitialized) return;
@@ -71,6 +228,9 @@ export class SoundManager {
       }),
       gameEvents.on('plate:trigger', () => {
         this.playMechanicalClick();
+      }),
+      gameEvents.on('synth:land', () => {
+        this.playSynthLandingSound();
       })
     );
 
@@ -169,9 +329,59 @@ export class SoundManager {
     return this.clonesCount;
   }
 
+  public setAtomicNumber(z: number): void {
+    const clampedZ = Math.max(1, Math.min(118, Math.round(z)));
+    this.atomicNumber = clampedZ;
+    this.currentFamily = getChemicalFamily(clampedZ);
+    this.updateActiveChordFrequencies(Math.floor(this.currentStep / 4) % 4);
+  }
+
+  public getAtomicNumber(): number {
+    return this.atomicNumber;
+  }
+
+  public getCurrentFamily(): ChemicalFamily {
+    return this.currentFamily;
+  }
+
+  public getCurrentProfile(): FamilyMusicalProfile {
+    return FAMILY_MUSICAL_PROFILES[this.currentFamily];
+  }
+
+  public getActiveChordFrequencies(): number[] {
+    return [...this.activeChordFrequencies];
+  }
+
+  private updateActiveChordFrequencies(chordIndex: number): void {
+    const profile = FAMILY_MUSICAL_PROFILES[this.currentFamily];
+    const chordRootOffset = profile.progressionSemitones[chordIndex % profile.progressionSemitones.length];
+    const chordRootHz = semitonesToHz(profile.rootHz, chordRootOffset);
+    // 1st, 3rd, 5th, 7th, 9th
+    this.activeChordFrequencies = profile.chordIntervals.map((interval) =>
+      Number(semitonesToHz(chordRootHz, interval).toFixed(2))
+    );
+  }
+
+  /**
+   * Returns a frequency quantized to the 1st, 3rd, 5th, 7th, or 9th degree
+   * of the active BGM chord, shifted by an optional number of octaves.
+   */
+  public getQuantizedFrequency(degreeIndex?: number, octaveShift = 0): number {
+    if (this.activeChordFrequencies.length === 0) {
+      this.updateActiveChordFrequencies(0);
+    }
+    const idx =
+      degreeIndex !== undefined
+        ? ((degreeIndex % this.activeChordFrequencies.length) + this.activeChordFrequencies.length) %
+          this.activeChordFrequencies.length
+        : this.sfxDegreeCursor++ % this.activeChordFrequencies.length;
+    const base = this.activeChordFrequencies[idx] ?? 220;
+    return Number((base * 2 ** octaveShift).toFixed(2));
+  }
+
   /**
    * SFX: Jump
-   * Balayage de fréquence ascendant en onde carrée (triangle/square, 150 Hz -> 450 Hz en 120 ms)
+   * Balayage de fréquence ascendant quantifié sur l'accord actif de la BGM
    */
   public playJump(): void {
     const ctx = this.ensureContext();
@@ -185,9 +395,12 @@ export class SoundManager {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
+      const startFreq = this.getQuantizedFrequency(0, 0);
+      const endFreq = this.getQuantizedFrequency(2, 1);
+
       osc.type = 'square';
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.exponentialRampToValueAtTime(450, now + 0.12);
+      osc.frequency.setValueAtTime(startFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.12);
 
       gain.gain.setValueAtTime(0.001, now);
       gain.gain.linearRampToValueAtTime(0.22, now + 0.01);
@@ -282,20 +495,30 @@ export class SoundManager {
 
     try {
       const now = ctx.currentTime;
-      // Bright musical chords with distinct character per power-up
-      let freqs = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 (Default / Duplicate)
-      if (type === 'speed') {
-        freqs = [659.25, 830.61, 987.77, 1318.51, 1567.98]; // E5, G#5, B5, E6, G6
-      } else if (type === 'antiGravity') {
-        freqs = [587.33, 739.99, 880.0, 1174.66, 1479.98]; // D5, F#5, A5, D6, F#6
-      } else if (type === 'lowGravity') {
-        freqs = [440.0, 554.37, 659.25, 880.0, 1108.73]; // A4, C#5, E5, A5, C#6
-      } else if (type === 'tunnel') {
-        freqs = [329.63, 440.0, 659.25, 880.0]; // E4, A4, E5, A5
-      } else if (type === 'pauli') {
-        freqs = [392.0, 587.33, 783.99, 1174.66]; // G4, D5, G5, D6
-      } else if (type === 'timeDilation') {
-        freqs = [783.99, 659.25, 523.25, 392.0]; // G5, E5, C5, G4 descending
+      // Quantized arpeggio onto the active BGM chord degrees (1st, 3rd, 5th, 7th, 9th)
+      let freqs: number[];
+      if (type === 'timeDilation') {
+        freqs = [
+          this.getQuantizedFrequency(4, 1),
+          this.getQuantizedFrequency(3, 1),
+          this.getQuantizedFrequency(2, 1),
+          this.getQuantizedFrequency(0, 1)
+        ];
+      } else if (type === 'speed' || type === 'antiGravity' || type === 'lowGravity') {
+        freqs = [
+          this.getQuantizedFrequency(0, 1),
+          this.getQuantizedFrequency(1, 1),
+          this.getQuantizedFrequency(2, 1),
+          this.getQuantizedFrequency(3, 1),
+          this.getQuantizedFrequency(4, 1)
+        ];
+      } else {
+        freqs = [
+          this.getQuantizedFrequency(0, 1),
+          this.getQuantizedFrequency(1, 1),
+          this.getQuantizedFrequency(2, 1),
+          this.getQuantizedFrequency(0, 2)
+        ];
       }
 
       const noteDuration = 0.045;
@@ -736,7 +959,7 @@ export class SoundManager {
 
   /**
    * SFX: Wall Rebound
-   * Springy dynamic bounce on neon walls
+   * Springy dynamic bounce on neon walls quantized to the active BGM chord
    */
   public playBounceSound(): void {
     const ctx = this.ensureContext();
@@ -752,16 +975,62 @@ export class SoundManager {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
+      const baseFreq = this.getQuantizedFrequency(undefined, 0);
+      const peakFreq = this.getQuantizedFrequency(2, 1);
+
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(160, now);
-      osc.frequency.linearRampToValueAtTime(360, now + 0.03);
-      osc.frequency.exponentialRampToValueAtTime(130, now + duration);
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.linearRampToValueAtTime(peakFreq, now + 0.03);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.85, now + duration);
 
       gain.gain.setValueAtTime(0.001, now);
       gain.gain.linearRampToValueAtTime(0.24, now + 0.008);
       gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
       osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(now);
+      osc.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Synth Platform Landing ("Corde de Synthé")
+   * Warm plucked synth string quantized to the active BGM chord degrees (1st, 3rd, 5th, 7th, 9th)
+   */
+  public playSynthLandingSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.18;
+
+      const freq = this.getQuantizedFrequency(undefined, 1);
+      const osc = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now);
+
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(3.5, now);
+      filter.frequency.setValueAtTime(freq * 4, now);
+      filter.frequency.exponentialRampToValueAtTime(Math.max(220, freq * 1.2), now + duration);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.16, now + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
       gain.connect(this.sfxGain);
 
       osc.start(now);
@@ -806,8 +1075,8 @@ export class SoundManager {
   }
 
   /**
-   * Procedural Ambient Chiptune BGM
-   * Bassline + Arpeggiator with dynamic clone modulation
+   * Procedural Synesthetic BGM
+   * Driven by the chemical family of the current atomic number Z
    */
   public startBgm(): void {
     if (this.isBgmPlaying) return;
@@ -844,38 +1113,57 @@ export class SoundManager {
     if (!this.ctx || !this.bgmGain || !this.isBgmPlaying) return;
 
     const scheduleAheadTime = 0.12;
-    // Tempo scales slightly when clones are present
-    const bpm = this.clonesCount >= 3 ? 134 : this.clonesCount >= 2 ? 126 : 118;
+    const profile = FAMILY_MUSICAL_PROFILES[this.currentFamily];
+    // Tempo scales slightly when clones are present around the family base BPM
+    const cloneBoost = this.clonesCount >= 3 ? 14 : this.clonesCount >= 2 ? 7 : 0;
+    const bpm = profile.baseBpm + cloneBoost;
     const stepDuration = 60 / (bpm * 4); // 16th note duration
 
     while (this.nextNoteTime < this.ctx.currentTime + scheduleAheadTime) {
-      this.scheduleStep(this.nextNoteTime, this.currentStep, stepDuration);
+      this.scheduleStep(this.nextNoteTime, this.currentStep, stepDuration, bpm);
       this.nextNoteTime += stepDuration;
       this.currentStep = (this.currentStep + 1) % 16;
     }
   }
 
-  private scheduleStep(time: number, step: number, stepDuration: number): void {
+  private scheduleStep(time: number, step: number, stepDuration: number, bpm = 118): void {
     if (!this.ctx || !this.bgmGain) return;
 
-    // 1. Bassline (plays on beats 0, 4, 8, 12, with occasional syncopations)
-    // A minor progression: A -> F -> D -> E
-    const bassScale = [55, 43.65, 73.42, 82.41]; // A1, F1, D2, E2
-    const bassNote = bassScale[Math.floor(step / 4) % bassScale.length];
+    const profile = FAMILY_MUSICAL_PROFILES[this.currentFamily];
+    const chordIndex = Math.floor(step / 4) % profile.progressionSemitones.length;
+    this.updateActiveChordFrequencies(chordIndex);
 
-    if (step % 4 === 0 || (this.clonesCount >= 2 && step % 4 === 2)) {
+    if (step % 4 === 0) {
+      gameEvents.emit('bgm:beat', { step, bpm });
+    }
+
+    // 1. Bassline (with family-specific oscillator & filter)
+    const chordOffset = profile.progressionSemitones[chordIndex];
+    const bassNote = semitonesToHz(profile.rootHz / 2, chordOffset);
+    const shouldPlayBass =
+      step % 4 === 0 ||
+      (this.clonesCount >= 2 && step % 4 === 2) ||
+      (profile.family === 'alkali_alkaline_earth' && (step === 6 || step === 14));
+
+    if (shouldPlayBass) {
       try {
         const bassOsc = this.ctx.createOscillator();
+        const bassFilter = this.ctx.createBiquadFilter();
         const bassGain = this.ctx.createGain();
-        bassOsc.type = 'triangle';
+        bassOsc.type = profile.bassOscType;
         bassOsc.frequency.setValueAtTime(bassNote, time);
+
+        bassFilter.type = 'lowpass';
+        bassFilter.Q.setValueAtTime(profile.bassFilterQ, time);
+        bassFilter.frequency.setValueAtTime(profile.bassFilterCutoff, time);
 
         const bassDur = stepDuration * 1.6;
         bassGain.gain.setValueAtTime(0.001, time);
         bassGain.gain.linearRampToValueAtTime(0.18, time + 0.01);
         bassGain.gain.exponentialRampToValueAtTime(0.001, time + bassDur);
 
-        bassOsc.connect(bassGain);
+        bassOsc.connect(bassFilter);
+        bassFilter.connect(bassGain);
         bassGain.connect(this.bgmGain);
 
         bassOsc.start(time);
@@ -885,34 +1173,42 @@ export class SoundManager {
       }
     }
 
-    // 2. Arpeggiator (retro synth pattern)
-    // Scale: A minor / Pentatonic [A3, C4, E4, G4, A4, C5, E5, G5]
-    const arpNotes = [220, 261.63, 329.63, 392.0, 440, 523.25, 659.25, 783.99];
+    // 2. Arpeggiator (mode-accurate scale & family timbre)
+    const scaleNotes = profile.scaleSemitones.map((st) => semitonesToHz(profile.rootHz * 2, st));
+    const shouldPlayArp = profile.syncopated
+      ? step % 3 === 0 || (this.clonesCount > 1 && step % 2 === 1)
+      : this.clonesCount > 1
+        ? true
+        : step % 2 === 0;
 
-    // With 1 clone: plays on even steps (8th notes).
-    // With 2+ clones: plays on all 16th steps.
-    const shouldPlayArp = this.clonesCount > 1 ? true : step % 2 === 0;
-
-    if (shouldPlayArp) {
+    if (shouldPlayArp && scaleNotes.length > 0) {
       try {
-        // Select note based on step & clone intensity
-        let noteIndex = (step * 2 + (this.clonesCount - 1)) % arpNotes.length;
+        let noteIndex = (step * 2 + (this.clonesCount - 1)) % scaleNotes.length;
         if (this.clonesCount >= 3 && step % 4 === 3) {
-          noteIndex = (noteIndex + 3) % arpNotes.length;
+          noteIndex = (noteIndex + 3) % scaleNotes.length;
         }
-        const freq = arpNotes[noteIndex];
+        const freq = scaleNotes[noteIndex];
 
         const arpOsc = this.ctx.createOscillator();
         const arpGain = this.ctx.createGain();
 
-        // More aggressive chiptune wave if multiple clones
-        arpOsc.type = this.clonesCount >= 2 ? 'square' : 'sine';
+        arpOsc.type = this.clonesCount >= 2 ? 'square' : profile.arpOscType;
         arpOsc.frequency.setValueAtTime(freq, time);
 
-        // Lowpass filter on square to give sweet retro 8-bit aesthetic
+        let modOsc: OscillatorNode | null = null;
+        if (profile.useFmArp) {
+          modOsc = this.ctx.createOscillator();
+          const modGain = this.ctx.createGain();
+          modOsc.type = 'sine';
+          modOsc.frequency.setValueAtTime(freq * 2, time);
+          modGain.gain.setValueAtTime(freq * 0.45, time);
+          modOsc.connect(modGain);
+          modGain.connect(arpOsc.frequency);
+        }
+
         const arpFilter = this.ctx.createBiquadFilter();
         arpFilter.type = 'lowpass';
-        arpFilter.frequency.setValueAtTime(this.clonesCount >= 2 ? 1800 : 1200, time);
+        arpFilter.frequency.setValueAtTime(this.clonesCount >= 2 ? 2000 : 1400, time);
 
         const arpDur = stepDuration * 0.85;
         const peakGain = this.clonesCount >= 2 ? 0.08 : 0.06;
@@ -925,8 +1221,35 @@ export class SoundManager {
         arpFilter.connect(arpGain);
         arpGain.connect(this.bgmGain);
 
+        if (modOsc) {
+          modOsc.start(time);
+          modOsc.stop(time + arpDur + 0.01);
+        }
         arpOsc.start(time);
         arpOsc.stop(time + arpDur + 0.01);
+      } catch {
+        // safe
+      }
+    }
+
+    // 3. Rhythmic Geiger micro-pulsations for radioactive Lanthanides & Actinides (Z >= 57)
+    if (profile.geigerPulse && (step % 4 === 1 || step % 7 === 0)) {
+      try {
+        const geigerOsc = this.ctx.createOscillator();
+        const geigerGain = this.ctx.createGain();
+        geigerOsc.type = 'square';
+        geigerOsc.frequency.setValueAtTime(3200, time);
+        geigerOsc.frequency.exponentialRampToValueAtTime(900, time + 0.015);
+
+        geigerGain.gain.setValueAtTime(0.001, time);
+        geigerGain.gain.linearRampToValueAtTime(0.04, time + 0.002);
+        geigerGain.gain.exponentialRampToValueAtTime(0.001, time + 0.018);
+
+        geigerOsc.connect(geigerGain);
+        geigerGain.connect(this.bgmGain);
+
+        geigerOsc.start(time);
+        geigerOsc.stop(time + 0.02);
       } catch {
         // safe
       }

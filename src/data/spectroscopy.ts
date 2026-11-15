@@ -1195,3 +1195,112 @@ export function getElementSpectroscopy(zOrSymbol: number | string): ElementSpect
   // Fallback to Hydrogen if unmapped
   return SPECTROSCOPY_DATABASE[0];
 }
+
+export type ChemicalFamily =
+  | 'noble_gas'
+  | 'alkali_alkaline_earth'
+  | 'transition_metal'
+  | 'nonmetal_halogen'
+  | 'lanthanide_actinide'
+  | 'metalloid'
+  | 'post_transition';
+
+const NOBLE_GASES = new Set([2, 10, 18, 36, 54, 86, 118]);
+const ALKALI_AND_ALKALINE_EARTH = new Set([3, 4, 11, 12, 19, 20, 37, 38, 55, 56, 87, 88]);
+const METALLOIDS = new Set([5, 14, 32, 33, 51, 52, 84]);
+const NONMETALS_AND_HALOGENS = new Set([1, 6, 7, 8, 9, 15, 16, 17, 34, 35, 53, 85, 117]);
+const POST_TRANSITION_METALS = new Set([13, 31, 49, 50, 81, 82, 83, 113, 114, 115, 116]);
+
+/**
+ * Classifies an atomic number Z (1..118) into one of the 7 chemical families
+ * used for musical synesthesia and visual theming.
+ */
+export function getChemicalFamily(z: number): ChemicalFamily {
+  const clampedZ = Math.max(1, Math.min(118, Math.round(z)));
+  if (NOBLE_GASES.has(clampedZ)) return 'noble_gas';
+  if (ALKALI_AND_ALKALINE_EARTH.has(clampedZ)) return 'alkali_alkaline_earth';
+  if ((clampedZ >= 57 && clampedZ <= 71) || (clampedZ >= 89 && clampedZ <= 103)) {
+    return 'lanthanide_actinide';
+  }
+  if (NONMETALS_AND_HALOGENS.has(clampedZ)) return 'nonmetal_halogen';
+  if (METALLOIDS.has(clampedZ)) return 'metalloid';
+  if (POST_TRANSITION_METALS.has(clampedZ)) return 'post_transition';
+  return 'transition_metal';
+}
+
+// Standard atomic weights (u) for Z = 1..118
+const ATOMIC_MASSES: readonly string[] = [
+  '1.008', '4.0026', '6.94', '9.0122', '10.81', '12.011', '14.007', '15.999', '18.998', '20.180',
+  '22.990', '24.305', '26.982', '28.085', '30.974', '32.06', '35.45', '39.948', '39.098', '40.078',
+  '44.956', '47.867', '50.942', '51.996', '54.938', '55.845', '58.933', '58.693', '63.546', '65.38',
+  '69.723', '72.630', '74.922', '78.971', '79.904', '83.798', '85.468', '87.62', '88.906', '91.224',
+  '92.906', '95.95', '[98]', '101.07', '102.91', '106.42', '107.87', '112.41', '114.82', '118.71',
+  '121.76', '127.60', '126.90', '131.29', '132.91', '137.33', '138.91', '140.12', '140.91', '144.24',
+  '[145]', '150.36', '151.96', '157.25', '158.93', '162.50', '164.93', '167.26', '168.93', '173.05',
+  '174.97', '178.49', '180.95', '183.84', '186.21', '190.23', '192.22', '195.08', '196.97', '200.59',
+  '204.38', '207.2', '208.98', '[209]', '[210]', '[222]', '[223]', '[226]', '[227]', '232.04',
+  '231.04', '238.03', '[237]', '[244]', '[243]', '[247]', '[247]', '[251]', '[252]', '[257]',
+  '[258]', '[259]', '[266]', '[267]', '[268]', '[269]', '[270]', '[277]', '[278]', '[281]',
+  '[282]', '[285]', '[286]', '[289]', '[290]', '[293]', '[294]', '[294]'
+];
+
+/**
+ * Returns the standard atomic mass string (in u) for atomic number Z (1..118).
+ */
+export function getAtomicMass(z: number): string {
+  const idx = Math.max(1, Math.min(118, Math.round(z))) - 1;
+  return ATOMIC_MASSES[idx] ?? '1.008';
+}
+
+function wavelengthNmToHex(nm: number): string {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (nm >= 380 && nm < 440) {
+    r = -(nm - 440) / (440 - 380);
+    b = 1;
+  } else if (nm >= 440 && nm < 490) {
+    g = (nm - 440) / (490 - 440);
+    b = 1;
+  } else if (nm >= 490 && nm < 510) {
+    g = 1;
+    b = -(nm - 510) / (510 - 490);
+  } else if (nm >= 510 && nm < 580) {
+    r = (nm - 510) / (580 - 510);
+    g = 1;
+  } else if (nm >= 580 && nm < 645) {
+    r = 1;
+    g = -(nm - 645) / (645 - 580);
+  } else if (nm >= 645 && nm <= 780) {
+    r = 1;
+  } else {
+    // Near UV / IR fallback
+    r = nm < 380 ? 0.6 : 0.85;
+    b = nm < 380 ? 1.0 : 0.2;
+  }
+
+  const toHex = (c: number) =>
+    Math.round(Math.max(0, Math.min(1, c)) * 255)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/**
+ * Returns an array of hex colors representing the spectral emission lines
+ * for an element Z, used for Bohr orbital rings and visual synesthesia.
+ */
+export function getSpectralLineColors(z: number): string[] {
+  const el = getElementSpectroscopy(z);
+  const colors: string[] = [el.antiHue];
+  if (typeof el.spectralLineNm === 'number') {
+    colors.push(wavelengthNmToHex(el.spectralLineNm));
+  }
+  // Add harmonic complementary spectral shifts derived from Z
+  const secondaryNm = 410 + ((el.z * 37) % 260);
+  const tertiaryNm = 430 + ((el.z * 73) % 240);
+  colors.push(wavelengthNmToHex(secondaryNm));
+  colors.push(wavelengthNmToHex(tertiaryNm));
+  return colors;
+}
+

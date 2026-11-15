@@ -635,4 +635,40 @@ describe('GameScene Spec-06: Swarm Replay & Isotope Medals', () => {
     expect(saved.lastJumps).toBe(2);
     expect(saved.medal).toBe('gold');
   });
+
+  it('Spec-07: showRetroToast renders diegetic 24px halo (never > 32px) anchored at (hero.x, hero.y - 36)', () => {
+    const hero = scene.heroes[0];
+    hero.x = 220;
+    hero.y = 380;
+
+    (scene as any).add.text.mockClear();
+    scene.showRetroToast('QUANTUM SPEED !');
+
+    expect((scene as any).add.text).toHaveBeenCalledTimes(1);
+    const [tx, ty, msg, style] = (scene as any).add.text.mock.calls[0];
+    expect(tx).toBe(220);
+    expect(ty).toBe(380 - 36);
+    expect(msg).toBe('QUANTUM SPEED !');
+    const fontSizePx = Number.parseInt(String(style.fontSize), 10);
+    expect(fontSizePx).toBeLessThanOrEqual(32);
+    expect(fontSizePx).toBe(24);
+  });
+
+  it('Spec-07: creates BohrBackgroundRenderer and holographic mural (depth 2, alpha 0.35) and adds valence electron on collectParticle', () => {
+    expect(scene.bohrBackground).not.toBeNull();
+    expect(scene.muralObjects).toHaveLength(3);
+    for (const mural of scene.muralObjects as any[]) {
+      expect(mural.depth).toBe(2);
+      expect(mural.alpha).toBe(0.35);
+    }
+
+    const initialTotal = scene.bohrBackground!.getTotalElectronCount();
+    const mockParticle = {
+      active: true,
+      getData: vi.fn(() => 'speed'),
+      disableBody: vi.fn()
+    };
+    (scene as any).collectParticle(scene.heroes[0], mockParticle);
+    expect(scene.bohrBackground!.getTotalElectronCount()).toBe(initialTotal + 1);
+  });
 });

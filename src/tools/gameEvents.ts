@@ -17,6 +17,8 @@ export interface GameEventPayloads {
   'hero:dive': { x: number; y: number };
   'hero:wavedash': { x: number; y: number };
   'hero:focus_switch': { fromId: number; toId: number };
+  'bgm:beat': { step: number; bpm: number };
+  'synth:land': { x: number; y: number };
 }
 
 export type GameEventName = keyof GameEventPayloads;
