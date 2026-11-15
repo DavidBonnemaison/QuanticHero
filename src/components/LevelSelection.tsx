@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import * as levelsData from '../data/levels';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
+import { isGodMode } from '../tools/godMode';
 import type { LevelData } from '../types';
 import styles from './LevelSelection.module.css';
 
@@ -12,14 +13,29 @@ const allLevels = levelsData as unknown as Record<string, LevelData>;
 export const LevelSelection: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const godMode = isGodMode();
   const maxLevel = useGameStore((state) => state.maxLevel);
   const maxEntanglementLevel = useGameStore((state) => state.maxEntanglementLevel ?? 110);
   const scores = useGameStore((state) => state.scores);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
-  const ghostEnabled = useGameStore((state) => state.ghostEnabled);
+  const ghostMode = useGameStore(
+    (state) => state.ghostMode ?? (state.ghostEnabled ? 'optimal' : 'off')
+  );
   const toggleGhost = useGameStore((state) => state.toggleGhost);
 
-  const isEntanglementUnlocked = maxLevel >= 10 || location.search.includes('entanglement=1');
+  const hasPersonalRun = Object.values(scores).some(
+    (s) => s.best > 0 && Boolean(s.ghostTrajectory)
+  );
+
+  const ghostLabel =
+    ghostMode === 'off'
+      ? '[GHOST: OFF]'
+      : ghostMode === 'optimal'
+        ? '[GHOST: OPTIMAL]'
+        : '[GHOST: BEST]';
+
+  const isEntanglementUnlocked =
+    godMode || maxLevel >= 10 || location.search.includes('entanglement=1');
   const [activeTab, setActiveTab] = useState<'classic' | 'entanglement'>(
     isEntanglementUnlocked &&
       (location.search.includes('tab=entanglement') || location.search.includes('entanglement=1'))
@@ -48,6 +64,7 @@ export const LevelSelection: React.FC = () => {
   }));
 
   const isDisabled = (id: string | number) => {
+    if (godMode) return false;
     const num = Number(id);
     if (num >= 110) {
       return num > maxEntanglementLevel;
@@ -72,15 +89,15 @@ export const LevelSelection: React.FC = () => {
         <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
           ◄ MENU
         </button>
-        <h1 className={styles.title}>Level Selection</h1>
+        <h1 className={styles.title}>Level Selection{godMode ? ' [GOD]' : ''}</h1>
         <button
           type="button"
-          className={`${styles.ghostToggle} ${ghostEnabled ? styles.ghostToggleActive : ''}`}
-          onClick={toggleGhost}
-          title={ghostEnabled ? 'Ghost replay enabled' : 'Ghost replay disabled'}
-          aria-label={ghostEnabled ? 'Ghost enabled' : 'Ghost disabled'}
+          className={`${styles.ghostToggle} ${ghostMode !== 'off' ? styles.ghostToggleActive : ''}`}
+          onClick={() => toggleGhost(hasPersonalRun)}
+          title={`Ghost replay mode: ${ghostMode}`}
+          aria-label={ghostMode === 'off' ? 'Ghost disabled' : `Ghost enabled (${ghostMode})`}
         >
-          {ghostEnabled ? '[GHOST: ON]' : '[GHOST: OFF]'}
+          {ghostLabel}
         </button>
       </div>
 
@@ -100,8 +117,7 @@ export const LevelSelection: React.FC = () => {
             }`}
             onClick={() => setActiveTab('entanglement')}
           >
-            [ ENTANGLEMENT Ψ ⊗ Ψ ]
-            <span className={styles.entanglementTabBadge}>110-114</span>
+            [ ENTANGLEMENT Ψ ⊗ Ψ ]<span className={styles.entanglementTabBadge}>110-114</span>
           </button>
         </div>
       )}

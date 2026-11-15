@@ -71,7 +71,7 @@ describe('Quantum Entanglement Mode & Physics', () => {
       for (const id of [110, 111, 112, 113, 114]) {
         const lvl = levels[`level${id}`];
         expect(lvl.explanations).toBeDefined();
-        expect(lvl.explanations!.length).toBeGreaterThan(0);
+        expect(lvl.explanations?.length).toBeGreaterThan(0);
       }
     });
   });

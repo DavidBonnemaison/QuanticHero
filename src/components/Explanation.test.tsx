@@ -28,8 +28,8 @@ describe('Explanation component', () => {
   it('renders explanations for current level 1 and the "Got it" button', () => {
     renderWithRouter();
 
-    expect(screen.getByText(/reduced to a veeery small size/i)).toBeInTheDocument();
-    expect(screen.getByText(/try to get that electron/i)).toBeInTheDocument();
+    expect(screen.getByText(/reduced to a single quantum/i)).toBeInTheDocument();
+    expect(screen.getByText(/what carries a spark across the dark/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /got it/i })).toBeInTheDocument();
   });
 

@@ -110,12 +110,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
         aria-modal="true"
         aria-labelledby="share-modal-title"
       >
-        <button
-          type="button"
-          className={styles.closeButton}
-          onClick={onClose}
-          aria-label="Close"
-        >
+        <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Close">
           [X]
         </button>
 
@@ -123,9 +118,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
           <h2 id="share-modal-title" className={styles.title}>
             === QUANTUM CHALLENGE ===
           </h2>
-          <p className={styles.subtitle}>
-            SCAN ARCADE QR CODE OR COPY CHALLENGE LINK
-          </p>
+          <p className={styles.subtitle}>SCAN ARCADE QR CODE OR COPY CHALLENGE LINK</p>
         </div>
 
         <div className={styles.levelInfo}>
@@ -138,9 +131,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
             </div>
           )}
           {level.authorGhost && (
-            <div className={styles.ghostBadge}>
-              ★ AUTHOR GHOST INCLUDED IN CHALLENGE ★
-            </div>
+            <div className={styles.ghostBadge}>★ AUTHOR GHOST INCLUDED IN CHALLENGE ★</div>
           )}
         </div>
 
@@ -154,14 +145,10 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, level, 
                 data-testid="qr-code-image"
               />
             ) : (
-              <div className={styles.qrLoading}>
-                GENERATING QR CODE...
-              </div>
+              <div className={styles.qrLoading}>GENERATING QR CODE...</div>
             )}
           </div>
-          <div className={styles.qrHint}>
-            [ SCAN WITH A SMARTPHONE CAMERA ]
-          </div>
+          <div className={styles.qrHint}>[ SCAN WITH A SMARTPHONE CAMERA ]</div>
         </div>
 
         <div className={styles.urlSection}>
