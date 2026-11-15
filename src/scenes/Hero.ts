@@ -132,8 +132,18 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     ease: string
   ): void {
     const baseScale = this.fusionStack >= 2 ? PHYSICS.SUPER_QUANTA_SCALE : 1;
+    const applyBodyAnchor = (sy: number) => {
+      const arcadeBody = this.body as Phaser.Physics.Arcade.Body | undefined;
+      if (arcadeBody && typeof arcadeBody.setOffset === 'function' && sy > 0) {
+        // Keep body bottom anchored when sprite scales vertically around center origin (0.5, 0.5)
+        const halfH = PHYSICS.HERO_HEIGHT / 2;
+        const baseOffsetY = (this.height - arcadeBody.height) / 2;
+        arcadeBody.setOffset(arcadeBody.offset.x, baseOffsetY + halfH * (1 - 1 / sy));
+      }
+    };
     if (typeof this.setScale === 'function') {
       this.setScale(startScaleX * baseScale, startScaleY * baseScale);
+      applyBodyAnchor(startScaleY * baseScale);
     }
     if (this.scene?.tweens?.add) {
       this.scene.tweens.killTweensOf?.(this);
@@ -142,7 +152,9 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         scaleX: baseScale,
         scaleY: baseScale,
         duration,
-        ease
+        ease,
+        onUpdate: () => applyBodyAnchor(this.scaleY),
+        onComplete: () => applyBodyAnchor(baseScale)
       });
     }
   }
@@ -308,9 +320,11 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
 
     if (touchingGround && !this.wasTouchingGround) {
       const impactSpeed = Math.abs(this.lastAirborneVy);
-      const intensity = Math.min(1, Math.max(0.35, impactSpeed / 450));
-      this.tweenSquashStretch(1 + 0.28 * intensity, 1 - 0.26 * intensity, 120, 'Sine.easeOut');
-      this.spawnLandingDust();
+      if (impactSpeed >= 80) {
+        const intensity = Math.min(1, Math.max(0.35, impactSpeed / 450));
+        this.tweenSquashStretch(1 + 0.28 * intensity, 1 - 0.26 * intensity, 120, 'Sine.easeOut');
+        this.spawnLandingDust();
+      }
     }
 
     if (touchingGround) {
