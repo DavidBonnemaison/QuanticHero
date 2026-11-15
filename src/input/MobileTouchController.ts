@@ -17,10 +17,12 @@ export interface TouchInputState {
 
 export interface PointerDownResult {
   doubleTap: boolean;
+  isPrimary?: boolean;
 }
 
 export class MobileTouchController {
   public isPointerDown = false;
+  public activePointerId: number | null = null;
   public anchorX = 0;
   public anchorY = 0;
   public pointerX = 0;
@@ -40,11 +42,21 @@ export class MobileTouchController {
     diveRequested: false
   };
 
-  public onPointerDown(x: number, y: number, timeMs: number): PointerDownResult {
+  public onPointerDown(
+    x: number,
+    y: number,
+    timeMs: number,
+    pointerId = 0
+  ): PointerDownResult {
+    if (this.isPointerDown && this.activePointerId !== null && this.activePointerId !== pointerId) {
+      return { doubleTap: false, isPrimary: false };
+    }
+
     const doubleTap = timeMs - this.lastPointerDownTime < DOUBLE_TAP_WINDOW_MS;
     this.lastPointerDownTime = doubleTap ? -Infinity : timeMs;
 
     this.isPointerDown = true;
+    this.activePointerId = pointerId;
     this.anchorX = x;
     this.anchorY = y;
     this.pointerX = x;
@@ -60,16 +72,24 @@ export class MobileTouchController {
     this.state.jumpHeld = false;
     this.state.diveRequested = false;
 
-    return { doubleTap };
+    return { doubleTap, isPrimary: true };
   }
 
   public onPointerMove(
     x: number,
     y: number,
     timeMs: number,
-    touchingGround = false
+    touchingGround = false,
+    pointerId?: number
   ): TouchInputState {
     if (!this.isPointerDown) return this.state;
+    if (
+      pointerId !== undefined &&
+      this.activePointerId !== null &&
+      pointerId !== this.activePointerId
+    ) {
+      return this.state;
+    }
 
     this.pointerX = x;
     this.pointerY = y;
@@ -125,8 +145,17 @@ export class MobileTouchController {
     return this.state;
   }
 
-  public onPointerUp(): TouchInputState {
+  public onPointerUp(pointerId?: number): TouchInputState {
+    if (
+      pointerId !== undefined &&
+      this.activePointerId !== null &&
+      pointerId !== this.activePointerId
+    ) {
+      return this.state;
+    }
+
     this.isPointerDown = false;
+    this.activePointerId = null;
     this.jumpActive = false;
     this.state.left = false;
     this.state.right = false;

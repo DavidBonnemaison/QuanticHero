@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { soundManager } from '../audio/SoundManager';
 import { useGameStore } from '../store';
 import { gameEvents } from '../tools/gameEvents';
@@ -439,6 +439,11 @@ const makeTestLevel = (id: string, atom: string, symbol: string): LevelData => (
 
 describe('GameScene Spec-05: Zero-Cut Loop & quickRespawn', () => {
   let scene: GameScene;
+
+  beforeAll(async () => {
+    const { loadLevel } = await import('../data/levels');
+    await Promise.all([loadLevel(1), loadLevel(2)]);
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();

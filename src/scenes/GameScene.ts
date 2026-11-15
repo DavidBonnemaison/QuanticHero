@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
 import { getNarrativeForLevel } from '../data/cosmicNarrative';
-import * as defaultLevels from '../data/levels';
+import { getCachedLevel, getLevelMetadata, loadLevel, preloadLevel } from '../data/levels';
 import { getMoleculeById } from '../data/molecules';
 import { getAtomicMass, getElementSpectroscopy } from '../data/spectroscopy';
 import { BohrBackgroundRenderer } from '../effects/BohrBackgroundRenderer';
@@ -243,6 +243,7 @@ export default class GameScene extends Phaser.Scene {
   private hasCondenseAbility = false;
   private fKey: Phaser.Input.Keyboard.Key | null = null;
   private activePinPointerWorld: { x: number; y: number } | null = null;
+  private activePinPointerId: number | null = null;
   private alphaArrivalTimeMs: number | null = null;
   private betaArrivalTimeMs: number | null = null;
   private bubbleHarvestHits: Array<{ molIndex: number; x: number; y: number; timeMs: number }> = [];
@@ -342,17 +343,17 @@ export default class GameScene extends Phaser.Scene {
 
     const currentLevel = store.currentLevel || 1;
     const selected = this.resolveLevelData(currentLevel);
-    this.levelData = selected || (defaultLevels as unknown as Record<string, LevelData>).level1;
+    this.levelData = selected || (getCachedLevel(1) as LevelData);
     if (!selected) {
       store.updateCurrentLevel(1);
     }
+    preloadLevel(currentLevel + 1);
   }
 
   public resolveLevelData(levelNumber: number): LevelData | undefined {
     const store = useGameStore.getState();
-    const builtInLevels = defaultLevels as unknown as Record<string, LevelData>;
     const levelKey = `level${levelNumber}`;
-    return store.customLevels?.[levelKey] || builtInLevels[levelKey];
+    return store.customLevels?.[levelKey] || getCachedLevel(levelKey);
   }
 
   create(): void {
@@ -1605,21 +1606,39 @@ export default class GameScene extends Phaser.Scene {
         return;
       }
 
-      // 2-finger tap: Broglie Wave-Trail Solidification
-      if (this.input.pointer1?.isDown && this.input.pointer2?.isDown) {
-        this.tryCrystallizeBroglieTrail();
+      const worldPt = this.getPointerWorldCoords(pointer);
+      const touchedPinnable = Boolean(
+        findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)
+      );
+
+      // Multi-touch: if primary Thumb-Ribbon pointer is already active, handle 2nd finger independently
+      if (
+        this.touchController.isPointerDown &&
+        this.touchController.activePointerId !== null &&
+        this.touchController.activePointerId !== pointer.id
+      ) {
+        if (touchedPinnable) {
+          // 2nd finger on a pinnable platform: activate Quantum Pinning without overwriting anchorX/Y or triggering Broglie
+          this.activePinPointerWorld = worldPt;
+          this.activePinPointerId = pointer.id;
+        } else {
+          // 2nd finger elsewhere: trigger Broglie crystallization without interrupting primary thumb
+          this.tryCrystallizeBroglieTrail();
+        }
+        return;
       }
 
       // Quantum Pinning: holding pointer directly on a decayMs or phase platform
-      const worldPt = this.getPointerWorldCoords(pointer);
-      if (findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)) {
+      if (touchedPinnable) {
         this.activePinPointerWorld = worldPt;
+        this.activePinPointerId = pointer.id;
       }
 
       const { doubleTap } = this.touchController.onPointerDown(
         pointer.x,
         pointer.y,
-        this.time.now
+        this.time.now,
+        pointer.id
       );
       if (doubleTap) {
         if (this.tryInFlightFission()) {
@@ -1636,26 +1655,48 @@ export default class GameScene extends Phaser.Scene {
       if (!this.isLevelCompleted && !this.isTransitioningLevel) {
         this.trackBubblePointerMove(worldPt.x, worldPt.y, this.time?.now ?? Date.now());
       }
-      if (pointer.isDown) {
+      if (pointer.isDown && (this.activePinPointerId === null || this.activePinPointerId === pointer.id)) {
         if (findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)) {
           this.activePinPointerWorld = worldPt;
-        } else if (this.activePinPointerWorld) {
+          this.activePinPointerId = pointer.id;
+        } else if (this.activePinPointerId === pointer.id) {
           this.activePinPointerWorld = null;
+          this.activePinPointerId = null;
         }
       }
-      if (!this.touchController.isPointerDown) return;
+      if (
+        !this.touchController.isPointerDown ||
+        (this.touchController.activePointerId !== null &&
+          this.touchController.activePointerId !== pointer.id)
+      ) {
+        return;
+      }
       const focused = this.heroes.find((h) => h.isFocused) || this.heroes[0];
       const touchingGround = focused?.body
         ? focused.upsideDown === 1
           ? focused.body.touching.down || focused.body.blocked.down
           : focused.body.touching.up || focused.body.blocked.up
         : false;
-      this.touchController.onPointerMove(pointer.x, pointer.y, this.time.now, touchingGround);
+      this.touchController.onPointerMove(
+        pointer.x,
+        pointer.y,
+        this.time.now,
+        touchingGround,
+        pointer.id
+      );
     });
 
-    this.input.on('pointerup', () => {
-      this.activePinPointerWorld = null;
-      this.touchController.onPointerUp();
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (this.activePinPointerId === null || this.activePinPointerId === pointer.id) {
+        this.activePinPointerWorld = null;
+        this.activePinPointerId = null;
+      }
+      if (
+        this.touchController.activePointerId === null ||
+        this.touchController.activePointerId === pointer.id
+      ) {
+        this.touchController.onPointerUp(pointer.id);
+      }
     });
   }
 
@@ -1782,6 +1823,7 @@ export default class GameScene extends Phaser.Scene {
     backButton.on('pointerdown', () => {
       this.uiPointerConsumed = true;
       soundManager.stopBgm();
+      useGameStore.getState().setSharedLevel(null);
       try {
         this.game.destroy(true);
       } catch {
@@ -2180,6 +2222,7 @@ export default class GameScene extends Phaser.Scene {
     this.quantumPinGraphics?.clear();
     this.quantumPinningState = createQuantumPinningState();
     this.activePinPointerWorld = null;
+    this.activePinPointerId = null;
     this.hasCondenseAbility = false;
     for (const crystal of this.broglieCrystals) {
       crystal.rect.destroy();
@@ -2215,6 +2258,7 @@ export default class GameScene extends Phaser.Scene {
         }
       }
     }
+    this.bohrBackground?.resetValenceElectrons();
 
     // 4. Restore phase platforms to 'cyan'
     if (this.hasPhasePlatforms) {
@@ -2784,8 +2828,9 @@ export default class GameScene extends Phaser.Scene {
           store.updateMaxLevel(nextLevel);
         }
       }
-      if (this.resolveLevelData(nextLevel)) {
+      if (this.resolveLevelData(nextLevel) || getLevelMetadata(nextLevel)) {
         nextLevelNumber = nextLevel;
+        preloadLevel(nextLevel);
       }
     }
     this.nextLevelNumberPending = nextLevelNumber;
@@ -2862,8 +2907,9 @@ export default class GameScene extends Phaser.Scene {
     });
     overlay.add(backdrop);
 
-    const cardW = Math.min(620, camW - 48);
-    const cardH = 264;
+    const cardW = Math.min(620, camW - 36);
+    const isCompact = cardW < 520;
+    const cardH = isCompact ? 344 : 264;
     const cardBg = this.add.rectangle(camW / 2, camH / 2, cardW, cardH, 0x0b0f19, 0.94);
     cardBg.setStrokeStyle(2, 0x00e5ff, 0.9);
     overlay.add(cardBg);
@@ -2872,13 +2918,14 @@ export default class GameScene extends Phaser.Scene {
     const atom = this.levelData.atom || 'Element';
     const headerText = this.add.text(
       camW / 2,
-      camH / 2 - 96,
+      camH / 2 - (isCompact ? 136 : 96),
       `ELEMENT SYNTHESIZED — ${symbol} ${atom.toUpperCase()}`,
       {
         fontFamily: 'VT323',
-        fontSize: '28px',
+        fontSize: isCompact ? '20px' : '28px',
         color: '#00e5ff',
-        align: 'center'
+        align: 'center',
+        wordWrap: { width: cardW - 24 }
       }
     );
     headerText.setOrigin(0.5);
@@ -2894,13 +2941,14 @@ export default class GameScene extends Phaser.Scene {
     const medalInfo = getMedalDisplayInfo(medal);
     const statsText = this.add.text(
       camW / 2,
-      camH / 2 - 60,
+      camH / 2 - (isCompact ? 96 : 60),
       `${formatScore(elapsedMs)}  •  REC ${formatScore(bestMs)}  •  ${deltaLabel}`,
       {
         fontFamily: 'VT323',
-        fontSize: '22px',
+        fontSize: isCompact ? '16px' : '22px',
         color: prevBestMs === 0 || elapsedMs <= prevBestMs ? '#34d399' : '#f8fafc',
-        align: 'center'
+        align: 'center',
+        wordWrap: { width: cardW - 24 }
       }
     );
     statsText.setOrigin(0.5);
@@ -2908,13 +2956,14 @@ export default class GameScene extends Phaser.Scene {
 
     const medalText = this.add.text(
       camW / 2,
-      camH / 2 - 34,
+      camH / 2 - (isCompact ? 64 : 34),
       `${medalInfo.symbol} ${medalInfo.label.toUpperCase()}  •  JUMPS: ${this.jumpCount}`,
       {
         fontFamily: 'VT323',
-        fontSize: '19px',
+        fontSize: isCompact ? '15px' : '19px',
         color: medalInfo.color,
-        align: 'center'
+        align: 'center',
+        wordWrap: { width: cardW - 24 }
       }
     );
     medalText.setOrigin(0.5);
@@ -2926,29 +2975,42 @@ export default class GameScene extends Phaser.Scene {
         ? this.levelData.explanations.slice(0, 2)
         : getNarrativeForLevel(currentLvl).slice(0, 2);
 
-    const narrativeText = this.add.text(camW / 2, camH / 2 + 2, narrativeLines.join('\n'), {
-      fontFamily: 'VT323',
-      fontSize: '18px',
-      color: '#cbd5e1',
-      align: 'center',
-      wordWrap: { width: cardW - 48 }
-    });
+    const narrativeText = this.add.text(
+      camW / 2,
+      camH / 2 - (isCompact ? 16 : -2),
+      narrativeLines.join('\n'),
+      {
+        fontFamily: 'VT323',
+        fontSize: isCompact ? '16px' : '18px',
+        color: '#cbd5e1',
+        align: 'center',
+        wordWrap: { width: cardW - 36 }
+      }
+    );
     narrativeText.setOrigin(0.5);
     overlay.add(narrativeText);
 
     const nextLevelData =
-      nextLevelNumber !== null ? this.resolveLevelData(nextLevelNumber) : undefined;
+      nextLevelNumber !== null
+        ? this.resolveLevelData(nextLevelNumber) || getLevelMetadata(nextLevelNumber)
+        : undefined;
     const primaryLabel = nextLevelData
       ? `[SPACE / TAP] NEXT: ${nextLevelData.symbol} ${nextLevelData.atom}`
       : '[LEVELS]';
 
-    const nextBtn = this.add.text(camW / 2 - 115, camH / 2 + 78, primaryLabel, {
-      fontFamily: 'VT323',
-      fontSize: '22px',
-      color: '#00ffcc',
-      backgroundColor: '#083344',
-      padding: { x: 12, y: 6 }
-    });
+    const nextBtn = this.add.text(
+      isCompact ? camW / 2 : camW / 2 - 115,
+      camH / 2 + (isCompact ? 72 : 78),
+      primaryLabel,
+      {
+        fontFamily: 'VT323',
+        fontSize: isCompact ? '20px' : '22px',
+        color: '#00ffcc',
+        backgroundColor: '#083344',
+        padding: { x: 12, y: 6 },
+        wordWrap: { width: cardW - 32 }
+      }
+    );
     nextBtn.setOrigin(0.5);
     nextBtn.setInteractive({ useHandCursor: true });
     nextBtn.on('pointerdown', () => {
@@ -2957,6 +3019,7 @@ export default class GameScene extends Phaser.Scene {
         this.advanceToNextLevel();
       } else {
         soundManager.stopBgm();
+        useGameStore.getState().setSharedLevel(null);
         try {
           this.game.destroy(true);
         } catch {
@@ -2968,18 +3031,25 @@ export default class GameScene extends Phaser.Scene {
     });
     overlay.add(nextBtn);
 
-    const codexBtn = this.add.text(camW / 2 + 135, camH / 2 + 78, '[SPECTROSCOPIE / CODEX]', {
-      fontFamily: 'VT323',
-      fontSize: '20px',
-      color: '#fbbf24',
-      backgroundColor: '#1e293b',
-      padding: { x: 10, y: 6 }
-    });
+    const codexBtn = this.add.text(
+      isCompact ? camW / 2 : camW / 2 + 135,
+      camH / 2 + (isCompact ? 120 : 78),
+      '[SPECTROSCOPIE / CODEX]',
+      {
+        fontFamily: 'VT323',
+        fontSize: isCompact ? '18px' : '20px',
+        color: '#fbbf24',
+        backgroundColor: '#1e293b',
+        padding: { x: 10, y: 6 },
+        wordWrap: { width: cardW - 32 }
+      }
+    );
     codexBtn.setOrigin(0.5);
     codexBtn.setInteractive({ useHandCursor: true });
     codexBtn.on('pointerdown', () => {
       this.uiPointerConsumed = true;
       soundManager.stopBgm();
+      useGameStore.getState().setSharedLevel(null);
       try {
         this.game.destroy(true);
       } catch {
@@ -3006,11 +3076,29 @@ export default class GameScene extends Phaser.Scene {
     if (!this.isLevelCompleted || this.isTransitioningLevel) return;
     if (this.nextLevelNumberPending === null) return;
 
-    const nextData = this.resolveLevelData(this.nextLevelNumberPending);
-    if (!nextData) return;
+    const nextNumber = this.nextLevelNumberPending;
+    const nextData = this.resolveLevelData(nextNumber);
+    if (nextData) {
+      this.performLevelTransition(nextData, nextNumber);
+      return;
+    }
 
     this.isTransitioningLevel = true;
     this.canAdvanceLevel = false;
+    void loadLevel(nextNumber).then((loaded) => {
+      if (loaded) {
+        this.performLevelTransition(loaded, nextNumber);
+      } else {
+        this.isTransitioningLevel = false;
+        this.canAdvanceLevel = true;
+      }
+    });
+  }
+
+  private performLevelTransition(nextData: LevelData, nextNumber: number): void {
+    this.isTransitioningLevel = true;
+    this.canAdvanceLevel = false;
+    preloadLevel(nextNumber + 1);
 
     if (this.cameras?.main?.fadeOut && this.cameras?.main?.once) {
       this.cameras.main.once('camerafadeoutcomplete', () => {

@@ -1,7 +1,7 @@
 import type React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as levels from '../data/levels';
+import { getCachedLevel, getLevelMetadata, loadLevel } from '../data/levels';
 import { getMedalDisplayInfo } from '../services/MedalService';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
@@ -9,12 +9,11 @@ import type { LevelData } from '../types';
 import ShareModal from './Editor/ShareModal';
 import styles from './LevelFinished.module.css';
 
-const allLevels = levels as unknown as Record<string, LevelData>;
-
 export default function LevelFinished(): React.ReactElement {
   const navigate = useNavigate();
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [loadedShareLevel, setLoadedShareLevel] = useState<LevelData | null>(null);
 
   const currentLevel = useGameStore((state) => state.currentLevel);
   const scores = useGameStore((state) => state.scores);
@@ -29,6 +28,19 @@ export default function LevelFinished(): React.ReactElement {
   const { last, best, medal, lastJumps } = currentLevelScore;
   const medalInfo = getMedalDisplayInfo(medal ?? (best > 0 ? 'bronze' : 'none'));
 
+  useEffect(() => {
+    if (!isShared && levelIndex >= 1) {
+      const cached = getCachedLevel(levelIndex);
+      if (cached) {
+        setLoadedShareLevel(cached);
+      } else {
+        void loadLevel(levelIndex).then((data) => {
+          if (data) setLoadedShareLevel(data);
+        });
+      }
+    }
+  }, [isShared, levelIndex]);
+
   const currentLevelData =
     isShared && sharedLevel
       ? {
@@ -38,7 +50,7 @@ export default function LevelFinished(): React.ReactElement {
           symbol: sharedLevel.symbol || '?',
           atom: sharedLevel.atom || 'Custom Level'
         }
-      : allLevels[`level${levelIndex}`] || {
+      : getLevelMetadata(levelIndex) || {
           id: String(levelIndex),
           hue: '#070737',
           antiHue: '#c56805',
@@ -49,7 +61,7 @@ export default function LevelFinished(): React.ReactElement {
   const { id, hue, antiHue, symbol, atom } = currentLevelData;
 
   const handleNextLevel = () => {
-    const nextLevelData = allLevels[`level${currentLevel}`];
+    const nextLevelData = getLevelMetadata(currentLevel);
     if (!nextLevelData) {
       navigate('/levels');
       return;
@@ -200,7 +212,8 @@ export default function LevelFinished(): React.ReactElement {
           level={{
             ...(isShared && sharedLevel
               ? sharedLevel
-              : allLevels[`level${levelIndex}`] || {
+              : loadedShareLevel ||
+                getCachedLevel(levelIndex) || {
                   id: String(levelIndex),
                   hue: '#070737',
                   antiHue: '#c56805',

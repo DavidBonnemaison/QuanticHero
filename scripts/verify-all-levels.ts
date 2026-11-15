@@ -9,6 +9,7 @@ import {
   isMilestoneLevel,
   isNobleGasLevel
 } from '../src/generator/campaignDirector';
+import { listSmartArchetypes } from '../src/generator/archetypes';
 import { validateAuthorGhost } from '../src/generator/simulator';
 import type { LevelData } from '../src/types';
 
@@ -17,6 +18,8 @@ export interface VerificationReport {
   moleculeCount: number;
   nobleGasCount: number;
   milestoneCount: number;
+  smartArchetypesFound: number;
+  parJumpsCount: number;
   errors: string[];
 }
 
@@ -26,6 +29,16 @@ export function verifyAllLevels(): VerificationReport {
   let campaignCount = 0;
   let nobleGasCount = 0;
   let milestoneCount = 0;
+  let parJumpsCount = 0;
+  const seenArchetypes = new Set<string>();
+
+  const metadataPath = path.join(dataDir, 'levelMetadata.json');
+  const metadata = fs.existsSync(metadataPath)
+    ? (JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as Record<
+        string,
+        { parJumps?: number }
+      >)
+    : {};
 
   // 1. Validate all 118 campaign levels
   for (let z = 1; z <= 118; z++) {
@@ -43,6 +56,24 @@ export function verifyAllLevels(): VerificationReport {
     }
     if (levelData.width <= 0 || levelData.height <= 0) {
       errors.push(`Level ${z}: invalid dimensions ${levelData.width}x${levelData.height}`);
+    }
+
+    if (levelData.meta && 'path' in levelData.meta && levelData.meta.path !== undefined) {
+      errors.push(`Level ${z}: meta.path must not be present`);
+    }
+
+    if (typeof levelData.parJumps !== 'number' || levelData.parJumps < 1) {
+      errors.push(`Level ${z}: missing or invalid parJumps`);
+    } else {
+      parJumpsCount++;
+      const metaEntry = metadata[`level${z}`];
+      if (!metaEntry || metaEntry.parJumps !== levelData.parJumps) {
+        errors.push(`Level ${z}: levelMetadata.json parJumps mismatch`);
+      }
+    }
+
+    if (levelData.archetype) {
+      seenArchetypes.add(levelData.archetype);
     }
 
     const expectedPeriod = getPeriodForLevel(z).period;
@@ -82,6 +113,58 @@ export function verifyAllLevels(): VerificationReport {
         );
       }
     }
+
+    // v3 Milestone & Set-piece checks
+    if (z === 6) {
+      const hasDup = levelData.particles.some((p) => p.type === 'duplicate');
+      const hasCracked = levelData.platforms.some((p) => p.cracked === true);
+      if (!hasDup || !hasCracked) {
+        errors.push('Level 6 (C): missing Super-Quanta duplicate particle or cracked platform');
+      }
+    }
+    if (z === 18 && levelData.screenWrap !== 'both') {
+      errors.push(`Level 18 (Ar): expected screenWrap === 'both', got ${levelData.screenWrap}`);
+    }
+    if ((z === 19 || z === 110) && levelData.entanglement?.revealAtX === undefined) {
+      errors.push(`Level ${z}: missing entanglement.revealAtX (WOW #1)`);
+    }
+    if ((z === 35 || z === 80) && !levelData.platforms.some((p) => p.matterState === 'liquid')) {
+      errors.push(`Level ${z}: missing matterState: 'liquid' basin`);
+    }
+    if (z === 36) {
+      if (
+        !levelData.entanglement?.tetherPhysical ||
+        (levelData.tetherPylons?.length ?? 0) === 0 ||
+        !levelData.platforms.some((p) => p.matterState === 'liquid')
+      ) {
+        errors.push('Level 36 (Kr): missing tetherPhysical, tetherPylons, or liquid platform');
+      }
+    }
+    if (z === 40) {
+      if (
+        levelData.archetype !== 'living_floor' ||
+        levelData.entanglement?.mode !== 'inverted_gravity' ||
+        levelData.entanglement?.allowHeroCollision !== true
+      ) {
+        errors.push('Level 40 (Zr): missing living_floor archetype or inverted_gravity collision');
+      }
+    }
+    if (z === 55 || z === 79 || z === 86) {
+      if ((levelData.wormholes?.length ?? 0) === 0) {
+        errors.push(`Level ${z}: missing wormholes`);
+      }
+      if (z === 86 && levelData.screenWrap !== 'horizontal') {
+        errors.push(`Level 86 (Rn): expected screenWrap === 'horizontal'`);
+      }
+    }
+  }
+
+  const requiredArchetypes = listSmartArchetypes();
+  const smartArchetypesFound = requiredArchetypes.filter((a) => seenArchetypes.has(a)).length;
+  for (const arch of requiredArchetypes) {
+    if (!seenArchetypes.has(arch)) {
+      errors.push(`Missing Smart Archetype in campaign: ${arch}`);
+    }
   }
 
   // 2. Validate all 12 Secret Molecular levels
@@ -103,6 +186,8 @@ export function verifyAllLevels(): VerificationReport {
     moleculeCount,
     nobleGasCount,
     milestoneCount,
+    smartArchetypesFound,
+    parJumpsCount,
     errors
   };
 }
@@ -120,6 +205,8 @@ function main() {
   console.log(
     `Milestone Discovery Boxes: ${report.milestoneCount}/${MILESTONE_LEVEL_NUMBERS.length}`
   );
+  console.log(`Smart Archetypes Wired   : ${report.smartArchetypesFound}/6`);
+  console.log(`parJumps Configured      : ${report.parJumpsCount}/118`);
   console.log(`Secret Molecules Verified: ${report.moleculeCount}/12`);
 
   if (report.errors.length > 0) {

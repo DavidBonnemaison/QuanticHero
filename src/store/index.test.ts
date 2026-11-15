@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { loadLevel } from '../data/levels';
 import type { LevelData } from '../types';
 import { getEffectiveLevel, useGameStore } from './index';
 
 describe('useGameStore', () => {
+  beforeAll(async () => {
+    await Promise.all([loadLevel(1), loadLevel(2)]);
+  });
+
   beforeEach(() => {
     localStorage.clear();
     useGameStore.setState({

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { DndProvider, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useNavigate } from 'react-router-dom';
-import * as levelsData from '../../data/levels';
+import { getLevelMetadata, loadLevel } from '../../data/levels';
 import { getEffectiveLevel, useGameStore } from '../../store';
 import { range } from '../../tools/math';
 import type { LevelData } from '../../types';
@@ -177,6 +177,7 @@ export const EditorView: React.FC = () => {
 
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(currentLevel || 1);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+  const [loadedBuiltIn, setLoadedBuiltIn] = useState<LevelData | undefined>(undefined);
 
   useEffect(() => {
     if (currentLevel) {
@@ -184,11 +185,18 @@ export const EditorView: React.FC = () => {
     }
   }, [currentLevel]);
 
-  const builtInLevels = levelsData as unknown as Record<string, LevelData>;
-  const levels = customLevels ? { ...builtInLevels, ...customLevels } : builtInLevels;
+  useEffect(() => {
+    let active = true;
+    void loadLevel(currentLevelNumber).then((data) => {
+      if (active) setLoadedBuiltIn(data);
+    });
+    return () => {
+      active = false;
+    };
+  }, [currentLevelNumber]);
 
   const levelKey = `level${currentLevelNumber}`;
-  const level = getEffectiveLevel(levelKey, customLevels);
+  const level = getEffectiveLevel(levelKey, customLevels) ?? loadedBuiltIn;
   if (!level) {
     return null;
   }
@@ -239,7 +247,7 @@ export const EditorView: React.FC = () => {
   };
 
   const handleDownload = () => {
-    const content = JSON.stringify(levels[levelKey], null, 2);
+    const content = JSON.stringify(level, null, 2);
     downloader(`${levelKey}.json`, content);
   };
 
@@ -274,7 +282,7 @@ export const EditorView: React.FC = () => {
         <select value={currentLevelNumber} onChange={handleChangeLevel}>
           {levelsRange.map((l) => (
             <option key={`level${l}`} value={l}>
-              {l} - {levels[`level${l}`]?.atom || `Level ${l}`}
+              {l} - {customLevels?.[`level${l}`]?.atom || getLevelMetadata(l)?.atom || `Level ${l}`}
             </option>
           ))}
         </select>

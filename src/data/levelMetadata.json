@@ -1,0 +1,1532 @@
+{
+  "level1": {
+    "id": "1",
+    "symbol": "H",
+    "atom": "Hydrogen",
+    "uncertainty": 1,
+    "hue": "#0a1128",
+    "antiHue": "#e63946",
+    "explanations": [
+      "Reduced to a single quantum.",
+      "What carries a spark across the dark?"
+    ],
+    "authorTime": 10167,
+    "parJumps": 7
+  },
+  "level2": {
+    "id": "2",
+    "symbol": "He",
+    "atom": "Helium",
+    "uncertainty": 2,
+    "hue": "#1c1900",
+    "antiHue": "#ffd166",
+    "explanations": [],
+    "authorTime": 12933,
+    "noblePlayground": true,
+    "parJumps": 9
+  },
+  "level3": {
+    "id": "3",
+    "symbol": "Li",
+    "atom": "Lithium",
+    "uncertainty": 3,
+    "hue": "#20080e",
+    "antiHue": "#ff4d6d",
+    "explanations": [],
+    "authorTime": 13950,
+    "parJumps": 10
+  },
+  "level4": {
+    "id": "4",
+    "symbol": "Be",
+    "atom": "Beryllium",
+    "uncertainty": 4,
+    "hue": "#0f1416",
+    "antiHue": "#70e000",
+    "explanations": [],
+    "authorTime": 16833,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "superposition_orbital",
+      "hintSteps": [
+        "JUMP / TAP",
+        "SWITCH ORBIT"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 12
+  },
+  "level5": {
+    "id": "5",
+    "symbol": "B",
+    "atom": "Boron",
+    "uncertainty": 5,
+    "hue": "#061a14",
+    "antiHue": "#38b000",
+    "explanations": [
+      "Boron hums with a golden current.",
+      "Catch the pulse; the void widens."
+    ],
+    "authorTime": 13450,
+    "parJumps": 9
+  },
+  "level6": {
+    "id": "6",
+    "symbol": "C",
+    "atom": "Carbon",
+    "uncertainty": 6,
+    "hue": "#111116",
+    "antiHue": "#00f5d4",
+    "explanations": [],
+    "authorTime": 22500,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "clone_fusion",
+      "hintSteps": [
+        "GRAB 2x CLONE",
+        "MERGE QUANTA"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 15
+  },
+  "level7": {
+    "id": "7",
+    "symbol": "N",
+    "atom": "Nitrogen",
+    "uncertainty": 7,
+    "hue": "#0b132b",
+    "antiHue": "#48cae4",
+    "explanations": [],
+    "authorTime": 16583,
+    "parJumps": 12
+  },
+  "level8": {
+    "id": "8",
+    "symbol": "O",
+    "atom": "Oxygen",
+    "uncertainty": 8,
+    "hue": "#032b1a",
+    "antiHue": "#52b788",
+    "explanations": [],
+    "authorTime": 16750,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "phase_shift_hud",
+      "hintSteps": [
+        "JUMP / TAP HUD",
+        "CYAN ↔ MAGENTA"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 12
+  },
+  "level9": {
+    "id": "9",
+    "symbol": "F",
+    "atom": "Fluorine",
+    "uncertainty": 9,
+    "hue": "#261a00",
+    "antiHue": "#fee440",
+    "explanations": [
+      "Weight is only a habit here.",
+      "How far does a step reach when gravity forgets?"
+    ],
+    "authorTime": 17450,
+    "parJumps": 8
+  },
+  "level10": {
+    "id": "10",
+    "symbol": "Ne",
+    "atom": "Neon",
+    "uncertainty": 10,
+    "hue": "#2b0b00",
+    "antiHue": "#ff5400",
+    "explanations": [],
+    "authorTime": 28283,
+    "noblePlayground": true,
+    "parJumps": 12
+  },
+  "level11": {
+    "id": "11",
+    "symbol": "Na",
+    "atom": "Sodium",
+    "uncertainty": 11,
+    "hue": "#231700",
+    "antiHue": "#ffbe0b",
+    "explanations": [],
+    "authorTime": 27550,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "quantum_tunneling",
+      "hintSteps": [
+        "GRAB TUNNEL ORB",
+        "PASS THROUGH WALL"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 11
+  },
+  "level12": {
+    "id": "12",
+    "symbol": "Mg",
+    "atom": "Magnesium",
+    "uncertainty": 12,
+    "hue": "#0e141a",
+    "antiHue": "#90e0ef",
+    "explanations": [
+      "Two trials close the primordial dawn.",
+      "Swiftness and lightness share one road."
+    ],
+    "authorTime": 12167,
+    "parJumps": 7
+  },
+  "level13": {
+    "id": "13",
+    "symbol": "Al",
+    "atom": "Aluminium",
+    "uncertainty": 13,
+    "hue": "#101728",
+    "antiHue": "#93c5fd",
+    "explanations": [
+      "The Stellar Forge awakens.",
+      "Denser lattices, higher climbs."
+    ],
+    "authorTime": 27467,
+    "parJumps": 12
+  },
+  "level14": {
+    "id": "14",
+    "symbol": "Si",
+    "atom": "Silicon",
+    "uncertainty": 4,
+    "hue": "#0c1b2a",
+    "antiHue": "#38bdf8",
+    "explanations": [
+      "A gate that refuses a solitary traveler.",
+      "Two bodies, one plate, one passage."
+    ],
+    "authorTime": 13133,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "de_broglie_wave",
+      "hintSteps": [
+        "CONDENSE WAVE",
+        "WALK ON TRAIL"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 9
+  },
+  "level15": {
+    "id": "15",
+    "symbol": "P",
+    "atom": "Phosphorus",
+    "uncertainty": 15,
+    "hue": "#240816",
+    "antiHue": "#f43f5e",
+    "explanations": [],
+    "authorTime": 16683,
+    "parJumps": 12
+  },
+  "level16": {
+    "id": "16",
+    "symbol": "S",
+    "atom": "Sulfur",
+    "uncertainty": 16,
+    "hue": "#1e1c05",
+    "antiHue": "#facc15",
+    "explanations": [],
+    "authorTime": 27483,
+    "parJumps": 10
+  },
+  "level17": {
+    "id": "17",
+    "symbol": "Cl",
+    "atom": "Chlorine",
+    "uncertainty": 17,
+    "hue": "#072418",
+    "antiHue": "#4ade80",
+    "explanations": [],
+    "authorTime": 27450,
+    "parJumps": 11
+  },
+  "level18": {
+    "id": "18",
+    "symbol": "Ar",
+    "atom": "Argon",
+    "uncertainty": 18,
+    "hue": "#140a28",
+    "antiHue": "#c084fc",
+    "explanations": [
+      "The walls remember every impact.",
+      "What strikes sideways can rise."
+    ],
+    "authorTime": 13667,
+    "noblePlayground": true,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "screen_wrap",
+      "hintSteps": [
+        "CROSS EDGE",
+        "WRAP TORUS"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 8
+  },
+  "level19": {
+    "id": "19",
+    "symbol": "K",
+    "atom": "Potassium",
+    "uncertainty": 19,
+    "hue": "#1b0d2e",
+    "antiHue": "#e879f9",
+    "explanations": [],
+    "authorTime": 14267,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "entanglement_reveal",
+      "hintSteps": [
+        "MOVE ALPHA",
+        "MIRROR BETA"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 11
+  },
+  "level20": {
+    "id": "20",
+    "symbol": "Ca",
+    "atom": "Calcium",
+    "uncertainty": 20,
+    "hue": "#1e1005",
+    "antiHue": "#fb923c",
+    "explanations": [],
+    "authorTime": 21883,
+    "parJumps": 15
+  },
+  "level21": {
+    "id": "21",
+    "symbol": "Sc",
+    "atom": "Scandium",
+    "uncertainty": 21,
+    "hue": "#0d1824",
+    "antiHue": "#67e8f9",
+    "explanations": [],
+    "authorTime": 16567,
+    "parJumps": 12
+  },
+  "level22": {
+    "id": "22",
+    "symbol": "Ti",
+    "atom": "Titanium",
+    "uncertainty": 22,
+    "hue": "#121929",
+    "antiHue": "#a5f3fc",
+    "explanations": [
+      "Up and down have traded places.",
+      "Fall toward the sky."
+    ],
+    "authorTime": 10800,
+    "parJumps": 8
+  },
+  "level23": {
+    "id": "23",
+    "symbol": "V",
+    "atom": "Vanadium",
+    "uncertainty": 23,
+    "hue": "#081c1c",
+    "antiHue": "#2dd4bf",
+    "explanations": [],
+    "authorTime": 14400,
+    "parJumps": 11
+  },
+  "level24": {
+    "id": "24",
+    "symbol": "Cr",
+    "atom": "Chromium",
+    "uncertainty": 24,
+    "hue": "#1c0915",
+    "antiHue": "#fb7185",
+    "explanations": [],
+    "authorTime": 18567,
+    "parJumps": 14
+  },
+  "level25": {
+    "id": "25",
+    "symbol": "Mn",
+    "atom": "Manganese",
+    "uncertainty": 25,
+    "hue": "#1c0f2a",
+    "antiHue": "#e879f9",
+    "explanations": [],
+    "authorTime": 22167,
+    "parJumps": 14
+  },
+  "level26": {
+    "id": "26",
+    "symbol": "Fe",
+    "atom": "Iron",
+    "uncertainty": 26,
+    "hue": "#1a1110",
+    "antiHue": "#e63946",
+    "explanations": [
+      "The iron core burns.",
+      "Weightless and inverted, two laws collide."
+    ],
+    "authorTime": 16117,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "entanglement_tether",
+      "hintSteps": [
+        "PULL TETHER",
+        "SWING & LAUNCH"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 12
+  },
+  "level27": {
+    "id": "27",
+    "symbol": "Co",
+    "atom": "Cobalt",
+    "uncertainty": 27,
+    "hue": "#06132a",
+    "antiHue": "#3b82f6",
+    "explanations": [
+      "Beyond iron, the star shatters.",
+      "Echoes and thin walls drift in the blast."
+    ],
+    "authorTime": 27600,
+    "parJumps": 12
+  },
+  "level28": {
+    "id": "28",
+    "symbol": "Ni",
+    "atom": "Nickel",
+    "uncertainty": 28,
+    "hue": "#081c15",
+    "antiHue": "#34d399",
+    "explanations": [],
+    "authorTime": 20017,
+    "parJumps": 12
+  },
+  "level29": {
+    "id": "29",
+    "symbol": "Cu",
+    "atom": "Copper",
+    "uncertainty": 29,
+    "hue": "#041f19",
+    "antiHue": "#22c55e",
+    "explanations": [
+      "Solid stone, yet mostly empty space.",
+      "What passes through without breaking?"
+    ],
+    "authorTime": 10283,
+    "parJumps": 7
+  },
+  "level30": {
+    "id": "30",
+    "symbol": "Zn",
+    "atom": "Zinc",
+    "uncertainty": 30,
+    "hue": "#0c1626",
+    "antiHue": "#60a5fa",
+    "explanations": [],
+    "authorTime": 23667,
+    "parJumps": 16
+  },
+  "level31": {
+    "id": "31",
+    "symbol": "Ga",
+    "atom": "Gallium",
+    "uncertainty": 31,
+    "hue": "#140d2b",
+    "antiHue": "#a78bfa",
+    "explanations": [],
+    "authorTime": 17883,
+    "parJumps": 13
+  },
+  "level32": {
+    "id": "32",
+    "symbol": "Ge",
+    "atom": "Germanium",
+    "uncertainty": 32,
+    "hue": "#0a1d28",
+    "antiHue": "#22d3ee",
+    "explanations": [],
+    "authorTime": 15600,
+    "parJumps": 12
+  },
+  "level33": {
+    "id": "33",
+    "symbol": "As",
+    "atom": "Arsenic",
+    "uncertainty": 33,
+    "hue": "#1c1f0d",
+    "antiHue": "#a3e635",
+    "explanations": [],
+    "authorTime": 19767,
+    "parJumps": 15
+  },
+  "level34": {
+    "id": "34",
+    "symbol": "Se",
+    "atom": "Selenium",
+    "uncertainty": 34,
+    "hue": "#24081c",
+    "antiHue": "#f472b6",
+    "explanations": [],
+    "authorTime": 19800,
+    "parJumps": 15
+  },
+  "level35": {
+    "id": "35",
+    "symbol": "Br",
+    "atom": "Bromine",
+    "uncertainty": 35,
+    "hue": "#240909",
+    "antiHue": "#f87171",
+    "explanations": [],
+    "authorTime": 18133,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "liquid_platforms",
+      "hintSteps": [
+        "ENTER LIQUID",
+        "BUOYANT JUMP"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 13
+  },
+  "level36": {
+    "id": "36",
+    "symbol": "Kr",
+    "atom": "Krypton",
+    "uncertainty": 36,
+    "hue": "#150f2b",
+    "antiHue": "#818cf8",
+    "explanations": [
+      "Cyan and magenta take turns existing.",
+      "Every leap trades one ground for the other."
+    ],
+    "authorTime": 11500,
+    "noblePlayground": true,
+    "parJumps": 8
+  },
+  "level37": {
+    "id": "37",
+    "symbol": "Rb",
+    "atom": "Rubidium",
+    "uncertainty": 37,
+    "hue": "#260618",
+    "antiHue": "#e11d48",
+    "explanations": [],
+    "authorTime": 15617,
+    "parJumps": 12
+  },
+  "level38": {
+    "id": "38",
+    "symbol": "Sr",
+    "atom": "Strontium",
+    "uncertainty": 38,
+    "hue": "#260505",
+    "antiHue": "#ef4444",
+    "explanations": [],
+    "authorTime": 15883,
+    "parJumps": 12
+  },
+  "level39": {
+    "id": "39",
+    "symbol": "Y",
+    "atom": "Yttrium",
+    "uncertainty": 39,
+    "hue": "#0d1a29",
+    "antiHue": "#38bdf8",
+    "explanations": [],
+    "authorTime": 17333,
+    "parJumps": 13
+  },
+  "level40": {
+    "id": "40",
+    "symbol": "Zr",
+    "atom": "Zirconium",
+    "uncertainty": 40,
+    "hue": "#12182b",
+    "antiHue": "#60a5fa",
+    "explanations": [
+      "Le Plancher Vivant : Alpha (+g) et Beta (-g) se percutent pied contre pied à mi-hauteur.",
+      "Leurs gravités opposées s’annulent : marchez ensemble au-dessus du gouffre ."
+    ],
+    "authorTime": 9500,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "living_floor",
+      "hintSteps": [
+        "ALIGN +G / -G",
+        "WALK SOLE-TO-SOLE"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 3
+  },
+  "level41": {
+    "id": "41",
+    "symbol": "Nb",
+    "atom": "Niobium",
+    "uncertainty": 41,
+    "hue": "#0a1d20",
+    "antiHue": "#2dd4bf",
+    "explanations": [],
+    "authorTime": 24783,
+    "parJumps": 16
+  },
+  "level42": {
+    "id": "42",
+    "symbol": "Mo",
+    "atom": "Molybdenum",
+    "uncertainty": 42,
+    "hue": "#0e1c18",
+    "antiHue": "#34d399",
+    "explanations": [
+      "Le Télécommandeur de Phase : sauter dans le tunnel bas est mortel.",
+      "Basculez sur le Clone B en chambre latérale et sautez en rythme pour commuter le pont sous A ."
+    ],
+    "authorTime": 11200,
+    "parJumps": 1
+  },
+  "level43": {
+    "id": "43",
+    "symbol": "Tc",
+    "atom": "Technetium",
+    "uncertainty": 43,
+    "hue": "#20082b",
+    "antiHue": "#c084fc",
+    "explanations": [],
+    "authorTime": 30133,
+    "parJumps": 12
+  },
+  "level44": {
+    "id": "44",
+    "symbol": "Ru",
+    "atom": "Ruthenium",
+    "uncertainty": 44,
+    "hue": "#1d102e",
+    "antiHue": "#e879f9",
+    "explanations": [],
+    "authorTime": 15500,
+    "parJumps": 12
+  },
+  "level45": {
+    "id": "45",
+    "symbol": "Rh",
+    "atom": "Rhodium",
+    "uncertainty": 45,
+    "hue": "#0e1a2c",
+    "antiHue": "#93c5fd",
+    "explanations": [],
+    "authorTime": 15567,
+    "parJumps": 12
+  },
+  "level46": {
+    "id": "46",
+    "symbol": "Pd",
+    "atom": "Palladium",
+    "uncertainty": 46,
+    "hue": "#111827",
+    "antiHue": "#cbd5e1",
+    "explanations": [
+      "The supernova reaches its crest.",
+      "Speed, passage, and shifting ground."
+    ],
+    "authorTime": 14150,
+    "parJumps": 10
+  },
+  "level47": {
+    "id": "47",
+    "symbol": "Ag",
+    "atom": "Silver",
+    "uncertainty": 47,
+    "hue": "#0f172a",
+    "antiHue": "#f1f5f9",
+    "explanations": [
+      "Two neutron stars collide in silence.",
+      "Fragile footholds linger in the afterglow."
+    ],
+    "authorTime": 23483,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "quantum_pinning",
+      "hintSteps": [
+        "HOLD PLATFORM",
+        "PIN PHASE"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 16
+  },
+  "level48": {
+    "id": "48",
+    "symbol": "Cd",
+    "atom": "Cadmium",
+    "uncertainty": 48,
+    "hue": "#0d1c29",
+    "antiHue": "#38bdf8",
+    "explanations": [
+      "Light fades beneath a lingering step.",
+      "Stand still, and the ground forgets you."
+    ],
+    "authorTime": 29917,
+    "parJumps": 20
+  },
+  "level49": {
+    "id": "49",
+    "symbol": "In",
+    "atom": "Indium",
+    "uncertainty": 49,
+    "hue": "#0b0f30",
+    "antiHue": "#6366f1",
+    "explanations": [],
+    "authorTime": 40750,
+    "parJumps": 15
+  },
+  "level50": {
+    "id": "50",
+    "symbol": "Sn",
+    "atom": "Tin",
+    "uncertainty": 50,
+    "hue": "#121826",
+    "antiHue": "#94a3b8",
+    "explanations": [],
+    "authorTime": 48783,
+    "parJumps": 18
+  },
+  "level51": {
+    "id": "51",
+    "symbol": "Sb",
+    "atom": "Antimony",
+    "uncertainty": 51,
+    "hue": "#111b29",
+    "antiHue": "#67e8f9",
+    "explanations": [],
+    "authorTime": 30200,
+    "parJumps": 20
+  },
+  "level52": {
+    "id": "52",
+    "symbol": "Te",
+    "atom": "Tellurium",
+    "uncertainty": 52,
+    "hue": "#0b1d1f",
+    "antiHue": "#2dd4bf",
+    "explanations": [
+      "Two identical fermions refuse the same place.",
+      "Bring them close and measure the recoil."
+    ],
+    "authorTime": 13550,
+    "parJumps": 9
+  },
+  "level53": {
+    "id": "53",
+    "symbol": "I",
+    "atom": "Iodine",
+    "uncertainty": 53,
+    "hue": "#200730",
+    "antiHue": "#c084fc",
+    "explanations": [],
+    "authorTime": 20400,
+    "parJumps": 15
+  },
+  "level54": {
+    "id": "54",
+    "symbol": "Xe",
+    "atom": "Xenon",
+    "uncertainty": 54,
+    "hue": "#091c30",
+    "antiHue": "#60a5fa",
+    "explanations": [],
+    "authorTime": 21150,
+    "noblePlayground": true,
+    "parJumps": 15
+  },
+  "level55": {
+    "id": "55",
+    "symbol": "Cs",
+    "atom": "Caesium",
+    "uncertainty": 55,
+    "hue": "#03071e",
+    "antiHue": "#3a86ff",
+    "explanations": [
+      "Le Métronome Perpétuel : la plaque repose sur une plateforme instable (650 ms).",
+      "Lancez un clone entre les deux murs rebondissants pour maintenir la porte ouverte ."
+    ],
+    "authorTime": 10400,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "time_dilation_wormhole",
+      "hintSteps": [
+        "SLOW TIME 0.25x",
+        "ENTER WORMHOLE α↔ω"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 2
+  },
+  "level56": {
+    "id": "56",
+    "symbol": "Ba",
+    "atom": "Barium",
+    "uncertainty": 56,
+    "hue": "#062413",
+    "antiHue": "#4ade80",
+    "explanations": [],
+    "authorTime": 24767,
+    "parJumps": 18
+  },
+  "level57": {
+    "id": "57",
+    "symbol": "La",
+    "atom": "Lanthanum",
+    "uncertainty": 57,
+    "hue": "#10172d",
+    "antiHue": "#818cf8",
+    "explanations": [],
+    "authorTime": 28383,
+    "parJumps": 20
+  },
+  "level58": {
+    "id": "58",
+    "symbol": "Ce",
+    "atom": "Cerium",
+    "uncertainty": 58,
+    "hue": "#1f1606",
+    "antiHue": "#f59e0b",
+    "explanations": [],
+    "authorTime": 16800,
+    "parJumps": 13
+  },
+  "level59": {
+    "id": "59",
+    "symbol": "Pr",
+    "atom": "Praseodymium",
+    "uncertainty": 59,
+    "hue": "#082115",
+    "antiHue": "#10b981",
+    "explanations": [],
+    "authorTime": 26733,
+    "parJumps": 20
+  },
+  "level60": {
+    "id": "60",
+    "symbol": "Nd",
+    "atom": "Neodymium",
+    "uncertainty": 60,
+    "hue": "#240821",
+    "antiHue": "#ec4899",
+    "explanations": [],
+    "authorTime": 24600,
+    "parJumps": 17
+  },
+  "level61": {
+    "id": "61",
+    "symbol": "Pm",
+    "atom": "Promethium",
+    "uncertainty": 61,
+    "hue": "#1f0d2b",
+    "antiHue": "#d946ef",
+    "explanations": [],
+    "authorTime": 29833,
+    "parJumps": 20
+  },
+  "level62": {
+    "id": "62",
+    "symbol": "Sm",
+    "atom": "Samarium",
+    "uncertainty": 62,
+    "hue": "#241008",
+    "antiHue": "#f97316",
+    "explanations": [],
+    "authorTime": 20467,
+    "parJumps": 14
+  },
+  "level63": {
+    "id": "63",
+    "symbol": "Eu",
+    "atom": "Europium",
+    "uncertainty": 63,
+    "hue": "#26060c",
+    "antiHue": "#f43f5e",
+    "explanations": [],
+    "authorTime": 37600,
+    "parJumps": 21
+  },
+  "level64": {
+    "id": "64",
+    "symbol": "Gd",
+    "atom": "Gadolinium",
+    "uncertainty": 64,
+    "hue": "#13182b",
+    "antiHue": "#93c5fd",
+    "explanations": [],
+    "authorTime": 37700,
+    "parJumps": 22
+  },
+  "level65": {
+    "id": "65",
+    "symbol": "Tb",
+    "atom": "Terbium",
+    "uncertainty": 65,
+    "hue": "#072412",
+    "antiHue": "#22c55e",
+    "explanations": [],
+    "authorTime": 24717,
+    "parJumps": 17
+  },
+  "level66": {
+    "id": "66",
+    "symbol": "Dy",
+    "atom": "Dysprosium",
+    "uncertainty": 66,
+    "hue": "#1d1c07",
+    "antiHue": "#facc15",
+    "explanations": [],
+    "authorTime": 43633,
+    "parJumps": 14
+  },
+  "level67": {
+    "id": "67",
+    "symbol": "Ho",
+    "atom": "Holmium",
+    "uncertainty": 67,
+    "hue": "#241306",
+    "antiHue": "#fb923c",
+    "explanations": [],
+    "authorTime": 31717,
+    "parJumps": 21
+  },
+  "level68": {
+    "id": "68",
+    "symbol": "Er",
+    "atom": "Erbium",
+    "uncertainty": 68,
+    "hue": "#24081c",
+    "antiHue": "#f472b6",
+    "explanations": [
+      "La Passe Décisive en Plein Vol : touchez la plaque suspendue au sommet du saut.",
+      "Le focus et la caméra basculeront automatiquement vers le Clone 2 devant la porte ."
+    ],
+    "authorTime": 9800,
+    "parJumps": 2
+  },
+  "level69": {
+    "id": "69",
+    "symbol": "Tm",
+    "atom": "Thulium",
+    "uncertainty": 69,
+    "hue": "#0b162e",
+    "antiHue": "#60a5fa",
+    "explanations": [
+      "The relativistic crucible begins.",
+      "Shorter orbits, sharper turns."
+    ],
+    "authorTime": 24533,
+    "parJumps": 18
+  },
+  "level70": {
+    "id": "70",
+    "symbol": "Yb",
+    "atom": "Ytterbium",
+    "uncertainty": 70,
+    "hue": "#121b2b",
+    "antiHue": "#38bdf8",
+    "explanations": [],
+    "authorTime": 22017,
+    "parJumps": 16
+  },
+  "level71": {
+    "id": "71",
+    "symbol": "Lu",
+    "atom": "Lutetium",
+    "uncertainty": 71,
+    "hue": "#19112e",
+    "antiHue": "#a78bfa",
+    "explanations": [],
+    "authorTime": 39683,
+    "parJumps": 21
+  },
+  "level72": {
+    "id": "72",
+    "symbol": "Hf",
+    "atom": "Hafnium",
+    "uncertainty": 72,
+    "hue": "#0e1c2b",
+    "antiHue": "#22d3ee",
+    "explanations": [],
+    "authorTime": 35117,
+    "parJumps": 21
+  },
+  "level73": {
+    "id": "73",
+    "symbol": "Ta",
+    "atom": "Tantalum",
+    "uncertainty": 73,
+    "hue": "#091f24",
+    "antiHue": "#2dd4bf",
+    "explanations": [],
+    "authorTime": 45700,
+    "parJumps": 14
+  },
+  "level74": {
+    "id": "74",
+    "symbol": "W",
+    "atom": "Tungsten",
+    "uncertainty": 74,
+    "hue": "#241a05",
+    "antiHue": "#fde047",
+    "explanations": [
+      "Le Trampoline Humain de Pauli : la cheminée de 280 px dépasse la hauteur de saut.",
+      "Placez un clone au pied, ramassez la particule Pauli et sautez au-dessus de lui ."
+    ],
+    "authorTime": 10800,
+    "parJumps": 2
+  },
+  "level75": {
+    "id": "75",
+    "symbol": "Re",
+    "atom": "Rhenium",
+    "uncertainty": 75,
+    "hue": "#1c1329",
+    "antiHue": "#c084fc",
+    "explanations": [],
+    "authorTime": 27783,
+    "parJumps": 16
+  },
+  "level76": {
+    "id": "76",
+    "symbol": "Os",
+    "atom": "Osmium",
+    "uncertainty": 76,
+    "hue": "#081a29",
+    "antiHue": "#38bdf8",
+    "explanations": [],
+    "authorTime": 32750,
+    "parJumps": 21
+  },
+  "level77": {
+    "id": "77",
+    "symbol": "Ir",
+    "atom": "Iridium",
+    "uncertainty": 77,
+    "hue": "#201809",
+    "antiHue": "#facc15",
+    "explanations": [],
+    "authorTime": 25950,
+    "parJumps": 17
+  },
+  "level78": {
+    "id": "78",
+    "symbol": "Pt",
+    "atom": "Platinum",
+    "uncertainty": 78,
+    "hue": "#111827",
+    "antiHue": "#e2e8f0",
+    "explanations": [],
+    "authorTime": 22050,
+    "parJumps": 15
+  },
+  "level79": {
+    "id": "79",
+    "symbol": "Au",
+    "atom": "Gold",
+    "uncertainty": 79,
+    "hue": "#1c1500",
+    "antiHue": "#ffb703",
+    "explanations": [],
+    "authorTime": 22133,
+    "parJumps": 15
+  },
+  "level80": {
+    "id": "80",
+    "symbol": "Hg",
+    "atom": "Mercury",
+    "uncertainty": 80,
+    "hue": "#062024",
+    "antiHue": "#2dd4bf",
+    "explanations": [],
+    "authorTime": 42600,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "mercury_bath",
+      "hintSteps": [
+        "SINK IN MERCURY",
+        "HIGH BUOYANCY"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 22
+  },
+  "level81": {
+    "id": "81",
+    "symbol": "Tl",
+    "atom": "Thallium",
+    "uncertainty": 81,
+    "hue": "#072412",
+    "antiHue": "#22c55e",
+    "explanations": [],
+    "authorTime": 25667,
+    "parJumps": 18
+  },
+  "level82": {
+    "id": "82",
+    "symbol": "Pb",
+    "atom": "Lead",
+    "uncertainty": 82,
+    "hue": "#111827",
+    "antiHue": "#94a3b8",
+    "explanations": [],
+    "authorTime": 58417,
+    "parJumps": 14
+  },
+  "level83": {
+    "id": "83",
+    "symbol": "Bi",
+    "atom": "Bismuth",
+    "uncertainty": 83,
+    "hue": "#170d2b",
+    "antiHue": "#d946ef",
+    "explanations": [],
+    "authorTime": 28200,
+    "parJumps": 21
+  },
+  "level84": {
+    "id": "84",
+    "symbol": "Po",
+    "atom": "Polonium",
+    "uncertainty": 84,
+    "hue": "#26081d",
+    "antiHue": "#f43f5e",
+    "explanations": [
+      "Three trials, one unstable core.",
+      "Swift, light, and unbroken through the wall."
+    ],
+    "authorTime": 23417,
+    "parJumps": 11
+  },
+  "level85": {
+    "id": "85",
+    "symbol": "At",
+    "atom": "Astatine",
+    "uncertainty": 85,
+    "hue": "#260710",
+    "antiHue": "#fb7185",
+    "explanations": [],
+    "authorTime": 25850,
+    "parJumps": 17
+  },
+  "level86": {
+    "id": "86",
+    "symbol": "Rn",
+    "atom": "Radon",
+    "uncertainty": 86,
+    "hue": "#170829",
+    "antiHue": "#a855f7",
+    "explanations": [],
+    "authorTime": 22633,
+    "noblePlayground": true,
+    "parJumps": 16
+  },
+  "level87": {
+    "id": "87",
+    "symbol": "Fr",
+    "atom": "Francium",
+    "uncertainty": 87,
+    "hue": "#2b0615",
+    "antiHue": "#f43f5e",
+    "explanations": [],
+    "authorTime": 42050,
+    "discoveryBox": {
+      "enabled": true,
+      "mechanic": "ghost_surfing",
+      "hintSteps": [
+        "FOLLOW GHOST",
+        "SURF TEMPORAL WAVE"
+      ],
+      "safeZoneRatio": 0.35
+    },
+    "parJumps": 22
+  },
+  "level88": {
+    "id": "88",
+    "symbol": "Ra",
+    "atom": "Radium",
+    "uncertainty": 88,
+    "hue": "#062615",
+    "antiHue": "#22c55e",
+    "explanations": [
+      "La Cage de Conservation : effleurez les barreaux dorés pour ouvrir le portail.",
+      "Méfiez-vous de la particule bonus devant la sortie : elle restaure la cage ."
+    ],
+    "authorTime": 8900,
+    "parJumps": 2
+  },
+  "level89": {
+    "id": "89",
+    "symbol": "Ac",
+    "atom": "Actinium",
+    "uncertainty": 89,
+    "hue": "#0b1c30",
+    "antiHue": "#38bdf8",
+    "explanations": [
+      "The Island of Stability.",
+      "Every law you learned returns at once."
+    ],
+    "authorTime": 58517,
+    "parJumps": 14
+  },
+  "level90": {
+    "id": "90",
+    "symbol": "Th",
+    "atom": "Thorium",
+    "uncertainty": 90,
+    "hue": "#121b2b",
+    "antiHue": "#60a5fa",
+    "explanations": [],
+    "authorTime": 61033,
+    "parJumps": 14
+  },
+  "level91": {
+    "id": "91",
+    "symbol": "Pa",
+    "atom": "Protactinium",
+    "uncertainty": 91,
+    "hue": "#200e30",
+    "antiHue": "#c084fc",
+    "explanations": [],
+    "authorTime": 35633,
+    "parJumps": 17
+  },
+  "level92": {
+    "id": "92",
+    "symbol": "U",
+    "atom": "Uranium",
+    "uncertainty": 92,
+    "hue": "#062412",
+    "antiHue": "#39ff14",
+    "explanations": [],
+    "authorTime": 29083,
+    "parJumps": 20
+  },
+  "level93": {
+    "id": "93",
+    "symbol": "Np",
+    "atom": "Neptunium",
+    "uncertainty": 93,
+    "hue": "#091d29",
+    "antiHue": "#06b6d4",
+    "explanations": [],
+    "authorTime": 35150,
+    "parJumps": 17
+  },
+  "level94": {
+    "id": "94",
+    "symbol": "Pu",
+    "atom": "Plutonium",
+    "uncertainty": 94,
+    "hue": "#260a0a",
+    "antiHue": "#f97316",
+    "explanations": [],
+    "authorTime": 22933,
+    "parJumps": 16
+  },
+  "level95": {
+    "id": "95",
+    "symbol": "Am",
+    "atom": "Americium",
+    "uncertainty": 95,
+    "hue": "#240822",
+    "antiHue": "#ec4899",
+    "explanations": [],
+    "authorTime": 45200,
+    "parJumps": 22
+  },
+  "level96": {
+    "id": "96",
+    "symbol": "Cm",
+    "atom": "Curium",
+    "uncertainty": 96,
+    "hue": "#1f0a2e",
+    "antiHue": "#a855f7",
+    "explanations": [],
+    "authorTime": 37783,
+    "parJumps": 24
+  },
+  "level97": {
+    "id": "97",
+    "symbol": "Bk",
+    "atom": "Berkelium",
+    "uncertainty": 97,
+    "hue": "#141a29",
+    "antiHue": "#38bdf8",
+    "explanations": [],
+    "authorTime": 48433,
+    "parJumps": 18
+  },
+  "level98": {
+    "id": "98",
+    "symbol": "Cf",
+    "atom": "Californium",
+    "uncertainty": 98,
+    "hue": "#241208",
+    "antiHue": "#fb923c",
+    "explanations": [],
+    "authorTime": 63983,
+    "parJumps": 18
+  },
+  "level99": {
+    "id": "99",
+    "symbol": "Es",
+    "atom": "Einsteinium",
+    "uncertainty": 99,
+    "hue": "#0b2426",
+    "antiHue": "#2dd4bf",
+    "explanations": [],
+    "authorTime": 36917,
+    "parJumps": 17
+  },
+  "level100": {
+    "id": "100",
+    "symbol": "Fm",
+    "atom": "Fermium",
+    "uncertainty": 100,
+    "hue": "#1b0a2e",
+    "antiHue": "#c084fc",
+    "explanations": [
+      "One hundred elements forged.",
+      "A twin, a recoil, and a barrier."
+    ],
+    "authorTime": 16233,
+    "parJumps": 11
+  },
+  "level101": {
+    "id": "101",
+    "symbol": "Md",
+    "atom": "Mendelevium",
+    "uncertainty": 101,
+    "hue": "#260718",
+    "antiHue": "#f43f5e",
+    "explanations": [],
+    "authorTime": 27317,
+    "parJumps": 15
+  },
+  "level102": {
+    "id": "102",
+    "symbol": "No",
+    "atom": "Nobelium",
+    "uncertainty": 102,
+    "hue": "#0e182b",
+    "antiHue": "#60a5fa",
+    "explanations": [],
+    "authorTime": 23083,
+    "parJumps": 14
+  },
+  "level103": {
+    "id": "103",
+    "symbol": "Lr",
+    "atom": "Lawrencium",
+    "uncertainty": 103,
+    "hue": "#1e112b",
+    "antiHue": "#a78bfa",
+    "explanations": [],
+    "authorTime": 23300,
+    "parJumps": 14
+  },
+  "level104": {
+    "id": "104",
+    "symbol": "Rf",
+    "atom": "Rutherfordium",
+    "uncertainty": 104,
+    "hue": "#091e2b",
+    "antiHue": "#22d3ee",
+    "explanations": [],
+    "authorTime": 45233,
+    "parJumps": 22
+  },
+  "level105": {
+    "id": "105",
+    "symbol": "Db",
+    "atom": "Dubnium",
+    "uncertainty": 105,
+    "hue": "#0a2124",
+    "antiHue": "#2dd4bf",
+    "explanations": [],
+    "authorTime": 48600,
+    "parJumps": 20
+  },
+  "level106": {
+    "id": "106",
+    "symbol": "Sg",
+    "atom": "Seaborgium",
+    "uncertainty": 106,
+    "hue": "#0d241d",
+    "antiHue": "#34d399",
+    "explanations": [],
+    "authorTime": 48383,
+    "parJumps": 14
+  },
+  "level107": {
+    "id": "107",
+    "symbol": "Bh",
+    "atom": "Bohrium",
+    "uncertainty": 107,
+    "hue": "#1f0d2b",
+    "antiHue": "#d946ef",
+    "explanations": [],
+    "authorTime": 29433,
+    "parJumps": 22
+  },
+  "level108": {
+    "id": "108",
+    "symbol": "Hs",
+    "atom": "Hassium",
+    "uncertainty": 108,
+    "hue": "#081c2e",
+    "antiHue": "#38bdf8",
+    "explanations": [],
+    "authorTime": 26917,
+    "parJumps": 15
+  },
+  "level109": {
+    "id": "109",
+    "symbol": "Mt",
+    "atom": "Meitnerium",
+    "uncertainty": 109,
+    "hue": "#20160a",
+    "antiHue": "#fbbf24",
+    "explanations": [
+      "The final crucible before entanglement.",
+      "Run, phase through, slow the fall, outlast the tide."
+    ],
+    "authorTime": 14700,
+    "parJumps": 10
+  },
+  "level110": {
+    "id": "110",
+    "symbol": "Ds",
+    "atom": "Darmstadtium",
+    "uncertainty": 1,
+    "hue": "#0d1b2a",
+    "antiHue": "#00f0ff",
+    "explanations": [
+      "Quantum Entanglement Mode: You simultaneously control Alpha (Cyan) and Beta (Magenta).",
+      "Horizontal movements are mirrored. Guide both heroes to their respective portals!"
+    ],
+    "authorTime": 3833,
+    "parJumps": 2
+  },
+  "level111": {
+    "id": "111",
+    "symbol": "Rg",
+    "atom": "Roentgenium",
+    "uncertainty": 1,
+    "hue": "#1a002c",
+    "antiHue": "#ff007f",
+    "explanations": [
+      "Advanced Mirror Symmetry: Moving platforms and convergence point.",
+      "Alpha and Beta must cross the chasms to reach the single central portal together!"
+    ],
+    "authorTime": 3350,
+    "parJumps": 4
+  },
+  "level112": {
+    "id": "112",
+    "symbol": "Cn",
+    "atom": "Copernicium",
+    "uncertainty": 1,
+    "hue": "#002b36",
+    "antiHue": "#2aa198",
+    "explanations": [
+      "Le Plancher Vivant : Alpha (+g) et Beta (-g) se percutent pied contre pied à mi-hauteur.",
+      "Leurs gravités opposées s’annulent : marchez ensemble au-dessus du gouffre ."
+    ],
+    "authorTime": 9200,
+    "parJumps": 3
+  },
+  "level113": {
+    "id": "113",
+    "symbol": "Nh",
+    "atom": "Nihonium",
+    "uncertainty": 1,
+    "hue": "#1f1d36",
+    "antiHue": "#e9a6a6",
+    "explanations": [
+      "Opposite Gravity: The biphasic labyrinth.",
+      "Alpha and Beta must synchronize their jumps to clear asymmetrical hazards!"
+    ],
+    "authorTime": 16000,
+    "parJumps": 1
+  },
+  "level114": {
+    "id": "114",
+    "symbol": "Fl",
+    "atom": "Flerovium",
+    "uncertainty": 1,
+    "hue": "#0f051d",
+    "antiHue": "#f43f5e",
+    "explanations": [
+      "Total Entanglement: Mirror symmetry AND inverted gravity!",
+      "Alpha runs on the ground, Beta runs on the ceiling in the opposite direction. The ultimate quantum test!"
+    ],
+    "authorTime": 16000,
+    "parJumps": 1
+  },
+  "level115": {
+    "id": "115",
+    "symbol": "Mc",
+    "atom": "Moscovium",
+    "uncertainty": 115,
+    "hue": "#1e0c2b",
+    "antiHue": "#c084fc",
+    "explanations": [],
+    "authorTime": 39633,
+    "parJumps": 17
+  },
+  "level116": {
+    "id": "116",
+    "symbol": "Lv",
+    "atom": "Livermorium",
+    "uncertainty": 116,
+    "hue": "#24081c",
+    "antiHue": "#f43f5e",
+    "explanations": [],
+    "authorTime": 28483,
+    "parJumps": 18
+  },
+  "level117": {
+    "id": "117",
+    "symbol": "Ts",
+    "atom": "Tennessine",
+    "uncertainty": 117,
+    "hue": "#240711",
+    "antiHue": "#fb7185",
+    "explanations": [],
+    "authorTime": 28733,
+    "parJumps": 18
+  },
+  "level118": {
+    "id": "118",
+    "symbol": "Og",
+    "atom": "Oganesson",
+    "uncertainty": 118,
+    "hue": "#16082e",
+    "antiHue": "#a855f7",
+    "explanations": [
+      "Oganesson: the outermost edge of the table.",
+      "From primordial spark to pure quantum symmetry."
+    ],
+    "authorTime": 25700,
+    "noblePlayground": true,
+    "parJumps": 18
+  }
+}

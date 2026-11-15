@@ -127,5 +127,26 @@ describe('BohrBackgroundRenderer & getElectronShells', () => {
 
       renderer.destroy();
     });
+
+    it('resets bonus valence electrons on resetValenceElectrons() while keeping ground-state electrons', () => {
+      const mockScene = createMockScene();
+      const renderer = new BohrBackgroundRenderer(mockScene as any, 6, 400, 300);
+
+      expect(renderer.getShells()).toEqual([2, 4]);
+      expect(renderer.getTotalElectronCount()).toBe(6);
+
+      renderer.addValenceElectron();
+      renderer.addValenceElectron();
+      expect(renderer.getShells()).toEqual([2, 6]);
+      expect(renderer.getValenceElectronCount()).toBe(6);
+      expect(renderer.getTotalElectronCount()).toBe(8);
+
+      renderer.resetValenceElectrons();
+      expect(renderer.getShells()).toEqual([2, 4]);
+      expect(renderer.getValenceElectronCount()).toBe(4);
+      expect(renderer.getTotalElectronCount()).toBe(6);
+
+      renderer.destroy();
+    });
   });
 });
