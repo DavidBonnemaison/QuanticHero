@@ -120,11 +120,21 @@ export interface PressurePlate {
   autoSwitchOnTrigger?: boolean;
 }
 
+export interface DiscoveryBoxConfig {
+  enabled: boolean;
+  mechanic: string;
+  hintSteps: [string, string];
+  safeZoneRatio?: number;
+}
+
 export interface LevelData {
   id: string;
   symbol: string;
   atom: string;
   uncertainty?: number;
+  period?: number;
+  noblePlayground?: boolean;
+  discoveryBox?: DiscoveryBoxConfig;
   width: number;
   height: number;
   hue: string;

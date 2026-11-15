@@ -25,6 +25,7 @@ import {
   createSuperpositionChamberChunk,
   translateChunk
 } from './chunks';
+import { applyCampaignDirectives } from './campaignDirector';
 import { SeededRandom, getAlphaForDifficulty } from './dagGenerator';
 import { isReachable, x_reach } from './kinematics';
 import { type SimulationResult, simulateFullLevel } from './simulator';
@@ -1408,22 +1409,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     y: Math.round(resolutionChunk.exit.y - 10)
   };
 
-  const world = {
-    width,
-    height,
-    gravityY: PHYSICS.GRAVITY_Y,
-    platforms: allPlatforms,
-    spikes: allSpikes,
-    particles: allParticles,
-    bounceWalls: true,
-    gates,
-    pressurePlates,
-    collapse: collapseConfig
-  };
-
-  const simulation = simulateFullLevel(world, player.position, door, fullPlatformPath);
-
-  const levelData: LevelData = {
+  const baseLevelData: LevelData = {
     id: String(level),
     symbol: elementInfo.symbol,
     atom: elementInfo.name,
@@ -1441,6 +1427,36 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     pressurePlates,
     door,
     collapse: collapseConfig,
+    meta: {
+      seed,
+      generatorVersion: '2.0.0'
+    }
+  };
+
+  const directedLevelData = applyCampaignDirectives(baseLevelData, level);
+
+  const world = {
+    width: directedLevelData.width,
+    height: directedLevelData.height,
+    gravityY: PHYSICS.GRAVITY_Y,
+    platforms: directedLevelData.platforms,
+    spikes: directedLevelData.spikes,
+    particles: directedLevelData.particles,
+    bounceWalls: true,
+    gates: directedLevelData.gates,
+    pressurePlates: directedLevelData.pressurePlates,
+    collapse: directedLevelData.collapse
+  };
+
+  const simulation = simulateFullLevel(
+    world,
+    directedLevelData.player.position,
+    directedLevelData.door,
+    fullPlatformPath
+  );
+
+  const levelData: LevelData = {
+    ...directedLevelData,
     authorGhost: simulation.authorGhost,
     authorTime: simulation.authorTime,
     meta: {

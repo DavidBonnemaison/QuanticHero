@@ -1025,4 +1025,21 @@ describe('GameScene Spec-10: Curiosity Secrets (HUD Phase, Bubble Antigravity & 
     expect(hero.x).toBe(28);
     expect(hero.tunnelCharges).toBe(0);
   });
+
+  it('Spec-12: renders non-blocking 2-step holographic Safe Discovery Box at depth 2 on milestone levels', () => {
+    scene.levelData = {
+      ...makeTestLevel('4', 'Beryllium', 'Be'),
+      discoveryBox: {
+        enabled: true,
+        mechanic: 'superposition_orbital',
+        hintSteps: ['JUMP / TAP', 'SWITCH ORBIT']
+      }
+    };
+    scene.create();
+
+    expect(scene.discoveryBoxObjects).toHaveLength(3);
+    for (const obj of scene.discoveryBoxObjects as any[]) {
+      expect(obj.depth).toBe(2);
+    }
+  });
 });

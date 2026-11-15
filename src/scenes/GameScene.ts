@@ -187,6 +187,7 @@ export default class GameScene extends Phaser.Scene {
   private molecules: MoleculeParticle[] = [];
   public bohrBackground: BohrBackgroundRenderer | null = null;
   public muralObjects: Phaser.GameObjects.GameObject[] = [];
+  public discoveryBoxObjects: Phaser.GameObjects.GameObject[] = [];
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
   private wasd: { [key: string]: Phaser.Input.Keyboard.Key } | null = null;
   private touchController: MobileTouchController = new MobileTouchController();
@@ -482,6 +483,7 @@ export default class GameScene extends Phaser.Scene {
     this.quantumEffects = null;
     this.bohrBackground = null;
     this.muralObjects = [];
+    this.discoveryBoxObjects = [];
     soundManager.setAtomicNumber(this.getCurrentAtomicNumber());
     this.touchController.reset();
     this.uiPointerConsumed = false;
@@ -1285,6 +1287,11 @@ export default class GameScene extends Phaser.Scene {
     }
     this.muralObjects = [];
 
+    for (const obj of this.discoveryBoxObjects) {
+      obj.destroy();
+    }
+    this.discoveryBoxObjects = [];
+
     if (this.entanglementGraphics) {
       this.entanglementGraphics.destroy();
       this.entanglementGraphics = null;
@@ -1503,6 +1510,73 @@ export default class GameScene extends Phaser.Scene {
         vx: Phaser.Math.FloatBetween(-0.5, 0.5),
         vy: Phaser.Math.FloatBetween(-0.5, 0.5)
       });
+    }
+
+    this.renderSafeDiscoveryBox();
+  }
+
+  /**
+   * Spec-12: Renders a minimalist 2-step holographic pictogram in the background (depth: 2)
+   * of milestone levels without any blocking modal.
+   */
+  public renderSafeDiscoveryBox(): void {
+    const discovery = this.levelData?.discoveryBox;
+    if (!discovery?.enabled || !this.add) return;
+
+    const anchorX = Math.max(200, (this.levelData.player?.position?.x ?? 120) + 150);
+    const anchorY = Math.max(130, (this.levelData.player?.position?.y ?? 500) - 110);
+    const colorHex = this.levelData.antiHue || '#00f5d4';
+    const colorNum = Phaser.Display.Color.HexStringToColor(colorHex).color;
+
+    if (typeof this.add.graphics === 'function') {
+      const g = this.add.graphics();
+      g.setDepth(2);
+      g.setAlpha(0.45);
+      g.lineStyle(2, colorNum, 0.85);
+      // Step 1 holographic frame
+      if (typeof g.strokeRoundedRect === 'function') {
+        g.strokeRoundedRect(anchorX - 165, anchorY - 34, 138, 56, 8);
+      } else if (typeof g.strokeRect === 'function') {
+        g.strokeRect(anchorX - 165, anchorY - 34, 138, 56);
+      }
+      // Connecting arrow (Step 1 -> Step 2)
+      if (typeof g.lineBetween === 'function') {
+        g.lineBetween(anchorX - 20, anchorY - 6, anchorX + 20, anchorY - 6);
+        g.lineBetween(anchorX + 12, anchorY - 12, anchorX + 20, anchorY - 6);
+        g.lineBetween(anchorX + 12, anchorY, anchorX + 20, anchorY - 6);
+      }
+      // Step 2 holographic frame
+      if (typeof g.strokeRoundedRect === 'function') {
+        g.strokeRoundedRect(anchorX + 27, anchorY - 34, 138, 56, 8);
+      } else if (typeof g.strokeRect === 'function') {
+        g.strokeRect(anchorX + 27, anchorY - 34, 138, 56);
+      }
+      this.discoveryBoxObjects.push(g);
+    }
+
+    if (typeof this.add.text === 'function') {
+      const [step1, step2] = discovery.hintSteps;
+      const t1 = this.add.text(anchorX - 96, anchorY - 6, `1. ${step1}`, {
+        fontFamily: 'Orbitron',
+        fontSize: '11px',
+        color: colorHex,
+        align: 'center'
+      });
+      t1.setOrigin(0.5);
+      t1.setDepth(2);
+      t1.setAlpha(0.55);
+      this.discoveryBoxObjects.push(t1);
+
+      const t2 = this.add.text(anchorX + 96, anchorY - 6, `2. ${step2}`, {
+        fontFamily: 'Orbitron',
+        fontSize: '11px',
+        color: colorHex,
+        align: 'center'
+      });
+      t2.setOrigin(0.5);
+      t2.setDepth(2);
+      t2.setAlpha(0.55);
+      this.discoveryBoxObjects.push(t2);
     }
   }
 

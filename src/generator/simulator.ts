@@ -17,15 +17,17 @@ import {
   stepHeroControl,
   stepMovingPlatform
 } from '../physics/stepHeroPhysics';
-import { type GhostFrame, compressTrajectory } from '../tools/GhostRecorder';
+import { type GhostFrame, compressTrajectory, decompressTrajectory } from '../tools/GhostRecorder';
 import type {
   CollapseConfig,
   Door,
   Gate,
+  LevelData,
   Particle,
   Platform,
   PressurePlate,
-  Spike
+  Spike,
+  Wormhole
 } from '../types';
 
 export interface SimHeroState {
@@ -83,6 +85,8 @@ export interface SimWorld {
   pressurePlates?: PressurePlate[];
   collapse?: CollapseConfig;
   bounceWalls?: boolean;
+  wormholes?: Wormhole[];
+  screenWrap?: boolean | 'horizontal' | 'vertical' | 'both';
 }
 
 export interface TrajectoryPoint {
@@ -953,3 +957,104 @@ export function simulateFullLevel(
     finalHeroState: hero
   };
 }
+
+export interface GhostValidationResult {
+  valid: boolean;
+  frameCount: number;
+  durationMs: number;
+  reason?: string;
+}
+
+/**
+ * Validates that a LevelData has a well-formed, decodable v1| authorGhost synchronized with authorTime.
+ */
+export function validateAuthorGhost(levelData: LevelData): GhostValidationResult {
+  if (!levelData.authorGhost || !levelData.authorGhost.startsWith('v1|')) {
+    return { valid: false, frameCount: 0, durationMs: 0, reason: 'Missing or non-v1 authorGhost' };
+  }
+  const frames = decompressTrajectory(levelData.authorGhost);
+  if (frames.length < 2) {
+    return {
+      valid: false,
+      frameCount: frames.length,
+      durationMs: 0,
+      reason: 'authorGhost has fewer than 2 frames'
+    };
+  }
+  const durationMs = frames[frames.length - 1].timeMs;
+  if (!levelData.authorTime || levelData.authorTime <= 0) {
+    return {
+      valid: false,
+      frameCount: frames.length,
+      durationMs,
+      reason: 'Missing or non-positive authorTime'
+    };
+  }
+  return {
+    valid: true,
+    frameCount: frames.length,
+    durationMs
+  };
+}
+
+/**
+ * Simulates an arbitrary LevelData (campaign JSON or secret molecule) from player.position to door.
+ */
+export function simulateLevelData(levelData: LevelData): SimulationResult {
+  const world: SimWorld = {
+    width: levelData.width,
+    height: levelData.height,
+    gravityY: PHYSICS.GRAVITY_Y,
+    platforms: levelData.platforms,
+    spikes: levelData.spikes,
+    particles: levelData.particles,
+    gates: levelData.gates,
+    pressurePlates: levelData.pressurePlates,
+    collapse: levelData.collapse,
+    wormholes: levelData.wormholes,
+    screenWrap: levelData.screenWrap,
+    bounceWalls: true
+  };
+
+  const walkable = levelData.platforms.filter(
+    (p) => p.kind !== 'wall' && !(p.width <= 40 && p.height >= 100)
+  );
+  const startX = levelData.player.position.x;
+  const startY = levelData.player.position.y;
+  const doorX = levelData.door.x;
+  const doorY = levelData.door.y;
+
+  // Pick starting platform closest to player.position
+  const sortedByStart = [...walkable].sort((a, b) => {
+    const da = Math.hypot(startX - (a.x + a.width / 2), startY - a.y);
+    const db = Math.hypot(startX - (b.x + b.width / 2), startY - b.y);
+    return da - db;
+  });
+
+  const startPlat = sortedByStart[0];
+  const doorPlat = [...walkable].sort((a, b) => {
+    const da = Math.hypot(doorX - (a.x + a.width / 2), doorY - a.y);
+    const db = Math.hypot(doorX - (b.x + b.width / 2), doorY - b.y);
+    return da - db;
+  })[0];
+
+  const pathPlatforms: Platform[] = [];
+  if (startPlat) {
+    pathPlatforms.push(startPlat);
+    const dir = doorX >= startX ? 1 : -1;
+    const middle = walkable
+      .filter((p) => p !== startPlat && p !== doorPlat)
+      .filter((p) => {
+        const cx = p.x + p.width / 2;
+        return dir > 0 ? cx > startX && cx < doorX : cx < startX && cx > doorX;
+      })
+      .sort((a, b) => (dir > 0 ? a.x - b.x : b.x - a.x));
+    pathPlatforms.push(...middle);
+    if (doorPlat && doorPlat !== startPlat) {
+      pathPlatforms.push(doorPlat);
+    }
+  }
+
+  return simulateFullLevel(world, levelData.player.position, levelData.door, pathPlatforms);
+}
+
