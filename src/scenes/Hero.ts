@@ -34,6 +34,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public waveDashUntilMs = -Infinity;
   public wasTouchingGround = false;
   public lastLandedPlatform: Phaser.GameObjects.GameObject | null = null;
+  public fusionStack = 1;
+  public createdAtMs = 0;
   private elapsedTimeMs = 0;
   private lastAirborneVy = 0;
 
@@ -41,6 +43,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, isFocused ? 'hero' : 'disabled');
     this.id = Math.random();
     this.isFocused = isFocused;
+    this.createdAtMs = scene?.time?.now ?? 0;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -80,10 +83,30 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  public setFusionStack(stack: number): void {
+    this.fusionStack = Math.max(1, stack);
+    const baseScale = this.fusionStack >= 2 ? PHYSICS.SUPER_QUANTA_SCALE : 1;
+    if (typeof this.setScale === 'function') {
+      this.setScale(baseScale, baseScale);
+    }
+    if (this.fusionStack >= 2) {
+      this.setTint(0xfbbf24);
+    } else if (!this.isEntangled) {
+      if (this.isFocused) {
+        this.clearTint();
+      } else {
+        this.setTint(0x38bdf8);
+      }
+    }
+  }
+
   public setFocus(focused: boolean): void {
     this.isFocused = focused;
     this.setTexture(focused ? 'hero' : 'disabled');
     this.play(this.getAnimKey('idle'), true);
+    if (this.fusionStack >= 2) {
+      this.setTint(0xfbbf24);
+    }
   }
 
   public setGravityInverted(inverted: boolean): void {
@@ -101,15 +124,16 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     duration: number,
     ease: string
   ): void {
+    const baseScale = this.fusionStack >= 2 ? PHYSICS.SUPER_QUANTA_SCALE : 1;
     if (typeof this.setScale === 'function') {
-      this.setScale(startScaleX, startScaleY);
+      this.setScale(startScaleX * baseScale, startScaleY * baseScale);
     }
     if (this.scene?.tweens?.add) {
       this.scene.tweens.killTweensOf?.(this);
       this.scene.tweens.add({
         targets: this,
-        scaleX: 1,
-        scaleY: 1,
+        scaleX: baseScale,
+        scaleY: baseScale,
         duration,
         ease
       });
@@ -318,7 +342,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         jumpCutApplied: this.jumpCutApplied,
         isDiving: this.isDiving,
         lastDiveEndTimeMs: this.lastDiveEndTimeMs,
-        waveDashUntilMs: this.waveDashUntilMs
+        waveDashUntilMs: this.waveDashUntilMs,
+        jumpMultiplier: this.fusionStack >= 2 ? PHYSICS.SUPER_QUANTA_JUMP_MULT : 1
       },
       { left: goLeft, right: goRight, jump, dive },
       delta

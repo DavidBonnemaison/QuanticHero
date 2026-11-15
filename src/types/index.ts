@@ -56,11 +56,20 @@ export interface Player {
 
 export type EntanglementMode = 'mirror_x' | 'inverted_gravity' | 'mirror_and_gravity';
 
+export interface TetherPylon {
+  x: number;
+  y: number;
+  radius: number;
+  maxLength?: number;
+}
+
 export interface EntanglementConfig {
   mode: EntanglementMode;
   betaSpawn?: { x: number; y: number };
   portalMode?: 'single' | 'dual';
   betaDoor?: { x: number; y: number };
+  tetherPhysical?: boolean;
+  tetherMaxLength?: number;
 }
 
 export interface LevelMeta {
@@ -110,8 +119,10 @@ export interface LevelData {
   gates?: Gate[];
   pressurePlates?: PressurePlate[];
   entanglement?: EntanglementConfig;
+  tetherPylons?: TetherPylon[];
+  allowCloneFusion?: boolean;
   collapse?: CollapseConfig;
-  screenWrap?: boolean;
+  screenWrap?: boolean | 'horizontal' | 'vertical' | 'both';
   wormholes?: Array<Record<string, unknown>>;
   authorGhost?: string;
   authorTime?: number;

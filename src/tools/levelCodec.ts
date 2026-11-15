@@ -40,6 +40,8 @@ export interface MinifiedEntanglement {
   bs?: [number, number];
   pm?: 'single' | 'dual';
   bd?: [number, number];
+  tp?: 0 | 1;
+  tml?: number;
 }
 
 /**
@@ -68,7 +70,9 @@ export interface MinifiedLevel {
   pp?: Array<[string, number, number, number, number, string, 0 | 1]>;
   cl?: [number, number];
   en?: MinifiedEntanglement;
-  sw?: 1;
+  py?: Array<[number, number, number] | [number, number, number, number]>;
+  acf?: 0;
+  sw?: 1 | 'h' | 'v' | 'b';
   wh?: Array<Record<string, unknown>>;
 }
 
@@ -221,11 +225,38 @@ export function compressLevel(level: LevelData): string {
         Math.round(level.entanglement.betaDoor.y)
       ];
     }
+    if (level.entanglement.tetherPhysical !== undefined) {
+      en.tp = level.entanglement.tetherPhysical ? 1 : 0;
+    }
+    if (
+      typeof level.entanglement.tetherMaxLength === 'number' &&
+      level.entanglement.tetherMaxLength > 0
+    ) {
+      en.tml = Math.round(level.entanglement.tetherMaxLength);
+    }
     minified.en = en;
   }
 
-  if (level.screenWrap) {
+  if (level.tetherPylons && level.tetherPylons.length > 0) {
+    minified.py = level.tetherPylons.slice(0, 30).map((py) =>
+      typeof py.maxLength === 'number' && py.maxLength > 0
+        ? [Math.round(py.x), Math.round(py.y), Math.round(py.radius), Math.round(py.maxLength)]
+        : [Math.round(py.x), Math.round(py.y), Math.round(py.radius)]
+    );
+  }
+
+  if (level.allowCloneFusion === false) {
+    minified.acf = 0;
+  }
+
+  if (level.screenWrap === true) {
     minified.sw = 1;
+  } else if (level.screenWrap === 'horizontal') {
+    minified.sw = 'h';
+  } else if (level.screenWrap === 'vertical') {
+    minified.sw = 'v';
+  } else if (level.screenWrap === 'both') {
+    minified.sw = 'b';
   }
 
   if (level.wormholes && level.wormholes.length > 0) {
@@ -671,6 +702,14 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
     ) {
       entanglement.betaDoor = { x: raw.en.bd[0], y: raw.en.bd[1] };
     }
+    if (raw.en.tp === 1 || raw.en.tp === true) {
+      entanglement.tetherPhysical = true;
+    } else if (raw.en.tp === 0 || raw.en.tp === false) {
+      entanglement.tetherPhysical = false;
+    }
+    if (typeof raw.en.tml === 'number' && Number.isFinite(raw.en.tml) && raw.en.tml > 0) {
+      entanglement.tetherMaxLength = Math.round(raw.en.tml);
+    }
   } else if (
     raw.entanglement &&
     typeof raw.entanglement === 'object' &&
@@ -700,10 +739,76 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
         y: raw.entanglement.betaDoor.y
       };
     }
+    if (typeof raw.entanglement.tetherPhysical === 'boolean') {
+      entanglement.tetherPhysical = raw.entanglement.tetherPhysical;
+    }
+    if (
+      typeof raw.entanglement.tetherMaxLength === 'number' &&
+      Number.isFinite(raw.entanglement.tetherMaxLength) &&
+      raw.entanglement.tetherMaxLength > 0
+    ) {
+      entanglement.tetherMaxLength = Math.round(raw.entanglement.tetherMaxLength);
+    }
   }
 
+  // Unpack tetherPylons
+  const rawPylons = raw.py ?? raw.tetherPylons;
+  const tetherPylons: LevelData['tetherPylons'] = [];
+  if (Array.isArray(rawPylons)) {
+    for (const item of rawPylons.slice(0, 30)) {
+      if (Array.isArray(item) && item.length >= 3) {
+        const [px, py, pr, pml] = item;
+        if (
+          typeof px === 'number' &&
+          Number.isFinite(px) &&
+          typeof py === 'number' &&
+          Number.isFinite(py) &&
+          typeof pr === 'number' &&
+          Number.isFinite(pr)
+        ) {
+          tetherPylons.push({
+            x: px,
+            y: py,
+            radius: Math.max(4, pr),
+            ...(typeof pml === 'number' && Number.isFinite(pml) && pml > 0
+              ? { maxLength: Math.round(pml) }
+              : {})
+          });
+        }
+      } else if (item && typeof item === 'object') {
+        if (
+          typeof item.x === 'number' &&
+          typeof item.y === 'number' &&
+          typeof item.radius === 'number'
+        ) {
+          tetherPylons.push({
+            x: item.x,
+            y: item.y,
+            radius: Math.max(4, item.radius),
+            ...(typeof item.maxLength === 'number' && item.maxLength > 0
+              ? { maxLength: Math.round(item.maxLength) }
+              : {})
+          });
+        }
+      }
+    }
+  }
+
+  const allowCloneFusion =
+    raw.acf === 0 || raw.allowCloneFusion === false ? false : undefined;
+
   // Unpack screenWrap & wormholes
-  const screenWrap = raw.sw === 1 || raw.sw === true || raw.screenWrap === true ? true : undefined;
+  let screenWrap: LevelData['screenWrap'];
+  if (raw.sw === 1 || raw.sw === true || raw.screenWrap === true) {
+    screenWrap = true;
+  } else if (raw.sw === 'h' || raw.screenWrap === 'horizontal') {
+    screenWrap = 'horizontal';
+  } else if (raw.sw === 'v' || raw.screenWrap === 'vertical') {
+    screenWrap = 'vertical';
+  } else if (raw.sw === 'b' || raw.screenWrap === 'both') {
+    screenWrap = 'both';
+  }
+
   const rawWormholes = raw.wh ?? raw.wormholes;
   const wormholes =
     Array.isArray(rawWormholes) && rawWormholes.length > 0
@@ -739,6 +844,8 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
     ...(pressurePlates.length > 0 ? { pressurePlates } : {}),
     ...(collapse ? { collapse } : {}),
     ...(entanglement ? { entanglement } : {}),
+    ...(tetherPylons.length > 0 ? { tetherPylons } : {}),
+    ...(allowCloneFusion === false ? { allowCloneFusion: false } : {}),
     ...(screenWrap ? { screenWrap } : {}),
     ...(wormholes && wormholes.length > 0 ? { wormholes } : {}),
     ...(authorGhost ? { authorGhost } : {}),

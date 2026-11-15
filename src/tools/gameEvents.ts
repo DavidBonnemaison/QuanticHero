@@ -19,6 +19,12 @@ export interface GameEventPayloads {
   'hero:focus_switch': { fromId: number; toId: number };
   'bgm:beat': { step: number; bpm: number };
   'synth:land': { x: number; y: number };
+  'tether:collect': { x: number; y: number; type: ParticleType };
+  'tether:pylon_hook': { x: number; y: number };
+  'hero:fusion': { x: number; y: number; fusionStack: number };
+  'hero:fission': { x: number; y: number };
+  'platform:cracked_break': { x: number; y: number };
+  'hero:screen_wrap': { axis: 'x' | 'y'; x: number; y: number };
 }
 
 export type GameEventName = keyof GameEventPayloads;

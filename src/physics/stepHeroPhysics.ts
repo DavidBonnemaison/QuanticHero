@@ -21,6 +21,7 @@ export interface HeroControlState {
   isDiving?: boolean;
   lastDiveEndTimeMs?: number;
   waveDashUntilMs?: number;
+  jumpMultiplier?: number;
 }
 
 export interface HeroControlInput {
@@ -210,7 +211,7 @@ export function stepHeroControl(
     }
 
     if (willJump) {
-      vy = PHYSICS.HERO_JUMP_V0 * state.upsideDown;
+      vy = PHYSICS.HERO_JUMP_V0 * state.upsideDown * (state.jumpMultiplier ?? 1);
       animState = 'jump';
       jumped = true;
     } else if (

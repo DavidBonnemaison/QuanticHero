@@ -365,6 +365,7 @@ vi.mock('phaser', () => {
             A: 65,
             S: 83,
             D: 68,
+            X: 88,
             TAB: 9,
             E: 69,
             ONE: 49,
@@ -672,3 +673,145 @@ describe('GameScene Spec-06: Swarm Replay & Isotope Medals', () => {
     expect(scene.bohrBackground!.getTotalElectronCount()).toBe(initialTotal + 1);
   });
 });
+
+describe('GameScene Spec-08: Entanglement Tether, Clone Fusion/Fission & Screen-Wrap', () => {
+  let scene: GameScene;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useGameStore.getState().resetGame();
+    useGameStore.getState().updateCurrentLevel(1);
+    scene = new GameScene();
+  });
+
+  it('collects a particle placed on the [Alpha, Beta] entanglement tether segment', () => {
+    scene.levelData = {
+      ...makeTestLevel('110', 'Darmstadtium', 'Ds'),
+      player: { position: { x: 100, y: 300 } },
+      particles: [{ x: 300, y: 300, type: 'speed' }],
+      entanglement: {
+        mode: 'mirror_x',
+        betaSpawn: { x: 500, y: 300 },
+        tetherPhysical: true
+      }
+    };
+    scene.create();
+
+    const tetherEvents: Array<{ x: number; y: number; type: string }> = [];
+    const unsub = gameEvents.on('tether:collect', (payload) => tetherEvents.push(payload));
+
+    scene.updateEntanglementTether(1000);
+    unsub();
+
+    const particle = scene.particles.getChildren()[0] as any;
+    expect(particle.disableBody).toHaveBeenCalledWith(true, true);
+    expect(tetherEvents).toHaveLength(1);
+    expect(tetherEvents[0]).toEqual({ x: 300, y: 300, type: 'speed' });
+  });
+
+  it('hooks onto a magnetic tether pylon and constrains Beta distance', () => {
+    scene.levelData = {
+      ...makeTestLevel('110', 'Darmstadtium', 'Ds'),
+      player: { position: { x: 150, y: 200 } },
+      particles: [],
+      entanglement: {
+        mode: 'mirror_x',
+        betaSpawn: { x: 350, y: 200 },
+        tetherPhysical: true,
+        tetherMaxLength: 250
+      },
+      tetherPylons: [{ x: 250, y: 200, radius: 18 }]
+    };
+    scene.create();
+
+    // First update hooks the pylon
+    scene.updateEntanglementTether(1000);
+
+    // Move Beta far down over an abyss (dAlpha=100, dBeta=250 => total=350 > 250)
+    scene.betaHero!.setPosition(250, 450);
+    scene.betaHero!.setVelocity(30, 150);
+    scene.updateEntanglementTether(1016);
+
+    expect(scene.betaHero!.y).toBeCloseTo(350, 3);
+    expect(scene.betaHero!.body!.velocity.x).toBeCloseTo(30, 3);
+    expect(scene.betaHero!.body!.velocity.y).toBeCloseTo(0, 3);
+  });
+
+  it('fuses two clones into Super-Quanta (fusionStack=2), shatters cracked platforms, and performs in-flight fission', () => {
+    scene.levelData = {
+      ...makeTestLevel('1', 'Hydrogen', 'H'),
+      platforms: [
+        { x: 0, y: 500, width: 800, height: 20 },
+        { x: 200, y: 420, width: 120, height: 20, cracked: true }
+      ]
+    };
+    scene.create();
+
+    const hero = scene.heroes[0];
+    hero.createdAtMs = 0;
+    hero.setPosition(200, 380);
+
+    const clone = new Hero(scene, 215, 380, false);
+    clone.createdAtMs = 100;
+    scene.heroes.push(clone);
+    scene.heroGroup.add(clone);
+
+    // After 500 ms grace period, clones fuse
+    const fused = scene.tryCloneFusion(700);
+    expect(fused).toBe(true);
+    expect(scene.heroes).toHaveLength(1);
+    expect(hero.fusionStack).toBe(2);
+    expect(hero.scaleX).toBe(1.25);
+
+    // Shatter cracked platform and verify quickRespawn restores it
+    const crackedRect = (scene as any).crackedPlatforms[0];
+    scene.shatterCrackedPlatform(crackedRect);
+    expect(crackedRect.visible).toBe(false);
+    expect(crackedRect.body.enable).toBe(false);
+
+    // In-flight fission (mid-air)
+    hero.body!.touching.down = false;
+    hero.body!.blocked.down = false;
+    const fissioned = scene.tryInFlightFission();
+    expect(fissioned).toBe(true);
+    expect(scene.heroes).toHaveLength(2);
+    expect(hero.fusionStack).toBe(1);
+    expect(hero.scaleX).toBe(1);
+    expect(hero.body!.velocity.y).toBe(-480);
+    expect(scene.heroes[1].body!.velocity.y).toBe(300);
+
+    // quickRespawn restores cracked platform
+    scene.quickRespawn({ x: 200, y: 380 });
+    expect(crackedRect.visible).toBe(true);
+    expect(crackedRect.body.enable).toBe(true);
+  });
+
+  it('wraps hero across x=0 <-> x=width preserving velocity and projects spectral edge ghost', () => {
+    scene.levelData = {
+      ...makeTestLevel('1', 'Hydrogen', 'H'),
+      width: 800,
+      height: 600,
+      screenWrap: 'horizontal'
+    };
+    scene.create();
+
+    const hero = scene.heroes[0];
+    hero.setPosition(-6, 300);
+    hero.setVelocity(-320, -140);
+    hero.recoilVx = -180;
+
+    scene.updateScreenWrap(1000);
+
+    expect(hero.x).toBe(794);
+    expect(hero.body!.velocity.x).toBe(-320);
+    expect(hero.body!.velocity.y).toBe(-140);
+    expect(hero.recoilVx).toBe(-180);
+
+    // Ghost projected on opposite edge (794 is within 32 px of 800 -> ghost at -6)
+    const ghosts = (scene as any).screenWrapGhosts;
+    expect(ghosts.length).toBeGreaterThanOrEqual(1);
+    expect(ghosts[0].visible).toBe(true);
+    expect(ghosts[0].x).toBe(-6);
+  });
+});
+

@@ -17,6 +17,17 @@ import {
 import { MobileTouchController } from '../input/MobileTouchController';
 import { PHYSICS } from '../physics/constants';
 import {
+  applyToroidalScreenWrap,
+  canFuseClones,
+  computeFissionVelocities,
+  findHookedTetherPylon,
+  getScreenWrapAxes,
+  getScreenWrapGhostPositions,
+  isParticleSweptByTether,
+  resolveTetherPylonConstraint,
+  shouldBreakCrackedPlatform
+} from '../physics/entanglementTether';
+import {
   applyLowGravity,
   computeLookAheadOffset,
   isHeroOnPressurePlate
@@ -43,7 +54,8 @@ import type {
   IsotopeMedal,
   LevelData,
   ParticleType,
-  PlatformPhase
+  PlatformPhase,
+  TetherPylon
 } from '../types';
 import { GhostHero } from './GhostHero';
 import Hero from './Hero';
@@ -185,6 +197,12 @@ export default class GameScene extends Phaser.Scene {
   private deathEchoes: Phaser.GameObjects.Sprite[] = [];
   private levelCompleteOverlay: Phaser.GameObjects.Container | null = null;
   private quantumEffects: QuantumEffectsManager | null = null;
+  private crackedPlatforms: Phaser.GameObjects.Rectangle[] = [];
+  private hookedTetherPylon: TetherPylon | null = null;
+  private tetherPylonGraphics: Phaser.GameObjects.Graphics | null = null;
+  private screenWrapGraphics: Phaser.GameObjects.Graphics | null = null;
+  private screenWrapGhosts: Phaser.GameObjects.Sprite[] = [];
+  private fusionHaloGraphics: Phaser.GameObjects.Graphics | null = null;
 
   constructor() {
     super('Game');
@@ -283,7 +301,14 @@ export default class GameScene extends Phaser.Scene {
       const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
       tabKey.on('down', (_key: Phaser.Input.Keyboard.Key, event?: KeyboardEvent) => {
         event?.preventDefault?.();
-        this.cycleFocusNext();
+        if (!this.tryInFlightFission()) {
+          this.cycleFocusNext();
+        }
+      });
+
+      const xKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+      xKey.on('down', () => {
+        this.tryInFlightFission();
       });
 
       const eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
@@ -309,6 +334,8 @@ export default class GameScene extends Phaser.Scene {
       spaceKey.on('down', () => {
         if (this.isLevelCompleted && this.canAdvanceLevel) {
           this.advanceToNextLevel();
+        } else if (!this.isLevelCompleted && !this.isTransitioningLevel) {
+          this.tryInFlightFission();
         }
       });
 
@@ -350,6 +377,12 @@ export default class GameScene extends Phaser.Scene {
     this.molecules = [];
     this.phasePlatforms = [];
     this.decayPlatforms = [];
+    this.crackedPlatforms = [];
+    this.hookedTetherPylon = null;
+    this.tetherPylonGraphics = null;
+    this.screenWrapGraphics = null;
+    this.screenWrapGhosts = [];
+    this.fusionHaloGraphics = null;
     this.edgePips = [];
     this.isLevelCompleted = false;
     this.isRespawning = false;
@@ -423,37 +456,47 @@ export default class GameScene extends Phaser.Scene {
 
     // Dedicated scene boundary walls (left, right, ceiling) for exclusive boundary bouncing
     this.sceneBounds = this.physics.add.staticGroup();
+    const wrapAxes = getScreenWrapAxes(this.levelData.screenWrap);
 
-    // Left wall: thickness 40, right edge at x = 0
-    const leftWall = this.add.rectangle(-20, this.levelData.height / 2, 40, this.levelData.height);
-    this.physics.add.existing(leftWall, true);
-    leftWall.setVisible(false);
-    leftWall.setData('boundary', 'left');
-    this.sceneBounds.add(leftWall);
+    if (!wrapAxes.horizontal) {
+      // Left wall: thickness 40, right edge at x = 0
+      const leftWall = this.add.rectangle(-20, this.levelData.height / 2, 40, this.levelData.height);
+      this.physics.add.existing(leftWall, true);
+      leftWall.setVisible(false);
+      leftWall.setData('boundary', 'left');
+      this.sceneBounds.add(leftWall);
 
-    // Right wall: thickness 40, left edge at x = levelData.width
-    const rightWall = this.add.rectangle(
-      this.levelData.width + 20,
-      this.levelData.height / 2,
-      40,
-      this.levelData.height
-    );
-    this.physics.add.existing(rightWall, true);
-    rightWall.setVisible(false);
-    rightWall.setData('boundary', 'right');
-    this.sceneBounds.add(rightWall);
+      // Right wall: thickness 40, left edge at x = levelData.width
+      const rightWall = this.add.rectangle(
+        this.levelData.width + 20,
+        this.levelData.height / 2,
+        40,
+        this.levelData.height
+      );
+      this.physics.add.existing(rightWall, true);
+      rightWall.setVisible(false);
+      rightWall.setData('boundary', 'right');
+      this.sceneBounds.add(rightWall);
+    }
 
-    // Ceiling: thickness 40, bottom edge at y = 0
-    const ceiling = this.add.rectangle(
-      this.levelData.width / 2,
-      -20,
-      this.levelData.width + 80,
-      40
-    );
-    this.physics.add.existing(ceiling, true);
-    ceiling.setVisible(false);
-    ceiling.setData('boundary', 'ceiling');
-    this.sceneBounds.add(ceiling);
+    if (!wrapAxes.vertical) {
+      // Ceiling: thickness 40, bottom edge at y = 0
+      const ceiling = this.add.rectangle(
+        this.levelData.width / 2,
+        -20,
+        this.levelData.width + 80,
+        40
+      );
+      this.physics.add.existing(ceiling, true);
+      ceiling.setVisible(false);
+      ceiling.setData('boundary', 'ceiling');
+      this.sceneBounds.add(ceiling);
+    }
+
+    if (wrapAxes.horizontal || wrapAxes.vertical) {
+      this.screenWrapGraphics = this.add.graphics();
+      this.screenWrapGraphics.setDepth(22);
+    }
 
     // 2. Background ambient molecules
     this.createMolecules();
@@ -504,6 +547,12 @@ export default class GameScene extends Phaser.Scene {
       if (p.phase) {
         rect.setData('phase', p.phase);
         this.phasePlatforms.push({ rect, phase: p.phase });
+      }
+
+      if (p.cracked) {
+        rect.setData('cracked', true);
+        rect.setStrokeStyle(2, 0xfbbf24, 0.85);
+        this.crackedPlatforms.push(rect);
       }
 
       if (p.decayMs && p.decayMs > 0) {
@@ -798,6 +847,14 @@ export default class GameScene extends Phaser.Scene {
       if (decayState && !decayState.triggered && touchingTop) {
         decayState.triggered = true;
       }
+
+      // 3. Cracked Platform Shatter (Super-Quanta fusionStack >= 2)
+      if (
+        plat.getData('cracked') === true &&
+        shouldBreakCrackedPlatform(hero.fusionStack, Boolean(touchingTop), hero.isDiving)
+      ) {
+        this.shatterCrackedPlatform(plat);
+      }
     });
 
     this.physics.add.collider(this.heroGroup, this.movingPlatformsGroup, (heroObj, platObj) => {
@@ -901,6 +958,13 @@ export default class GameScene extends Phaser.Scene {
     this.diveTrailGraphics.setDepth(18);
     this.focusArcGraphics = this.add.graphics();
     this.focusArcGraphics.setDepth(26);
+    this.fusionHaloGraphics = this.add.graphics();
+    this.fusionHaloGraphics.setDepth(19);
+    if (this.levelData.tetherPylons && this.levelData.tetherPylons.length > 0) {
+      this.tetherPylonGraphics = this.add.graphics();
+      this.tetherPylonGraphics.setDepth(16);
+      this.drawTetherPylons();
+    }
   }
 
   private spawnHeroes(): void {
@@ -1000,6 +1064,24 @@ export default class GameScene extends Phaser.Scene {
       this.thumbRibbonGraphics.destroy();
       this.thumbRibbonGraphics = null;
     }
+    if (this.tetherPylonGraphics) {
+      this.tetherPylonGraphics.destroy();
+      this.tetherPylonGraphics = null;
+    }
+    if (this.screenWrapGraphics) {
+      this.screenWrapGraphics.destroy();
+      this.screenWrapGraphics = null;
+    }
+    if (this.fusionHaloGraphics) {
+      this.fusionHaloGraphics.destroy();
+      this.fusionHaloGraphics = null;
+    }
+    for (const ghost of this.screenWrapGhosts) {
+      ghost.destroy();
+    }
+    this.screenWrapGhosts = [];
+    this.crackedPlatforms = [];
+    this.hookedTetherPylon = null;
     if (this.unsubJump) {
       this.unsubJump();
       this.unsubJump = null;
@@ -1169,8 +1251,13 @@ export default class GameScene extends Phaser.Scene {
         pointer.y,
         this.time.now
       );
-      if (doubleTap && this.heroes.length > 1 && !this.isEntangled) {
-        this.cycleFocusNext();
+      if (doubleTap) {
+        if (this.tryInFlightFission()) {
+          return;
+        }
+        if (this.heroes.length > 1 && !this.isEntangled) {
+          this.cycleFocusNext();
+        }
       }
     });
 
@@ -1698,6 +1785,11 @@ export default class GameScene extends Phaser.Scene {
     this.pauliGraphics?.clear();
     this.diveTrailGraphics?.clear();
     this.focusArcGraphics?.clear();
+    this.fusionHaloGraphics?.clear();
+    this.hookedTetherPylon = null;
+    for (const ghost of this.screenWrapGhosts) {
+      ghost.setVisible(false);
+    }
     if (this.dilationIndicatorText?.active) {
       this.dilationIndicatorText.setVisible(false);
     }
@@ -1735,7 +1827,7 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // 5. Restore half-life decay platforms
+    // 5. Restore half-life decay platforms & cracked platforms
     for (const dp of this.decayPlatforms) {
       dp.state.timerMs = 0;
       dp.state.triggered = false;
@@ -1746,6 +1838,16 @@ export default class GameScene extends Phaser.Scene {
       const body = dp.rect.body as Phaser.Physics.Arcade.StaticBody | null;
       if (body) {
         body.checkCollision.none = false;
+        body.updateFromGameObject?.();
+      }
+    }
+    for (const cp of this.crackedPlatforms) {
+      cp.setAlpha(1);
+      cp.setVisible(true);
+      const body = cp.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.checkCollision.none = false;
+        body.enable = true;
         body.updateFromGameObject?.();
       }
     }
@@ -1943,6 +2045,7 @@ export default class GameScene extends Phaser.Scene {
         if (this.heroes.length < uncertainty) {
           const spawnX = Phaser.Math.Clamp(hero.x - 45, 32, this.levelData.width - 32);
           const clonedHero = new Hero(this, spawnX, hero.y - 10, false);
+          clonedHero.createdAtMs = this.time?.now ?? 0;
           clonedHero.velocityMultiplier = hero.velocityMultiplier;
           clonedHero.setGravityInverted(this.physics.world.gravity.y < 0);
           clonedHero.pauliGraceUntil = this.time.now + 500;
@@ -2389,11 +2492,34 @@ export default class GameScene extends Phaser.Scene {
     const beta = this.heroes.find((h) => h.isBeta);
     if (!alpha || !beta || !alpha.active || !beta.active) return;
 
-    const ax = alpha.x;
-    const ay = alpha.y;
-    const bx = beta.x;
-    const by = beta.y;
+    if (this.hookedTetherPylon) {
+      this.drawBeamSegment(
+        alpha.x,
+        alpha.y,
+        this.hookedTetherPylon.x,
+        this.hookedTetherPylon.y,
+        time
+      );
+      this.drawBeamSegment(
+        this.hookedTetherPylon.x,
+        this.hookedTetherPylon.y,
+        beta.x,
+        beta.y,
+        time
+      );
+      this.entanglementGraphics.lineStyle(2.5, 0x00e5ff, 0.9);
+      this.entanglementGraphics.strokeCircle(
+        this.hookedTetherPylon.x,
+        this.hookedTetherPylon.y,
+        this.hookedTetherPylon.radius + 4
+      );
+    } else {
+      this.drawBeamSegment(alpha.x, alpha.y, beta.x, beta.y, time);
+    }
+  }
 
+  private drawBeamSegment(ax: number, ay: number, bx: number, by: number, time: number): void {
+    if (!this.entanglementGraphics) return;
     const dx = bx - ax;
     const dy = by - ay;
     const dist = Math.hypot(dx, dy);
@@ -2466,6 +2592,311 @@ export default class GameScene extends Phaser.Scene {
       this.entanglementGraphics.lineTo(px, py);
     }
     this.entanglementGraphics.strokePath();
+  }
+
+  private drawTetherPylons(): void {
+    if (!this.tetherPylonGraphics || !this.levelData.tetherPylons) return;
+    const g = this.tetherPylonGraphics;
+    g.clear();
+    for (const pylon of this.levelData.tetherPylons) {
+      g.fillStyle(0x0f172a, 0.9);
+      g.fillCircle(pylon.x, pylon.y, pylon.radius);
+      g.lineStyle(2.5, 0x22d3ee, 0.95);
+      g.strokeCircle(pylon.x, pylon.y, pylon.radius);
+      g.fillStyle(0xec4899, 0.9);
+      g.fillCircle(pylon.x, pylon.y, Math.max(4, pylon.radius * 0.35));
+    }
+  }
+
+  private spawnTetherSweepSparks(
+    px: number,
+    py: number,
+    alpha: { x: number; y: number },
+    beta: { x: number; y: number }
+  ): void {
+    if (!this.add?.circle || !this.tweens?.add) return;
+    const targets = [
+      { x: alpha.x, y: alpha.y, color: 0x00e5ff },
+      { x: beta.x, y: beta.y, color: 0xec4899 }
+    ];
+    for (const target of targets) {
+      for (let i = 0; i < 4; i++) {
+        const spark = this.add.circle(px, py, 3, target.color, 0.95);
+        spark.setDepth(23);
+        this.tweens.add({
+          targets: spark,
+          x: target.x,
+          y: target.y,
+          alpha: 0,
+          scale: 0.3,
+          duration: 180 + i * 35,
+          ease: 'Quad.easeOut',
+          onComplete: () => spark.destroy()
+        });
+      }
+    }
+  }
+
+  public updateEntanglementTether(_time: number): void {
+    if (!this.isEntangled) return;
+    const alpha = this.heroes.find((h) => !h.isBeta && h.active);
+    const beta = this.heroes.find((h) => h.isBeta && h.active);
+    if (!alpha || !beta) return;
+
+    const tetherEnabled = this.levelData.entanglement?.tetherPhysical !== false;
+
+    // 1. Magnetic Tether Pylon Pivot & Pulley Constraint
+    const pylons = this.levelData.tetherPylons;
+    if (pylons && pylons.length > 0) {
+      if (!this.hookedTetherPylon) {
+        const found = findHookedTetherPylon(alpha, beta, pylons);
+        if (found) {
+          this.hookedTetherPylon = found;
+          gameEvents.emit('tether:pylon_hook', { x: found.x, y: found.y });
+        }
+      }
+
+      if (this.hookedTetherPylon) {
+        const maxLen =
+          this.hookedTetherPylon.maxLength ??
+          this.levelData.entanglement?.tetherMaxLength ??
+          PHYSICS.TETHER_DEFAULT_MAX_LENGTH;
+        const betaBody = beta.body as Phaser.Physics.Arcade.Body | null;
+        const betaVel = betaBody?.velocity ?? { x: 0, y: 0 };
+        const constraint = resolveTetherPylonConstraint(
+          alpha,
+          beta,
+          betaVel,
+          this.hookedTetherPylon,
+          maxLen
+        );
+        if (constraint.constrained) {
+          beta.x = constraint.betaPos.x;
+          beta.y = constraint.betaPos.y;
+          if (betaBody) {
+            beta.setVelocity(constraint.betaVel.x, constraint.betaVel.y);
+          }
+        }
+      }
+    }
+
+    // 2. Lasso Particle Sweep (distToSegment < 22 px)
+    if (tetherEnabled && this.particles?.getChildren) {
+      for (const child of this.particles.getChildren()) {
+        const sprite = child as Phaser.Physics.Arcade.Sprite;
+        if (!sprite.active) continue;
+        const swept = this.hookedTetherPylon
+          ? isParticleSweptByTether(sprite, alpha, this.hookedTetherPylon) ||
+            isParticleSweptByTether(sprite, this.hookedTetherPylon, beta)
+          : isParticleSweptByTether(sprite, alpha, beta);
+        if (swept) {
+          const sx = sprite.x;
+          const sy = sprite.y;
+          const pType = sprite.getData('type') as ParticleType;
+          this.collectParticle(alpha, sprite);
+          this.spawnTetherSweepSparks(sx, sy, alpha, beta);
+          gameEvents.emit('tether:collect', { x: sx, y: sy, type: pType });
+        }
+      }
+    }
+  }
+
+  public shatterCrackedPlatform(plat: Phaser.GameObjects.Rectangle): void {
+    if (!plat.active) return;
+    const body = plat.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (body) {
+      body.checkCollision.none = true;
+      body.enable = false;
+    }
+    plat.setAlpha(0);
+    plat.setVisible(false);
+    gameEvents.emit('platform:cracked_break', { x: plat.x, y: plat.y });
+
+    if (this.add?.circle && this.tweens?.add) {
+      for (let i = 0; i < 6; i++) {
+        const shard = this.add.circle(
+          plat.x + (i - 2.5) * 10,
+          plat.y,
+          4,
+          0xfbbf24,
+          0.95
+        );
+        shard.setDepth(21);
+        this.tweens.add({
+          targets: shard,
+          x: shard.x + (i - 2.5) * 18,
+          y: shard.y + 28 + (i % 2) * 16,
+          alpha: 0,
+          duration: 240,
+          ease: 'Quad.easeOut',
+          onComplete: () => shard.destroy()
+        });
+      }
+    }
+  }
+
+  public tryCloneFusion(nowMs = this.time?.now ?? 0): boolean {
+    if (this.heroes.length < 2 || this.isEntangled || this.isPauliActive) return false;
+    if (this.levelData.allowCloneFusion === false) return false;
+
+    const focused = this.heroes.find((h) => h.isFocused && h.active);
+    if (!focused) return false;
+
+    const target = this.heroes.find(
+      (h) =>
+        h !== focused &&
+        h.active &&
+        canFuseClones(focused, h, nowMs, {
+          isEntangled: this.isEntangled,
+          isPauliActive: this.isPauliActive,
+          allowCloneFusion: this.levelData.allowCloneFusion
+        })
+    );
+    if (!target) return false;
+
+    const nextStack = Math.min(3, focused.fusionStack + target.fusionStack);
+    target.destroy();
+    this.heroes = this.heroes.filter((h) => h !== target && h.active);
+    focused.setFusionStack(nextStack);
+    this.updateEdgePips();
+    this.showRetroToast('SUPER-QUANTA !');
+    gameEvents.emit('hero:fusion', {
+      x: focused.x,
+      y: focused.y,
+      fusionStack: focused.fusionStack
+    });
+    return true;
+  }
+
+  public tryInFlightFission(): boolean {
+    if (this.isEntangled) return false;
+    const focused = this.heroes.find((h) => h.isFocused && h.active);
+    if (!focused || focused.fusionStack < 2 || !focused.body) return false;
+
+    const touchingGround =
+      focused.upsideDown === 1
+        ? focused.body.touching.down || focused.body.blocked.down
+        : focused.body.touching.up || focused.body.blocked.up;
+    if (touchingGround) return false;
+
+    const nowMs = this.time?.now ?? 0;
+    const { upperVy, lowerVy } = computeFissionVelocities(focused.upsideDown);
+
+    focused.setFusionStack(focused.fusionStack - 1);
+    focused.setVelocityY(upperVy);
+
+    const lowerClone = new Hero(
+      this,
+      focused.x,
+      focused.y + 16 * focused.upsideDown,
+      false
+    );
+    lowerClone.createdAtMs = nowMs;
+    lowerClone.velocityMultiplier = focused.velocityMultiplier;
+    lowerClone.setGravityInverted(focused.upsideDown === -1);
+    lowerClone.pauliGraceUntil = nowMs + 500;
+    lowerClone.setTint(0x38bdf8);
+    lowerClone.setVelocity(focused.body.velocity.x * 0.5, lowerVy);
+    this.heroes.push(lowerClone);
+    this.heroGroup.add(lowerClone);
+
+    this.updateEdgePips();
+    this.showRetroToast('FISSION !');
+    gameEvents.emit('hero:fission', { x: focused.x, y: focused.y });
+    return true;
+  }
+
+  public updateScreenWrap(time: number): void {
+    const wrapAxes = getScreenWrapAxes(this.levelData.screenWrap);
+    if (!wrapAxes.horizontal && !wrapAxes.vertical) return;
+
+    const w = this.levelData.width;
+    const h = this.levelData.height;
+
+    for (const hero of this.heroes) {
+      if (!hero.active) continue;
+      const wrapped = applyToroidalScreenWrap(
+        { x: hero.x, y: hero.y },
+        w,
+        h,
+        this.levelData.screenWrap
+      );
+      if (wrapped.wrappedX) {
+        hero.x = wrapped.x;
+        if (hero.body && 'x' in hero.body) {
+          const b = hero.body as Phaser.Physics.Arcade.Body;
+          b.x = wrapped.x - (b.width || 0) / 2;
+        }
+        gameEvents.emit('hero:screen_wrap', { axis: 'x', x: hero.x, y: hero.y });
+      }
+      if (wrapped.wrappedY) {
+        hero.y = wrapped.y;
+        if (hero.body && 'y' in hero.body) {
+          const b = hero.body as Phaser.Physics.Arcade.Body;
+          b.y = wrapped.y - (b.height || 0) / 2;
+        }
+        gameEvents.emit('hero:screen_wrap', { axis: 'y', x: hero.x, y: hero.y });
+      }
+    }
+
+    // Spectral border lines (violet/cyan undulating edge)
+    if (this.screenWrapGraphics) {
+      const g = this.screenWrapGraphics;
+      g.clear();
+      const pulse = 0.45 + 0.25 * Math.sin(time * 0.006);
+      if (wrapAxes.horizontal) {
+        g.lineStyle(3, 0xa855f7, pulse);
+        g.lineBetween(1.5, 0, 1.5, h);
+        g.lineBetween(w - 1.5, 0, w - 1.5, h);
+        g.lineStyle(1.5, 0x00e5ff, pulse * 0.9);
+        g.lineBetween(4, 0, 4, h);
+        g.lineBetween(w - 4, 0, w - 4, h);
+      }
+      if (wrapAxes.vertical) {
+        g.lineStyle(3, 0xa855f7, pulse);
+        g.lineBetween(0, 1.5, w, 1.5);
+        g.lineBetween(0, h - 1.5, w, h - 1.5);
+      }
+    }
+
+    // Opposite-edge phantom projection within < 32 px
+    if (this.add?.sprite) {
+      const ghostCoords: Array<{ pos: { x: number; y: number }; hero: Hero }> = [];
+      for (const hero of this.heroes) {
+        if (!hero.active) continue;
+        const positions = getScreenWrapGhostPositions(
+          { x: hero.x, y: hero.y },
+          w,
+          h,
+          this.levelData.screenWrap
+        );
+        for (const pos of positions) {
+          ghostCoords.push({ pos, hero });
+        }
+      }
+
+      while (this.screenWrapGhosts.length < ghostCoords.length) {
+        const ghost = this.add.sprite(0, 0, 'hero');
+        ghost.setAlpha(0.55);
+        ghost.setTint(0x22d3ee);
+        ghost.setDepth(18);
+        this.screenWrapGhosts.push(ghost);
+      }
+
+      for (let i = 0; i < this.screenWrapGhosts.length; i++) {
+        const ghost = this.screenWrapGhosts[i];
+        if (i < ghostCoords.length) {
+          const { pos, hero } = ghostCoords[i];
+          ghost.setVisible(true);
+          ghost.setPosition(pos.x, pos.y);
+          ghost.setFlipX(hero.flipX);
+          ghost.setFlipY(hero.flipY);
+          ghost.setScale(hero.scaleX, hero.scaleY);
+        } else {
+          ghost.setVisible(false);
+        }
+      }
+    }
   }
 
   private triggerSynthPlatformImpact(
@@ -2641,21 +3072,20 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Entanglement boundary check & laser beam
+    // Entanglement boundary check, physical tether & laser beam
+    const wrapAxes = getScreenWrapAxes(this.levelData.screenWrap);
     if (this.isEntangled) {
       for (const h of this.heroes) {
         if (h.active && !h.enteredPortal) {
-          if (
-            h.y > this.levelData.height + 60 ||
-            h.y < -60 ||
-            h.x < -60 ||
-            h.x > this.levelData.width + 60
-          ) {
+          const outY = !wrapAxes.vertical && (h.y > this.levelData.height + 60 || h.y < -60);
+          const outX = !wrapAxes.horizontal && (h.x < -60 || h.x > this.levelData.width + 60);
+          if (outY || outX) {
             this.killHero(h);
             return;
           }
         }
       }
+      this.updateEntanglementTether(time);
       this.drawEntanglementBeam(time);
     }
 
@@ -2746,7 +3176,10 @@ export default class GameScene extends Phaser.Scene {
       if (hero.active) {
         hero.updateControl(this.cursors, this.wasd, this.touchController.state, delta);
         // Restart if hero falls out through the bottom (or top when gravity is inverted)
-        if (hero.y > this.levelData.height + 20 || (hero.upsideDown === -1 && hero.y < -10)) {
+        if (
+          !wrapAxes.vertical &&
+          (hero.y > this.levelData.height + 20 || (hero.upsideDown === -1 && hero.y < -10))
+        ) {
           if (hero.isFocused || this.heroes.length <= 1) {
             gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: this.isEntangled });
             this.quickRespawn({ x: hero.x, y: hero.y });
@@ -2757,6 +3190,27 @@ export default class GameScene extends Phaser.Scene {
       }
     }
     this.touchController.consumeFrameFlags();
+
+    if (this.levelData.screenWrap) {
+      this.updateScreenWrap(time);
+    }
+
+    if (this.heroes.length >= 2 && !this.isEntangled && !this.isPauliActive) {
+      this.tryCloneFusion(time);
+    }
+
+    if (this.fusionHaloGraphics) {
+      this.fusionHaloGraphics.clear();
+      const pulse = 0.55 + 0.25 * Math.sin(time * 0.008);
+      for (const hero of this.heroes) {
+        if (hero.active && hero.fusionStack >= 2) {
+          this.fusionHaloGraphics.lineStyle(3, 0xfbbf24, pulse);
+          this.fusionHaloGraphics.strokeCircle(hero.x, hero.y, 28);
+          this.fusionHaloGraphics.lineStyle(1.5, 0x00e5ff, pulse * 0.9);
+          this.fusionHaloGraphics.strokeCircle(hero.x, hero.y, 33);
+        }
+      }
+    }
 
     // Render cyan vertical dive trail for diving heroes
     if (this.diveTrailGraphics) {
