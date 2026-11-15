@@ -26,6 +26,7 @@ export interface GameStoreState {
   ghostMode: GhostMode;
   ghostEnabled: boolean;
   sharedLevel: LevelData | null;
+  unlockedMolecules: string[];
 }
 
 export interface RecordScoreMeta {
@@ -64,6 +65,8 @@ export interface GameStoreActions {
   toggleGhost: (hasPersonalBest?: boolean, hasSwarm?: boolean) => void;
   setGhostMode: (mode: GhostMode) => void;
   setGhostEnabled: (enabled: boolean) => void;
+  unlockMolecule: (moleculeId: string) => void;
+  unlockBellSync: (level: number) => void;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -173,6 +176,7 @@ export const useGameStore = create<GameStore>()(
       reducedEffects: false,
       ghostMode: 'optimal',
       ghostEnabled: true,
+      unlockedMolecules: [],
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
       setMuted: (muted: boolean) => set({ isMuted: muted }),
@@ -221,6 +225,29 @@ export const useGameStore = create<GameStore>()(
           ghostMode: enabled ? 'optimal' : 'off'
         }),
 
+      unlockMolecule: (moleculeId: string) =>
+        set((state) => {
+          if (state.unlockedMolecules.includes(moleculeId)) return state;
+          return {
+            unlockedMolecules: [...state.unlockedMolecules, moleculeId]
+          };
+        }),
+
+      unlockBellSync: (level: number) =>
+        set((state) => {
+          const prevItem = state.scores[level] ?? { best: 0, last: 0 };
+          return {
+            scores: {
+              ...state.scores,
+              [level]: {
+                ...prevItem,
+                medal: bestMedal(prevItem.medal, 'gold'),
+                bellSync: true
+              }
+            }
+          };
+        }),
+
       updateCurrentLevel: (lvl: number) => set({ currentLevel: Number(lvl) }),
 
       updateMaxLevel: (lvl: number) => set({ maxLevel: Number(lvl) }),
@@ -233,7 +260,8 @@ export const useGameStore = create<GameStore>()(
           maxLevel: 1,
           maxEntanglementLevel: 110,
           scores: {},
-          sharedLevel: null
+          sharedLevel: null,
+          unlockedMolecules: []
         }),
 
       recordScore: (
@@ -279,7 +307,8 @@ export const useGameStore = create<GameStore>()(
               ...(bestJumps !== undefined ? { bestJumps } : {}),
               ...(lastJumps !== undefined ? { lastJumps } : {}),
               ...(bestSwitches !== undefined ? { bestSwitches } : {}),
-              ...(medal !== undefined ? { medal } : {})
+              ...(medal !== undefined ? { medal } : {}),
+              ...(prevItem?.bellSync ? { bellSync: true } : {})
             }
           };
           const isEntangled = level >= 110;
@@ -513,7 +542,8 @@ export const useGameStore = create<GameStore>()(
         hapticsEnabled: state.hapticsEnabled,
         reducedEffects: state.reducedEffects,
         ghostMode: state.ghostMode,
-        ghostEnabled: state.ghostEnabled
+        ghostEnabled: state.ghostEnabled,
+        unlockedMolecules: state.unlockedMolecules
       })
     }
   )

@@ -234,6 +234,12 @@ export class SoundManager {
       }),
       gameEvents.on('platform:plasma_bounce', () => {
         this.playPlasmaChord();
+      }),
+      gameEvents.on('bell:violation', () => {
+        this.playBellViolationChord();
+      }),
+      gameEvents.on('bubble:harvest', () => {
+        this.playBubbleChime();
       })
     );
 
@@ -1293,6 +1299,75 @@ export class SoundManager {
         osc.start(now);
         osc.stop(now + 0.25);
       }
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Bell Inequality Violation (Celestial golden harmonic chord)
+   */
+  public playBellViolationChord(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      // Celestial Lydian/Maj9 harmonic chord
+      const freqs = [523.25, 659.25, 783.99, 987.77, 1174.66, 1567.98];
+      freqs.forEach((freq, idx) => {
+        const start = now + idx * 0.035;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.65);
+
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(start);
+        osc.stop(start + 0.68);
+      });
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Crystalline bubble convergence chime
+   */
+  public playBubbleChime(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const freqs = [1046.5, 1318.51, 1567.98, 2093.0];
+      freqs.forEach((freq, idx) => {
+        const start = now + idx * 0.03;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.15, start + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
+
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(start);
+        osc.stop(start + 0.24);
+      });
     } catch {
       // safe fallback
     }

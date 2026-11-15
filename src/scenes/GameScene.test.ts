@@ -372,6 +372,9 @@ vi.mock('phaser', () => {
             TWO: 50,
             THREE: 51,
             R: 82,
+            Q: 81,
+            C: 67,
+            F: 70,
             SPACE: 32,
             ENTER: 13
           }
@@ -814,4 +817,114 @@ describe('GameScene Spec-08: Entanglement Tether, Clone Fusion/Fission & Screen-
     expect(ghosts[0].x).toBe(-6);
   });
 });
+
+describe('GameScene Spec-10: Curiosity Secrets (HUD Phase, Bubble Antigravity & Bell Sync)', () => {
+  let scene: GameScene;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useGameStore.getState().resetGame();
+    useGameStore.getState().updateCurrentLevel(1);
+    scene = new GameScene();
+  });
+
+  it('Secret #1: tapping phaseIndicatorText or pressing Q toggles phase platforms and flashes badge', () => {
+    scene.levelData = makeTestLevel('1', 'Hydrogen', 'H');
+    scene.create();
+
+    const phaseText = (scene as any).phaseIndicatorText;
+    expect(phaseText).not.toBeNull();
+    expect(scene.currentPhase).toBe('cyan');
+
+    // Simulate tapping/clicking the interactive HUD badge
+    const pointerHandlers = phaseText.listeners.get('pointerdown') || [];
+    expect(pointerHandlers.length).toBeGreaterThan(0);
+    pointerHandlers[0]();
+    expect(scene.currentPhase).toBe('magenta');
+    expect(phaseText.scaleX).toBe(1.25);
+
+    // Simulate calling togglePhasePlatforms (as triggered by Q key)
+    scene.togglePhasePlatforms();
+    expect(scene.currentPhase).toBe('cyan');
+  });
+
+  it('Secret #2: dragging within 35px of 3 background bubbles in < 800ms spawns an antigravity bubble that levitates heroes at -180 px/s', () => {
+    scene.levelData = makeTestLevel('1', 'Hydrogen', 'H');
+    scene.create();
+
+    const molecules = (scene as any).molecules as Array<{ circle: { x: number; y: number } }>;
+    expect(molecules.length).toBeGreaterThanOrEqual(3);
+
+    molecules[0].circle.x = 200;
+    molecules[0].circle.y = 300;
+    molecules[1].circle.x = 260;
+    molecules[1].circle.y = 300;
+    molecules[2].circle.x = 320;
+    molecules[2].circle.y = 300;
+
+    const harvestEvents: Array<{ x: number; y: number }> = [];
+    const unsub = gameEvents.on('bubble:harvest', (p) => harvestEvents.push(p));
+
+    expect(scene.trackBubblePointerMove(210, 300, 1000)).toBe(false);
+    expect(scene.trackBubblePointerMove(255, 300, 1200)).toBe(false);
+    expect(scene.trackBubblePointerMove(315, 300, 1400)).toBe(true);
+    unsub();
+
+    expect(harvestEvents).toHaveLength(1);
+    expect(harvestEvents[0].x).toBeCloseTo(260, 1);
+    expect(harvestEvents[0].y).toBeCloseTo(300, 1);
+
+    const bubbles = (scene as any).antigravityBubbles;
+    expect(bubbles).toHaveLength(1);
+    expect(bubbles[0].radius).toBe(36);
+    expect(bubbles[0].expiresAtMs).toBe(5400);
+
+    // Hero enters bubble -> levitates at vy = -180 px/s
+    const hero = scene.heroes[0];
+    hero.setPosition(260, 300);
+    scene.updateAntigravityBubbles(1500);
+    expect(hero.levitateUntilMs).toBe(3500);
+    expect(hero.body!.velocity.y).toBe(-180);
+
+    // Bubble expires after 4000ms
+    scene.updateAntigravityBubbles(5500);
+    expect((scene as any).antigravityBubbles).toHaveLength(0);
+  });
+
+  it('Secret #3: entangled twins arriving within <= 50ms trigger bell:violation and award Bell Sync Gold Isotope', () => {
+    scene.levelData = {
+      ...makeTestLevel('110', 'Darmstadtium', 'Ds'),
+      entanglement: {
+        mode: 'mirror_x',
+        betaSpawn: { x: 600, y: 400 },
+        portalMode: 'dual',
+        betaDoor: { x: 650, y: 400 }
+      }
+    };
+    scene.create();
+
+    const bellEvents: Array<{ level: number; deltaMs: number }> = [];
+    const unsub = gameEvents.on('bell:violation', (p) => bellEvents.push(p));
+
+    const alpha = scene.heroes.find((h) => !h.isBeta)!;
+    const beta = scene.heroes.find((h) => h.isBeta)!;
+    const portalA = (scene as any).portalSprite;
+    const portalB = (scene as any).betaPortalSprite;
+
+    scene.time.now = 5000;
+    (scene as any).handleEntangledPortalArrival(alpha, portalA, false);
+    scene.time.now = 5035;
+    (scene as any).handleEntangledPortalArrival(beta, portalB, true);
+    unsub();
+
+    expect(bellEvents).toHaveLength(1);
+    expect(bellEvents[0]).toEqual({ level: 110, deltaMs: 35 });
+    expect(scene.cameras.main.flash).toHaveBeenCalledWith(400, 255, 215, 0, false);
+
+    const score110 = useGameStore.getState().scores[110];
+    expect(score110?.bellSync).toBe(true);
+    expect(score110?.medal).toBe('gold');
+  });
+});
+
 

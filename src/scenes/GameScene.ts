@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
 import { getNarrativeForLevel } from '../data/cosmicNarrative';
 import * as defaultLevels from '../data/levels';
+import { getMoleculeById } from '../data/molecules';
 import { getAtomicMass, getElementSpectroscopy } from '../data/spectroscopy';
 import { BohrBackgroundRenderer } from '../effects/BohrBackgroundRenderer';
 import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
@@ -240,6 +241,16 @@ export default class GameScene extends Phaser.Scene {
   private hasCondenseAbility = false;
   private fKey: Phaser.Input.Keyboard.Key | null = null;
   private activePinPointerWorld: { x: number; y: number } | null = null;
+  private alphaArrivalTimeMs: number | null = null;
+  private betaArrivalTimeMs: number | null = null;
+  private bubbleHarvestHits: Array<{ molIndex: number; x: number; y: number; timeMs: number }> = [];
+  private antigravityBubbles: Array<{
+    x: number;
+    y: number;
+    radius: number;
+    expiresAtMs: number;
+    graphic: Phaser.GameObjects.Arc;
+  }> = [];
 
   constructor() {
     super('Game');
@@ -289,6 +300,17 @@ export default class GameScene extends Phaser.Scene {
               : assemblePacedLevel({ atom: atomVal, seed: seedVal });
           this.levelData = paced.levelData;
           return;
+        }
+      }
+    }
+
+    // Check if URL contains /game/molecule/:moleculeId
+    if (!store.sharedLevel && typeof window !== 'undefined') {
+      const molMatch = /\/game\/molecule\/([^/?#]+)/i.exec(window.location.pathname);
+      if (molMatch) {
+        const recipe = getMoleculeById(molMatch[1]);
+        if (recipe) {
+          store.setSharedLevel(recipe.levelData);
         }
       }
     }
@@ -384,6 +406,12 @@ export default class GameScene extends Phaser.Scene {
       });
 
       this.fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+      const qKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+      qKey.on('down', () => {
+        if (!this.isLevelCompleted && !this.isTransitioningLevel) {
+          this.togglePhasePlatforms();
+        }
+      });
       const cKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
       cKey.on('down', () => {
         if (!this.isLevelCompleted && !this.isTransitioningLevel) {
@@ -483,6 +511,10 @@ export default class GameScene extends Phaser.Scene {
     this.betaPortalSprite = null;
     this.alphaEnteredPortal = false;
     this.betaEnteredPortal = false;
+    this.alphaArrivalTimeMs = null;
+    this.betaArrivalTimeMs = null;
+    this.bubbleHarvestHits = [];
+    this.antigravityBubbles = [];
     this.isPauliActive = false;
     this.isTimeDilationActive = false;
     this.timeDilationUntil = 0;
@@ -1137,6 +1169,13 @@ export default class GameScene extends Phaser.Scene {
     this.betaHero = null;
     this.alphaEnteredPortal = false;
     this.betaEnteredPortal = false;
+    this.alphaArrivalTimeMs = null;
+    this.betaArrivalTimeMs = null;
+    this.bubbleHarvestHits = [];
+    for (const b of this.antigravityBubbles) {
+      b.graphic.destroy();
+    }
+    this.antigravityBubbles = [];
 
     const startX = this.levelData.player.position.x;
     const startY = this.levelData.player.position.y;
@@ -1308,6 +1347,11 @@ export default class GameScene extends Phaser.Scene {
       mol.circle.destroy();
     }
     this.molecules = [];
+    this.bubbleHarvestHits = [];
+    for (const b of this.antigravityBubbles) {
+      b.graphic.destroy();
+    }
+    this.antigravityBubbles = [];
 
     this.heroGroup?.clear?.(true, true);
     this.platforms?.clear?.(true, true);
@@ -1388,7 +1432,7 @@ export default class GameScene extends Phaser.Scene {
     verseText.setScrollFactor(0.35);
     this.muralObjects.push(verseText);
 
-    const numMolecules = 12;
+    const numMolecules = 25;
     for (let i = 0; i < numMolecules; i++) {
       const rx = Phaser.Math.Between(0, this.levelData.width);
       const ry = Phaser.Math.Between(0, this.levelData.height);
@@ -1456,8 +1500,11 @@ export default class GameScene extends Phaser.Scene {
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      const worldPt = this.getPointerWorldCoords(pointer);
+      if (!this.isLevelCompleted && !this.isTransitioningLevel) {
+        this.trackBubblePointerMove(worldPt.x, worldPt.y, this.time?.now ?? Date.now());
+      }
       if (pointer.isDown) {
-        const worldPt = this.getPointerWorldCoords(pointer);
         if (findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)) {
           this.activePinPointerWorld = worldPt;
         } else if (this.activePinPointerWorld) {
@@ -1719,6 +1766,15 @@ export default class GameScene extends Phaser.Scene {
           color: this.currentPhase === 'cyan' ? '#00ffff' : '#ec4899'
         }
       );
+      this.phaseIndicatorText.setInteractive({
+        useHandCursor: true,
+        hitArea: new Phaser.Geom.Rectangle(-8, -8, 120, 36),
+        hitAreaCallback: Phaser.Geom.Rectangle.Contains
+      });
+      this.phaseIndicatorText.on('pointerdown', () => {
+        this.uiPointerConsumed = true;
+        this.togglePhasePlatforms();
+      });
       this.hudContainer.add(this.phaseIndicatorText);
     }
 
@@ -2211,13 +2267,29 @@ export default class GameScene extends Phaser.Scene {
     hero.setPosition(portal.x + 48, portal.y + 96);
     hero.setAlpha(0.7);
 
+    const nowMs = this.time?.now ?? Date.now();
     if (hero.isBeta) {
       this.betaEnteredPortal = true;
+      this.betaArrivalTimeMs = nowMs;
     } else {
       this.alphaEnteredPortal = true;
+      this.alphaArrivalTimeMs = nowMs;
     }
 
     gameEvents.emit('hero:portal_docked', { isBeta: hero.isBeta });
+
+    if (this.alphaArrivalTimeMs !== null && this.betaArrivalTimeMs !== null) {
+      const deltaMs = Math.abs(this.alphaArrivalTimeMs - this.betaArrivalTimeMs);
+      if (deltaMs <= 50) {
+        const levelNum = Number(this.levelData.id);
+        gameEvents.emit('bell:violation', { level: levelNum, deltaMs });
+        if (!Number.isNaN(levelNum) && levelNum > 0) {
+          useGameStore.getState().unlockBellSync(levelNum);
+        }
+        this.cameras?.main?.flash?.(400, 255, 215, 0, false);
+        this.showRetroToast('BELL SYNC ! (ISOTOPE D\'OR)');
+      }
+    }
 
     if (this.alphaEnteredPortal && this.betaEnteredPortal) {
       this.time.delayedCall(120, () => {
@@ -2343,6 +2415,104 @@ export default class GameScene extends Phaser.Scene {
       ease: 'Cubic.easeOut',
       onComplete: () => toast.destroy()
     });
+  }
+
+  public togglePhasePlatforms(): void {
+    if (!this.hasPhasePlatforms) return;
+    this.toggleLevelPhase();
+    if (this.phaseIndicatorText?.active) {
+      this.phaseIndicatorText.setScale(1.25);
+      this.phaseIndicatorText.setAlpha(1);
+      if (this.tweens?.add) {
+        this.tweens.add({
+          targets: this.phaseIndicatorText,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 180,
+          ease: 'Cubic.easeOut'
+        });
+      }
+    }
+  }
+
+  public trackBubblePointerMove(worldX: number, worldY: number, nowMs: number): boolean {
+    if (this.molecules.length === 0) return false;
+    this.bubbleHarvestHits = this.bubbleHarvestHits.filter((hit) => nowMs - hit.timeMs <= 800);
+
+    for (let i = 0; i < this.molecules.length; i++) {
+      const mol = this.molecules[i];
+      if (!mol.circle?.active) continue;
+      if (this.bubbleHarvestHits.some((h) => h.molIndex === i)) continue;
+      const dist = Math.hypot(worldX - mol.circle.x, worldY - mol.circle.y);
+      if (dist < 35) {
+        this.bubbleHarvestHits.push({
+          molIndex: i,
+          x: mol.circle.x,
+          y: mol.circle.y,
+          timeMs: nowMs
+        });
+        if (this.bubbleHarvestHits.length >= 3) {
+          const hits = this.bubbleHarvestHits.slice(0, 3);
+          const bx = (hits[0].x + hits[1].x + hits[2].x) / 3;
+          const by = (hits[0].y + hits[1].y + hits[2].y) / 3;
+          for (const hit of hits) {
+            const m = this.molecules[hit.molIndex];
+            if (m?.circle && this.tweens?.add) {
+              this.tweens.add({
+                targets: m.circle,
+                x: bx,
+                y: by,
+                scaleX: 0.2,
+                scaleY: 0.2,
+                duration: 180,
+                ease: 'Cubic.easeIn',
+                onComplete: () => {
+                  if (m.circle?.active) {
+                    m.circle.setScale(1);
+                    m.circle.setPosition(
+                      Phaser.Math.Between(0, this.levelData.width),
+                      Phaser.Math.Between(0, this.levelData.height)
+                    );
+                  }
+                }
+              });
+            }
+          }
+          this.bubbleHarvestHits = [];
+          this.spawnAntigravityBubble(bx, by, nowMs);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  public spawnAntigravityBubble(x: number, y: number, nowMs: number): void {
+    const radius = 36;
+    const duration = 4000;
+    const graphic = this.add.circle(x, y, radius, 0x38bdf8, 0.26);
+    graphic.setStrokeStyle?.(2, 0xe879f9, 0.9);
+    graphic.setDepth?.(12);
+
+    if (this.tweens?.add) {
+      this.tweens.add({
+        targets: graphic,
+        scaleX: 1.08,
+        scaleY: 1.08,
+        duration: 450,
+        yoyo: true,
+        repeat: -1
+      });
+    }
+
+    this.antigravityBubbles.push({
+      x,
+      y,
+      radius,
+      expiresAtMs: nowMs + duration,
+      graphic
+    });
+    gameEvents.emit('bubble:harvest', { x, y });
   }
 
   public toggleLevelPhase(): void {
@@ -3958,6 +4128,33 @@ export default class GameScene extends Phaser.Scene {
       if (mol.circle.x > this.levelData.width) mol.circle.x = 0;
       if (mol.circle.y < 0) mol.circle.y = this.levelData.height;
       if (mol.circle.y > this.levelData.height) mol.circle.y = 0;
+    }
+
+    this.updateAntigravityBubbles(time);
+  }
+
+  public updateAntigravityBubbles(nowMs: number): void {
+    for (let i = this.antigravityBubbles.length - 1; i >= 0; i--) {
+      const bubble = this.antigravityBubbles[i];
+      if (nowMs >= bubble.expiresAtMs) {
+        bubble.graphic.destroy();
+        this.antigravityBubbles.splice(i, 1);
+        continue;
+      }
+      for (const hero of this.heroes) {
+        if (!hero.active || hero.enteredPortal) continue;
+        const dist = Math.hypot(hero.x - bubble.x, hero.y - bubble.y);
+        if (dist <= bubble.radius + 16) {
+          hero.levitateUntilMs = nowMs + 2000;
+        }
+      }
+    }
+
+    for (const hero of this.heroes) {
+      if (!hero.active || hero.enteredPortal) continue;
+      if (nowMs < hero.levitateUntilMs) {
+        hero.setVelocityY(-180);
+      }
     }
   }
 }

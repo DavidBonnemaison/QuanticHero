@@ -161,6 +161,7 @@ export interface ScoreItem {
   lastJumps?: number;
   bestSwitches?: number;
   medal?: IsotopeMedal;
+  bellSync?: boolean;
 }
 
 export type ScoreState = Record<number, ScoreItem>;

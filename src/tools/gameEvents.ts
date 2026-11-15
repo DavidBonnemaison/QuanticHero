@@ -32,6 +32,8 @@ export interface GameEventPayloads {
   'hero:wormhole': { wormholeId: string; outX: number; outY: number; speed: number };
   'hero:broglie_crystallize': { count: number; durationMs: number };
   'hero:ghost_surf': { x: number; y: number };
+  'bell:violation': { level: number; deltaMs: number };
+  'bubble:harvest': { x: number; y: number };
 }
 
 export type GameEventName = keyof GameEventPayloads;

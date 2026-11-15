@@ -10,7 +10,8 @@ describe('LevelSelection component', () => {
       currentLevel: 0,
       maxLevel: 1,
       scores: {},
-      customLevels: null
+      customLevels: null,
+      unlockedMolecules: []
     });
   });
 
@@ -22,6 +23,7 @@ describe('LevelSelection component', () => {
           <Route path="/levels" element={<LevelSelection />} />
           <Route path="/explanation" element={<div>Explanation Page</div>} />
           <Route path="/game" element={<div>Game Page</div>} />
+          <Route path="/game/molecule/:moleculeId" element={<div>Molecule Game Page</div>} />
         </Routes>
       </MemoryRouter>
     );
@@ -238,5 +240,35 @@ describe('LevelSelection component', () => {
     expect(screen.getByLabelText('Isotope Quantique (Or)')).toBeInTheDocument();
     expect(screen.getByLabelText('Isotope Pur (Argent)')).toBeInTheDocument();
     expect(screen.getByLabelText('Isotope Stable (Bronze)')).toBeInTheDocument();
+  });
+
+  it('Spec-10: Shift+Click combining H (1) and O (8) unlocks H2O in store and navigates to /game/molecule/H2O', () => {
+    renderWithRouter();
+
+    const hydrogen = screen.getByText('Hydrogen').closest('[role="button"]') as HTMLElement;
+    const oxygen = screen.getByText('Oxygen').closest('[role="button"]') as HTMLElement;
+
+    fireEvent.click(hydrogen, { shiftKey: true });
+    fireEvent.click(oxygen, { shiftKey: true });
+
+    expect(useGameStore.getState().unlockedMolecules).toContain('H2O');
+    expect(screen.getByText('Molecule Game Page')).toBeInTheDocument();
+  });
+
+  it('Spec-10: Alchemy Mode toggle allows combining H (1) and O (8) without holding Shift', () => {
+    renderWithRouter();
+
+    const alchemyBtn = screen.getByRole('button', { name: /liaison chimique/i });
+    fireEvent.click(alchemyBtn);
+    expect(alchemyBtn).toHaveAttribute('aria-pressed', 'true');
+
+    const hydrogen = screen.getByText('Hydrogen').closest('[role="button"]') as HTMLElement;
+    const oxygen = screen.getByText('Oxygen').closest('[role="button"]') as HTMLElement;
+
+    fireEvent.click(hydrogen);
+    fireEvent.click(oxygen);
+
+    expect(useGameStore.getState().unlockedMolecules).toContain('H2O');
+    expect(screen.getByText('Molecule Game Page')).toBeInTheDocument();
   });
 });

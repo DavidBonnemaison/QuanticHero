@@ -40,6 +40,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public inLiquid = false;
   public wormholeCooldownUntil = 0;
   public hasSurfedThisJump = false;
+  public levitateUntilMs = 0;
   public trailPoints: Array<{ x: number; y: number }> = [];
   private lastTrailSampleMs = -Infinity;
   private elapsedTimeMs = 0;
@@ -374,6 +375,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       this.jumpCutApplied = false;
       this.lastJumpPressedTimeMs = -Infinity;
       this.lastGroundedTimeMs = -Infinity;
+      this.levitateUntilMs = 0;
       this.setVelocityY(res.vy);
       this.tweenSquashStretch(0.78, 1.25, 140, 'Back.easeOut');
       if (res.waveDashed) {

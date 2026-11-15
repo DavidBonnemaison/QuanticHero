@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import config from './config';
+import { getMoleculeById } from './data/molecules';
 import BootScene from './scenes/BootScene';
 import GameScene from './scenes/GameScene';
 import PreloadScene from './scenes/PreloadScene';
@@ -16,9 +18,15 @@ declare global {
 
 export const GameContainer: React.FC = () => {
   const gameRef = useRef<Phaser.Game | null>(null);
+  const { moleculeId } = useParams<{ moleculeId?: string }>();
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (moleculeId) {
+      const recipe = getMoleculeById(moleculeId);
+      if (recipe) {
+        useGameStore.getState().setSharedLevel(recipe.levelData);
+      }
+    } else if (typeof window !== 'undefined') {
       const hash = window.location.hash;
       const search = window.location.search;
       if (hash.includes('custom=') || search.includes('custom=')) {
