@@ -115,6 +115,8 @@ export interface LevelData {
   wormholes?: Array<Record<string, unknown>>;
   authorGhost?: string;
   authorTime?: number;
+  parTimeMs?: number;
+  parJumps?: number;
   meta?: LevelMeta;
 }
 
@@ -125,10 +127,16 @@ export interface GameState {
   currentLevel: number;
 }
 
+export type IsotopeMedal = 'none' | 'bronze' | 'silver' | 'gold';
+
 export interface ScoreItem {
   best: number;
   last: number;
   ghostTrajectory?: string;
+  bestJumps?: number;
+  lastJumps?: number;
+  bestSwitches?: number;
+  medal?: IsotopeMedal;
 }
 
 export type ScoreState = Record<number, ScoreItem>;
@@ -140,4 +148,4 @@ export interface RootState {
   routing?: unknown;
 }
 
-export type GhostMode = 'off' | 'optimal' | 'best';
+export type GhostMode = 'off' | 'optimal' | 'best' | 'swarm';

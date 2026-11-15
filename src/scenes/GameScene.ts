@@ -20,6 +20,8 @@ import {
   isHeroOnPressurePlate
 } from '../physics/stepHeroPhysics';
 import { push } from '../shims/navigation';
+import { SessionSwarmBuffer, getSwarmSpectrumTint } from '../services/GhostManager';
+import { calculateIsotopeMedal, getMedalDisplayInfo } from '../services/MedalService';
 import { useGameStore } from '../store';
 import {
   type GhostFrame,
@@ -33,7 +35,14 @@ import { formatScore } from '../tools/formatScore';
 import { gameEvents } from '../tools/gameEvents';
 import { isGodMode } from '../tools/godMode';
 import { decodeLevelFromUrl } from '../tools/levelCodec';
-import type { CollapseConfig, GhostMode, LevelData, ParticleType, PlatformPhase } from '../types';
+import type {
+  CollapseConfig,
+  GhostMode,
+  IsotopeMedal,
+  LevelData,
+  ParticleType,
+  PlatformPhase
+} from '../types';
 import { GhostHero } from './GhostHero';
 import Hero from './Hero';
 
@@ -127,6 +136,14 @@ export default class GameScene extends Phaser.Scene {
   private betaEnteredPortal = false;
   private ghostRecorder: GhostRecorder = new GhostRecorder();
   private ghostFrames: GhostFrame[] = [];
+  public swarmBuffer: SessionSwarmBuffer = new SessionSwarmBuffer();
+  public swarmGhosts: GhostHero[] = [];
+  private swarmPlaybackActive = false;
+  private swarmPlaybackElapsedMs = 0;
+  private swarmPlaybackSpeed = 2;
+  private swarmPlaybackMaxMs = 0;
+  public jumpCount = 0;
+  public switchCount = 0;
   private splitDeltaText: Phaser.GameObjects.Text | null = null;
   private ghostButton: Phaser.GameObjects.Text | null = null;
   private movingPlatforms: MovingPlatform[] = [];
@@ -178,6 +195,12 @@ export default class GameScene extends Phaser.Scene {
     this.touchController.reset();
     this.uiPointerConsumed = false;
     this.ghostRecorder.reset();
+    this.swarmBuffer.clear();
+    this.swarmGhosts = [];
+    this.swarmPlaybackActive = false;
+    this.swarmPlaybackElapsedMs = 0;
+    this.jumpCount = 0;
+    this.switchCount = 0;
     this.startTime = 0;
     this.dilatedElapsedMs = 0;
     this.timerStarted = false;
@@ -339,6 +362,11 @@ export default class GameScene extends Phaser.Scene {
     this.ghostHero = null;
     this.ghostRecorder.reset();
     this.ghostFrames = [];
+    this.swarmGhosts = [];
+    this.swarmPlaybackActive = false;
+    this.swarmPlaybackElapsedMs = 0;
+    this.jumpCount = 0;
+    this.switchCount = 0;
     this.hasAnyGhost = false;
     this.authorTrajectory = undefined;
     this.personalTrajectory = undefined;
@@ -435,10 +463,15 @@ export default class GameScene extends Phaser.Scene {
     this.hasPhasePlatforms = this.levelData.platforms.some((p) => Boolean(p.phase));
     if (this.hasPhasePlatforms) {
       this.currentPhase = 'cyan';
-      this.unsubJump = gameEvents.on('hero:jump', () => {
-        this.toggleLevelPhase();
-      });
     }
+    this.unsubJump = gameEvents.on('hero:jump', () => {
+      if (!this.isLevelCompleted && !this.isRespawning && !this.isTransitioningLevel) {
+        this.jumpCount += 1;
+      }
+      if (this.hasPhasePlatforms) {
+        this.toggleLevelPhase();
+      }
+    });
 
     for (const p of this.levelData.platforms) {
       const width = p.width ?? 200;
@@ -980,6 +1013,7 @@ export default class GameScene extends Phaser.Scene {
       this.ghostHero.destroy();
       this.ghostHero = null;
     }
+    this.destroySwarmGhosts();
     if (this.betaPortalSprite) {
       this.betaPortalSprite.destroy();
       this.betaPortalSprite = null;
@@ -1079,6 +1113,42 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  public destroySwarmGhosts(): void {
+    for (const ghost of this.swarmGhosts) {
+      ghost.destroy();
+    }
+    this.swarmGhosts = [];
+    this.swarmPlaybackActive = false;
+    this.swarmPlaybackElapsedMs = 0;
+  }
+
+  public spawnSwarmGhosts(speed = 1): void {
+    this.destroySwarmGhosts();
+    const attempts = this.swarmBuffer.getAttempts();
+    if (attempts.length === 0) return;
+
+    const baseHex = this.levelData?.antiHue || this.levelData?.hue || '#00e5ff';
+    const total = attempts.length;
+
+    for (let i = 0; i < total; i++) {
+      const attempt = attempts[i];
+      if (!attempt.frames || attempt.frames.length === 0) continue;
+      const tint = getSwarmSpectrumTint(baseHex, i, total, attempt.isVictory);
+      const ghost = new GhostHero(this, attempt.frames, {
+        alpha: 0.22,
+        finishedAlpha: 0.08,
+        tint
+      });
+      ghost.setVisible(true);
+      this.swarmGhosts.push(ghost);
+    }
+
+    this.swarmPlaybackSpeed = speed;
+    this.swarmPlaybackElapsedMs = 0;
+    this.swarmPlaybackMaxMs = this.swarmBuffer.getMaxDurationMs();
+    this.swarmPlaybackActive = this.swarmGhosts.length > 0;
+  }
+
   public applyGhostMode(): void {
     const store = useGameStore.getState();
     const mode = store.ghostMode ?? (store.ghostEnabled ? 'optimal' : 'off');
@@ -1095,22 +1165,38 @@ export default class GameScene extends Phaser.Scene {
       this.ghostHero = null;
     }
 
-    if (this.hasAnyGhost && mode !== 'off' && trajectoryToLoad) {
-      this.ghostFrames = decompressTrajectory(trajectoryToLoad);
-      if (this.ghostFrames.length > 0) {
-        this.ghostHero = new GhostHero(this, this.ghostFrames);
-        this.ghostHero.setVisible(true);
+    if (mode === 'swarm') {
+      this.ghostFrames = [];
+      if (this.swarmBuffer.size > 0) {
+        this.spawnSwarmGhosts(1);
       }
     } else {
-      this.ghostFrames = [];
+      if (!this.isLevelCompleted) {
+        this.destroySwarmGhosts();
+      }
+      if (this.hasAnyGhost && mode !== 'off' && trajectoryToLoad) {
+        this.ghostFrames = decompressTrajectory(trajectoryToLoad);
+        if (this.ghostFrames.length > 0) {
+          this.ghostHero = new GhostHero(this, this.ghostFrames);
+          this.ghostHero.setVisible(true);
+        }
+      } else {
+        this.ghostFrames = [];
+      }
     }
 
     if (this.ghostButton?.active) {
       const label =
-        mode === 'off' ? '[GHOST: OFF]' : mode === 'optimal' ? '[GHOST: OPTIMAL]' : '[GHOST: BEST]';
+        mode === 'off'
+          ? '[GHOST: OFF]'
+          : mode === 'optimal'
+            ? '[GHOST: OPTIMAL]'
+            : mode === 'best'
+              ? '[GHOST: BEST]'
+              : '[GHOST: SWARM]';
       this.ghostButton.setText(label);
       this.ghostButton.setAlpha(mode !== 'off' ? 1 : 0.45);
-      this.ghostButton.setVisible(this.hasAnyGhost);
+      this.ghostButton.setVisible(this.hasAnyGhost || this.swarmBuffer.size > 0);
     }
 
     if (this.splitDeltaText?.active) {
@@ -1224,7 +1310,7 @@ export default class GameScene extends Phaser.Scene {
     });
     this.hudContainer.add(fxButton);
 
-    // Row 2: Ghost replay toggle button [GHOST: OFF] / [GHOST: OPTIMAL] / [GHOST: BEST]
+    // Row 2: Ghost replay toggle button [GHOST: OFF] / [GHOST: OPTIMAL] / [GHOST: BEST] / [GHOST: SWARM]
     const currentMode =
       useGameStore.getState().ghostMode ??
       (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
@@ -1233,7 +1319,9 @@ export default class GameScene extends Phaser.Scene {
         ? '[GHOST: OFF]'
         : currentMode === 'optimal'
           ? '[GHOST: OPTIMAL]'
-          : '[GHOST: BEST]';
+          : currentMode === 'best'
+            ? '[GHOST: BEST]'
+            : '[GHOST: SWARM]';
     this.ghostButton = this.add.text(44, 29, ghostLabel, {
       fontFamily: 'VT323',
       fontSize: '18px',
@@ -1241,12 +1329,12 @@ export default class GameScene extends Phaser.Scene {
     });
     this.ghostButton.setScrollFactor(0);
     this.ghostButton.setAlpha(currentMode !== 'off' ? 1 : 0.45);
-    this.ghostButton.setVisible(this.hasAnyGhost);
+    this.ghostButton.setVisible(this.hasAnyGhost || this.swarmBuffer.size > 0);
     this.ghostButton.setInteractive({ useHandCursor: true });
     this.ghostButton.on('pointerdown', () => {
       this.uiPointerConsumed = true;
       const hasBest = Boolean(this.personalTrajectory);
-      useGameStore.getState().toggleGhost(hasBest);
+      useGameStore.getState().toggleGhost(hasBest, this.swarmBuffer.size > 0);
       this.applyGhostMode();
     });
     this.hudContainer.add(this.ghostButton);
@@ -1411,6 +1499,7 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(targetHero, true, 0.1, 0.1);
 
     // Micro-Bullet-Time d'Orientation (180 ms at 0.2x)
+    this.switchCount += 1;
     this.focusBulletTimeUntil = this.time.now + 180;
     if (prevHero?.active) {
       this.drawFocusSwitchArc(prevHero.x, prevHero.y, targetHero.x, targetHero.y);
@@ -1634,9 +1723,25 @@ export default class GameScene extends Phaser.Scene {
       this.splitDeltaText.setText('--');
       this.splitDeltaText.setColor('#94a3b8');
     }
+    const failedFrames = this.ghostRecorder.getFrames();
+    if (failedFrames.length > 0) {
+      this.swarmBuffer.addAttempt(failedFrames, false);
+    }
+    this.jumpCount = 0;
+    this.switchCount = 0;
+
     this.ghostRecorder.reset();
     if (this.ghostHero) {
       this.ghostHero.updateReplay(0);
+    }
+    if (this.ghostButton?.active) {
+      this.ghostButton.setVisible(this.hasAnyGhost || this.swarmBuffer.size > 0);
+    }
+    const currentGhostMode =
+      useGameStore.getState().ghostMode ??
+      (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
+    if (currentGhostMode === 'swarm' && this.swarmBuffer.size > 0) {
+      this.spawnSwarmGhosts(1);
     }
     this.touchController.reset();
 
@@ -1904,6 +2009,16 @@ export default class GameScene extends Phaser.Scene {
       );
     }
     const trajectory = this.ghostRecorder.getSerialized();
+    const winningFrames = this.ghostRecorder.getFrames();
+    if (winningFrames.length > 0) {
+      this.swarmBuffer.addAttempt(winningFrames, true);
+    }
+
+    const medal = calculateIsotopeMedal({
+      timeMs: elapsedMs,
+      jumpCount: this.jumpCount,
+      level: this.levelData
+    });
 
     const isShared = Boolean(store.sharedLevel);
     const currentLvl = Number(this.levelData.id);
@@ -1913,9 +2028,17 @@ export default class GameScene extends Phaser.Scene {
 
     let nextLevelNumber: number | null = null;
     if (isShared) {
-      store.recordScore(0, elapsedMs, trajectory);
+      store.recordScore(0, elapsedMs, trajectory, {
+        jumpCount: this.jumpCount,
+        switchCount: this.switchCount,
+        medal
+      });
     } else {
-      store.recordScore(currentLvl, elapsedMs, trajectory);
+      store.recordScore(currentLvl, elapsedMs, trajectory, {
+        jumpCount: this.jumpCount,
+        switchCount: this.switchCount,
+        medal
+      });
       const nextLevel = currentLvl + 1;
       store.updateCurrentLevel(nextLevel);
       if (currentLvl >= 110) {
@@ -1961,8 +2084,13 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
+    // 1b. Swarm Victory Celebration (2x speed replay of up to 25 session attempts)
+    if (this.swarmBuffer.size > 0) {
+      this.spawnSwarmGhosts(2);
+    }
+
     // 2. Show in-canvas Element Synthesized HUD banner & narrative overlay
-    this.showLevelCompleteOverlay(elapsedMs, newBest, prevBest, nextLevelNumber);
+    this.showLevelCompleteOverlay(elapsedMs, newBest, prevBest, nextLevelNumber, medal);
 
     if (this.time?.delayedCall) {
       this.time.delayedCall(280, () => {
@@ -1977,7 +2105,8 @@ export default class GameScene extends Phaser.Scene {
     elapsedMs: number,
     bestMs: number,
     prevBestMs: number,
-    nextLevelNumber: number | null
+    nextLevelNumber: number | null,
+    medal: IsotopeMedal = 'bronze'
   ): void {
     if (!this.add?.container || !this.cameras?.main) return;
 
@@ -2000,7 +2129,7 @@ export default class GameScene extends Phaser.Scene {
     overlay.add(backdrop);
 
     const cardW = Math.min(620, camW - 48);
-    const cardH = 250;
+    const cardH = 264;
     const cardBg = this.add.rectangle(camW / 2, camH / 2, cardW, cardH, 0x0b0f19, 0.94);
     cardBg.setStrokeStyle(2, 0x00e5ff, 0.9);
     overlay.add(cardBg);
@@ -2009,7 +2138,7 @@ export default class GameScene extends Phaser.Scene {
     const atom = this.levelData.atom || 'Element';
     const headerText = this.add.text(
       camW / 2,
-      camH / 2 - 86,
+      camH / 2 - 96,
       `ELEMENT SYNTHESIZED — ${symbol} ${atom.toUpperCase()}`,
       {
         fontFamily: 'VT323',
@@ -2028,9 +2157,10 @@ export default class GameScene extends Phaser.Scene {
       deltaLabel = `${sign}${Math.abs(diffSec).toFixed(2)}s`;
     }
 
+    const medalInfo = getMedalDisplayInfo(medal);
     const statsText = this.add.text(
       camW / 2,
-      camH / 2 - 48,
+      camH / 2 - 60,
       `${formatScore(elapsedMs)}  •  REC ${formatScore(bestMs)}  •  ${deltaLabel}`,
       {
         fontFamily: 'VT323',
@@ -2041,6 +2171,20 @@ export default class GameScene extends Phaser.Scene {
     );
     statsText.setOrigin(0.5);
     overlay.add(statsText);
+
+    const medalText = this.add.text(
+      camW / 2,
+      camH / 2 - 34,
+      `${medalInfo.symbol} ${medalInfo.label.toUpperCase()}  •  JUMPS: ${this.jumpCount}`,
+      {
+        fontFamily: 'VT323',
+        fontSize: '19px',
+        color: medalInfo.color,
+        align: 'center'
+      }
+    );
+    medalText.setOrigin(0.5);
+    overlay.add(medalText);
 
     const currentLvl = Number(this.levelData.id) || 1;
     const narrativeLines =
@@ -2147,6 +2291,7 @@ export default class GameScene extends Phaser.Scene {
 
   public rebuildForLevel(nextLevelData: LevelData): void {
     this.clearLevelObjects();
+    this.swarmBuffer.clear();
     this.levelData = nextLevelData;
     this.buildLevel();
   }
@@ -2299,6 +2444,15 @@ export default class GameScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     if (this.isLevelCompleted || this.isTransitioningLevel || this.isRespawning) {
+      if (this.isLevelCompleted && this.swarmPlaybackActive && this.swarmGhosts.length > 0) {
+        this.swarmPlaybackElapsedMs += delta * this.swarmPlaybackSpeed;
+        if (this.swarmPlaybackMaxMs > 0 && this.swarmPlaybackElapsedMs > this.swarmPlaybackMaxMs + 600) {
+          this.swarmPlaybackElapsedMs = 0;
+        }
+        for (const sg of this.swarmGhosts) {
+          sg.updateReplay(this.swarmPlaybackElapsedMs);
+        }
+      }
       if (this.quantumEffects) {
         this.quantumEffects.update(
           time,
@@ -2427,6 +2581,11 @@ export default class GameScene extends Phaser.Scene {
     // Update ghost replay
     if (this.ghostHero && isGhostActive) {
       this.ghostHero.updateReplay(elapsedMs);
+    }
+    if (currentGhostMode === 'swarm' && this.swarmGhosts.length > 0) {
+      for (const sg of this.swarmGhosts) {
+        sg.updateReplay(elapsedMs);
+      }
     }
 
     // Record main player frame and update live speedrun split delta

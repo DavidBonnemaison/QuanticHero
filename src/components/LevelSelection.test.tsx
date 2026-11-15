@@ -221,4 +221,22 @@ describe('LevelSelection component', () => {
     expect(rg).toHaveAttribute('tabindex', '0');
     expect(rg.className).not.toMatch(/menuItemDisabled/);
   });
+
+  it('displays total Gold Isotopes out of 118 and per-tile isotope medal stars', () => {
+    useGameStore.setState({
+      maxLevel: 4,
+      scores: {
+        1: { best: 8000, last: 8000, bestJumps: 3, medal: 'gold' },
+        2: { best: 11000, last: 11000, bestJumps: 5, medal: 'silver' },
+        3: { best: 15000, last: 15000, bestJumps: 9, medal: 'bronze' }
+      }
+    });
+    renderWithRouter();
+
+    const counter = screen.getByTestId('gold-isotope-counter');
+    expect(counter).toHaveTextContent("Isotopes d'Or : 1 / 118");
+    expect(screen.getByLabelText('Isotope Quantique (Or)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Isotope Pur (Argent)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Isotope Stable (Bronze)')).toBeInTheDocument();
+  });
 });

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { soundManager } from '../audio/SoundManager';
 import { useGameStore } from '../store';
+import { gameEvents } from '../tools/gameEvents';
 import type { LevelData } from '../types';
 
 vi.mock('phaser', () => {
@@ -570,5 +571,68 @@ describe('GameScene Spec-05: Zero-Cut Loop & quickRespawn', () => {
     expect(stopBgmSpy).not.toHaveBeenCalled();
     expect(scene.levelData.id).toBe('2');
     expect((scene as any).deathEchoes).toHaveLength(0);
+  });
+});
+
+describe('GameScene Spec-06: Swarm Replay & Isotope Medals', () => {
+  let scene: GameScene;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useGameStore.getState().resetGame();
+    useGameStore.getState().updateCurrentLevel(1);
+    scene = new GameScene();
+    scene.levelData = {
+      ...makeTestLevel('1', 'Hydrogen', 'H'),
+      parTimeMs: 10000,
+      parJumps: 3
+    };
+    scene.create();
+  });
+
+  it('tracks jumpCount on hero:jump and switchCount on switchFocusTo(), resetting both on quickRespawn()', () => {
+    gameEvents.emit('hero:jump');
+    gameEvents.emit('hero:jump');
+    expect(scene.jumpCount).toBe(2);
+
+    const clone = new Hero(scene, 200, 400, false);
+    scene.heroes.push(clone);
+    scene.heroGroup.add(clone);
+    scene.switchFocusTo(clone);
+    expect(scene.switchCount).toBe(1);
+
+    scene.quickRespawn({ x: 250, y: 400 });
+    expect(scene.jumpCount).toBe(0);
+    expect(scene.switchCount).toBe(0);
+  });
+
+  it('buffers 3 failed attempts + 1 winning attempt into SessionSwarmBuffer and spawns 4 translucent swarm ghosts on victory', () => {
+    // Simulate 3 failed runs
+    for (let i = 0; i < 3; i++) {
+      (scene as any).ghostRecorder.recordFrame(0, 100, 400, false, 'idle', undefined, true);
+      (scene as any).ghostRecorder.recordFrame(500 + i * 100, 200 + i * 30, 400, false, 'right', undefined, true);
+      scene.quickRespawn({ x: 200 + i * 30, y: 400 });
+    }
+
+    expect(scene.swarmBuffer.size).toBe(3);
+
+    // Winning run
+    (scene as any).ghostRecorder.recordFrame(0, 100, 400, false, 'idle', undefined, true);
+    (scene as any).ghostRecorder.recordFrame(3000, 700, 400, false, 'right', undefined, true);
+    (scene as any).dilatedElapsedMs = 3000;
+    scene.jumpCount = 2;
+
+    (scene as any).completeLevel();
+
+    expect(scene.swarmBuffer.size).toBe(4);
+    expect(scene.swarmGhosts).toHaveLength(4);
+    for (const sg of scene.swarmGhosts) {
+      expect(sg.alpha).toBe(0.22);
+    }
+
+    const saved = useGameStore.getState().scores[1];
+    expect(saved.bestJumps).toBe(2);
+    expect(saved.lastJumps).toBe(2);
+    expect(saved.medal).toBe('gold');
   });
 });

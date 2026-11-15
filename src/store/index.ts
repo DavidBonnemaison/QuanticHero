@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import * as levelsData from '../data/levels';
-import type { LevelData, ScoreItem } from '../types';
-import type { GhostMode } from '../types';
+import type { GhostMode, IsotopeMedal, LevelData, ScoreItem } from '../types';
+import { bestMedal } from '../services/MedalService';
 
 export interface UpdateLevelFieldParams {
   level: number;
@@ -28,12 +28,23 @@ export interface GameStoreState {
   sharedLevel: LevelData | null;
 }
 
+export interface RecordScoreMeta {
+  jumpCount?: number;
+  switchCount?: number;
+  medal?: IsotopeMedal;
+}
+
 export interface GameStoreActions {
   updateCurrentLevel: (lvl: number) => void;
   updateMaxLevel: (lvl: number) => void;
   updateMaxEntanglementLevel: (lvl: number) => void;
   resetGame: () => void;
-  recordScore: (level: number, score: number, ghostTrajectory?: string) => void;
+  recordScore: (
+    level: number,
+    score: number,
+    ghostTrajectory?: string,
+    meta?: RecordScoreMeta
+  ) => void;
   saveGhostTrajectory: (level: number, trajectory: string) => void;
   setLevels: (data: Record<string, LevelData> | null) => void;
   resetCustomLevel: (id: string) => void;
@@ -50,7 +61,7 @@ export interface GameStoreActions {
   setHapticsEnabled: (enabled: boolean) => void;
   toggleReducedEffects: () => void;
   setReducedEffects: (reduced: boolean) => void;
-  toggleGhost: (hasPersonalBest?: boolean) => void;
+  toggleGhost: (hasPersonalBest?: boolean, hasSwarm?: boolean) => void;
   setGhostMode: (mode: GhostMode) => void;
   setGhostEnabled: (enabled: boolean) => void;
 }
@@ -172,7 +183,7 @@ export const useGameStore = create<GameStore>()(
       toggleReducedEffects: () => set((state) => ({ reducedEffects: !state.reducedEffects })),
       setReducedEffects: (reduced: boolean) => set({ reducedEffects: reduced }),
 
-      toggleGhost: (hasPersonalBest?: boolean) =>
+      toggleGhost: (hasPersonalBest?: boolean, hasSwarm = false) =>
         set((state) => {
           let canUseBest = hasPersonalBest;
           if (canUseBest === undefined) {
@@ -185,7 +196,9 @@ export const useGameStore = create<GameStore>()(
           if (currentMode === 'off') {
             nextMode = 'optimal';
           } else if (currentMode === 'optimal') {
-            nextMode = canUseBest ? 'best' : 'off';
+            nextMode = canUseBest ? 'best' : hasSwarm ? 'swarm' : 'off';
+          } else if (currentMode === 'best') {
+            nextMode = hasSwarm ? 'swarm' : 'off';
           } else {
             nextMode = 'off';
           }
@@ -223,7 +236,12 @@ export const useGameStore = create<GameStore>()(
           sharedLevel: null
         }),
 
-      recordScore: (level: number, score: number, ghostTrajectory?: string) =>
+      recordScore: (
+        level: number,
+        score: number,
+        ghostTrajectory?: string,
+        meta?: RecordScoreMeta
+      ) =>
         set((state) => {
           const prevItem = state.scores[level];
           const currentBest = prevItem?.best ?? 0;
@@ -233,12 +251,35 @@ export const useGameStore = create<GameStore>()(
             ? (ghostTrajectory ?? prevItem?.ghostTrajectory)
             : prevItem?.ghostTrajectory;
 
+          const bestJumps =
+            meta?.jumpCount !== undefined
+              ? prevItem?.bestJumps !== undefined
+                ? Math.min(prevItem.bestJumps, meta.jumpCount)
+                : meta.jumpCount
+              : prevItem?.bestJumps;
+
+          const lastJumps = meta?.jumpCount !== undefined ? meta.jumpCount : prevItem?.lastJumps;
+
+          const bestSwitches =
+            meta?.switchCount !== undefined
+              ? prevItem?.bestSwitches !== undefined
+                ? Math.min(prevItem.bestSwitches, meta.switchCount)
+                : meta.switchCount
+              : prevItem?.bestSwitches;
+
+          const medal =
+            meta?.medal !== undefined ? bestMedal(prevItem?.medal, meta.medal) : prevItem?.medal;
+
           const newScores = {
             ...state.scores,
             [level]: {
               last: score,
               best,
-              ...(trajectoryToSave ? { ghostTrajectory: trajectoryToSave } : {})
+              ...(trajectoryToSave ? { ghostTrajectory: trajectoryToSave } : {}),
+              ...(bestJumps !== undefined ? { bestJumps } : {}),
+              ...(lastJumps !== undefined ? { lastJumps } : {}),
+              ...(bestSwitches !== undefined ? { bestSwitches } : {}),
+              ...(medal !== undefined ? { medal } : {})
             }
           };
           const isEntangled = level >= 110;

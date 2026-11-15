@@ -2,6 +2,7 @@ import type React from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as levels from '../data/levels';
+import { getMedalDisplayInfo } from '../services/MedalService';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
 import type { LevelData } from '../types';
@@ -25,7 +26,8 @@ export default function LevelFinished(): React.ReactElement {
   const isShared = Boolean(sharedLevel);
   const levelIndex = isShared ? 0 : Math.max(1, currentLevel - 1);
   const currentLevelScore = scores[levelIndex] || { best: 0, last: 0 };
-  const { last, best } = currentLevelScore;
+  const { last, best, medal, lastJumps } = currentLevelScore;
+  const medalInfo = getMedalDisplayInfo(medal ?? (best > 0 ? 'bronze' : 'none'));
 
   const currentLevelData =
     isShared && sharedLevel
@@ -102,6 +104,13 @@ export default function LevelFinished(): React.ReactElement {
           <span className={styles.scoreValue}>{formatScore(best)}</span>
         </div>
       </div>
+
+      {medalInfo.medal !== 'none' && (
+        <div style={{ color: medalInfo.color, fontSize: 22, marginBottom: 10 }}>
+          {medalInfo.symbol} {medalInfo.label}
+          {lastJumps !== undefined ? ` • ${lastJumps} sauts` : ''}
+        </div>
+      )}
 
       <div className={styles.molecule} style={{ backgroundColor: hue, color: antiHue }}>
         <span className={styles.atomicId}>{id}</span>

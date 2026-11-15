@@ -193,3 +193,50 @@
   border: 1px solid rgba(236, 72, 153, 0.6);
   color: #ec4899;
 }
+
+.isotopeSummary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #f8fafc;
+  font-size: 20px;
+}
+
+.goldStar {
+  color: #fbbf24;
+  font-size: 22px;
+}
+
+.medalGold {
+  border-color: #fbbf24;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.28);
+}
+
+.medalSilver {
+  border-color: #cbd5e1;
+  box-shadow: 0 0 8px rgba(203, 213, 225, 0.2);
+}
+
+.medalBronze {
+  border-color: #d97706;
+}
+
+.medalStar {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+.jumpBadge {
+  font-size: 20px;
+  color: #94a3b8;
+}

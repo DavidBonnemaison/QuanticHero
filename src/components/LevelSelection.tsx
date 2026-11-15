@@ -2,10 +2,15 @@ import type React from 'react';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import * as levelsData from '../data/levels';
+import {
+  TOTAL_PERIODIC_ELEMENTS,
+  countGoldMedals,
+  getMedalDisplayInfo
+} from '../services/MedalService';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
 import { isGodMode } from '../tools/godMode';
-import type { LevelData } from '../types';
+import type { IsotopeMedal, LevelData } from '../types';
 import styles from './LevelSelection.module.css';
 
 const allLevels = levelsData as unknown as Record<string, LevelData>;
@@ -26,13 +31,16 @@ export const LevelSelection: React.FC = () => {
   const hasPersonalRun = Object.values(scores).some(
     (s) => s.best > 0 && Boolean(s.ghostTrajectory)
   );
+  const goldCount = countGoldMedals(scores);
 
   const ghostLabel =
     ghostMode === 'off'
       ? '[GHOST: OFF]'
       : ghostMode === 'optimal'
         ? '[GHOST: OPTIMAL]'
-        : '[GHOST: BEST]';
+        : ghostMode === 'best'
+          ? '[GHOST: BEST]'
+          : '[GHOST: SWARM]';
 
   const isEntanglementUnlocked =
     godMode || maxLevel >= 10 || location.search.includes('entanglement=1');
@@ -58,10 +66,17 @@ export const LevelSelection: React.FC = () => {
       return { id, hue, antiHue, symbol, atom };
     });
 
-  const enriched = raw.map((r) => ({
-    ...r,
-    score: scores[Number(r.id)] ? formatScore(scores[Number(r.id)].best) : '00:00:00'
-  }));
+  const enriched = raw.map((r) => {
+    const scoreEntry = scores[Number(r.id)];
+    const medal: IsotopeMedal =
+      scoreEntry?.medal ?? (scoreEntry?.best && scoreEntry.best > 0 ? 'bronze' : 'none');
+    return {
+      ...r,
+      score: scoreEntry ? formatScore(scoreEntry.best) : '00:00:00',
+      bestJumps: scoreEntry?.bestJumps,
+      medal
+    };
+  });
 
   const isDisabled = (id: string | number) => {
     if (godMode) return false;
@@ -83,6 +98,13 @@ export const LevelSelection: React.FC = () => {
     }
   };
 
+  const getMedalClass = (medal: IsotopeMedal): string => {
+    if (medal === 'gold') return styles.medalGold;
+    if (medal === 'silver') return styles.medalSilver;
+    if (medal === 'bronze') return styles.medalBronze;
+    return '';
+  };
+
   return (
     <div className={styles.selectionContainer}>
       <div className={styles.header}>
@@ -99,6 +121,13 @@ export const LevelSelection: React.FC = () => {
         >
           {ghostLabel}
         </button>
+      </div>
+
+      <div className={styles.isotopeSummary} data-testid="gold-isotope-counter">
+        <span className={styles.goldStar}>★</span>
+        <span>
+          Isotopes d&apos;Or : <strong>{goldCount}</strong> / {TOTAL_PERIODIC_ELEMENTS}
+        </span>
       </div>
 
       {isEntanglementUnlocked && (
@@ -121,12 +150,15 @@ export const LevelSelection: React.FC = () => {
           </button>
         </div>
       )}
-      {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore }) => {
+      {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore, bestJumps, medal }) => {
         const disabled = isDisabled(id);
+        const medalInfo = getMedalDisplayInfo(medal);
         return (
           <div
             key={`${id}-${symbol}`}
-            className={`${styles.menuItem} ${disabled ? styles.menuItemDisabled : ''}`}
+            className={`${styles.menuItem} ${getMedalClass(medal)} ${
+              disabled ? styles.menuItemDisabled : ''
+            }`}
             onClick={() => handleSelect(id)}
             role="button"
             tabIndex={disabled ? -1 : 0}
@@ -137,10 +169,25 @@ export const LevelSelection: React.FC = () => {
             <div className={styles.atom} style={{ backgroundColor: hue, color: antiHue }}>
               {symbol}
               <div className={styles.atomicNumber}>{id}</div>
+              {medal !== 'none' && (
+                <span
+                  className={styles.medalStar}
+                  style={{ color: medalInfo.color }}
+                  title={medalInfo.label}
+                  aria-label={medalInfo.label}
+                >
+                  {medalInfo.symbol}
+                </span>
+              )}
             </div>
             <div className={styles.atomDescription}>
               <h2 className={styles.atomTitle}>{atom}</h2>
-              <div className={styles.atomScore}>{levelScore}</div>
+              <div className={styles.atomScore}>
+                <span>{levelScore}</span>
+                {bestJumps !== undefined && (
+                  <span className={styles.jumpBadge}> • {bestJumps}J</span>
+                )}
+              </div>
             </div>
           </div>
         );
