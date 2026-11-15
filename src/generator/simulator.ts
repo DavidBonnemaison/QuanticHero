@@ -9,7 +9,9 @@ import { PHYSICS } from '../physics/constants';
 import {
   type MovingPlatformSimState,
   applyLowGravity,
+  clampFallVelocity,
   createMovingPlatformState,
+  getAsymmetricGravityMultiplier,
   getCollapseBounds,
   isHeroOnPressurePlate,
   stepHeroControl,
@@ -53,12 +55,21 @@ export interface SimHeroState {
   movingPlatforms?: Record<number, MovingPlatformSimState>;
   pauliGraceUntil?: number;
   groundedPlatformIndex?: number;
+  lastGroundedTimeMs?: number;
+  lastJumpPressedTimeMs?: number;
+  hasJumpedSinceGrounded?: boolean;
+  prevJumpPressed?: boolean;
+  jumpCutApplied?: boolean;
+  isDiving?: boolean;
+  lastDiveEndTimeMs?: number;
+  waveDashUntilMs?: number;
 }
 
 export interface SimInput {
   left: boolean;
   right: boolean;
   jump: boolean;
+  dive?: boolean;
 }
 
 export interface SimWorld {
@@ -181,6 +192,16 @@ export function stepSimulation(
   };
 
   // 1. Recoil timer & control update (shared framerate-independent physics core)
+  if (next.touchingGround) {
+    next.lastGroundedTimeMs = next.timeMs;
+    next.hasJumpedSinceGrounded = false;
+    next.jumpCutApplied = false;
+    if (next.isDiving) {
+      next.isDiving = false;
+      next.lastDiveEndTimeMs = next.timeMs;
+    }
+  }
+
   const ctrl = stepHeroControl(
     {
       vx: next.vx,
@@ -192,7 +213,16 @@ export function stepSimulation(
       upsideDown: next.upsideDown,
       flipX: next.flipX,
       animState: next.animState,
-      isActive: true
+      isActive: true,
+      nowMs: next.timeMs,
+      lastGroundedTimeMs: next.lastGroundedTimeMs,
+      lastJumpPressedTimeMs: next.lastJumpPressedTimeMs,
+      hasJumpedSinceGrounded: next.hasJumpedSinceGrounded,
+      prevJumpPressed: next.prevJumpPressed,
+      jumpCutApplied: next.jumpCutApplied,
+      isDiving: next.isDiving,
+      lastDiveEndTimeMs: next.lastDiveEndTimeMs,
+      waveDashUntilMs: next.waveDashUntilMs
     },
     input,
     deltaMs
@@ -206,16 +236,39 @@ export function stepSimulation(
 
   if (ctrl.jumped) {
     next.touchingGround = false;
+    next.hasJumpedSinceGrounded = true;
+    next.jumpCutApplied = false;
+    next.lastJumpPressedTimeMs = -Infinity;
+    next.lastGroundedTimeMs = -Infinity;
+    next.isDiving = false;
+    if (ctrl.waveDashed) {
+      next.waveDashUntilMs = next.timeMs + PHYSICS.WAVE_DASH_DURATION_MS;
+      next.lastDiveEndTimeMs = -Infinity;
+    }
     if (world.platforms.some((p) => Boolean(p.phase))) {
       next.currentPhase = next.currentPhase === 'cyan' ? 'magenta' : 'cyan';
     }
+  } else {
+    if (ctrl.dived) {
+      next.isDiving = true;
+    }
+    if (ctrl.jumpCut) {
+      next.jumpCutApplied = true;
+    }
+    const jumpJustPressed = input.jump && !(next.prevJumpPressed ?? false);
+    if (!next.touchingGround && jumpJustPressed) {
+      next.lastJumpPressedTimeMs = next.timeMs;
+    }
   }
+  next.prevJumpPressed = input.jump;
 
-  // 2. Physics integration
+  // 2. Physics integration (asymmetric gravity + apex hang-time + terminal velocity)
   const dt = deltaMs / 1000;
   const gravityMultiplier = next.gravityMultiplier ?? 1;
-  const gravity = (world.gravityY ?? PHYSICS.GRAVITY_Y) * gravityMultiplier * next.upsideDown;
-  next.vy += gravity * dt;
+  const asymFactor = getAsymmetricGravityMultiplier(next.vy, next.upsideDown, next.touchingGround);
+  const gravity =
+    (world.gravityY ?? PHYSICS.GRAVITY_Y) * gravityMultiplier * asymFactor * next.upsideDown;
+  next.vy = clampFallVelocity(next.vy + gravity * dt, next.upsideDown, Boolean(next.isDiving));
 
   let carryDx = 0;
   if (hero.touchingGround && hero.groundedPlatformIndex !== undefined) {
@@ -733,6 +786,11 @@ export function simulatePlatformTransition(
           else if (dist < -5) input.left = true;
         }
       }
+    }
+
+    // Keep jump held while ascending so Variable Jump Cut does not shorten full bot jumps
+    if (!current.touchingGround && current.vy * current.upsideDown < 0 && !usedPauliChasm) {
+      input.jump = true;
     }
 
     // Reflexively jump over any spike directly ahead on the current platform

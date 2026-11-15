@@ -432,7 +432,7 @@ export function createElectronChasmChunk(options: ElectronChasmOptions = {}): Ch
 
   // Mid-air particle suspended in the apex arc
   const midX = originX + startWidth + Math.round(chasmWidth * 0.42);
-  const midY = originY - 110; // Apex arc altitude
+  const midY = originY - 135; // Apex arc altitude
   particles.push({
     x: midX,
     y: midY,

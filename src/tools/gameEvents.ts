@@ -15,6 +15,7 @@ export interface GameEventPayloads {
   'hero:wall_bounce': { x: number; y: number };
   'plate:trigger': { plateId: string; gateId: string };
   'hero:dive': { x: number; y: number };
+  'hero:wavedash': { x: number; y: number };
   'hero:focus_switch': { fromId: number; toId: number };
 }
 

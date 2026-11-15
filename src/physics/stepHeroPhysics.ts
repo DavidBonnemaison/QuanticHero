@@ -12,6 +12,15 @@ export interface HeroControlState {
   flipX: boolean;
   animState: 'idle' | 'left' | 'right' | 'jump';
   isActive?: boolean;
+  nowMs?: number;
+  lastGroundedTimeMs?: number;
+  lastJumpPressedTimeMs?: number;
+  hasJumpedSinceGrounded?: boolean;
+  prevJumpPressed?: boolean;
+  jumpCutApplied?: boolean;
+  isDiving?: boolean;
+  lastDiveEndTimeMs?: number;
+  waveDashUntilMs?: number;
 }
 
 export interface HeroControlInput {
@@ -30,6 +39,8 @@ export interface HeroControlResult {
   animState: 'idle' | 'left' | 'right' | 'jump';
   jumped: boolean;
   dived: boolean;
+  jumpCut: boolean;
+  waveDashed: boolean;
 }
 
 /**
@@ -47,6 +58,47 @@ export function applyFramerateIndependentDrag(
 }
 
 /**
+ * Returns the Spec-04 asymmetric gravity multiplier:
+ * - Apex Hang-Time: |vy| < 45 px/s -> 0.6 (40% reduced gravity)
+ * - Fast Fall: vy * upsideDown > 45 px/s -> 1.35
+ * - Normal ascent / grounded -> 1.0
+ */
+export function getAsymmetricGravityMultiplier(
+  vy: number,
+  upsideDown: number,
+  touchingGround: boolean
+): number {
+  if (touchingGround) return 1;
+  if (Math.abs(vy) < PHYSICS.APEX_VY_THRESHOLD) {
+    return PHYSICS.APEX_GRAVITY_MULT;
+  }
+  if (vy * upsideDown > PHYSICS.APEX_VY_THRESHOLD) {
+    return PHYSICS.FALL_GRAVITY_MULT;
+  }
+  return 1;
+}
+
+/**
+ * Clamps downward vertical velocity to PHYSICS.MAX_FALL_VY (680 px/s) unless diving.
+ */
+export function clampFallVelocity(vy: number, upsideDown: number, isDiving: boolean): number {
+  if (!isDiving && vy * upsideDown > PHYSICS.MAX_FALL_VY) {
+    return PHYSICS.MAX_FALL_VY * upsideDown;
+  }
+  return vy;
+}
+
+/**
+ * Computes Spec-04 predictive camera Look-Ahead followOffset.
+ */
+export function computeLookAheadOffset(vx: number, vy: number): { x: number; y: number } {
+  return {
+    x: Math.max(-70, Math.min(70, -vx * 0.18)),
+    y: Math.max(-55, Math.min(55, -vy * 0.12))
+  };
+}
+
+/**
  * Pure, Phaser-free horizontal control, wall-recoil damping, air drag, and jump step.
  * Shared by Hero.ts (Phaser runtime) and simulator.ts (Node DAG solver).
  */
@@ -55,7 +107,40 @@ export function stepHeroControl(
   input: HeroControlInput,
   deltaMs: number = PHYSICS.DELTA_FIXED_MS
 ): HeroControlResult {
-  const mult = state.velocityMultiplier;
+  const nowMs = state.nowMs;
+  const hasTime = nowMs !== undefined;
+  const isActive = state.isActive ?? true;
+
+  const jumpJustPressed = hasTime ? input.jump && !(state.prevJumpPressed ?? false) : input.jump;
+  const jumpReleased = hasTime ? !input.jump && (state.prevJumpPressed ?? false) : false;
+
+  const canCoyoteJump =
+    hasTime &&
+    !state.touchingGround &&
+    !(state.hasJumpedSinceGrounded ?? false) &&
+    nowMs - (state.lastGroundedTimeMs ?? -Infinity) <= PHYSICS.COYOTE_TIME_MS;
+
+  const hasBufferedJump =
+    hasTime &&
+    state.touchingGround &&
+    nowMs - (state.lastJumpPressedTimeMs ?? -Infinity) <= PHYSICS.JUMP_BUFFER_MS;
+
+  const willJump =
+    isActive &&
+    state.recoilTimer <= 0 &&
+    ((state.touchingGround && (input.jump || hasBufferedJump)) ||
+      (jumpJustPressed && canCoyoteJump));
+
+  const waveDashTriggered =
+    willJump &&
+    hasTime &&
+    nowMs - (state.lastDiveEndTimeMs ?? -Infinity) <= PHYSICS.WAVE_DASH_WINDOW_MS;
+
+  const isWaveDashActive =
+    waveDashTriggered || (hasTime && nowMs < (state.waveDashUntilMs ?? -Infinity));
+
+  const mult = state.velocityMultiplier * (isWaveDashActive ? PHYSICS.WAVE_DASH_MULTIPLIER : 1);
+
   let vx = state.vx;
   let vy = state.vy;
   let recoilTimer = state.recoilTimer;
@@ -64,6 +149,7 @@ export function stepHeroControl(
   let animState = state.animState;
   let jumped = false;
   let dived = false;
+  let jumpCut = false;
 
   if (recoilTimer > 0) {
     recoilTimer -= deltaMs;
@@ -81,10 +167,20 @@ export function stepHeroControl(
 
     animState = 'jump';
     flipX = recoilVx < 0;
-    return { vx, vy, recoilTimer, recoilVx, flipX, animState, jumped, dived };
+    return {
+      vx,
+      vy,
+      recoilTimer,
+      recoilVx,
+      flipX,
+      animState,
+      jumped,
+      dived,
+      jumpCut,
+      waveDashed: false
+    };
   }
 
-  const isActive = state.isActive ?? true;
   if (isActive) {
     const isHighSpeed = Math.abs(vx) > PHYSICS.HERO_SPEED_X * mult;
     if (input.left) {
@@ -113,7 +209,7 @@ export function stepHeroControl(
       }
     }
 
-    if (input.jump && state.touchingGround) {
+    if (willJump) {
       vy = PHYSICS.HERO_JUMP_V0 * state.upsideDown;
       animState = 'jump';
       jumped = true;
@@ -126,17 +222,37 @@ export function stepHeroControl(
       vy = PHYSICS.DIVE_VY * state.upsideDown;
       animState = 'jump';
       dived = true;
+    } else if (
+      hasTime &&
+      !state.touchingGround &&
+      !(state.jumpCutApplied ?? false) &&
+      jumpReleased &&
+      vy * state.upsideDown < 0
+    ) {
+      vy *= PHYSICS.JUMP_CUT_MULTIPLIER;
+      jumpCut = true;
     }
   } else if (state.touchingGround) {
     vx = 0;
     animState = 'idle';
   }
 
-  if (!state.touchingGround) {
+  if (!state.touchingGround || jumped) {
     animState = 'jump';
   }
 
-  return { vx, vy, recoilTimer, recoilVx, flipX, animState, jumped, dived };
+  return {
+    vx,
+    vy,
+    recoilTimer,
+    recoilVx,
+    flipX,
+    animState,
+    jumped,
+    dived,
+    jumpCut,
+    waveDashed: waveDashTriggered
+  };
 }
 
 /**

@@ -13,7 +13,11 @@ import {
 } from '../mechanics/quantumMechanics';
 import { MobileTouchController } from '../input/MobileTouchController';
 import { PHYSICS } from '../physics/constants';
-import { applyLowGravity, isHeroOnPressurePlate } from '../physics/stepHeroPhysics';
+import {
+  applyLowGravity,
+  computeLookAheadOffset,
+  isHeroOnPressurePlate
+} from '../physics/stepHeroPhysics';
 import { push } from '../shims/navigation';
 import { useGameStore } from '../store';
 import {
@@ -402,6 +406,7 @@ export default class GameScene extends Phaser.Scene {
           startY: p.y + height / 2
         });
       } else {
+        rect.setData('baseY', rect.y);
         this.physics.add.existing(rect, true);
         this.platforms.add(rect);
       }
@@ -658,16 +663,20 @@ export default class GameScene extends Phaser.Scene {
         gameEvents.emit('hero:wall_bounce', { x: hero.x, y: hero.y });
       }
 
+      const touchingTop =
+        hero.upsideDown === 1
+          ? hero.body?.touching.down || hero.body?.blocked.down
+          : hero.body?.touching.up || hero.body?.blocked.up;
+
+      if (touchingTop && (!hero.wasTouchingGround || hero.lastLandedPlatform !== plat)) {
+        hero.lastLandedPlatform = plat;
+        this.triggerSynthPlatformImpact(hero, plat, true);
+      }
+
       // 2. Radioactive Half-Life Platform Decay Trigger
       const decayState = plat.getData('decayState') as DecayPlatformState | undefined;
-      if (decayState && !decayState.triggered) {
-        const touchingTop =
-          hero.upsideDown === 1
-            ? hero.body?.touching.down || hero.body?.blocked.down
-            : hero.body?.touching.up || hero.body?.blocked.up;
-        if (touchingTop) {
-          decayState.triggered = true;
-        }
+      if (decayState && !decayState.triggered && touchingTop) {
+        decayState.triggered = true;
       }
     });
 
@@ -678,6 +687,10 @@ export default class GameScene extends Phaser.Scene {
         hero.upsideDown === 1
           ? hero.body?.touching.down || hero.body?.blocked.down
           : hero.body?.touching.up || hero.body?.blocked.up;
+      if (touchingTop && (!hero.wasTouchingGround || hero.lastLandedPlatform !== plat)) {
+        hero.lastLandedPlatform = plat;
+        this.triggerSynthPlatformImpact(hero, plat, false);
+      }
       const decayState = plat.getData('decayState') as DecayPlatformState | undefined;
       if (decayState && !decayState.triggered && touchingTop) {
         decayState.triggered = true;
@@ -1657,6 +1670,65 @@ export default class GameScene extends Phaser.Scene {
     this.entanglementGraphics.strokePath();
   }
 
+  private triggerSynthPlatformImpact(
+    hero: Hero,
+    plat: Phaser.GameObjects.Rectangle,
+    isStatic: boolean
+  ): void {
+    if (!plat.active) return;
+
+    // 1. Vertical elastic flexion (+3 * hero.upsideDown px, yoyo back in 160 ms Sine.easeOut)
+    if (isStatic && plat.getData('kind') !== 'wall') {
+      const baseY = (plat.getData('baseY') as number | undefined) ?? plat.y;
+      if (!plat.getData('synthTweenActive')) {
+        plat.setData('synthTweenActive', true);
+        plat.y = baseY;
+        this.tweens.add({
+          targets: plat,
+          y: baseY + 3 * hero.upsideDown,
+          duration: 80,
+          yoyo: true,
+          ease: 'Sine.easeOut',
+          onComplete: () => {
+            if (plat.active) {
+              plat.y = baseY;
+              plat.setData('synthTweenActive', false);
+            }
+          }
+        });
+      }
+    }
+
+    // 2. Specular light wave propagating left and right from impact hero.x in 200 ms
+    const halfW = plat.width / 2;
+    const leftX = plat.x - halfW;
+    const rightX = plat.x + halfW;
+    const impactX = Phaser.Math.Clamp(hero.x, leftX, rightX);
+    const impactY = hero.upsideDown === 1 ? plat.y - plat.height / 2 : plat.y + plat.height / 2;
+
+    const leftWave = this.add.rectangle(impactX, impactY, 6, 3, 0xffffff, 0.95);
+    leftWave.setDepth(14);
+    this.tweens.add({
+      targets: leftWave,
+      x: leftX,
+      alpha: 0,
+      duration: 200,
+      ease: 'Sine.easeOut',
+      onComplete: () => leftWave.destroy()
+    });
+
+    const rightWave = this.add.rectangle(impactX, impactY, 6, 3, 0xffffff, 0.95);
+    rightWave.setDepth(14);
+    this.tweens.add({
+      targets: rightWave,
+      x: rightX,
+      alpha: 0,
+      duration: 200,
+      ease: 'Sine.easeOut',
+      onComplete: () => rightWave.destroy()
+    });
+  }
+
   update(time: number, delta: number): void {
     if (!this.timerStarted) {
       this.startTime = time;
@@ -1726,6 +1798,25 @@ export default class GameScene extends Phaser.Scene {
         const newCamX = Phaser.Math.Linear(currentMid.x, cx, 0.1);
         const newCamY = Phaser.Math.Linear(currentMid.y, cy, 0.1);
         this.cameras.main.centerOn(newCamX, newCamY);
+      }
+    } else {
+      const lookHero = this.heroes.find((h) => h.isFocused) || this.heroes[0];
+      if (lookHero?.active && lookHero.body) {
+        const targetOffset = computeLookAheadOffset(
+          lookHero.body.velocity.x,
+          lookHero.body.velocity.y
+        );
+        const lerpFactor = 1 - Math.exp(-8 * (delta / 1000));
+        this.cameras.main.followOffset.x = Phaser.Math.Linear(
+          this.cameras.main.followOffset.x,
+          targetOffset.x,
+          lerpFactor
+        );
+        this.cameras.main.followOffset.y = Phaser.Math.Linear(
+          this.cameras.main.followOffset.y,
+          targetOffset.y,
+          lerpFactor
+        );
       }
     }
 

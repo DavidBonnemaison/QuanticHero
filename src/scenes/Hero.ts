@@ -1,7 +1,11 @@
 import Phaser from 'phaser';
 import type { TouchInputState } from '../input/MobileTouchController';
 import { PHYSICS } from '../physics/constants';
-import { stepHeroControl } from '../physics/stepHeroPhysics';
+import {
+  clampFallVelocity,
+  getAsymmetricGravityMultiplier,
+  stepHeroControl
+} from '../physics/stepHeroPhysics';
 import { gameEvents } from '../tools/gameEvents';
 import type { EntanglementMode } from '../types';
 
@@ -21,6 +25,17 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public tunnelCharges = 0;
   public pauliGraceUntil = 0;
   public isDiving = false;
+  public lastGroundedTimeMs = -Infinity;
+  public lastJumpPressedTimeMs = -Infinity;
+  public hasJumpedSinceGrounded = false;
+  public prevJumpPressed = false;
+  public jumpCutApplied = false;
+  public lastDiveEndTimeMs = -Infinity;
+  public waveDashUntilMs = -Infinity;
+  public wasTouchingGround = false;
+  public lastLandedPlatform: Phaser.GameObjects.GameObject | null = null;
+  private elapsedTimeMs = 0;
+  private lastAirborneVy = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, isFocused = true) {
     super(scene, x, y, isFocused ? 'hero' : 'disabled');
@@ -80,12 +95,91 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     return this.isFocused ? base : `disabled-${base}`;
   }
 
+  private tweenSquashStretch(
+    startScaleX: number,
+    startScaleY: number,
+    duration: number,
+    ease: string
+  ): void {
+    if (typeof this.setScale === 'function') {
+      this.setScale(startScaleX, startScaleY);
+    }
+    if (this.scene?.tweens?.add) {
+      this.scene.tweens.killTweensOf?.(this);
+      this.scene.tweens.add({
+        targets: this,
+        scaleX: 1,
+        scaleY: 1,
+        duration,
+        ease
+      });
+    }
+  }
+
+  private spawnLandingDust(): void {
+    if (!this.scene?.add?.circle || !this.scene?.tweens?.add) return;
+    const footY = this.y + (PHYSICS.HERO_HEIGHT / 2) * this.upsideDown;
+    for (let i = 0; i < 6; i++) {
+      const dir = i < 3 ? -1 : 1;
+      const spreadX = dir * (12 + (i % 3) * 10);
+      const liftY = -this.upsideDown * (4 + (i % 2) * 5);
+      const puff = this.scene.add.circle(this.x + dir * 4, footY, 3, 0x00e5ff, 0.85);
+      puff.setDepth(19);
+      this.scene.tweens.add({
+        targets: puff,
+        x: puff.x + spreadX,
+        y: puff.y + liftY,
+        alpha: 0,
+        scale: 0.2,
+        duration: 220,
+        ease: 'Sine.easeOut',
+        onComplete: () => puff.destroy()
+      });
+    }
+  }
+
+  private spawnWallSparks(normalDir: 1 | -1): void {
+    if (!this.scene?.add?.circle || !this.scene?.tweens?.add) return;
+    const contactX = this.x - normalDir * (PHYSICS.HERO_WIDTH / 2);
+    for (let i = 0; i < 6; i++) {
+      const speedX = normalDir * (18 + (i % 3) * 12);
+      const speedY = ((i % 3) - 1) * 14;
+      const spark = this.scene.add.circle(contactX, this.y, 2.5, 0x00e5ff, 0.95);
+      spark.setDepth(21);
+      this.scene.tweens.add({
+        targets: spark,
+        x: spark.x + speedX,
+        y: spark.y + speedY,
+        alpha: 0,
+        scale: 0.2,
+        duration: 180,
+        ease: 'Quad.easeOut',
+        onComplete: () => spark.destroy()
+      });
+    }
+  }
+
+  private triggerNeonWallHitStop(normalDir: 1 | -1): void {
+    this.tweenSquashStretch(0.65, 1.32, 140, 'Back.easeOut');
+    this.spawnWallSparks(normalDir);
+    if (this.body && 'moves' in this.body && this.scene?.time?.delayedCall) {
+      const arcadeBody = this.body as Phaser.Physics.Arcade.Body;
+      arcadeBody.moves = false;
+      this.scene.time.delayedCall(22, () => {
+        if (this.active && this.body) {
+          (this.body as Phaser.Physics.Arcade.Body).moves = true;
+        }
+      });
+    }
+  }
+
   public bounceOffLeftWall(isNeonWall = false): void {
     if (this.recoilVx <= 0) {
       this.recoilVx = PHYSICS.WALL_RECOIL_VX * this.velocityMultiplier;
       this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
       if (isNeonWall) {
         this.setVelocityY(-400 * this.upsideDown);
+        this.triggerNeonWallHitStop(1);
         return;
       }
       const touchingGround =
@@ -106,6 +200,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
       if (isNeonWall) {
         this.setVelocityY(-400 * this.upsideDown);
+        this.triggerNeonWallHitStop(-1);
         return;
       }
       const touchingGround =
@@ -150,6 +245,9 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
+    this.elapsedTimeMs += delta;
+    const nowMs = this.elapsedTimeMs;
+
     const rawLeft = (cursors?.left?.isDown ?? false) || (wasd?.A?.isDown ?? false) || touch.left;
     const rawRight = (cursors?.right?.isDown ?? false) || (wasd?.D?.isDown ?? false) || touch.right;
     const jump =
@@ -177,8 +275,24 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         ? this.body.touching.down || this.body.blocked.down
         : this.body.touching.up || this.body.blocked.up;
 
+    if (touchingGround && !this.wasTouchingGround) {
+      const impactSpeed = Math.abs(this.lastAirborneVy);
+      const intensity = Math.min(1, Math.max(0.35, impactSpeed / 450));
+      this.tweenSquashStretch(1 + 0.28 * intensity, 1 - 0.26 * intensity, 120, 'Sine.easeOut');
+      this.spawnLandingDust();
+    }
+
     if (touchingGround) {
-      this.isDiving = false;
+      this.lastGroundedTimeMs = nowMs;
+      this.hasJumpedSinceGrounded = false;
+      this.jumpCutApplied = false;
+      if (this.isDiving) {
+        this.isDiving = false;
+        this.lastDiveEndTimeMs = nowMs;
+      }
+    } else {
+      this.lastAirborneVy = this.body.velocity.y;
+      this.lastLandedPlatform = null;
     }
 
     const wasRecoiling = this.recoilTimer > 0;
@@ -195,7 +309,16 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         upsideDown: this.upsideDown,
         flipX: this.flipX,
         animState: this.getAnimState(),
-        isActive
+        isActive,
+        nowMs,
+        lastGroundedTimeMs: this.lastGroundedTimeMs,
+        lastJumpPressedTimeMs: this.lastJumpPressedTimeMs,
+        hasJumpedSinceGrounded: this.hasJumpedSinceGrounded,
+        prevJumpPressed: this.prevJumpPressed,
+        jumpCutApplied: this.jumpCutApplied,
+        isDiving: this.isDiving,
+        lastDiveEndTimeMs: this.lastDiveEndTimeMs,
+        waveDashUntilMs: this.waveDashUntilMs
       },
       { left: goLeft, right: goRight, jump, dive },
       delta
@@ -206,13 +329,53 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     this.setVelocityX(res.vx);
     if (res.jumped) {
       this.isDiving = false;
+      this.hasJumpedSinceGrounded = true;
+      this.jumpCutApplied = false;
+      this.lastJumpPressedTimeMs = -Infinity;
+      this.lastGroundedTimeMs = -Infinity;
       this.setVelocityY(res.vy);
+      this.tweenSquashStretch(0.78, 1.25, 140, 'Back.easeOut');
+      if (res.waveDashed) {
+        this.waveDashUntilMs = nowMs + PHYSICS.WAVE_DASH_DURATION_MS;
+        this.lastDiveEndTimeMs = -Infinity;
+        gameEvents.emit('hero:wavedash', { x: this.x, y: this.y });
+      }
       gameEvents.emit('hero:jump');
-    } else if (res.dived) {
-      this.isDiving = true;
-      this.setVelocityY(res.vy);
-      gameEvents.emit('hero:dive', { x: this.x, y: this.y });
+    } else {
+      if (res.dived) {
+        this.isDiving = true;
+        this.setVelocityY(res.vy);
+        gameEvents.emit('hero:dive', { x: this.x, y: this.y });
+      } else if (res.jumpCut) {
+        this.jumpCutApplied = true;
+        this.setVelocityY(res.vy);
+      }
+      const jumpJustPressed = jump && !this.prevJumpPressed;
+      if (!touchingGround && jumpJustPressed) {
+        this.lastJumpPressedTimeMs = nowMs;
+      }
     }
+
+    this.prevJumpPressed = jump;
+    this.wasTouchingGround = touchingGround;
+
+    // Asymmetric gravity (Apex Hang-Time & Fall Gravity) + Terminal Velocity
+    const asymFactor = getAsymmetricGravityMultiplier(
+      this.body.velocity.y,
+      this.upsideDown,
+      touchingGround && !res.jumped
+    );
+    const worldGravityY = this.scene?.physics?.world?.gravity?.y ?? PHYSICS.GRAVITY_Y;
+    const effectiveBaseGravity = Math.abs(worldGravityY) * this.upsideDown;
+    const arcadeBody = this.body as Phaser.Physics.Arcade.Body;
+    if (typeof arcadeBody.setGravityY === 'function') {
+      arcadeBody.setGravityY(effectiveBaseGravity * asymFactor - worldGravityY);
+    }
+    const clampedVy = clampFallVelocity(this.body.velocity.y, this.upsideDown, this.isDiving);
+    if (clampedVy !== this.body.velocity.y) {
+      this.setVelocityY(clampedVy);
+    }
+
     this.setFlipX(res.flipX);
     this.play(this.getAnimKey(res.animState), true);
 
