@@ -307,38 +307,73 @@ interface DynamicCourseOptions {
 function createDynamicCourseChunk(opts: DynamicCourseOptions): Chunk {
   const { id, steps, rng, progress, allowSpikes = false, allowMoving = false, decayMs } = opts;
   const platforms: Platform[] = [];
+  const pathPlatforms: Platform[] = [];
   const spikes: Spike[] = [];
   let curX = 0;
   let curY = 0;
 
   for (let i = 0; i < steps; i++) {
-    const pattern = (i + Math.floor(rng.next() * 2)) % 4;
+    const pattern = (i + Math.floor(rng.next() * 3)) % 5;
     let dy = 0;
     if (i > 0) {
-      if (pattern === 0 || pattern === 1) {
-        dy = -Math.round(24 + rng.next() * 22);
-      } else if (pattern === 2) {
-        dy = Math.round(35 + rng.next() * 40);
-      } else {
+      if (pattern === 0) {
+        // Ascent step
+        dy = -Math.round(26 + rng.next() * 18);
+      } else if (pattern === 1) {
+        // Gentle rise
         dy = -Math.round(10 + rng.next() * 14);
+      } else if (pattern === 2) {
+        // Drop-down chasm
+        dy = Math.round(35 + rng.next() * 45);
+      } else if (pattern === 3) {
+        // High vault
+        dy = -Math.round(32 + rng.next() * 12);
+      } else {
+        // Flat sprint
+        dy = Math.round((rng.next() - 0.5) * 14);
       }
-      if (curY + dy < -220) dy = 45;
-      if (curY + dy > 140) dy = -40;
+      if (curY + dy < -240) dy = 45;
+      if (curY + dy > 150) dy = -42;
     }
 
-    const isSpikePlat = allowSpikes && i > 0 && i % 3 === 1;
-    const isMovingPlat = !isSpikePlat && allowMoving && i > 0 && i % 3 === 2;
-    const baseW = Math.round(150 - progress * 40 + (rng.next() - 0.5) * 30);
-    const platW = isSpikePlat ? 260 : Math.max(95, Math.min(180, baseW));
+    const hazardRoll = rng.next();
+    const isSpikePlat =
+      allowSpikes && i > 0 && (i % 3 === 1 || (progress > 0.55 && hazardRoll < 0.32));
+    const isMovingPlat = !isSpikePlat && allowMoving && i > 0 && (i % 3 === 2 || hazardRoll > 0.72);
+    const isDoubleSpike = false;
 
-    const maxGap = dy < -30 ? 115 : dy > 20 ? 170 : 145;
-    const minGap = dy < -30 ? 75 : 100;
+    const baseW = Math.round(148 - progress * 44 + (rng.next() - 0.5) * 30);
+    const platW = isDoubleSpike
+      ? 360
+      : isSpikePlat
+        ? 260
+        : isMovingPlat
+          ? Math.max(105, Math.min(145, baseW))
+          : Math.max(95, Math.min(185, baseW));
+
+    const prevHasSpike =
+      i > 0 &&
+      spikes.some(
+        (s) =>
+          s.x >= pathPlatforms[pathPlatforms.length - 1].x &&
+          s.x <=
+            pathPlatforms[pathPlatforms.length - 1].x +
+              pathPlatforms[pathPlatforms.length - 1].width
+      );
+    if (prevHasSpike && dy < -22) {
+      dy = -22;
+    }
+    const maxGap = prevHasSpike ? 92 : dy < -30 ? 105 : dy < 0 ? 115 : dy > 20 ? 165 : 142;
+    const minGap = prevHasSpike || dy < -30 ? 70 : 85;
     const gap = i === 0 ? 0 : Math.round(minGap + rng.next() * (maxGap - minGap));
 
     if (i > 0) {
-      const prev = platforms[i - 1];
+      const prev = pathPlatforms[pathPlatforms.length - 1];
       curX = prev.x + prev.width + gap;
       curY += dy;
+      if (prev.movesTo?.x !== undefined) {
+        prev.movesTo.x = prev.x + Math.round(gap * 0.65);
+      }
     }
 
     const plat: Platform = {
@@ -347,21 +382,63 @@ function createDynamicCourseChunk(opts: DynamicCourseOptions): Chunk {
       width: platW,
       height: 20
     };
-    if (decayMs && i % 2 === 1) {
+    if (decayMs && i % 2 === 1 && !isMovingPlat && !isSpikePlat) {
       plat.decayMs = decayMs;
     }
     if (isMovingPlat) {
-      plat.movesTo = rng.next() > 0.5 ? { x: curX + 44 } : { y: curY - 28 };
+      const prevHasVertMove =
+        i > 0 && pathPlatforms[pathPlatforms.length - 1]?.movesTo?.y !== undefined;
+      if (prevHasVertMove || dy < -18 || rng.next() > 0.35) {
+        plat.movesTo = { x: curX + 75 };
+      } else {
+        const vTravel = Math.round(22 + rng.next() * 14);
+        plat.movesTo = { y: curY - vTravel };
+      }
     }
     platforms.push(plat);
+    pathPlatforms.push(plat);
 
-    if (isSpikePlat) {
-      spikes.push({
-        x: curX + Math.round(platW * 0.78) - 14,
-        y: curY - 20,
-        width: 28,
+    // Optional upper perch on wide flat segments for visual & route variety
+    if (
+      !isMovingPlat &&
+      !isSpikePlat &&
+      i > 1 &&
+      i < steps - 1 &&
+      pattern === 4 &&
+      rng.next() > 0.55
+    ) {
+      platforms.push({
+        x: curX + Math.round(platW * 0.2),
+        y: curY - 95,
+        width: 100,
         height: 20
       });
+    }
+
+    if (isSpikePlat) {
+      if (isDoubleSpike) {
+        spikes.push(
+          {
+            x: curX + Math.round(platW * 0.48) - 14,
+            y: curY - 20,
+            width: 28,
+            height: 20
+          },
+          {
+            x: curX + Math.round(platW * 0.78) - 14,
+            y: curY - 20,
+            width: 28,
+            height: 20
+          }
+        );
+      } else {
+        spikes.push({
+          x: curX + Math.round(platW * 0.78) - 14,
+          y: curY - 20,
+          width: 28,
+          height: 20
+        });
+      }
     }
   }
 
@@ -369,13 +446,16 @@ function createDynamicCourseChunk(opts: DynamicCourseOptions): Chunk {
     id,
     name: 'Parcours Dynamique',
     archetype: 'speedrun_highway',
-    entry: { x: platforms[0].x + 40, y: platforms[0].y },
+    entry: { x: pathPlatforms[0].x + 40, y: pathPlatforms[0].y },
     exit: {
-      x: platforms[platforms.length - 1].x + platforms[platforms.length - 1].width - 40,
-      y: platforms[platforms.length - 1].y
+      x:
+        pathPlatforms[pathPlatforms.length - 1].x +
+        pathPlatforms[pathPlatforms.length - 1].width -
+        40,
+      y: pathPlatforms[pathPlatforms.length - 1].y
     },
     platforms,
-    pathPlatforms: [...platforms],
+    pathPlatforms,
     spikes,
     particles: [],
     bounds: computeChunkBounds(platforms, spikes)
@@ -1058,42 +1138,64 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           const canPhase = level >= 37 && picked !== 'phase';
           const canDecay = level >= 48 && picked !== 'decay';
           const roll = rng.next();
-          if (canPhase && roll < 0.28) {
+          let primaryClimax: Chunk;
+          if (canPhase && roll < 0.3) {
             const rawPhase = createSuperpositionChamberChunk({
-              steps: 5 + Math.floor(progress * 2),
+              steps: 6 + Math.floor(progress * 4),
               stepSpacing: 175,
               platformWidth: 150,
               verticalStep: -20,
               initialPhase: level % 2 === 0 ? 'cyan' : 'magenta'
             });
-            return connectAndTranslateChunk(anchor, rawPhase, levelAlpha, -15);
-          }
-          if (canDecay && roll >= 0.28 && roll < 0.56) {
+            primaryClimax = connectAndTranslateChunk(anchor, rawPhase, levelAlpha, -15);
+          } else if (canDecay && roll >= 0.3 && roll < 0.6) {
             const rawDecay = createDecayZoneChunk({
-              steps: 5 + Math.floor(progress * 2),
+              steps: 6 + Math.floor(progress * 4),
               decayMs,
               stepSpacing: 170,
               platformWidth: 145,
               verticalDelta: -18,
               includeStableExit: true
             });
-            return connectAndTranslateChunk(anchor, rawDecay, levelAlpha, -15);
+            primaryClimax = connectAndTranslateChunk(anchor, rawDecay, levelAlpha, -15);
+          } else {
+            const rawDyn = createDynamicCourseChunk({
+              id: `chunk_climax_dyn_${level}`,
+              steps: 7 + Math.floor(progress * 6),
+              rng,
+              progress,
+              allowSpikes: true,
+              allowMoving: true
+            });
+            primaryClimax = connectAndTranslateChunk(anchor, rawDyn, levelAlpha, -15);
           }
-          const rawDyn = createDynamicCourseChunk({
-            id: `chunk_climax_dyn_${level}`,
-            steps: 6 + Math.floor(progress * 3),
-            rng,
-            progress,
-            allowSpikes: true,
-            allowMoving: true
-          });
-          return connectAndTranslateChunk(anchor, rawDyn, levelAlpha, -15);
+
+          if (progress >= 0.35) {
+            const rawFollowUp = createDynamicCourseChunk({
+              id: `chunk_climax_ext_${level}`,
+              steps: 5 + Math.floor(progress * 5),
+              rng,
+              progress,
+              allowSpikes: true,
+              allowMoving: true,
+              decayMs: canDecay && roll < 0.3 ? decayMs : undefined
+            });
+            const followUpT = connectAndTranslateChunk(primaryClimax, rawFollowUp, levelAlpha, -15);
+            return mergeChunks(
+              `chunk_climax_full_${level}`,
+              'Épreuve Finale',
+              primaryClimax,
+              followUpT
+            );
+          }
+          return primaryClimax;
         };
 
+        const leadSteps = 4 + Math.floor(progress * 5);
         if (picked === 'pure') {
           const rawD1 = createDynamicCourseChunk({
             id: `chunk_pure_d1_${level}`,
-            steps: 5 + Math.floor(progress * 2),
+            steps: 6 + Math.floor(progress * 5),
             rng,
             progress,
             allowSpikes: true,
@@ -1139,7 +1241,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           height = 1450;
           const rawLead = createDynamicCourseChunk({
             id: `chunk_wall_lead_${level}`,
-            steps: 4,
+            steps: leadSteps,
             rng,
             progress,
             allowSpikes: true,
@@ -1155,7 +1257,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           const rawWell = createGravityWellChunk({
             wellWidth: 320,
             height: 450,
-            steps: 2
+            steps: 2 + Math.floor(progress * 2)
           });
           climaxChunk = connectAndTranslateChunk(accelerationChunk, rawWell, levelAlpha, 15);
         } else if (picked === 'tunnel') {
@@ -1180,7 +1282,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         } else if (picked === 'phase') {
           const rawLead = createDynamicCourseChunk({
             id: `chunk_phase_lead_${level}`,
-            steps: 4,
+            steps: leadSteps,
             rng,
             progress,
             allowSpikes: true,
@@ -1194,7 +1296,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             leadT
           );
           const rawPhase = createSuperpositionChamberChunk({
-            steps: 5 + Math.floor(progress * 2),
+            steps: 6 + Math.floor(progress * 5),
             stepSpacing: 180,
             platformWidth: 155,
             verticalStep: -20,
@@ -1204,7 +1306,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         } else if (picked === 'decay') {
           const rawLead = createDynamicCourseChunk({
             id: `chunk_decay_lead_${level}`,
-            steps: 4,
+            steps: leadSteps,
             rng,
             progress,
             allowSpikes: true,
@@ -1218,7 +1320,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             leadT
           );
           const rawDecay = createDecayZoneChunk({
-            steps: 5 + Math.floor(progress * 2),
+            steps: 6 + Math.floor(progress * 5),
             decayMs,
             stepSpacing: 175,
             platformWidth: 150,

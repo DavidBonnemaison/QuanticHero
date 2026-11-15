@@ -206,11 +206,9 @@ describe('Spec-03: 4-Act Cosmic Narrative & Odyssey Lore', () => {
     }
   });
 
-  it('strictly preserves the iconic opening lines for Level 1 (Hydrogen)', () => {
+  it('provides concise riddle opening lines for Level 1 (Hydrogen)', () => {
     const level1Lines = getNarrativeForLevel(1);
-    expect(level1Lines[0]).toBe(
-      'Oops. Looks like you have been reduced to a veeery small size. Sorry for that...'
-    );
+    expect(level1Lines[0]).toBe('Reduced to a single quantum.');
     expect(level1Lines.length).toBeGreaterThanOrEqual(2);
   });
 

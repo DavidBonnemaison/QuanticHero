@@ -144,17 +144,23 @@ export function computeChunkBounds(
  * Translates an existing chunk by (dx, dy).
  */
 export function translateChunk(chunk: Chunk, dx: number, dy: number): Chunk {
-  const platforms: Platform[] = chunk.platforms.map((p) => ({
+  const translatePlat = (p: Platform): Platform => ({
     ...p,
     x: Math.round(p.x + dx),
-    y: Math.round(p.y + dy)
-  }));
+    y: Math.round(p.y + dy),
+    ...(p.movesTo
+      ? {
+          movesTo: {
+            ...(p.movesTo.x !== undefined ? { x: Math.round(p.movesTo.x + dx) } : {}),
+            ...(p.movesTo.y !== undefined ? { y: Math.round(p.movesTo.y + dy) } : {}),
+            ...(p.movesTo.time !== undefined ? { time: p.movesTo.time } : {})
+          }
+        }
+      : {})
+  });
 
-  const pathPlatforms: Platform[] = chunk.pathPlatforms.map((p) => ({
-    ...p,
-    x: Math.round(p.x + dx),
-    y: Math.round(p.y + dy)
-  }));
+  const platforms: Platform[] = chunk.platforms.map(translatePlat);
+  const pathPlatforms: Platform[] = chunk.pathPlatforms.map(translatePlat);
 
   const spikes: Spike[] = chunk.spikes.map((s) => ({
     ...s,

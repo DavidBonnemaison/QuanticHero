@@ -8,8 +8,8 @@
   "hue": "#150f2b",
   "antiHue": "#818cf8",
   "explanations": [
-    "Krypton flickers between alternating echoes of cyan and magenta.",
-    "Every leap seems to rearrange which ground exists."
+    "Cyan and magenta take turns existing.",
+    "Every leap trades one ground for the other."
   ],
   "player": {
     "position": {

@@ -48,129 +48,42 @@ export const COSMIC_ACTS: Record<1 | 2 | 3 | 4, CosmicAct> = {
  * Each level contains at least two distinct story lines.
  */
 export const LEVEL_NARRATIVES: Record<number, string[]> = {
-  1: [
-    'Oops. Looks like you have been reduced to a veeery small size. Sorry for that...',
-    'The tiny floating spark looks like it might carry enough momentum to leap through the anomaly.'
-  ],
-  5: [
-    'Boron hums with a golden current just beyond the first ledges.',
-    'Catching that spark might carry you across wider voids ahead.'
-  ],
-  9: [
-    'Fluorine drifts in a thin, weightless pocket above the chasm.',
-    'A lighter step could let a single leap span far more vacuum.'
-  ],
-  12: [
-    'Magnesium closes the primordial dawn with a twin trial.',
-    'Swift momentum and lightened weight converge before the stellar forge.'
-  ],
-  13: [
-    'Aluminium marks the threshold of the Stellar Forge.',
-    'Denser lattices and higher climbs await inside the core.'
-  ],
-  14: [
-    'Silicon guards a heavy barrier that will not yield on its own.',
-    'Perhaps an identical self could hold the plate while you pass.'
-  ],
-  18: [
-    'Argon rises through vertical shafts lined with glowing neon walls.',
-    'Kinetic energy feels like it could rebound upward from the sides.'
-  ],
-  22: [
-    'Titanium bends the rules of weight along an inverted ceiling.',
-    'Gravity behaves like a mere suggestion in this chamber.'
-  ],
-  26: [
-    'Iron marks the core of the Stellar Forge, where fusion reaches its peak.',
-    'Inverted weight and buoyant currents unite before the supernova.'
-  ],
-  27: [
-    'Beyond iron, the forge gives way to the breath of a supernova.',
-    'Shockwaves scatter thin barriers and shifting echoes ahead.'
-  ],
-  29: [
-    'Copper seals the corridor behind a solid, unyielding wall.',
-    'Matter is mostly empty space after all.'
-  ],
-  36: [
-    'Krypton flickers between alternating echoes of cyan and magenta.',
-    'Every leap seems to rearrange which ground exists.'
-  ],
-  46: [
-    'Palladium guards the edge of the supernova cataclysm.',
-    'Speed, tunneling, and shifting phases converge in one trial.'
-  ],
-  47: [
-    'Silver shimmers in the aftermath of colliding neutron stars.',
-    'The kilonova echo leaves fragile footholds suspended in deep space.'
-  ],
-  48: [
-    'Cadmium ledges glow briefly before dissolving into the void.',
-    'Hesitation costs the ground beneath your feet.'
-  ],
-  52: [
-    'Tellurium brings two identical fermions face to face.',
-    'Forcing them together might yield quite a push across the abyss.'
-  ],
-  55: [
-    'Caesium ticks with atomic precision at the heart of the kilonova.',
-    'Slowing the world for a few moments may reveal hidden openings.'
-  ],
-  68: [
-    'Erbium closes the kilonova sector beneath a cascade of decaying steps.',
-    'Clone repulsion and fleeting ground demand calm precision.'
-  ],
-  69: [
-    'Thulium ushers in the relativistic crucible, where orbitals contract.',
-    'Longer chasms and brisker rhythms demand steady momentum.'
-  ],
-  74: [
-    'Tungsten trembles as walls begin to close around the chamber.',
-    'Moving while everything else slows down could offer a way out.'
-  ],
-  84: [
-    'Polonium radiates an unstable aura over three distinct trials.',
-    'Speed, lightened weight, and tunneling intertwine toward the gate.'
-  ],
-  88: [
-    'Radium stands at the threshold of the transuranic frontier.',
-    'Inverted gravity, tunneling, and shifting phases converge.'
-  ],
-  89: [
-    'Actinium opens the Island of Stability, far beyond classical bounds.',
-    'Every quantum effect you have met lingers in this outer expanse.'
-  ],
-  100: [
-    'Fermium marks the hundredth element, a twin-state gauntlet.',
-    'Clones, Pauli repulsion, and a thin barrier stand before the final stretch.'
-  ],
+  1: ['Reduced to a single quantum.', 'What carries a spark across the dark?'],
+  5: ['Boron hums with a golden current.', 'Catch the pulse; the void widens.'],
+  9: ['Weight is only a habit here.', 'How far does a step reach when gravity forgets?'],
+  12: ['Two trials close the primordial dawn.', 'Swiftness and lightness share one road.'],
+  13: ['The Stellar Forge awakens.', 'Denser lattices, higher climbs.'],
+  14: ['A gate that refuses a solitary traveler.', 'Two bodies, one plate, one passage.'],
+  18: ['The walls remember every impact.', 'What strikes sideways can rise.'],
+  22: ['Up and down have traded places.', 'Fall toward the sky.'],
+  26: ['The iron core burns.', 'Weightless and inverted, two laws collide.'],
+  27: ['Beyond iron, the star shatters.', 'Echoes and thin walls drift in the blast.'],
+  29: ['Solid stone, yet mostly empty space.', 'What passes through without breaking?'],
+  36: ['Cyan and magenta take turns existing.', 'Every leap trades one ground for the other.'],
+  46: ['The supernova reaches its crest.', 'Speed, passage, and shifting ground.'],
+  47: ['Two neutron stars collide in silence.', 'Fragile footholds linger in the afterglow.'],
+  48: ['Light fades beneath a lingering step.', 'Stand still, and the ground forgets you.'],
+  52: ['Two identical fermions refuse the same place.', 'Bring them close and measure the recoil.'],
+  55: ['The clock ticks slower for the world than for you.', 'Move before the moment catches up.'],
+  68: ['Fleeting steps over the kilonova abyss.', 'Repulsion and decay share a narrow path.'],
+  69: ['The relativistic crucible begins.', 'Shorter orbits, sharper turns.'],
+  74: ['The walls are closing in.', 'Outrun what never stops.'],
+  84: ['Three trials, one unstable core.', 'Swift, light, and unbroken through the wall.'],
+  88: ['The transuranic threshold.', 'Inverted skies, shifting phases, hollow stone.'],
+  89: ['The Island of Stability.', 'Every law you learned returns at once.'],
+  100: ['One hundred elements forged.', 'A twin, a recoil, and a barrier.'],
   109: [
-    'Meitnerium: the final synthetic crucible before the entangled realm.',
-    'Speed, tunneling, time dilation, and rising collapse unite in one trial.'
+    'The final crucible before entanglement.',
+    'Run, phase through, slow the fall, outlast the tide.'
   ],
-  110: [
-    'Darmstadtium initiates the Quantum Entanglement Matrix (Ψ_A ⊗ Ψ_B).',
-    'Control twin wavefunctions simultaneously—your actions resonate across quantum mirror space.'
-  ],
-  111: [
-    'Roentgenium challenges your entangled reflexes across inverted gravitational fields.',
-    'When Alpha leaps upward, Beta plunges downward. Harmonize their trajectories to unlock the twin doors.'
-  ],
-  112: [
-    'Copernicium bends classical chemistry: a volatile superheavy metal in a dual quantum state.',
-    'Dodge synchronized obstacles while keeping both heroes in perfect quantum phase coherence.'
-  ],
-  113: [
-    'Nihonium tests multi-axis spatial parity inversion in an asymmetric laboratory labyrinth.',
-    'Guide both clones through disparate hazards before quantum decoherence collapses the link.'
-  ],
-  114: [
-    'Flerovium: the fabled core of the Island of Stability.',
-    'Coordinate Alpha and Beta to navigate crossed finish portals and achieve ultimate quantum synthesis.'
-  ],
+  110: ['One mind, two wavefunctions.', 'Move one, and its twin answers.'],
+  111: ['Twin skies, opposite weights.', 'One rises while the other falls.'],
+  112: ['Two states bound across the void.', 'Keep both in phase.'],
+  113: ['Parity inverted across two chambers.', 'Mirror paths, single will.'],
+  114: ['The heart of the Island of Stability.', 'Crossed doors, one synthesis.'],
   118: [
-    'Oganesson: the 118th and final element of the Periodic Table, where relativistic electron clouds smear into pure quantum chaos.',
-    'You have completed the Cosmic Odyssey from the Primordial Big Bang to the outermost edge of atomic physics.'
+    'Oganesson: the outermost edge of the table.',
+    'From primordial spark to pure quantum symmetry.'
   ]
 };
 

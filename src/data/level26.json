@@ -7,10 +7,7 @@
   "height": 1250,
   "hue": "#1a1110",
   "antiHue": "#e63946",
-  "explanations": [
-    "Iron marks the core of the Stellar Forge, where fusion reaches its peak.",
-    "Inverted weight and buoyant currents unite before the supernova."
-  ],
+  "explanations": ["The iron core burns.", "Weightless and inverted, two laws collide."],
   "player": {
     "position": {
       "x": 180,

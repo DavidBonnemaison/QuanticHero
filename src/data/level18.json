@@ -7,10 +7,7 @@
   "height": 1300,
   "hue": "#140a28",
   "antiHue": "#c084fc",
-  "explanations": [
-    "Argon rises through vertical shafts lined with glowing neon walls.",
-    "Kinetic energy feels like it could rebound upward from the sides."
-  ],
+  "explanations": ["The walls remember every impact.", "What strikes sideways can rise."],
   "player": {
     "position": {
       "x": 180,

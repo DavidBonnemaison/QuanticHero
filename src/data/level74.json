@@ -7,10 +7,7 @@
   "height": 1100,
   "hue": "#241a05",
   "antiHue": "#fde047",
-  "explanations": [
-    "Tungsten trembles as walls begin to close around the chamber.",
-    "Moving while everything else slows down could offer a way out."
-  ],
+  "explanations": ["The walls are closing in.", "Outrun what never stops."],
   "player": {
     "position": {
       "x": 180,

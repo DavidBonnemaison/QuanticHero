@@ -7,10 +7,7 @@
   "height": 1100,
   "hue": "#041f19",
   "antiHue": "#22c55e",
-  "explanations": [
-    "Copper seals the corridor behind a solid, unyielding wall.",
-    "Matter is mostly empty space after all."
-  ],
+  "explanations": ["Solid stone, yet mostly empty space.", "What passes through without breaking?"],
   "player": {
     "position": {
       "x": 180,

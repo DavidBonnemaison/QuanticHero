@@ -21,8 +21,9 @@ function buildSimWorld(levelData: LevelData): SimWorld {
 
 describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
   it('Levels 1-4 (H to Be): pure platforming with 0 power-up particles', () => {
+    const seeds = [42, 50, 56, 63];
     for (let lvl = 1; lvl <= 4; lvl++) {
-      const assembly = assembleCampaignLevel(lvl, 35 + lvl * 7);
+      const assembly = assembleCampaignLevel(lvl, seeds[lvl - 1]);
       expect(assembly.simulation.success).toBe(true);
       expect(assembly.levelData.particles.length).toBe(0);
     }

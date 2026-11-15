@@ -7,10 +7,7 @@
   "height": 1100,
   "hue": "#061a14",
   "antiHue": "#38b000",
-  "explanations": [
-    "Boron hums with a golden current just beyond the first ledges.",
-    "Catching that spark might carry you across wider voids ahead."
-  ],
+  "explanations": ["Boron hums with a golden current.", "Catch the pulse; the void widens."],
   "player": {
     "position": {
       "x": 180,

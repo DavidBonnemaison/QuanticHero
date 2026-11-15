@@ -56,7 +56,6 @@ interface MovingPlatform {
   height: number;
   startX: number;
   startY: number;
-  prevX?: number;
 }
 
 interface MoleculeParticle {
@@ -288,7 +287,8 @@ export default class GameScene extends Phaser.Scene {
     this.platforms = this.physics.add.staticGroup();
     this.movingPlatformsGroup = this.physics.add.group({
       allowGravity: false,
-      immovable: true
+      immovable: true,
+      frictionX: 1
     });
     const antiHueColor = Phaser.Display.Color.HexStringToColor(this.levelData.antiHue).color;
 
@@ -653,9 +653,6 @@ export default class GameScene extends Phaser.Scene {
         hero.upsideDown === 1
           ? hero.body?.touching.down || hero.body?.blocked.down
           : hero.body?.touching.up || hero.body?.blocked.up;
-      if (touchingTop) {
-        hero.setData('ridingPlatform', plat);
-      }
       const decayState = plat.getData('decayState') as DecayPlatformState | undefined;
       if (decayState && !decayState.triggered && touchingTop) {
         decayState.triggered = true;
@@ -1762,31 +1759,8 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Update moving platforms (slowed by time dilation) and carry riding heroes horizontally
+    // Update moving platforms (slowed by time dilation)
     for (const mp of this.movingPlatforms) {
-      const dx = mp.prevX !== undefined ? mp.rect.x - mp.prevX : 0;
-      if (dx !== 0) {
-        for (const hero of this.heroes) {
-          if (!hero.active || !hero.body) continue;
-          const riding = hero.getData('ridingPlatform');
-          if (riding === mp.rect) {
-            const heroBody = hero.body as Phaser.Physics.Arcade.Body;
-            const grounded =
-              hero.upsideDown === 1
-                ? heroBody.touching.down || heroBody.blocked.down
-                : heroBody.touching.up || heroBody.blocked.up;
-            if (grounded) {
-              hero.x += dx;
-              heroBody.position.x += dx;
-              heroBody.prev.x += dx;
-            } else {
-              hero.setData('ridingPlatform', null);
-            }
-          }
-        }
-      }
-      mp.prevX = mp.rect.x;
-
       const body = mp.rect.body as Phaser.Physics.Arcade.Body;
       const targetX = mp.movesTo.x !== undefined ? mp.movesTo.x + mp.width / 2 : mp.startX;
       const targetY = mp.movesTo.y !== undefined ? mp.movesTo.y + mp.height / 2 : mp.startY;
@@ -1817,17 +1791,6 @@ export default class GameScene extends Phaser.Scene {
         if (mp.rect.y <= minY) {
           mp.direction.y = 'bottom';
         }
-      }
-    }
-
-    for (const hero of this.heroes) {
-      if (!hero.active || !hero.body) continue;
-      const grounded =
-        hero.upsideDown === 1
-          ? hero.body.touching.down || hero.body.blocked.down
-          : hero.body.touching.up || hero.body.blocked.up;
-      if (!grounded) {
-        hero.setData('ridingPlatform', null);
       }
     }
 
