@@ -1,14 +1,11 @@
 import Phaser from 'phaser';
+import type { TouchInputState } from '../input/MobileTouchController';
 import { PHYSICS } from '../physics/constants';
 import { stepHeroControl } from '../physics/stepHeroPhysics';
 import { gameEvents } from '../tools/gameEvents';
 import type { EntanglementMode } from '../types';
 
-export interface TouchInputState {
-  left: boolean;
-  right: boolean;
-  jump: boolean;
-}
+export type { TouchInputState };
 
 export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public id: number;
@@ -23,6 +20,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public enteredPortal = false;
   public tunnelCharges = 0;
   public pauliGraceUntil = 0;
+  public isDiving = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, isFocused = true) {
     super(scene, x, y, isFocused ? 'hero' : 'disabled');
@@ -36,7 +34,18 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     this.setCollideWorldBounds(false);
     this.play(this.getAnimKey('idle'));
 
-    this.setInteractive();
+    if (Phaser.Geom?.Rectangle) {
+      const w = this.width || PHYSICS.HERO_WIDTH;
+      const h = this.height || PHYSICS.HERO_HEIGHT;
+      const hitW = Math.max(64, w);
+      const hitH = Math.max(64, h);
+      this.setInteractive(
+        new Phaser.Geom.Rectangle((w - hitW) / 2, (h - hitH) / 2, hitW, hitH),
+        Phaser.Geom.Rectangle.Contains
+      );
+    } else {
+      this.setInteractive();
+    }
     this.on('pointerdown', () => {
       this.scene.events.emit('hero-clicked', this);
     });
@@ -148,6 +157,10 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       (wasd?.W?.isDown ?? false) ||
       (cursors?.space?.isDown ?? false) ||
       touch.jump;
+    const dive =
+      (cursors?.down?.isDown ?? false) ||
+      (wasd?.S?.isDown ?? false) ||
+      Boolean(touch.diveRequested);
 
     let goLeft = rawLeft;
     let goRight = rawRight;
@@ -163,6 +176,10 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       this.upsideDown === 1
         ? this.body.touching.down || this.body.blocked.down
         : this.body.touching.up || this.body.blocked.up;
+
+    if (touchingGround) {
+      this.isDiving = false;
+    }
 
     const wasRecoiling = this.recoilTimer > 0;
     const isActive = this.isEntangled || this.isFocused;
@@ -180,7 +197,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         animState: this.getAnimState(),
         isActive
       },
-      { left: goLeft, right: goRight, jump },
+      { left: goLeft, right: goRight, jump, dive },
       delta
     );
 
@@ -188,8 +205,13 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     this.recoilVx = res.recoilVx;
     this.setVelocityX(res.vx);
     if (res.jumped) {
+      this.isDiving = false;
       this.setVelocityY(res.vy);
       gameEvents.emit('hero:jump');
+    } else if (res.dived) {
+      this.isDiving = true;
+      this.setVelocityY(res.vy);
+      gameEvents.emit('hero:dive', { x: this.x, y: this.y });
     }
     this.setFlipX(res.flipX);
     this.play(this.getAnimKey(res.animState), true);

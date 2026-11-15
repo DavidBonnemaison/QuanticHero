@@ -11,6 +11,7 @@ import {
   togglePhase,
   updateDecayPlatform
 } from '../mechanics/quantumMechanics';
+import { MobileTouchController } from '../input/MobileTouchController';
 import { PHYSICS } from '../physics/constants';
 import { applyLowGravity, isHeroOnPressurePlate } from '../physics/stepHeroPhysics';
 import { push } from '../shims/navigation';
@@ -29,7 +30,7 @@ import { isGodMode } from '../tools/godMode';
 import { decodeLevelFromUrl } from '../tools/levelCodec';
 import type { CollapseConfig, GhostMode, LevelData, ParticleType, PlatformPhase } from '../types';
 import { GhostHero } from './GhostHero';
-import Hero, { type TouchInputState } from './Hero';
+import Hero from './Hero';
 
 export interface Gate {
   id: string;
@@ -124,10 +125,17 @@ export default class GameScene extends Phaser.Scene {
   private molecules: MoleculeParticle[] = [];
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
   private wasd: { [key: string]: Phaser.Input.Keyboard.Key } | null = null;
-  private touchInput: TouchInputState = { left: false, right: false, jump: false };
-  private isPointerDown = false;
-  private pointerStartX = 0;
-  private pointerStartY = 0;
+  private touchController: MobileTouchController = new MobileTouchController();
+  private uiPointerConsumed = false;
+  private thumbRibbonGraphics: Phaser.GameObjects.Graphics | null = null;
+  private diveTrailGraphics: Phaser.GameObjects.Graphics | null = null;
+  private focusArcGraphics: Phaser.GameObjects.Graphics | null = null;
+  private focusBulletTimeUntil = 0;
+  private edgePips: Array<{
+    bg: Phaser.GameObjects.Rectangle;
+    label: Phaser.GameObjects.Text;
+    hitArea: Phaser.GameObjects.Zone;
+  }> = [];
   private startTime = 0;
   private dilatedElapsedMs = 0;
   private timerStarted = false;
@@ -154,6 +162,13 @@ export default class GameScene extends Phaser.Scene {
     this.molecules = [];
     this.isLevelCompleted = false;
     this.quantumEffects = null;
+    this.touchController.reset();
+    this.uiPointerConsumed = false;
+    this.thumbRibbonGraphics = null;
+    this.diveTrailGraphics = null;
+    this.focusArcGraphics = null;
+    this.focusBulletTimeUntil = 0;
+    this.edgePips = [];
     this.ghostHero = null;
     this.ghostRecorder.reset();
     this.ghostFrames = [];
@@ -746,18 +761,34 @@ export default class GameScene extends Phaser.Scene {
         S: Phaser.Input.Keyboard.KeyCodes.S,
         D: Phaser.Input.Keyboard.KeyCodes.D
       }) as { [key: string]: Phaser.Input.Keyboard.Key };
+
+      const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+      tabKey.on('down', (_key: Phaser.Input.Keyboard.Key, event?: KeyboardEvent) => {
+        event?.preventDefault?.();
+        this.cycleFocusNext();
+      });
+
+      const eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+      eKey.on('down', () => this.cycleFocusNext());
+
+      const oneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
+      oneKey.on('down', () => this.switchFocusByIndex(0));
+
+      const twoKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+      twoKey.on('down', () => this.switchFocusByIndex(1));
+
+      const threeKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE);
+      threeKey.on('down', () => this.switchFocusByIndex(2));
+
+      const rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+      rKey.on('down', () => this.scene.restart());
     }
 
     this.setupPointerControls();
 
     this.events.on('hero-clicked', (clickedHero: Hero) => {
-      if (this.isEntangled) return;
-      if (this.heroes.length > 1) {
-        for (const h of this.heroes) {
-          h.setFocus(h === clickedHero);
-        }
-        this.cameras.main.startFollow(clickedHero, true, 0.1, 0.1);
-      }
+      this.uiPointerConsumed = true;
+      this.switchFocusTo(clickedHero);
     });
 
     // 9. HUD and Timer
@@ -774,8 +805,12 @@ export default class GameScene extends Phaser.Scene {
 
     // 12. Quantum Visual Effects (de Broglie waves & spacetime vortex)
     this.quantumEffects = new QuantumEffectsManager(this);
+    this.diveTrailGraphics = this.add.graphics();
+    this.diveTrailGraphics.setDepth(18);
+    this.focusArcGraphics = this.add.graphics();
+    this.focusArcGraphics.setDepth(26);
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    const cleanupScene = () => {
       soundManager.stopBgm();
       this.quantumEffects?.destroy();
       this.quantumEffects = null;
@@ -787,28 +822,26 @@ export default class GameScene extends Phaser.Scene {
         this.pauliGraphics.destroy();
         this.pauliGraphics = null;
       }
-      if (this.unsubJump) {
-        this.unsubJump();
-        this.unsubJump = null;
+      if (this.diveTrailGraphics) {
+        this.diveTrailGraphics.destroy();
+        this.diveTrailGraphics = null;
       }
-    });
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      soundManager.stopBgm();
-      this.quantumEffects?.destroy();
-      this.quantumEffects = null;
-      if (this.entanglementGraphics) {
-        this.entanglementGraphics.destroy();
-        this.entanglementGraphics = null;
+      if (this.focusArcGraphics) {
+        this.focusArcGraphics.destroy();
+        this.focusArcGraphics = null;
       }
-      if (this.pauliGraphics) {
-        this.pauliGraphics.destroy();
-        this.pauliGraphics = null;
+      if (this.thumbRibbonGraphics) {
+        this.thumbRibbonGraphics.destroy();
+        this.thumbRibbonGraphics = null;
       }
       if (this.unsubJump) {
         this.unsubJump();
         this.unsubJump = null;
       }
-    });
+    };
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupScene);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanupScene);
   }
 
   private createMolecules(): void {
@@ -830,26 +863,37 @@ export default class GameScene extends Phaser.Scene {
 
   private setupPointerControls(): void {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      this.isPointerDown = true;
-      this.pointerStartX = pointer.x;
-      this.pointerStartY = pointer.y;
+      if (this.uiPointerConsumed) {
+        this.uiPointerConsumed = false;
+        return;
+      }
+      if (pointer.y <= 54) {
+        return;
+      }
+
+      const { doubleTap } = this.touchController.onPointerDown(
+        pointer.x,
+        pointer.y,
+        this.time.now
+      );
+      if (doubleTap && this.heroes.length > 1 && !this.isEntangled) {
+        this.cycleFocusNext();
+      }
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (!this.isPointerDown) return;
-      const deltaX = pointer.x - this.pointerStartX;
-      const deltaY = pointer.y - this.pointerStartY;
-      this.touchInput.left = deltaX < -20;
-      this.touchInput.right = deltaX > 20;
-      const inverted = this.physics.world.gravity.y < 0;
-      this.touchInput.jump = inverted ? deltaY > 20 : deltaY < -20;
+      if (!this.touchController.isPointerDown) return;
+      const focused = this.heroes.find((h) => h.isFocused) || this.heroes[0];
+      const touchingGround = focused?.body
+        ? focused.upsideDown === 1
+          ? focused.body.touching.down || focused.body.blocked.down
+          : focused.body.touching.up || focused.body.blocked.up
+        : false;
+      this.touchController.onPointerMove(pointer.x, pointer.y, this.time.now, touchingGround);
     });
 
     this.input.on('pointerup', () => {
-      this.isPointerDown = false;
-      this.touchInput.left = false;
-      this.touchInput.right = false;
-      this.touchInput.jump = false;
+      this.touchController.onPointerUp();
     });
   }
 
@@ -894,11 +938,15 @@ export default class GameScene extends Phaser.Scene {
 
   private createHUD(): void {
     const camW = this.cameras.main.width;
+    const camH = this.cameras.main.height;
     const hudHeight = 54;
 
     this.hudContainer = this.add.container(0, 0);
     this.hudContainer.setScrollFactor(0);
     this.hudContainer.setDepth(100);
+
+    this.thumbRibbonGraphics = this.add.graphics();
+    this.hudContainer.add(this.thumbRibbonGraphics);
 
     const hudBar = this.add.graphics();
     hudBar.fillStyle(0x0b0f19, 0.85);
@@ -918,6 +966,7 @@ export default class GameScene extends Phaser.Scene {
     backButton.setScrollFactor(0);
     backButton.setInteractive({ useHandCursor: true });
     backButton.on('pointerdown', () => {
+      this.uiPointerConsumed = true;
       soundManager.stopBgm();
       try {
         this.game.destroy(true);
@@ -938,6 +987,7 @@ export default class GameScene extends Phaser.Scene {
     restartButton.setScrollFactor(0);
     restartButton.setInteractive({ useHandCursor: true });
     restartButton.on('pointerdown', () => {
+      this.uiPointerConsumed = true;
       this.scene.restart();
     });
     this.hudContainer.add(restartButton);
@@ -952,6 +1002,7 @@ export default class GameScene extends Phaser.Scene {
     soundButton.setScrollFactor(0);
     soundButton.setInteractive({ useHandCursor: true });
     soundButton.on('pointerdown', () => {
+      this.uiPointerConsumed = true;
       useGameStore.getState().toggleMute();
       soundButton.setText(getSoundLabel());
     });
@@ -967,6 +1018,7 @@ export default class GameScene extends Phaser.Scene {
     hapticButton.setScrollFactor(0);
     hapticButton.setInteractive({ useHandCursor: true });
     hapticButton.on('pointerdown', () => {
+      this.uiPointerConsumed = true;
       useGameStore.getState().toggleHaptics();
       hapticButton.setText(getHapticLabel());
     });
@@ -982,6 +1034,7 @@ export default class GameScene extends Phaser.Scene {
     fxButton.setScrollFactor(0);
     fxButton.setInteractive({ useHandCursor: true });
     fxButton.on('pointerdown', () => {
+      this.uiPointerConsumed = true;
       useGameStore.getState().toggleReducedEffects();
       fxButton.setText(getFxLabel());
     });
@@ -1007,6 +1060,7 @@ export default class GameScene extends Phaser.Scene {
     this.ghostButton.setVisible(this.hasAnyGhost);
     this.ghostButton.setInteractive({ useHandCursor: true });
     this.ghostButton.on('pointerdown', () => {
+      this.uiPointerConsumed = true;
       const hasBest = Boolean(this.personalTrajectory);
       useGameStore.getState().toggleGhost(hasBest);
       this.applyGhostMode();
@@ -1088,7 +1142,137 @@ export default class GameScene extends Phaser.Scene {
     this.splitDeltaText.setVisible(currentMode !== 'off' && this.ghostFrames.length > 0);
     this.hudContainer.add(this.splitDeltaText);
 
+    // Thumb-Zone Quick Restart button (bottom-right: 48x48 px, alpha 0.35)
+    const thumbRestartBg = this.add.rectangle(camW - 36, camH - 36, 48, 48, 0x0b0f19, 0.35);
+    thumbRestartBg.setStrokeStyle(1.5, 0xfbbf24, 0.35);
+    const thumbRestartLabel = this.add.text(camW - 36, camH - 36, '↻', {
+      fontFamily: 'VT323',
+      fontSize: '28px',
+      color: '#fbbf24'
+    });
+    thumbRestartLabel.setOrigin(0.5);
+    thumbRestartLabel.setAlpha(0.35);
+    const thumbRestartZone = this.add.zone(camW - 36, camH - 36, 48, 48);
+    thumbRestartZone.setInteractive({ useHandCursor: true });
+    thumbRestartZone.on('pointerdown', () => {
+      this.uiPointerConsumed = true;
+      this.scene.restart();
+    });
+    this.hudContainer.add(thumbRestartBg);
+    this.hudContainer.add(thumbRestartLabel);
+    this.hudContainer.add(thumbRestartZone);
+
+    this.updateEdgePips();
     this.syncHudTransform();
+  }
+
+  private updateEdgePips(): void {
+    for (const pip of this.edgePips) {
+      pip.bg.destroy();
+      pip.label.destroy();
+      pip.hitArea.destroy();
+    }
+    this.edgePips = [];
+
+    if (!this.hudContainer || this.isEntangled || this.heroes.length <= 1) {
+      return;
+    }
+
+    const camH = this.cameras.main.height;
+    const pipY = camH - 70;
+    const subscripts = ['ψ₁', 'ψ₂', 'ψ₃'];
+
+    this.heroes.slice(0, 3).forEach((hero, index) => {
+      const pipX = 40 + index * 70;
+      const isFocused = hero.isFocused;
+      const bg = this.add.rectangle(
+        pipX,
+        pipY,
+        64,
+        64,
+        isFocused ? 0x083344 : 0x0b0f19,
+        isFocused ? 0.85 : 0.45
+      );
+      bg.setStrokeStyle(2, isFocused ? 0x00e5ff : 0x64748b, isFocused ? 0.95 : 0.5);
+
+      const label = this.add.text(pipX, pipY, subscripts[index] ?? `ψ${index + 1}`, {
+        fontFamily: 'VT323',
+        fontSize: '24px',
+        color: isFocused ? '#00e5ff' : '#94a3b8'
+      });
+      label.setOrigin(0.5);
+
+      const hitArea = this.add.zone(pipX, pipY, 64, 64);
+      hitArea.setInteractive({ useHandCursor: true });
+      hitArea.on('pointerdown', () => {
+        this.uiPointerConsumed = true;
+        this.switchFocusTo(hero);
+      });
+
+      this.hudContainer?.add(bg);
+      this.hudContainer?.add(label);
+      this.hudContainer?.add(hitArea);
+      this.edgePips.push({ bg, label, hitArea });
+    });
+  }
+
+  public switchFocusTo(targetHero: Hero): void {
+    if (this.isEntangled || this.heroes.length <= 1) return;
+    if (!targetHero || !targetHero.active) return;
+
+    const prevHero = this.heroes.find((h) => h.isFocused) || this.heroes[0];
+    if (targetHero === prevHero) return;
+
+    for (const h of this.heroes) {
+      h.setFocus(h === targetHero);
+    }
+    this.cameras.main.startFollow(targetHero, true, 0.1, 0.1);
+
+    // Micro-Bullet-Time d'Orientation (180 ms at 0.2x)
+    this.focusBulletTimeUntil = this.time.now + 180;
+    if (prevHero?.active) {
+      this.drawFocusSwitchArc(prevHero.x, prevHero.y, targetHero.x, targetHero.y);
+      gameEvents.emit('hero:focus_switch', { fromId: prevHero.id, toId: targetHero.id });
+    }
+    this.updateEdgePips();
+  }
+
+  public cycleFocusNext(): void {
+    if (this.isEntangled || this.heroes.length <= 1) return;
+    const currentIdx = this.heroes.findIndex((h) => h.isFocused);
+    const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % this.heroes.length : 0;
+    this.switchFocusTo(this.heroes[nextIdx]);
+  }
+
+  public switchFocusByIndex(index: number): void {
+    if (this.isEntangled || this.heroes.length <= 1) return;
+    if (index >= 0 && index < this.heroes.length) {
+      this.switchFocusTo(this.heroes[index]);
+    }
+  }
+
+  private drawFocusSwitchArc(x1: number, y1: number, x2: number, y2: number): void {
+    if (!this.focusArcGraphics) return;
+    const g = this.focusArcGraphics;
+    g.clear();
+
+    const isReduced = useGameStore.getState().reducedEffects;
+    g.lineStyle(isReduced ? 2 : 3, 0x00e5ff, 0.9);
+    g.beginPath();
+    g.moveTo(x1, y1);
+    if (!isReduced) {
+      const midX = (x1 + x2) / 2 + (Math.random() * 28 - 14);
+      const midY = (y1 + y2) / 2 + (Math.random() * 28 - 14);
+      g.lineTo(midX, midY);
+    }
+    g.lineTo(x2, y2);
+    g.strokePath();
+
+    this.time.delayedCall(180, () => {
+      if (this.focusArcGraphics) {
+        this.focusArcGraphics.clear();
+      }
+    });
   }
 
   private syncHudTransform(): void {
@@ -1149,6 +1333,7 @@ export default class GameScene extends Phaser.Scene {
         this.heroes[0].setFocus(true);
         this.cameras.main.startFollow(this.heroes[0], true, 0.1, 0.1);
       }
+      this.updateEdgePips();
     }
   }
 
@@ -1218,6 +1403,7 @@ export default class GameScene extends Phaser.Scene {
           clonedHero.setTint(0x38bdf8);
           this.heroes.push(clonedHero);
           this.heroGroup.add(clonedHero);
+          this.updateEdgePips();
           gameEvents.emit('hero:duplicate', { count: this.heroes.length });
         }
         break;
@@ -1481,12 +1667,16 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Time Dilation active check
+    // Time Dilation & Focus Micro-Bullet-Time active check
     if (this.isTimeDilationActive && time >= this.timeDilationUntil) {
       this.isTimeDilationActive = false;
       gameEvents.emit('time:dilation', { active: false, durationMs: 0 });
     }
-    const timeDilationFactor = this.isTimeDilationActive ? 0.25 : 1.0;
+    const isFocusBulletTime = time < this.focusBulletTimeUntil;
+    const timeDilationFactor = isFocusBulletTime ? 0.2 : this.isTimeDilationActive ? 0.25 : 1.0;
+    if (this.physics?.world) {
+      this.physics.world.timeScale = isFocusBulletTime ? 5.0 : 1.0;
+    }
 
     this.dilatedElapsedMs += delta * timeDilationFactor;
     const elapsedMs = Math.max(0, time - this.startTime);
@@ -1615,10 +1805,29 @@ export default class GameScene extends Phaser.Scene {
       );
     }
 
+    // Update Floating Thumb-Ribbon visual feedback
+    if (this.thumbRibbonGraphics) {
+      this.thumbRibbonGraphics.clear();
+      if (this.touchController.isPointerDown && !useGameStore.getState().reducedEffects) {
+        const ax = this.touchController.anchorX;
+        const ay = this.touchController.anchorY;
+        const px = this.touchController.pointerX;
+        const py = this.touchController.pointerY;
+        this.thumbRibbonGraphics.lineStyle(2, 0x00e5ff, 0.22);
+        this.thumbRibbonGraphics.beginPath();
+        this.thumbRibbonGraphics.moveTo(ax, ay);
+        this.thumbRibbonGraphics.lineTo(px, py);
+        this.thumbRibbonGraphics.strokePath();
+        this.thumbRibbonGraphics.fillStyle(0x00e5ff, 0.22);
+        this.thumbRibbonGraphics.fillCircle(ax, ay, 4);
+        this.thumbRibbonGraphics.strokeCircle(px, py, 7);
+      }
+    }
+
     // Update heroes
     for (const hero of [...this.heroes]) {
       if (hero.active) {
-        hero.updateControl(this.cursors, this.wasd, this.touchInput, delta);
+        hero.updateControl(this.cursors, this.wasd, this.touchController.state, delta);
         // Restart if hero falls out through the bottom (or top when gravity is inverted)
         if (hero.y > this.levelData.height + 20 || (hero.upsideDown === -1 && hero.y < -10)) {
           if (hero.isFocused || this.heroes.length <= 1) {
@@ -1626,6 +1835,31 @@ export default class GameScene extends Phaser.Scene {
             return;
           }
           this.killHero(hero);
+        }
+      }
+    }
+    this.touchController.consumeFrameFlags();
+
+    // Render cyan vertical dive trail for diving heroes
+    if (this.diveTrailGraphics) {
+      this.diveTrailGraphics.clear();
+      const isReduced = useGameStore.getState().reducedEffects;
+      for (const hero of this.heroes) {
+        if (hero.active && hero.isDiving) {
+          const trailLen = isReduced ? 28 : 48;
+          const tailY = hero.y - trailLen * hero.upsideDown;
+          this.diveTrailGraphics.lineStyle(isReduced ? 2 : 4, 0x00e5ff, 0.75);
+          this.diveTrailGraphics.beginPath();
+          this.diveTrailGraphics.moveTo(hero.x, hero.y);
+          this.diveTrailGraphics.lineTo(hero.x, tailY);
+          this.diveTrailGraphics.strokePath();
+          if (!isReduced) {
+            this.diveTrailGraphics.lineStyle(1.5, 0xffffff, 0.85);
+            this.diveTrailGraphics.beginPath();
+            this.diveTrailGraphics.moveTo(hero.x, hero.y);
+            this.diveTrailGraphics.lineTo(hero.x, hero.y - 26 * hero.upsideDown);
+            this.diveTrailGraphics.strokePath();
+          }
         }
       }
     }
@@ -1665,6 +1899,7 @@ export default class GameScene extends Phaser.Scene {
                 triggeringHero.setFocus(false);
                 otherHero.setFocus(true);
                 this.cameras.main.startFollow(otherHero, true, 0.1, 0.1);
+                this.updateEdgePips();
               }
             }
           }
@@ -1699,11 +1934,11 @@ export default class GameScene extends Phaser.Scene {
         const rawLeft =
           (this.cursors?.left?.isDown ?? false) ||
           (this.wasd?.A?.isDown ?? false) ||
-          this.touchInput.left;
+          this.touchController.state.left;
         const rawRight =
           (this.cursors?.right?.isDown ?? false) ||
           (this.wasd?.D?.isDown ?? false) ||
-          this.touchInput.right;
+          this.touchController.state.right;
         const dir = rawLeft ? 'left' : rawRight ? 'right' : null;
         if (dir) {
           for (const p of this.levelData.platforms) {

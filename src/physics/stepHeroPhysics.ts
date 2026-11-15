@@ -18,6 +18,7 @@ export interface HeroControlInput {
   left: boolean;
   right: boolean;
   jump: boolean;
+  dive?: boolean;
 }
 
 export interface HeroControlResult {
@@ -28,6 +29,7 @@ export interface HeroControlResult {
   flipX: boolean;
   animState: 'idle' | 'left' | 'right' | 'jump';
   jumped: boolean;
+  dived: boolean;
 }
 
 /**
@@ -61,6 +63,7 @@ export function stepHeroControl(
   let flipX = state.flipX;
   let animState = state.animState;
   let jumped = false;
+  let dived = false;
 
   if (recoilTimer > 0) {
     recoilTimer -= deltaMs;
@@ -78,7 +81,7 @@ export function stepHeroControl(
 
     animState = 'jump';
     flipX = recoilVx < 0;
-    return { vx, vy, recoilTimer, recoilVx, flipX, animState, jumped };
+    return { vx, vy, recoilTimer, recoilVx, flipX, animState, jumped, dived };
   }
 
   const isActive = state.isActive ?? true;
@@ -114,6 +117,15 @@ export function stepHeroControl(
       vy = PHYSICS.HERO_JUMP_V0 * state.upsideDown;
       animState = 'jump';
       jumped = true;
+    } else if (
+      input.dive &&
+      !state.touchingGround &&
+      vy * state.upsideDown < PHYSICS.DIVE_VY
+    ) {
+      vx *= 0.5;
+      vy = PHYSICS.DIVE_VY * state.upsideDown;
+      animState = 'jump';
+      dived = true;
     }
   } else if (state.touchingGround) {
     vx = 0;
@@ -124,7 +136,7 @@ export function stepHeroControl(
     animState = 'jump';
   }
 
-  return { vx, vy, recoilTimer, recoilVx, flipX, animState, jumped };
+  return { vx, vy, recoilTimer, recoilVx, flipX, animState, jumped, dived };
 }
 
 /**

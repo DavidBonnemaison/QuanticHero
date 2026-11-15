@@ -14,6 +14,8 @@ export interface GameEventPayloads {
   'platform:decay': { x: number; y: number };
   'hero:wall_bounce': { x: number; y: number };
   'plate:trigger': { plateId: string; gateId: string };
+  'hero:dive': { x: number; y: number };
+  'hero:focus_switch': { fromId: number; toId: number };
 }
 
 export type GameEventName = keyof GameEventPayloads;
