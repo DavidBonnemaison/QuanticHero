@@ -113,7 +113,7 @@ describe('levelCodec', () => {
             width: 100,
             height: 20,
             cracked: true,
-            matterState: 'antimatter',
+            matterState: 'cryo',
             movesTo: { x: 750, y: 450, time: 1500 }
           }
         ],
@@ -129,7 +129,17 @@ describe('levelCodec', () => {
           betaDoor: { x: 1100, y: 600 }
         },
         screenWrap: true,
-        wormholes: [{ id: 'w1', x: 200, y: 300, targetX: 900, targetY: 300 }]
+        wormholes: [
+          {
+            id: 'w1',
+            inX: 200,
+            inY: 300,
+            inNormalAngleDeg: -90,
+            outX: 900,
+            outY: 300,
+            outNormalAngleDeg: 0
+          }
+        ]
       };
 
       const compressed = compressLevel(v3Level);

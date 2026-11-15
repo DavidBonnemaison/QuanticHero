@@ -4,11 +4,13 @@ import type {
   EntanglementMode,
   Gate,
   LevelData,
+  MatterState,
   Particle,
   ParticleType,
   Platform,
   PressurePlate,
-  Spike
+  Spike,
+  Wormhole
 } from '../types';
 
 export const PARTICLE_TYPES: ParticleType[] = [
@@ -18,7 +20,8 @@ export const PARTICLE_TYPES: ParticleType[] = [
   'antiGravity',
   'tunnel',
   'pauli',
-  'timeDilation'
+  'timeDilation',
+  'condense'
 ];
 
 export interface MinifiedPlatformOptions {
@@ -26,7 +29,7 @@ export interface MinifiedPlatformOptions {
   ph?: 'c' | 'm';
   dc?: number;
   cr?: 1;
-  ms?: string;
+  ms?: MatterState;
 }
 
 export type MinifiedPlatformTuple =
@@ -73,7 +76,7 @@ export interface MinifiedLevel {
   py?: Array<[number, number, number] | [number, number, number, number]>;
   acf?: 0;
   sw?: 1 | 'h' | 'v' | 'b';
-  wh?: Array<Record<string, unknown>>;
+  wh?: Wormhole[];
 }
 
 function sanitizeNumber(val: unknown, min: number, max: number, defaultVal: number): number {
@@ -141,7 +144,7 @@ export function compressLevel(level: LevelData): string {
         opts.cr = 1;
       }
       if (typeof plat.matterState === 'string' && plat.matterState) {
-        opts.ms = sanitizeText(plat.matterState, 20, '');
+        opts.ms = plat.matterState;
       }
       const hasOpts = Object.keys(opts).length > 0;
 
@@ -390,8 +393,14 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
     if (opts.cr === 1 || opts.cr === true) {
       plat.cracked = true;
     }
-    if (typeof opts.ms === 'string' && opts.ms) {
-      plat.matterState = sanitizeText(opts.ms, 20, '');
+    if (
+      opts.ms === 'solid' ||
+      opts.ms === 'liquid' ||
+      opts.ms === 'gas' ||
+      opts.ms === 'cryo' ||
+      opts.ms === 'plasma'
+    ) {
+      plat.matterState = opts.ms;
     }
   };
 
@@ -477,8 +486,14 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
         if (item.cracked === true) {
           plat.cracked = true;
         }
-        if (typeof item.matterState === 'string' && item.matterState) {
-          plat.matterState = sanitizeText(item.matterState, 20, '');
+        if (
+          item.matterState === 'solid' ||
+          item.matterState === 'liquid' ||
+          item.matterState === 'gas' ||
+          item.matterState === 'cryo' ||
+          item.matterState === 'plasma'
+        ) {
+          plat.matterState = item.matterState;
         }
         platforms.push(plat);
       }
@@ -810,11 +825,19 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
   }
 
   const rawWormholes = raw.wh ?? raw.wormholes;
-  const wormholes =
+  const wormholes: Wormhole[] | undefined =
     Array.isArray(rawWormholes) && rawWormholes.length > 0
-      ? (rawWormholes.slice(0, 50).filter((w) => w && typeof w === 'object') as Array<
-          Record<string, unknown>
-        >)
+      ? (rawWormholes
+          .slice(0, 50)
+          .filter(
+            (w) =>
+              w &&
+              typeof w === 'object' &&
+              typeof w.inX === 'number' &&
+              typeof w.inY === 'number' &&
+              typeof w.outX === 'number' &&
+              typeof w.outY === 'number'
+          ) as Wormhole[])
       : undefined;
 
   const level: LevelData = {

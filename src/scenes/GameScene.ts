@@ -32,6 +32,26 @@ import {
   computeLookAheadOffset,
   isHeroOnPressurePlate
 } from '../physics/stepHeroPhysics';
+import {
+  type PinnablePlatformRef,
+  type QuantumPinningState,
+  buildBroglieScaffoldSegments,
+  canGhostSurf,
+  computeWormholeExit,
+  createQuantumPinningState,
+  findNearestPinnablePlatform,
+  findPinnablePlatformAtPoint,
+  getGhostSurfVelocity,
+  getLiquidEmergeVelocity,
+  getPlasmaBounceVelocity,
+  isHeroInWormholeInlet,
+  isHeroOverlappingRect,
+  normalizeMatterState,
+  shouldPlungeIntoLiquid,
+  stepGasUpdraft,
+  stepLiquidBuoyancy,
+  stepQuantumPinning
+} from '../physics/matterStates';
 import { push } from '../shims/navigation';
 import { SessionSwarmBuffer, getSwarmSpectrumTint } from '../services/GhostManager';
 import { calculateIsotopeMedal, getMedalDisplayInfo } from '../services/MedalService';
@@ -53,6 +73,7 @@ import type {
   GhostMode,
   IsotopeMedal,
   LevelData,
+  MatterState,
   ParticleType,
   PlatformPhase,
   TetherPylon
@@ -203,6 +224,22 @@ export default class GameScene extends Phaser.Scene {
   private screenWrapGraphics: Phaser.GameObjects.Graphics | null = null;
   private screenWrapGhosts: Phaser.GameObjects.Sprite[] = [];
   private fusionHaloGraphics: Phaser.GameObjects.Graphics | null = null;
+  private liquidPlatforms: Array<{ rect: Phaser.GameObjects.Rectangle; startY: number }> = [];
+  private gasPlatforms: Phaser.GameObjects.Rectangle[] = [];
+  private pinnablePlatforms: Array<
+    PinnablePlatformRef & {
+      rect: Phaser.GameObjects.Rectangle;
+      phase?: PlatformPhase;
+      decayState?: DecayPlatformState;
+    }
+  > = [];
+  private quantumPinningState: QuantumPinningState = createQuantumPinningState();
+  private quantumPinGraphics: Phaser.GameObjects.Graphics | null = null;
+  private wormholeGraphics: Phaser.GameObjects.Graphics | null = null;
+  private broglieCrystals: Array<{ rect: Phaser.GameObjects.Rectangle; expiresAtMs: number }> = [];
+  private hasCondenseAbility = false;
+  private fKey: Phaser.Input.Keyboard.Key | null = null;
+  private activePinPointerWorld: { x: number; y: number } | null = null;
 
   constructor() {
     super('Game');
@@ -345,6 +382,14 @@ export default class GameScene extends Phaser.Scene {
           this.advanceToNextLevel();
         }
       });
+
+      this.fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+      const cKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
+      cKey.on('down', () => {
+        if (!this.isLevelCompleted && !this.isTransitioningLevel) {
+          this.tryCrystallizeBroglieTrail();
+        }
+      });
     }
 
     this.setupPointerControls();
@@ -383,6 +428,15 @@ export default class GameScene extends Phaser.Scene {
     this.screenWrapGraphics = null;
     this.screenWrapGhosts = [];
     this.fusionHaloGraphics = null;
+    this.liquidPlatforms = [];
+    this.gasPlatforms = [];
+    this.pinnablePlatforms = [];
+    this.quantumPinningState = createQuantumPinningState();
+    this.quantumPinGraphics = null;
+    this.wormholeGraphics = null;
+    this.broglieCrystals = [];
+    this.hasCondenseAbility = false;
+    this.activePinPointerWorld = null;
     this.edgePips = [];
     this.isLevelCompleted = false;
     this.isRespawning = false;
@@ -523,25 +577,56 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
-    for (const p of this.levelData.platforms) {
+    for (let platIdx = 0; platIdx < this.levelData.platforms.length; platIdx++) {
+      const p = this.levelData.platforms[platIdx];
       const width = p.width ?? 200;
       const height = p.height ?? 20;
+      const matterState = normalizeMatterState(p.matterState);
 
       const isWall = p.kind === 'wall';
       let fillColor = antiHueColor;
+      let fillAlpha = 1;
       if (isWall) {
         fillColor = 0x00e5ff;
       } else if (p.phase === 'cyan') {
         fillColor = 0x00e5ff;
       } else if (p.phase === 'magenta') {
         fillColor = 0xff00e5;
+      } else if (matterState === 'liquid') {
+        fillColor = 0x0ea5e9;
+        fillAlpha = 0.68;
+      } else if (matterState === 'gas') {
+        fillColor = 0xa855f7;
+        fillAlpha = 0.35;
+      } else if (matterState === 'cryo') {
+        fillColor = 0xbae6fd;
+      } else if (matterState === 'plasma') {
+        fillColor = 0xf43f5e;
       }
 
-      const rect = this.add.rectangle(p.x + width / 2, p.y + height / 2, width, height, fillColor);
+      const rect = this.add.rectangle(
+        p.x + width / 2,
+        p.y + height / 2,
+        width,
+        height,
+        fillColor,
+        fillAlpha
+      );
+      rect.setData('matterState', matterState);
 
       if (isWall) {
         rect.setStrokeStyle(2, 0xffffff);
         rect.setData('kind', 'wall');
+      } else if (matterState === 'liquid') {
+        rect.setStrokeStyle(2, 0x38bdf8, 0.9);
+        this.liquidPlatforms.push({ rect, startY: p.y + height / 2 });
+      } else if (matterState === 'gas') {
+        rect.setStrokeStyle(1.5, 0xc084fc, 0.75);
+        this.gasPlatforms.push(rect);
+      } else if (matterState === 'cryo') {
+        rect.setStrokeStyle(2, 0xe0f2fe, 0.95);
+      } else if (matterState === 'plasma') {
+        rect.setStrokeStyle(2, 0xfbbf24, 0.95);
       }
 
       if (p.phase) {
@@ -555,6 +640,7 @@ export default class GameScene extends Phaser.Scene {
         this.crackedPlatforms.push(rect);
       }
 
+      let decayStateRef: DecayPlatformState | undefined;
       if (p.decayMs && p.decayMs > 0) {
         const decayState: DecayPlatformState = {
           timerMs: 0,
@@ -563,12 +649,28 @@ export default class GameScene extends Phaser.Scene {
           collapsed: false,
           respawnTimerMs: 0
         };
+        decayStateRef = decayState;
         rect.setData('decayState', decayState);
         this.decayPlatforms.push({
           rect,
           state: decayState,
           startX: p.x + width / 2,
           startY: p.y + height / 2
+        });
+      }
+
+      if (p.phase || (p.decayMs && p.decayMs > 0)) {
+        const pinId = `plat_${platIdx}`;
+        rect.setData('pinId', pinId);
+        this.pinnablePlatforms.push({
+          id: pinId,
+          x: p.x + width / 2,
+          y: p.y + height / 2,
+          width,
+          height,
+          rect,
+          phase: p.phase,
+          decayState: decayStateRef
         });
       }
 
@@ -608,6 +710,12 @@ export default class GameScene extends Phaser.Scene {
       } else {
         rect.setData('baseY', rect.y);
         this.physics.add.existing(rect, true);
+        if (matterState === 'gas') {
+          const gasBody = rect.body as Phaser.Physics.Arcade.StaticBody | null;
+          if (gasBody) {
+            gasBody.checkCollision.none = true;
+          }
+        }
         this.platforms.add(rect);
       }
     }
@@ -694,7 +802,8 @@ export default class GameScene extends Phaser.Scene {
       antiGravity: 'cyan',
       tunnel: 'yellow',
       pauli: 'red',
-      timeDilation: 'cyan'
+      timeDilation: 'cyan',
+      condense: 'cyan'
     };
 
     for (const part of this.levelData.particles) {
@@ -818,44 +927,89 @@ export default class GameScene extends Phaser.Scene {
 
     // Collisions and Overlaps
     this.physics.add.collider(this.heroGroup, this.gatesGroup);
-    this.physics.add.collider(this.heroGroup, this.platforms, (heroObj, platObj) => {
-      const hero = heroObj as Hero;
-      const plat = platObj as Phaser.GameObjects.Rectangle;
+    this.physics.add.collider(
+      this.heroGroup,
+      this.platforms,
+      (heroObj, platObj) => {
+        const hero = heroObj as Hero;
+        const plat = platObj as Phaser.GameObjects.Rectangle;
 
-      // 1. Neon Wall Rebound (kind === 'wall')
-      if (plat.getData('kind') === 'wall') {
-        if (hero.x < plat.x) {
-          hero.bounceOffRightWall(true);
-        } else {
-          hero.bounceOffLeftWall(true);
+        // 1. Neon Wall Rebound (kind === 'wall')
+        if (plat.getData('kind') === 'wall') {
+          if (hero.x < plat.x) {
+            hero.bounceOffRightWall(true);
+          } else {
+            hero.bounceOffLeftWall(true);
+          }
+          gameEvents.emit('hero:wall_bounce', { x: hero.x, y: hero.y });
         }
-        gameEvents.emit('hero:wall_bounce', { x: hero.x, y: hero.y });
-      }
 
-      const touchingTop =
-        hero.upsideDown === 1
-          ? hero.body?.touching.down || hero.body?.blocked.down
-          : hero.body?.touching.up || hero.body?.blocked.up;
+        const touchingTop =
+          hero.upsideDown === 1
+            ? hero.body?.touching.down || hero.body?.blocked.down
+            : hero.body?.touching.up || hero.body?.blocked.up;
 
-      if (touchingTop && (!hero.wasTouchingGround || hero.lastLandedPlatform !== plat)) {
-        hero.lastLandedPlatform = plat;
-        this.triggerSynthPlatformImpact(hero, plat, true);
-      }
+        const matterState = plat.getData('matterState') as MatterState | undefined;
 
-      // 2. Radioactive Half-Life Platform Decay Trigger
-      const decayState = plat.getData('decayState') as DecayPlatformState | undefined;
-      if (decayState && !decayState.triggered && touchingTop) {
-        decayState.triggered = true;
-      }
+        if (touchingTop && matterState === 'plasma') {
+          hero.setVelocityY(getPlasmaBounceVelocity(hero.upsideDown));
+          hero.isDiving = false;
+          gameEvents.emit('platform:plasma_bounce', { x: hero.x, y: hero.y });
+        }
 
-      // 3. Cracked Platform Shatter (Super-Quanta fusionStack >= 2)
-      if (
-        plat.getData('cracked') === true &&
-        shouldBreakCrackedPlatform(hero.fusionStack, Boolean(touchingTop), hero.isDiving)
-      ) {
-        this.shatterCrackedPlatform(plat);
+        if (touchingTop && matterState === 'cryo') {
+          hero.onCryo = true;
+        }
+
+        if (touchingTop && (!hero.wasTouchingGround || hero.lastLandedPlatform !== plat)) {
+          hero.lastLandedPlatform = plat;
+          this.triggerSynthPlatformImpact(hero, plat, true);
+        }
+
+        // 2. Radioactive Half-Life Platform Decay Trigger
+        const decayState = plat.getData('decayState') as DecayPlatformState | undefined;
+        if (decayState && !decayState.triggered && touchingTop) {
+          decayState.triggered = true;
+        }
+
+        // 3. Cracked Platform Shatter (Super-Quanta fusionStack >= 2)
+        if (
+          plat.getData('cracked') === true &&
+          shouldBreakCrackedPlatform(hero.fusionStack, Boolean(touchingTop), hero.isDiving)
+        ) {
+          this.shatterCrackedPlatform(plat);
+        }
+      },
+      (heroObj, platObj) => {
+        const hero = heroObj as Hero;
+        const plat = platObj as Phaser.GameObjects.Rectangle;
+        const matterState = plat.getData('matterState') as MatterState | undefined;
+
+        if (matterState === 'gas') {
+          return false;
+        }
+
+        if (matterState === 'liquid') {
+          const diveInput =
+            (this.cursors?.down?.isDown ?? false) ||
+            (this.wasd?.S?.isDown ?? false) ||
+            Boolean(this.touchController.state.diveRequested);
+          const vy = hero.body ? hero.body.velocity.y : 0;
+          if (
+            hero.inLiquid ||
+            shouldPlungeIntoLiquid(vy, hero.upsideDown, hero.isDiving, diveInput)
+          ) {
+            if (!hero.inLiquid) {
+              hero.inLiquid = true;
+              gameEvents.emit('platform:liquid_plunge', { x: hero.x, y: hero.y });
+            }
+            return false;
+          }
+        }
+
+        return true;
       }
-    });
+    );
 
     this.physics.add.collider(this.heroGroup, this.movingPlatformsGroup, (heroObj, platObj) => {
       const hero = heroObj as Hero;
@@ -960,6 +1114,10 @@ export default class GameScene extends Phaser.Scene {
     this.focusArcGraphics.setDepth(26);
     this.fusionHaloGraphics = this.add.graphics();
     this.fusionHaloGraphics.setDepth(19);
+    this.quantumPinGraphics = this.add.graphics();
+    this.quantumPinGraphics.setDepth(24);
+    this.wormholeGraphics = this.add.graphics();
+    this.wormholeGraphics.setDepth(17);
     if (this.levelData.tetherPylons && this.levelData.tetherPylons.length > 0) {
       this.tetherPylonGraphics = this.add.graphics();
       this.tetherPylonGraphics.setDepth(16);
@@ -1076,6 +1234,22 @@ export default class GameScene extends Phaser.Scene {
       this.fusionHaloGraphics.destroy();
       this.fusionHaloGraphics = null;
     }
+    if (this.quantumPinGraphics) {
+      this.quantumPinGraphics.destroy();
+      this.quantumPinGraphics = null;
+    }
+    if (this.wormholeGraphics) {
+      this.wormholeGraphics.destroy();
+      this.wormholeGraphics = null;
+    }
+    for (const crystal of this.broglieCrystals) {
+      crystal.rect.destroy();
+    }
+    this.broglieCrystals = [];
+    this.liquidPlatforms = [];
+    this.gasPlatforms = [];
+    this.pinnablePlatforms = [];
+    this.activePinPointerWorld = null;
     for (const ghost of this.screenWrapGhosts) {
       ghost.destroy();
     }
@@ -1230,6 +1404,15 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private getPointerWorldCoords(pointer: Phaser.Input.Pointer): { x: number; y: number } {
+    const cam = this.cameras?.main;
+    if (cam?.getWorldPoint) {
+      const wp = cam.getWorldPoint(pointer.x, pointer.y);
+      return { x: wp.x, y: wp.y };
+    }
+    return { x: pointer.x, y: pointer.y };
+  }
+
   private setupPointerControls(): void {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.uiPointerConsumed) {
@@ -1244,6 +1427,17 @@ export default class GameScene extends Phaser.Scene {
       }
       if (pointer.y <= 54) {
         return;
+      }
+
+      // 2-finger tap: Broglie Wave-Trail Solidification
+      if (this.input.pointer1?.isDown && this.input.pointer2?.isDown) {
+        this.tryCrystallizeBroglieTrail();
+      }
+
+      // Quantum Pinning: holding pointer directly on a decayMs or phase platform
+      const worldPt = this.getPointerWorldCoords(pointer);
+      if (findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)) {
+        this.activePinPointerWorld = worldPt;
       }
 
       const { doubleTap } = this.touchController.onPointerDown(
@@ -1262,6 +1456,14 @@ export default class GameScene extends Phaser.Scene {
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.isDown) {
+        const worldPt = this.getPointerWorldCoords(pointer);
+        if (findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)) {
+          this.activePinPointerWorld = worldPt;
+        } else if (this.activePinPointerWorld) {
+          this.activePinPointerWorld = null;
+        }
+      }
       if (!this.touchController.isPointerDown) return;
       const focused = this.heroes.find((h) => h.isFocused) || this.heroes[0];
       const touchingGround = focused?.body
@@ -1273,6 +1475,7 @@ export default class GameScene extends Phaser.Scene {
     });
 
     this.input.on('pointerup', () => {
+      this.activePinPointerWorld = null;
       this.touchController.onPointerUp();
     });
   }
@@ -1786,6 +1989,14 @@ export default class GameScene extends Phaser.Scene {
     this.diveTrailGraphics?.clear();
     this.focusArcGraphics?.clear();
     this.fusionHaloGraphics?.clear();
+    this.quantumPinGraphics?.clear();
+    this.quantumPinningState = createQuantumPinningState();
+    this.activePinPointerWorld = null;
+    this.hasCondenseAbility = false;
+    for (const crystal of this.broglieCrystals) {
+      crystal.rect.destroy();
+    }
+    this.broglieCrystals = [];
     this.hookedTetherPylon = null;
     for (const ghost of this.screenWrapGhosts) {
       ghost.setVisible(false);
@@ -2036,10 +2247,15 @@ export default class GameScene extends Phaser.Scene {
       duplicate: 'CLONING !',
       tunnel: 'TUNNELING CHARGE !',
       pauli: 'PAULI BLAST !',
-      timeDilation: 'TIME DILATION !'
+      timeDilation: 'TIME DILATION !',
+      condense: 'BROGLIE CONDENSE !'
     };
 
     switch (type) {
+      case 'condense': {
+        this.hasCondenseAbility = true;
+        break;
+      }
       case 'duplicate': {
         const uncertainty = this.levelData.uncertainty ?? 3;
         if (this.heroes.length < uncertainty) {
@@ -2141,7 +2357,11 @@ export default class GameScene extends Phaser.Scene {
   }
 
   public applyPhase(phase: PlatformPhase): void {
+    const pinnedId = this.quantumPinningState.pinnedPlatformId;
     for (const { rect, phase: pPhase } of this.phasePlatforms) {
+      if (pinnedId && rect.getData('pinId') === pinnedId) {
+        continue;
+      }
       const isActive = pPhase === phase;
       rect.setAlpha(isActive ? 1.0 : 0.25);
       const body = rect.body as Phaser.Physics.Arcade.StaticBody | null;
@@ -2959,6 +3179,306 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  public tryCrystallizeBroglieTrail(): boolean {
+    const hasCondenseInLevel = this.levelData?.particles?.some((p) => p.type === 'condense');
+    if (this.heroes.length <= 1 && !this.hasCondenseAbility && !hasCondenseInLevel) {
+      return false;
+    }
+
+    const focused = this.heroes.find((h) => h.isFocused && h.active) || this.heroes[0];
+    if (!focused || !focused.body) return false;
+
+    const touchingGround =
+      focused.upsideDown === 1
+        ? focused.body.touching.down || focused.body.blocked.down
+        : focused.body.touching.up || focused.body.blocked.up;
+    if (touchingGround) return false;
+
+    const points =
+      focused.trailPoints.length > 0
+        ? focused.trailPoints
+        : [{ x: focused.x, y: focused.y }];
+    const segments = buildBroglieScaffoldSegments(points, 22 * focused.upsideDown);
+    if (segments.length === 0) return false;
+
+    const expiresAtMs = (this.time?.now ?? 0) + PHYSICS.BROGLIE_SCAFFOLD_DURATION_MS;
+    for (const seg of segments) {
+      const crystalRect = this.add.rectangle(
+        seg.x,
+        seg.y,
+        seg.width,
+        seg.height,
+        0x00e5ff,
+        0.85
+      );
+      crystalRect.setStrokeStyle(1.5, 0xffffff, 0.95);
+      crystalRect.setDepth(16);
+      this.physics.add.existing(crystalRect, true);
+      this.platforms.add(crystalRect);
+      this.broglieCrystals.push({ rect: crystalRect, expiresAtMs });
+    }
+
+    gameEvents.emit('hero:broglie_crystallize', {
+      count: segments.length,
+      durationMs: PHYSICS.BROGLIE_SCAFFOLD_DURATION_MS
+    });
+    this.showRetroToast('BROGLIE CRYSTAL !');
+    return true;
+  }
+
+  private updateBroglieCrystals(time: number): void {
+    if (this.broglieCrystals.length === 0) return;
+    const remaining: Array<{ rect: Phaser.GameObjects.Rectangle; expiresAtMs: number }> = [];
+    for (const item of this.broglieCrystals) {
+      if (time >= item.expiresAtMs) {
+        item.rect.destroy();
+      } else {
+        const timeLeft = item.expiresAtMs - time;
+        if (timeLeft < 500) {
+          item.rect.setAlpha(Math.max(0.15, (timeLeft / 500) * 0.85));
+        }
+        remaining.push(item);
+      }
+    }
+    this.broglieCrystals = remaining;
+  }
+
+  private updateMatterStates(time: number, delta: number): void {
+    const dt = delta / 1000;
+
+    // Gentle wave undulation on liquid platforms
+    for (let i = 0; i < this.liquidPlatforms.length; i++) {
+      const lp = this.liquidPlatforms[i];
+      if (lp.rect.active) {
+        lp.rect.y = lp.startY + Math.sin(time * 0.004 + i) * 1.5;
+      }
+    }
+
+    for (const hero of this.heroes) {
+      if (!hero.active || !hero.body) continue;
+
+      // 1. Liquid immersion buoyancy & dolphin emerge
+      if (this.liquidPlatforms.length > 0) {
+        let overlappingLiquid: { rect: Phaser.GameObjects.Rectangle; startY: number } | null = null;
+        for (const lp of this.liquidPlatforms) {
+          if (isHeroOverlappingRect(hero.x, hero.y, lp.rect, true)) {
+            overlappingLiquid = lp;
+            break;
+          }
+        }
+
+        if (overlappingLiquid && hero.inLiquid) {
+          const nextVy = stepLiquidBuoyancy(hero.body.velocity.y, hero.upsideDown, dt);
+          hero.setVelocityY(nextVy);
+          hero.isDiving = false;
+
+          const topSurface = overlappingLiquid.rect.y - overlappingLiquid.rect.height / 2;
+          const bottomSurface = overlappingLiquid.rect.y + overlappingLiquid.rect.height / 2;
+          const emerging =
+            hero.upsideDown === 1
+              ? nextVy < 0 && hero.y <= topSurface + 8
+              : nextVy > 0 && hero.y >= bottomSurface - 8;
+          if (emerging) {
+            hero.inLiquid = false;
+            hero.setVelocityY(getLiquidEmergeVelocity(hero.upsideDown));
+            gameEvents.emit('platform:liquid_emerge', { x: hero.x, y: hero.y });
+          }
+        } else if (!overlappingLiquid && hero.inLiquid) {
+          hero.inLiquid = false;
+          if (hero.body.velocity.y * hero.upsideDown < 0) {
+            hero.setVelocityY(getLiquidEmergeVelocity(hero.upsideDown));
+            gameEvents.emit('platform:liquid_emerge', { x: hero.x, y: hero.y });
+          }
+        }
+      }
+
+      // 2. Noble Gas updraft
+      if (this.gasPlatforms.length > 0) {
+        for (const gp of this.gasPlatforms) {
+          if (gp.active && isHeroOverlappingRect(hero.x, hero.y, gp, true)) {
+            hero.setVelocityY(stepGasUpdraft(hero.body.velocity.y, dt, hero.upsideDown));
+            hero.isDiving = false;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  private updateQuantumPinning(time: number, delta: number): void {
+    if (this.pinnablePlatforms.length === 0) return;
+
+    const prevPinnedId = this.quantumPinningState.pinnedPlatformId;
+    let targetPinId: string | null = null;
+
+    if (this.fKey?.isDown) {
+      const focused = this.heroes.find((h) => h.isFocused && h.active) || this.heroes[0];
+      if (focused) {
+        const nearest = findNearestPinnablePlatform(
+          focused.x,
+          focused.y,
+          this.pinnablePlatforms,
+          PHYSICS.QUANTUM_PIN_RADIUS
+        );
+        if (nearest) {
+          targetPinId = nearest.id;
+        }
+      }
+    } else if (this.activePinPointerWorld) {
+      const underPointer = findPinnablePlatformAtPoint(
+        this.activePinPointerWorld.x,
+        this.activePinPointerWorld.y,
+        this.pinnablePlatforms
+      );
+      if (underPointer) {
+        targetPinId = underPointer.id;
+      }
+    }
+
+    this.quantumPinningState = stepQuantumPinning(this.quantumPinningState, targetPinId, delta);
+    const nextPinnedId = this.quantumPinningState.pinnedPlatformId;
+
+    for (const pp of this.pinnablePlatforms) {
+      if (pp.decayState) {
+        pp.decayState.decayPaused = pp.id === nextPinnedId;
+      }
+    }
+
+    if (prevPinnedId !== nextPinnedId) {
+      if (nextPinnedId) {
+        gameEvents.emit('quantum:pin', {
+          platformId: nextPinnedId,
+          pinned: true,
+          cooldownMs: 0
+        });
+      } else if (prevPinnedId) {
+        gameEvents.emit('quantum:pin', {
+          platformId: prevPinnedId,
+          pinned: false,
+          cooldownMs: this.quantumPinningState.cooldownRemainingMs
+        });
+      }
+    }
+
+    if (this.quantumPinGraphics) {
+      const g = this.quantumPinGraphics;
+      g.clear();
+      if (nextPinnedId) {
+        const pinned = this.pinnablePlatforms.find((p) => p.id === nextPinnedId);
+        if (pinned) {
+          const pulse = 0.7 + 0.25 * Math.sin(time * 0.01);
+          g.lineStyle(3, 0xfbbf24, pulse);
+          g.strokeRect(
+            pinned.x - pinned.width / 2 - 4,
+            pinned.y - pinned.height / 2 - 4,
+            pinned.width + 8,
+            pinned.height + 8
+          );
+          g.lineStyle(2, 0xfef08a, pulse);
+          g.strokeCircle(pinned.x, pinned.y, 12);
+          g.fillStyle(0xfbbf24, pulse);
+          g.fillCircle(pinned.x, pinned.y, 4);
+        }
+      }
+    }
+  }
+
+  private updateWormholes(time: number): void {
+    const wormholes = this.levelData?.wormholes;
+    if (!wormholes || wormholes.length === 0) return;
+
+    if (this.wormholeGraphics) {
+      const g = this.wormholeGraphics;
+      g.clear();
+      const pulse = 0.65 + 0.25 * Math.sin(time * 0.008);
+      for (const wh of wormholes) {
+        const colorNum = wh.color
+          ? Phaser.Display.Color.HexStringToColor(wh.color).color
+          : 0x22d3ee;
+        // Inlet ring
+        g.lineStyle(3, colorNum, pulse);
+        g.strokeCircle(wh.inX, wh.inY, PHYSICS.WORMHOLE_RADIUS);
+        g.fillStyle(colorNum, 0.22);
+        g.fillCircle(wh.inX, wh.inY, PHYSICS.WORMHOLE_RADIUS * 0.65);
+
+        // Outlet ring + normal direction vector
+        g.lineStyle(3, 0xe879f9, pulse);
+        g.strokeCircle(wh.outX, wh.outY, PHYSICS.WORMHOLE_RADIUS);
+        const outRad = (wh.outNormalAngleDeg * Math.PI) / 180;
+        g.lineStyle(2.5, 0xffffff, 0.9);
+        g.lineBetween(
+          wh.outX,
+          wh.outY,
+          wh.outX + Math.cos(outRad) * (PHYSICS.WORMHOLE_RADIUS + 10),
+          wh.outY + Math.sin(outRad) * (PHYSICS.WORMHOLE_RADIUS + 10)
+        );
+      }
+    }
+
+    for (const hero of this.heroes) {
+      if (!hero.active || !hero.body || time < hero.wormholeCooldownUntil) continue;
+      for (const wh of wormholes) {
+        if (isHeroInWormholeInlet(hero.x, hero.y, wh)) {
+          const exit = computeWormholeExit(hero.body.velocity.x, hero.body.velocity.y, wh);
+          hero.setPosition(exit.x, exit.y);
+          if ('x' in hero.body) {
+            const b = hero.body as Phaser.Physics.Arcade.Body;
+            b.x = exit.x - (b.width || 0) / 2;
+            b.y = exit.y - (b.height || 0) / 2;
+          }
+          hero.setVelocity(exit.vx, exit.vy);
+          hero.isDiving = false;
+          hero.wormholeCooldownUntil = time + PHYSICS.WORMHOLE_COOLDOWN_MS;
+          gameEvents.emit('hero:wormhole', {
+            wormholeId: wh.id,
+            outX: exit.x,
+            outY: exit.y,
+            speed: exit.speed
+          });
+          break;
+        }
+      }
+    }
+  }
+
+  private updateGhostSurfing(isGhostActive: boolean): void {
+    if (!isGhostActive || !this.ghostHero || !this.ghostHero.visible || !this.ghostHero.active) {
+      return;
+    }
+
+    for (const hero of this.heroes) {
+      if (!hero.active || !hero.body) continue;
+      const surfOk = canGhostSurf(
+        {
+          x: hero.x,
+          y: hero.y,
+          vy: hero.body.velocity.y,
+          upsideDown: hero.upsideDown,
+          hasSurfedThisJump: hero.hasSurfedThisJump
+        },
+        this.ghostHero
+      );
+      if (surfOk) {
+        hero.setVelocityY(getGhostSurfVelocity(hero.upsideDown));
+        hero.hasSurfedThisJump = true;
+        hero.isDiving = false;
+        gameEvents.emit('hero:ghost_surf', { x: hero.x, y: hero.y });
+        if (this.add?.circle && this.tweens?.add) {
+          const ring = this.add.circle(hero.x, hero.y + 12 * hero.upsideDown, 10, 0xfbbf24, 0.75);
+          ring.setDepth(22);
+          this.tweens.add({
+            targets: ring,
+            scale: 2.6,
+            alpha: 0,
+            duration: 240,
+            ease: 'Sine.easeOut',
+            onComplete: () => ring.destroy()
+          });
+        }
+      }
+    }
+  }
+
   update(time: number, delta: number): void {
     if (this.isLevelCompleted || this.isTransitioningLevel || this.isRespawning) {
       if (this.isLevelCompleted && this.swarmPlaybackActive && this.swarmGhosts.length > 0) {
@@ -3190,6 +3710,12 @@ export default class GameScene extends Phaser.Scene {
       }
     }
     this.touchController.consumeFrameFlags();
+
+    this.updateMatterStates(time, delta);
+    this.updateQuantumPinning(time, delta);
+    this.updateWormholes(time);
+    this.updateBroglieCrystals(time);
+    this.updateGhostSurfing(isGhostActive);
 
     if (this.levelData.screenWrap) {
       this.updateScreenWrap(time);

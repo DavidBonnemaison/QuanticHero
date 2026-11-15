@@ -1,5 +1,6 @@
 export type PlatformKind = 'standard' | 'wall';
 export type PlatformPhase = 'cyan' | 'magenta';
+export type MatterState = 'solid' | 'liquid' | 'gas' | 'cryo' | 'plasma';
 
 export interface Platform {
   x: number;
@@ -10,12 +11,23 @@ export interface Platform {
   phase?: PlatformPhase; // 'cyan' | 'magenta' = active according to global phase
   decayMs?: number; // Half-life decay platform: collapses N ms after initial contact
   cracked?: boolean;
-  matterState?: string;
+  matterState?: MatterState;
   movesTo?: {
     x?: number;
     y?: number;
     time?: number;
   };
+}
+
+export interface Wormhole {
+  id: string;
+  inX: number;
+  inY: number;
+  inNormalAngleDeg: number;
+  outX: number;
+  outY: number;
+  outNormalAngleDeg: number;
+  color?: string;
 }
 
 export type ParticleType =
@@ -25,7 +37,8 @@ export type ParticleType =
   | 'antiGravity'
   | 'tunnel'
   | 'pauli'
-  | 'timeDilation';
+  | 'timeDilation'
+  | 'condense';
 
 export interface Particle {
   x: number;
@@ -123,7 +136,7 @@ export interface LevelData {
   allowCloneFusion?: boolean;
   collapse?: CollapseConfig;
   screenWrap?: boolean | 'horizontal' | 'vertical' | 'both';
-  wormholes?: Array<Record<string, unknown>>;
+  wormholes?: Wormhole[];
   authorGhost?: string;
   authorTime?: number;
   parTimeMs?: number;

@@ -158,6 +158,7 @@ export interface DecayPlatformState {
   triggered: boolean;
   collapsed: boolean;
   respawnTimerMs?: number;
+  decayPaused?: boolean;
 }
 
 export interface DecayPlatformUpdate {
@@ -170,12 +171,22 @@ export interface DecayPlatformUpdate {
 /**
  * Updates radioactive half-life decay platform state.
  * Under time dilation, effective timer advances at 25% speed.
+ * When decayPaused is true (Quantum Pinning), decay timer progression is frozen.
  */
 export function updateDecayPlatform(
   state: DecayPlatformState,
   deltaMs: number,
   timeDilationFactor = 1.0
 ): DecayPlatformUpdate {
+  if (state.decayPaused) {
+    return {
+      collapsed: state.collapsed,
+      alpha: state.collapsed ? 0 : 1.0,
+      solid: !state.collapsed,
+      shaking: false
+    };
+  }
+
   if (!state.triggered) {
     return { collapsed: false, alpha: 1.0, solid: true, shaking: false };
   }

@@ -22,6 +22,7 @@ export interface HeroControlState {
   lastDiveEndTimeMs?: number;
   waveDashUntilMs?: number;
   jumpMultiplier?: number;
+  onCryo?: boolean;
 }
 
 export interface HeroControlInput {
@@ -185,7 +186,7 @@ export function stepHeroControl(
   if (isActive) {
     const isHighSpeed = Math.abs(vx) > PHYSICS.HERO_SPEED_X * mult;
     if (input.left) {
-      if (state.touchingGround || !isHighSpeed) {
+      if ((state.touchingGround && !state.onCryo) || !isHighSpeed || vx > 0) {
         vx = -PHYSICS.HERO_SPEED_X * mult;
       }
       flipX = true;
@@ -193,7 +194,7 @@ export function stepHeroControl(
         animState = 'left';
       }
     } else if (input.right) {
-      if (state.touchingGround || !isHighSpeed) {
+      if ((state.touchingGround && !state.onCryo) || !isHighSpeed || vx < 0) {
         vx = PHYSICS.HERO_SPEED_X * mult;
       }
       flipX = false;
@@ -202,8 +203,13 @@ export function stepHeroControl(
       }
     } else {
       if (state.touchingGround) {
-        vx = 0;
-        animState = 'idle';
+        if (state.onCryo) {
+          vx = applyFramerateIndependentDrag(vx, PHYSICS.CRYO_GROUND_DRAG, deltaMs);
+          animState = Math.abs(vx) > 5 ? (vx < 0 ? 'left' : 'right') : 'idle';
+        } else {
+          vx = 0;
+          animState = 'idle';
+        }
       } else {
         const baseDrag = isHighSpeed ? PHYSICS.HIGH_SPEED_AIR_DRAG_X : PHYSICS.AIR_DRAG_X;
         vx = applyFramerateIndependentDrag(vx, baseDrag, deltaMs);
@@ -234,8 +240,13 @@ export function stepHeroControl(
       jumpCut = true;
     }
   } else if (state.touchingGround) {
-    vx = 0;
-    animState = 'idle';
+    if (state.onCryo) {
+      vx = applyFramerateIndependentDrag(vx, PHYSICS.CRYO_GROUND_DRAG, deltaMs);
+      animState = Math.abs(vx) > 5 ? (vx < 0 ? 'left' : 'right') : 'idle';
+    } else {
+      vx = 0;
+      animState = 'idle';
+    }
   }
 
   if (!state.touchingGround || jumped) {

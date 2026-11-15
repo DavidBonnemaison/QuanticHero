@@ -25,6 +25,13 @@ export interface GameEventPayloads {
   'hero:fission': { x: number; y: number };
   'platform:cracked_break': { x: number; y: number };
   'hero:screen_wrap': { axis: 'x' | 'y'; x: number; y: number };
+  'platform:plasma_bounce': { x: number; y: number };
+  'platform:liquid_plunge': { x: number; y: number };
+  'platform:liquid_emerge': { x: number; y: number };
+  'quantum:pin': { platformId: string; pinned: boolean; cooldownMs: number };
+  'hero:wormhole': { wormholeId: string; outX: number; outY: number; speed: number };
+  'hero:broglie_crystallize': { count: number; durationMs: number };
+  'hero:ghost_surf': { x: number; y: number };
 }
 
 export type GameEventName = keyof GameEventPayloads;

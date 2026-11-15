@@ -36,6 +36,12 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public lastLandedPlatform: Phaser.GameObjects.GameObject | null = null;
   public fusionStack = 1;
   public createdAtMs = 0;
+  public onCryo = false;
+  public inLiquid = false;
+  public wormholeCooldownUntil = 0;
+  public hasSurfedThisJump = false;
+  public trailPoints: Array<{ x: number; y: number }> = [];
+  private lastTrailSampleMs = -Infinity;
   private elapsedTimeMs = 0;
   private lastAirborneVy = 0;
 
@@ -310,6 +316,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       this.lastGroundedTimeMs = nowMs;
       this.hasJumpedSinceGrounded = false;
       this.jumpCutApplied = false;
+      this.hasSurfedThisJump = false;
       if (this.isDiving) {
         this.isDiving = false;
         this.lastDiveEndTimeMs = nowMs;
@@ -317,6 +324,14 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     } else {
       this.lastAirborneVy = this.body.velocity.y;
       this.lastLandedPlatform = null;
+      this.onCryo = false;
+      if (nowMs - this.lastTrailSampleMs >= 24) {
+        this.lastTrailSampleMs = nowMs;
+        this.trailPoints.push({ x: this.x, y: this.y });
+        if (this.trailPoints.length > PHYSICS.BROGLIE_TRAIL_POINTS) {
+          this.trailPoints.shift();
+        }
+      }
     }
 
     const wasRecoiling = this.recoilTimer > 0;
@@ -343,7 +358,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         isDiving: this.isDiving,
         lastDiveEndTimeMs: this.lastDiveEndTimeMs,
         waveDashUntilMs: this.waveDashUntilMs,
-        jumpMultiplier: this.fusionStack >= 2 ? PHYSICS.SUPER_QUANTA_JUMP_MULT : 1
+        jumpMultiplier: this.fusionStack >= 2 ? PHYSICS.SUPER_QUANTA_JUMP_MULT : 1,
+        onCryo: this.onCryo
       },
       { left: goLeft, right: goRight, jump, dive },
       delta

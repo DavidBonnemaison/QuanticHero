@@ -231,6 +231,9 @@ export class SoundManager {
       }),
       gameEvents.on('synth:land', () => {
         this.playSynthLandingSound();
+      }),
+      gameEvents.on('platform:plasma_bounce', () => {
+        this.playPlasmaChord();
       })
     );
 
@@ -1253,6 +1256,45 @@ export class SoundManager {
       } catch {
         // safe
       }
+    }
+  }
+
+  /**
+   * SFX: Plasma Trampoline Bounce (bright shimmering synth chord)
+   */
+  public playPlasmaChord(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const freqs = [
+        this.getQuantizedFrequency(0, 1),
+        this.getQuantizedFrequency(2, 1),
+        this.getQuantizedFrequency(4, 1),
+        this.getQuantizedFrequency(0, 2)
+      ];
+      for (const freq of freqs) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.03, now + 0.18);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.16, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+    } catch {
+      // safe fallback
     }
   }
 
