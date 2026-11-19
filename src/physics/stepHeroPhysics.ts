@@ -56,7 +56,7 @@ export function applyFramerateIndependentDrag(
 ): number {
   if (deltaMs <= 0) return velocity;
   const frameRatio = deltaMs / PHYSICS.DELTA_FIXED_MS;
-  return velocity * Math.pow(baseDrag, frameRatio);
+  return velocity * baseDrag ** frameRatio;
 }
 
 /**
@@ -120,12 +120,12 @@ export function stepHeroControl(
     hasTime &&
     !state.touchingGround &&
     !(state.hasJumpedSinceGrounded ?? false) &&
-    nowMs - (state.lastGroundedTimeMs ?? -Infinity) <= PHYSICS.COYOTE_TIME_MS;
+    nowMs - (state.lastGroundedTimeMs ?? Number.NEGATIVE_INFINITY) <= PHYSICS.COYOTE_TIME_MS;
 
   const hasBufferedJump =
     hasTime &&
     state.touchingGround &&
-    nowMs - (state.lastJumpPressedTimeMs ?? -Infinity) <= PHYSICS.JUMP_BUFFER_MS;
+    nowMs - (state.lastJumpPressedTimeMs ?? Number.NEGATIVE_INFINITY) <= PHYSICS.JUMP_BUFFER_MS;
 
   const willJump =
     isActive &&
@@ -136,10 +136,10 @@ export function stepHeroControl(
   const waveDashTriggered =
     willJump &&
     hasTime &&
-    nowMs - (state.lastDiveEndTimeMs ?? -Infinity) <= PHYSICS.WAVE_DASH_WINDOW_MS;
+    nowMs - (state.lastDiveEndTimeMs ?? Number.NEGATIVE_INFINITY) <= PHYSICS.WAVE_DASH_WINDOW_MS;
 
   const isWaveDashActive =
-    waveDashTriggered || (hasTime && nowMs < (state.waveDashUntilMs ?? -Infinity));
+    waveDashTriggered || (hasTime && nowMs < (state.waveDashUntilMs ?? Number.NEGATIVE_INFINITY));
 
   const mult = state.velocityMultiplier * (isWaveDashActive ? PHYSICS.WAVE_DASH_MULTIPLIER : 1);
 
@@ -220,11 +220,7 @@ export function stepHeroControl(
       vy = PHYSICS.HERO_JUMP_V0 * state.upsideDown * (state.jumpMultiplier ?? 1);
       animState = 'jump';
       jumped = true;
-    } else if (
-      input.dive &&
-      !state.touchingGround &&
-      vy * state.upsideDown < PHYSICS.DIVE_VY
-    ) {
+    } else if (input.dive && !state.touchingGround && vy * state.upsideDown < PHYSICS.DIVE_VY) {
       vx *= 0.5;
       vy = PHYSICS.DIVE_VY * state.upsideDown;
       animState = 'jump';

@@ -7,10 +7,7 @@
   "height": 1400,
   "hue": "#0b162e",
   "antiHue": "#60a5fa",
-  "explanations": [
-    "The relativistic crucible begins.",
-    "Shorter orbits, sharper turns."
-  ],
+  "explanations": ["The relativistic crucible begins.", "Shorter orbits, sharper turns."],
   "player": {
     "position": {
       "x": 180,

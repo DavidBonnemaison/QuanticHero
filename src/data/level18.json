@@ -7,10 +7,7 @@
   "height": 1300,
   "hue": "#140a28",
   "antiHue": "#c084fc",
-  "explanations": [
-    "The walls remember every impact.",
-    "What strikes sideways can rise."
-  ],
+  "explanations": ["The walls remember every impact.", "What strikes sideways can rise."],
   "player": {
     "position": {
       "x": 180,
@@ -114,10 +111,7 @@
   "discoveryBox": {
     "enabled": true,
     "mechanic": "screen_wrap",
-    "hintSteps": [
-      "CROSS EDGE",
-      "WRAP TORUS"
-    ],
+    "hintSteps": ["CROSS EDGE", "WRAP TORUS"],
     "safeZoneRatio": 0.35
   },
   "noblePlayground": true,

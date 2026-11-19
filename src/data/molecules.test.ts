@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  SECRET_MOLECULES,
-  findMoleculeByElements,
-  getMoleculeById
-} from './molecules';
+import { SECRET_MOLECULES, findMoleculeByElements, getMoleculeById } from './molecules';
 
 describe('Secret Molecules Data (Spec-10)', () => {
   it('defines all 12 secret molecular recipes with unique IDs and valid LevelData', () => {

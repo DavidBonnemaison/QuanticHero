@@ -119,10 +119,7 @@
   "discoveryBox": {
     "enabled": true,
     "mechanic": "time_dilation_wormhole",
-    "hintSteps": [
-      "SLOW TIME 0.25x",
-      "ENTER WORMHOLE α↔ω"
-    ],
+    "hintSteps": ["SLOW TIME 0.25x", "ENTER WORMHOLE α↔ω"],
     "safeZoneRatio": 0.35
   },
   "authorTime": 10400,

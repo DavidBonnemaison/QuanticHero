@@ -125,7 +125,9 @@ describe('Spec-02 Framerate Invariance (30 Hz, 60 Hz, 120 Hz, 240 Hz)', () => {
 
   it('keeps final (x, y) within < 0.5 px across 30/60/120/240 Hz during 220 ms wall recoil', () => {
     const results = FREQUENCIES.map((hz) => ({ hz, ...simulateWallRecoil(hz, 220) }));
-    const ref = results.find((r) => r.hz === 60)!;
+    const ref = results.find((r) => r.hz === 60);
+    expect(ref).toBeDefined();
+    if (!ref) return;
 
     for (const res of results) {
       expect(Math.abs(res.x - ref.x)).toBeLessThan(0.5);
@@ -136,7 +138,9 @@ describe('Spec-02 Framerate Invariance (30 Hz, 60 Hz, 120 Hz, 240 Hz)', () => {
 
   it('keeps final (x, y) within < 0.5 px across 30/60/120/240 Hz during 500 ms air drift', () => {
     const results = FREQUENCIES.map((hz) => ({ hz, ...simulateAirDrift(hz, 500) }));
-    const ref = results.find((r) => r.hz === 60)!;
+    const ref = results.find((r) => r.hz === 60);
+    expect(ref).toBeDefined();
+    if (!ref) return;
 
     for (const res of results) {
       expect(Math.abs(res.x - ref.x)).toBeLessThan(0.5);

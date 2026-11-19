@@ -7,10 +7,7 @@
   "height": 1250,
   "hue": "#1b0a2e",
   "antiHue": "#c084fc",
-  "explanations": [
-    "One hundred elements forged.",
-    "A twin, a recoil, and a barrier."
-  ],
+  "explanations": ["One hundred elements forged.", "A twin, a recoil, and a barrier."],
   "player": {
     "position": {
       "x": 180,

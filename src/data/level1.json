@@ -7,10 +7,7 @@
   "height": 1200,
   "hue": "#0a1128",
   "antiHue": "#e63946",
-  "explanations": [
-    "Reduced to a single quantum.",
-    "What carries a spark across the dark?"
-  ],
+  "explanations": ["Reduced to a single quantum.", "What carries a spark across the dark?"],
   "player": {
     "position": {
       "x": 180,

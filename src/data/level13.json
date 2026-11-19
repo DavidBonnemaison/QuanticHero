@@ -7,10 +7,7 @@
   "height": 1400,
   "hue": "#101728",
   "antiHue": "#93c5fd",
-  "explanations": [
-    "The Stellar Forge awakens.",
-    "Denser lattices, higher climbs."
-  ],
+  "explanations": ["The Stellar Forge awakens.", "Denser lattices, higher climbs."],
   "player": {
     "position": {
       "x": 180,

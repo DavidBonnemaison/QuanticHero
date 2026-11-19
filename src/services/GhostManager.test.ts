@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GhostFrame } from '../tools/GhostRecorder';
-import {
-  MAX_SWARM_ATTEMPTS,
-  SessionSwarmBuffer,
-  getSwarmSpectrumTint
-} from './GhostManager';
+import { MAX_SWARM_ATTEMPTS, SessionSwarmBuffer, getSwarmSpectrumTint } from './GhostManager';
 
 const makeFrames = (endTimeMs: number, xOffset = 0): GhostFrame[] => [
   { timeMs: 0, x: 100 + xOffset, y: 400, flipX: false, animState: 'idle' },

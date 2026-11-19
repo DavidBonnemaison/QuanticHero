@@ -7,10 +7,7 @@
   "height": 1400,
   "hue": "#0b1c30",
   "antiHue": "#38bdf8",
-  "explanations": [
-    "The Island of Stability.",
-    "Every law you learned returns at once."
-  ],
+  "explanations": ["The Island of Stability.", "Every law you learned returns at once."],
   "player": {
     "position": {
       "x": 180,

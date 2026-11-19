@@ -6,10 +6,7 @@
     "uncertainty": 1,
     "hue": "#0a1128",
     "antiHue": "#e63946",
-    "explanations": [
-      "Reduced to a single quantum.",
-      "What carries a spark across the dark?"
-    ],
+    "explanations": ["Reduced to a single quantum.", "What carries a spark across the dark?"],
     "authorTime": 10167,
     "parJumps": 7
   },
@@ -48,10 +45,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "superposition_orbital",
-      "hintSteps": [
-        "JUMP / TAP",
-        "SWITCH ORBIT"
-      ],
+      "hintSteps": ["JUMP / TAP", "SWITCH ORBIT"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 12
@@ -63,10 +57,7 @@
     "uncertainty": 5,
     "hue": "#061a14",
     "antiHue": "#38b000",
-    "explanations": [
-      "Boron hums with a golden current.",
-      "Catch the pulse; the void widens."
-    ],
+    "explanations": ["Boron hums with a golden current.", "Catch the pulse; the void widens."],
     "authorTime": 13450,
     "parJumps": 9
   },
@@ -82,10 +73,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "clone_fusion",
-      "hintSteps": [
-        "GRAB 2x CLONE",
-        "MERGE QUANTA"
-      ],
+      "hintSteps": ["GRAB 2x CLONE", "MERGE QUANTA"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 15
@@ -113,10 +101,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "phase_shift_hud",
-      "hintSteps": [
-        "JUMP / TAP HUD",
-        "CYAN ↔ MAGENTA"
-      ],
+      "hintSteps": ["JUMP / TAP HUD", "CYAN ↔ MAGENTA"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 12
@@ -159,10 +144,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "quantum_tunneling",
-      "hintSteps": [
-        "GRAB TUNNEL ORB",
-        "PASS THROUGH WALL"
-      ],
+      "hintSteps": ["GRAB TUNNEL ORB", "PASS THROUGH WALL"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 11
@@ -188,10 +170,7 @@
     "uncertainty": 13,
     "hue": "#101728",
     "antiHue": "#93c5fd",
-    "explanations": [
-      "The Stellar Forge awakens.",
-      "Denser lattices, higher climbs."
-    ],
+    "explanations": ["The Stellar Forge awakens.", "Denser lattices, higher climbs."],
     "authorTime": 27467,
     "parJumps": 12
   },
@@ -210,10 +189,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "de_broglie_wave",
-      "hintSteps": [
-        "CONDENSE WAVE",
-        "WALK ON TRAIL"
-      ],
+      "hintSteps": ["CONDENSE WAVE", "WALK ON TRAIL"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 9
@@ -258,19 +234,13 @@
     "uncertainty": 18,
     "hue": "#140a28",
     "antiHue": "#c084fc",
-    "explanations": [
-      "The walls remember every impact.",
-      "What strikes sideways can rise."
-    ],
+    "explanations": ["The walls remember every impact.", "What strikes sideways can rise."],
     "authorTime": 13667,
     "noblePlayground": true,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "screen_wrap",
-      "hintSteps": [
-        "CROSS EDGE",
-        "WRAP TORUS"
-      ],
+      "hintSteps": ["CROSS EDGE", "WRAP TORUS"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 8
@@ -287,10 +257,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "entanglement_reveal",
-      "hintSteps": [
-        "MOVE ALPHA",
-        "MIRROR BETA"
-      ],
+      "hintSteps": ["MOVE ALPHA", "MIRROR BETA"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 11
@@ -324,10 +291,7 @@
     "uncertainty": 22,
     "hue": "#121929",
     "antiHue": "#a5f3fc",
-    "explanations": [
-      "Up and down have traded places.",
-      "Fall toward the sky."
-    ],
+    "explanations": ["Up and down have traded places.", "Fall toward the sky."],
     "authorTime": 10800,
     "parJumps": 8
   },
@@ -371,18 +335,12 @@
     "uncertainty": 26,
     "hue": "#1a1110",
     "antiHue": "#e63946",
-    "explanations": [
-      "The iron core burns.",
-      "Weightless and inverted, two laws collide."
-    ],
+    "explanations": ["The iron core burns.", "Weightless and inverted, two laws collide."],
     "authorTime": 16117,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "entanglement_tether",
-      "hintSteps": [
-        "PULL TETHER",
-        "SWING & LAUNCH"
-      ],
+      "hintSteps": ["PULL TETHER", "SWING & LAUNCH"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 12
@@ -493,10 +451,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "liquid_platforms",
-      "hintSteps": [
-        "ENTER LIQUID",
-        "BUOYANT JUMP"
-      ],
+      "hintSteps": ["ENTER LIQUID", "BUOYANT JUMP"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 13
@@ -564,10 +519,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "living_floor",
-      "hintSteps": [
-        "ALIGN +G / -G",
-        "WALK SOLE-TO-SOLE"
-      ],
+      "hintSteps": ["ALIGN +G / -G", "WALK SOLE-TO-SOLE"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 3
@@ -637,10 +589,7 @@
     "uncertainty": 46,
     "hue": "#111827",
     "antiHue": "#cbd5e1",
-    "explanations": [
-      "The supernova reaches its crest.",
-      "Speed, passage, and shifting ground."
-    ],
+    "explanations": ["The supernova reaches its crest.", "Speed, passage, and shifting ground."],
     "authorTime": 14150,
     "parJumps": 10
   },
@@ -659,10 +608,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "quantum_pinning",
-      "hintSteps": [
-        "HOLD PLATFORM",
-        "PIN PHASE"
-      ],
+      "hintSteps": ["HOLD PLATFORM", "PIN PHASE"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 16
@@ -766,10 +712,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "time_dilation_wormhole",
-      "hintSteps": [
-        "SLOW TIME 0.25x",
-        "ENTER WORMHOLE α↔ω"
-      ],
+      "hintSteps": ["SLOW TIME 0.25x", "ENTER WORMHOLE α↔ω"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 2
@@ -927,10 +870,7 @@
     "uncertainty": 69,
     "hue": "#0b162e",
     "antiHue": "#60a5fa",
-    "explanations": [
-      "The relativistic crucible begins.",
-      "Shorter orbits, sharper turns."
-    ],
+    "explanations": ["The relativistic crucible begins.", "Shorter orbits, sharper turns."],
     "authorTime": 24533,
     "parJumps": 18
   },
@@ -1059,10 +999,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "mercury_bath",
-      "hintSteps": [
-        "SINK IN MERCURY",
-        "HIGH BUOYANCY"
-      ],
+      "hintSteps": ["SINK IN MERCURY", "HIGH BUOYANCY"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 22
@@ -1149,10 +1086,7 @@
     "discoveryBox": {
       "enabled": true,
       "mechanic": "ghost_surfing",
-      "hintSteps": [
-        "FOLLOW GHOST",
-        "SURF TEMPORAL WAVE"
-      ],
+      "hintSteps": ["FOLLOW GHOST", "SURF TEMPORAL WAVE"],
       "safeZoneRatio": 0.35
     },
     "parJumps": 22
@@ -1178,10 +1112,7 @@
     "uncertainty": 89,
     "hue": "#0b1c30",
     "antiHue": "#38bdf8",
-    "explanations": [
-      "The Island of Stability.",
-      "Every law you learned returns at once."
-    ],
+    "explanations": ["The Island of Stability.", "Every law you learned returns at once."],
     "authorTime": 58517,
     "parJumps": 14
   },
@@ -1302,10 +1233,7 @@
     "uncertainty": 100,
     "hue": "#1b0a2e",
     "antiHue": "#c084fc",
-    "explanations": [
-      "One hundred elements forged.",
-      "A twin, a recoil, and a barrier."
-    ],
+    "explanations": ["One hundred elements forged.", "A twin, a recoil, and a barrier."],
     "authorTime": 16233,
     "parJumps": 11
   },

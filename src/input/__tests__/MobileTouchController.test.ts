@@ -117,7 +117,12 @@ describe('Spec-03 MobileTouchController', () => {
       ctrl.onPointerDown(200, 500, 1000);
 
       // Too slow
-      ctrl.onPointerMove(200, 500 + FLICK_DOWN_THRESHOLD_Y + 10, 1000 + FLICK_DOWN_WINDOW_MS, false);
+      ctrl.onPointerMove(
+        200,
+        500 + FLICK_DOWN_THRESHOLD_Y + 10,
+        1000 + FLICK_DOWN_WINDOW_MS,
+        false
+      );
       expect(ctrl.state.diveRequested).toBe(false);
 
       // On ground

@@ -11,6 +11,7 @@ import type {
   PressurePlate,
   Spike
 } from '../types';
+import { applyCampaignDirectives } from './campaignDirector';
 import {
   type Chunk,
   type ChunkArchetype,
@@ -25,7 +26,6 @@ import {
   createSuperpositionChamberChunk,
   translateChunk
 } from './chunks';
-import { applyCampaignDirectives } from './campaignDirector';
 import { SeededRandom, getAlphaForDifficulty } from './dagGenerator';
 import { isReachable, x_reach } from './kinematics';
 import { type SimulationResult, simulateFullLevel } from './simulator';

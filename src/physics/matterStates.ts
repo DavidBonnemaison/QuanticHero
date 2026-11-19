@@ -83,13 +83,7 @@ export function getPlasmaBounceVelocity(upsideDown: number): number {
 }
 
 export function normalizeMatterState(raw?: string): MatterState {
-  if (
-    raw === 'liquid' ||
-    raw === 'gas' ||
-    raw === 'cryo' ||
-    raw === 'plasma' ||
-    raw === 'solid'
-  ) {
+  if (raw === 'liquid' || raw === 'gas' || raw === 'cryo' || raw === 'plasma' || raw === 'solid') {
     return raw;
   }
   return 'solid';
@@ -268,10 +262,7 @@ export interface CrystalSegment {
 /**
  * Crystallizes up to the last 8 Broglie wave-trail points into solid cyan crystal platform segments.
  */
-export function buildBroglieScaffoldSegments(
-  points: TrailPoint[],
-  yOffset = 22
-): CrystalSegment[] {
+export function buildBroglieScaffoldSegments(points: TrailPoint[], yOffset = 22): CrystalSegment[] {
   const recent = points.slice(-PHYSICS.BROGLIE_TRAIL_POINTS);
   return recent.map((pt) => ({
     x: pt.x,

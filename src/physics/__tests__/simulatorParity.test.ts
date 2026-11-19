@@ -1,11 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import {
-  type SimWorld,
-  createInitialHeroState,
-  stepSimulation
-} from '../../generator/simulator';
+import { type SimWorld, createInitialHeroState, stepSimulation } from '../../generator/simulator';
 import * as quantumMechanics from '../../mechanics/quantumMechanics';
 import { PHYSICS } from '../constants';
 import { applyLowGravity, getCollapseBounds, isHeroOnPressurePlate } from '../stepHeroPhysics';
@@ -28,9 +24,7 @@ describe('Spec-02 Simulator Parity & Shared Quantum Mechanics', () => {
     const world: SimWorld = {
       width: 1200,
       height: 800,
-      platforms: [
-        { x: 100, y: 500, width: 200, height: 20, movesTo: { x: 300, y: 560 } }
-      ]
+      platforms: [{ x: 100, y: 500, width: 200, height: 20, movesTo: { x: 300, y: 560 } }]
     };
 
     let hero = createInitialHeroState(150, 500 - PHYSICS.HERO_HEIGHT / 2);
@@ -38,15 +32,16 @@ describe('Spec-02 Simulator Parity & Shared Quantum Mechanics', () => {
 
     const mp = hero.movingPlatforms?.[0];
     expect(mp).toBeDefined();
-    expect(mp!.x).toBeCloseTo(200, 1);
-    expect(mp!.y).toBeCloseTo(520, 1);
+    expect(mp?.x).toBeCloseTo(200, 1);
+    expect(mp?.y).toBeCloseTo(520, 1);
 
     // Under time dilation (0.25x), platform moves 25 px in X and 5 px in Y over 1000 ms
     hero.timeDilationUntilMs = hero.timeMs + 4000;
     hero = stepSimulation(hero, { left: false, right: false, jump: false }, world, 1000);
     const mpDilated = hero.movingPlatforms?.[0];
-    expect(mpDilated!.x).toBeCloseTo(225, 1);
-    expect(mpDilated!.y).toBeCloseTo(525, 1);
+    expect(mpDilated).toBeDefined();
+    expect(mpDilated?.x).toBeCloseTo(225, 1);
+    expect(mpDilated?.y).toBeCloseTo(525, 1);
   });
 
   it('Rule 2: unifies timeDilation duration to PHYSICS.TIME_DILATION_DURATION_MS = 4000 ms', () => {

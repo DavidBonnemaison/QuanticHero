@@ -242,12 +242,12 @@ export function stepSimulation(
     next.touchingGround = false;
     next.hasJumpedSinceGrounded = true;
     next.jumpCutApplied = false;
-    next.lastJumpPressedTimeMs = -Infinity;
-    next.lastGroundedTimeMs = -Infinity;
+    next.lastJumpPressedTimeMs = Number.NEGATIVE_INFINITY;
+    next.lastGroundedTimeMs = Number.NEGATIVE_INFINITY;
     next.isDiving = false;
     if (ctrl.waveDashed) {
       next.waveDashUntilMs = next.timeMs + PHYSICS.WAVE_DASH_DURATION_MS;
-      next.lastDiveEndTimeMs = -Infinity;
+      next.lastDiveEndTimeMs = Number.NEGATIVE_INFINITY;
     }
     if (world.platforms.some((p) => Boolean(p.phase))) {
       next.currentPhase = next.currentPhase === 'cyan' ? 'magenta' : 'cyan';
@@ -534,7 +534,12 @@ export function stepSimulation(
           landedPlatformIndex = idx;
 
           // Trigger decay platform on contact
-          if (p.decayMs && p.decayMs > 0 && nextDecayStates[idx] && !nextDecayStates[idx].triggered) {
+          if (
+            p.decayMs &&
+            p.decayMs > 0 &&
+            nextDecayStates[idx] &&
+            !nextDecayStates[idx].triggered
+          ) {
             nextDecayStates[idx] = { ...nextDecayStates[idx], triggered: true };
           }
           break;
@@ -575,7 +580,12 @@ export function stepSimulation(
           next.vy = 0;
           landed = true;
           landedPlatformIndex = idx;
-          if (p.decayMs && p.decayMs > 0 && nextDecayStates[idx] && !nextDecayStates[idx].triggered) {
+          if (
+            p.decayMs &&
+            p.decayMs > 0 &&
+            nextDecayStates[idx] &&
+            !nextDecayStates[idx].triggered
+          ) {
             nextDecayStates[idx] = { ...nextDecayStates[idx], triggered: true };
           }
           break;
@@ -1057,4 +1067,3 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
 
   return simulateFullLevel(world, levelData.player.position, levelData.door, pathPlatforms);
 }
-
