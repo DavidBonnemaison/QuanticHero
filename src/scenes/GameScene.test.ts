@@ -233,6 +233,7 @@ vi.mock('phaser', () => {
     public events: any;
     public scene: any;
     public game: any;
+    public scale: any;
 
     constructor() {
       const eventMap = new Map<string, Function[]>();
@@ -311,9 +312,15 @@ vi.mock('phaser', () => {
           zoom: 1,
           midPoint: { x: 400, y: 300 },
           followOffset: { x: 0, y: 0, set: vi.fn() },
+          setViewport: vi.fn(function (this: any, _x: number, _y: number, w: number, h: number) {
+            this.width = w;
+            this.height = h;
+          }),
           setBounds: vi.fn(),
           setBackgroundColor: vi.fn(),
-          setZoom: vi.fn(),
+          setZoom: vi.fn(function (this: any, z: number) {
+            this.zoom = z;
+          }),
           centerOn: vi.fn(),
           startFollow: vi.fn(),
           flash: vi.fn(),
@@ -321,6 +328,26 @@ vi.mock('phaser', () => {
           fadeIn: vi.fn(),
           once: vi.fn((_ev: string, cb: Function) => cb())
         }
+      };
+      const scaleEventMap = new Map<string, Array<{ fn: Function; ctx?: any }>>();
+      this.scale = {
+        on: vi.fn((ev: string, fn: Function, ctx?: any) => {
+          const list = scaleEventMap.get(ev) || [];
+          list.push({ fn, ctx });
+          scaleEventMap.set(ev, list);
+        }),
+        off: vi.fn((ev: string, fn: Function) => {
+          const list = scaleEventMap.get(ev) || [];
+          scaleEventMap.set(
+            ev,
+            list.filter((entry) => entry.fn !== fn)
+          );
+        }),
+        emit: vi.fn((ev: string, ...args: any[]) => {
+          for (const entry of scaleEventMap.get(ev) || []) {
+            entry.fn.apply(entry.ctx, args);
+          }
+        })
       };
       this.tweens = {
         add: vi.fn(),
@@ -1071,5 +1098,42 @@ describe('GameScene Spec-10: Curiosity Secrets (HUD Phase, Bubble Antigravity & 
     for (const obj of scene.discoveryBoxObjects as any[]) {
       expect(obj.depth).toBe(2);
     }
+  });
+
+  it('Spec-02: handles scale resize events by updating camera, edge-anchored HUD, and Bohr background', () => {
+    scene.levelData = makeTestLevel('6', 'Carbon', 'C');
+    scene.create();
+
+    expect((scene as any).scale.on).toHaveBeenCalledWith('resize', scene.handleResize, scene);
+
+    // Emit a resize event simulating desktop wide 1280x800
+    (scene as any).scale.emit('resize', { width: 1280, height: 800 });
+
+    expect(scene.cameras.main.width).toBe(1280);
+    expect(scene.cameras.main.height).toBe(800);
+
+    // Top-right HUD anchored to new width
+    expect((scene as any).timerText.x).toBe(1270);
+    expect((scene as any).timerText.y).toBe(3);
+    expect((scene as any).splitDeltaText.x).toBe(1270);
+    expect((scene as any).splitDeltaText.y).toBe(28);
+
+    // Bottom-right quick restart button anchored to new bottom-right corner
+    expect((scene as any).thumbRestartBg.x).toBe(1244);
+    expect((scene as any).thumbRestartBg.y).toBe(764);
+    expect((scene as any).thumbRestartLabel.x).toBe(1244);
+    expect((scene as any).thumbRestartLabel.y).toBe(764);
+    expect((scene as any).thumbRestartZone.x).toBe(1244);
+    expect((scene as any).thumbRestartZone.y).toBe(764);
+
+    // BohrBackgroundRenderer re-centered without artifacts
+    expect(scene.bohrBackground?.getCenter()).toEqual({ x: 640, y: 400 });
+
+    // Rotating to mobile portrait 390x844 repositions cleanly again
+    (scene as any).scale.emit('resize', { width: 390, height: 844 });
+    expect((scene as any).timerText.x).toBe(380);
+    expect((scene as any).thumbRestartBg.x).toBe(354);
+    expect((scene as any).thumbRestartBg.y).toBe(808);
+    expect(scene.bohrBackground?.getCenter()).toEqual({ x: 195, y: 422 });
   });
 });

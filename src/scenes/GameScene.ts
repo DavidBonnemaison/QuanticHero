@@ -207,6 +207,10 @@ export default class GameScene extends Phaser.Scene {
   private dilatedElapsedMs = 0;
   private timerStarted = false;
   private timerText!: Phaser.GameObjects.Text;
+  private hudBarGraphics: Phaser.GameObjects.Graphics | null = null;
+  private thumbRestartBg: Phaser.GameObjects.Rectangle | null = null;
+  private thumbRestartLabel: Phaser.GameObjects.Text | null = null;
+  private thumbRestartZone: Phaser.GameObjects.Zone | null = null;
   private lastTimerString = '';
   private lastTimerColor = '';
   private lastSplitString = '';
@@ -443,7 +447,10 @@ export default class GameScene extends Phaser.Scene {
     soundManager.init();
     hapticFeedback.init();
 
+    this.scale?.on?.('resize', this.handleResize, this);
+
     const cleanupScene = () => {
+      this.scale?.off?.('resize', this.handleResize, this);
       soundManager.stopBgm();
       this.clearLevelObjects();
     };
@@ -516,6 +523,10 @@ export default class GameScene extends Phaser.Scene {
     this.splitDeltaText = null;
     this.ghostButton = null;
     this.hudContainer = null;
+    this.hudBarGraphics = null;
+    this.thumbRestartBg = null;
+    this.thumbRestartLabel = null;
+    this.thumbRestartZone = null;
     this.levelCompleteOverlay = null;
     this.phaseIndicatorText = null;
     this.dilationIndicatorText = null;
@@ -1388,6 +1399,10 @@ export default class GameScene extends Phaser.Scene {
       this.hudContainer.destroy(true);
       this.hudContainer = null;
     }
+    this.hudBarGraphics = null;
+    this.thumbRestartBg = null;
+    this.thumbRestartLabel = null;
+    this.thumbRestartZone = null;
     if (this.levelCompleteOverlay) {
       this.levelCompleteOverlay.destroy(true);
       this.levelCompleteOverlay = null;
@@ -1806,12 +1821,8 @@ export default class GameScene extends Phaser.Scene {
     this.hudContainer.add(this.thumbRibbonGraphics);
 
     const hudBar = this.add.graphics();
-    hudBar.fillStyle(0x0b0f19, 0.85);
-    hudBar.fillRect(36, 0, camW - 36, hudHeight);
-    hudBar.fillStyle(0xe74c3c, 0.85);
-    hudBar.fillRect(0, 0, 36, hudHeight);
-    hudBar.lineStyle(1, 0x334155, 0.9);
-    hudBar.lineBetween(0, hudHeight, camW, hudHeight);
+    this.hudBarGraphics = hudBar;
+    this.drawHudBar(camW);
     this.hudContainer.add(hudBar);
 
     const backButton = this.add.text(18, hudHeight / 2, '◄', {
@@ -2036,6 +2047,9 @@ export default class GameScene extends Phaser.Scene {
         this.quickRespawn();
       }
     });
+    this.thumbRestartBg = thumbRestartBg;
+    this.thumbRestartLabel = thumbRestartLabel;
+    this.thumbRestartZone = thumbRestartZone;
     this.hudContainer.add(thumbRestartBg);
     this.hudContainer.add(thumbRestartLabel);
     this.hudContainer.add(thumbRestartZone);
@@ -2152,6 +2166,102 @@ export default class GameScene extends Phaser.Scene {
         this.focusArcGraphics.clear();
       }
     });
+  }
+
+  private drawHudBar(camW: number): void {
+    const hudBar = this.hudBarGraphics;
+    if (!hudBar || !hudBar.active) return;
+    const hudHeight = 54;
+    hudBar.clear();
+    hudBar.fillStyle(0x0b0f19, 0.85);
+    hudBar.fillRect(36, 0, Math.max(0, camW - 36), hudHeight);
+    hudBar.fillStyle(0xe74c3c, 0.85);
+    hudBar.fillRect(0, 0, 36, hudHeight);
+    hudBar.lineStyle(1, 0x334155, 0.9);
+    hudBar.lineBetween(0, hudHeight, camW, hudHeight);
+  }
+
+  public handleResize(gameSize?: { width: number; height: number }): void {
+    if (!this.cameras?.main) return;
+
+    const camW = gameSize?.width ?? this.cameras.main.width;
+    const camH = gameSize?.height ?? this.cameras.main.height;
+    if (!camW || !camH || camW <= 0 || camH <= 0) return;
+
+    if (typeof this.cameras.main.setViewport === 'function') {
+      this.cameras.main.setViewport(0, 0, camW, camH);
+    } else {
+      this.cameras.main.width = camW;
+      this.cameras.main.height = camH;
+    }
+
+    if (this.levelData) {
+      this.cameras.main.setBounds(0, 0, this.levelData.width, this.levelData.height);
+    }
+
+    // Recalculate adaptive camera framing & zoom
+    if (this.isEntangled && this.heroes.length >= 2) {
+      const alpha = this.heroes.find((h) => !h.isBeta);
+      const beta = this.heroes.find((h) => h.isBeta);
+      if (alpha?.active && beta?.active) {
+        const cx = (alpha.x + beta.x) / 2;
+        const cy = (alpha.y + beta.y) / 2;
+        const dx = Math.abs(alpha.x - beta.x);
+        const dy = Math.abs(alpha.y - beta.y);
+        const zoomX = camW / (dx + 240);
+        const zoomY = camH / (dy + 200);
+        const targetZoom = Phaser.Math.Clamp(Math.min(zoomX, zoomY), 0.28, 1.0);
+        this.cameras.main.setZoom(targetZoom);
+        this.cameras.main.centerOn(cx, cy);
+      }
+    }
+
+    // Reposition HUD elements anchored to screen edges
+    this.drawHudBar(camW);
+
+    if (this.timerText?.active) {
+      this.timerText.setPosition(camW - 10, 3);
+    }
+    if (this.splitDeltaText?.active) {
+      this.splitDeltaText.setPosition(camW - 10, 28);
+    }
+
+    const thumbX = camW - 36;
+    const thumbY = camH - 36;
+    if (this.thumbRestartBg?.active) {
+      this.thumbRestartBg.setPosition(thumbX, thumbY);
+    }
+    if (this.thumbRestartLabel?.active) {
+      this.thumbRestartLabel.setPosition(thumbX, thumbY);
+    }
+    if (this.thumbRestartZone?.active) {
+      this.thumbRestartZone.setPosition(thumbX, thumbY);
+    }
+
+    const pipY = camH - 70;
+    this.edgePips.forEach((pip, index) => {
+      const pipX = 40 + index * 70;
+      if (pip.bg.active) pip.bg.setPosition(pipX, pipY);
+      if (pip.label.active) pip.label.setPosition(pipX, pipY);
+      if (pip.hitArea.active) pip.hitArea.setPosition(pipX, pipY);
+    });
+
+    this.syncHudTransform();
+
+    // Update Bohr orbital background and holographic mural without artifacts
+    this.bohrBackground?.resize(camW / 2, camH / 2);
+
+    if (this.levelData && this.muralObjects.length >= 3) {
+      const muralX = Math.min(this.levelData.width * 0.5, camW * 0.5);
+      const muralY = Math.min(this.levelData.height * 0.45, camH * 0.44);
+      const offsets = [-24, 38, 62];
+      offsets.forEach((dy, idx) => {
+        const obj = this.muralObjects[idx] as Phaser.GameObjects.Text | undefined;
+        if (obj?.active && typeof obj.setPosition === 'function') {
+          obj.setPosition(muralX, muralY + dy);
+        }
+      });
+    }
   }
 
   private syncHudTransform(): void {

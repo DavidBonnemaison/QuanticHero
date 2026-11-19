@@ -5,12 +5,15 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   padding: 20px;
   box-sizing: border-box;
 }
 
 .title {
+  position: relative;
+  z-index: 1;
   text-align: center;
   color: #999;
   padding-bottom: 20px;
@@ -21,6 +24,8 @@
 }
 
 .button {
+  position: relative;
+  z-index: 1;
   color: #e2e2e2;
   font-size: 30px;
   font-family: inherit;

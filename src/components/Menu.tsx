@@ -8,7 +8,7 @@ import { useGameStore } from '../store';
 import { hapticFeedback } from '../tools/HapticFeedback';
 import { MAX_CLASSIC_LEVEL } from '../tools/levelProgression';
 import styles from './Menu.module.css';
-import Molecules from './Molecules';
+import QuantumOrbitalBackground from './QuantumOrbitalBackground';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -43,7 +43,6 @@ export default function Menu(): React.ReactElement {
   const resumeSymbol = resumeMeta?.symbol ?? '?';
 
   useEffect(() => {
-    Molecules.start();
     hapticFeedback.init();
 
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -59,7 +58,6 @@ export default function Menu(): React.ReactElement {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
-      Molecules.end();
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
@@ -163,7 +161,7 @@ export default function Menu(): React.ReactElement {
           <span className={locale === 'fr' ? styles.langActive : styles.langInactive}>FR</span>
         </button>
       </div>
-      <div id="container" />
+      <QuantumOrbitalBackground />
       <h1 className={styles.title}>{t.menu.title}</h1>
       {hasProgress && (
         <button

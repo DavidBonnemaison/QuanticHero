@@ -4,13 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGameStore } from '../store';
 import Menu from './Menu';
 
-vi.mock('./Molecules', () => ({
-  default: {
-    start: vi.fn(),
-    end: vi.fn()
-  }
-}));
-
 describe('Menu component', () => {
   beforeEach(() => {
     useGameStore.setState({
