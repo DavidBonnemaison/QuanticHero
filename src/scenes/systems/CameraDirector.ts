@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getStrings } from '../../i18n/strings';
 import { computeLookAheadOffset } from '../../physics/stepHeroPhysics';
 import { useGameStore } from '../../store';
 import { gameEvents } from '../../tools/gameEvents';
@@ -120,7 +121,9 @@ export class CameraDirector {
         cam?.centerOn?.((alphaHero.x + ctx.betaHero.x) / 2, (alphaHero.y + ctx.betaHero.y) / 2);
       }
       gameEvents.emit('entanglement:reveal', { revealAtX });
-      ctx.showRetroToast('ENTANGLEMENT REVEALED !');
+      ctx.showRetroToast(
+        getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.entanglementRevealed
+      );
     }
   }
 

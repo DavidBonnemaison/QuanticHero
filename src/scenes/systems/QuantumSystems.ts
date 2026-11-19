@@ -56,16 +56,8 @@ export class QuantumSystems {
     }
     gameEvents.emit('particle:collect', { type });
 
-    const powerUpNames: Record<ParticleType, string> = {
-      antiGravity: 'ANTI GRAVITY !',
-      lowGravity: 'LOW GRAVITY !',
-      speed: 'HIGH SPEED !',
-      duplicate: 'CLONING !',
-      tunnel: 'TUNNELING CHARGE !',
-      pauli: 'PAULI BLAST !',
-      timeDilation: 'TIME DILATION !',
-      condense: 'BROGLIE CONDENSE !'
-    };
+    const toasts = getStrings(useGameStore.getState().locale ?? 'en').hud.toasts;
+    const powerUpNames: Record<ParticleType, string> = toasts.powerUps;
 
     switch (type) {
       case 'condense': {
@@ -133,7 +125,7 @@ export class QuantumSystems {
     if (particle.getData('restoresEphemeral') === true || ctx.ephemeralPlatforms.length > 0) {
       const restored = this.setPieces.restoreEphemeralPlatforms();
       if (restored > 0) {
-        ctx.showRetroToast('CONSERVATION ! CAGE RESTORED');
+        ctx.showRetroToast(toasts.conservationRestored);
       }
     }
 
@@ -213,7 +205,7 @@ export class QuantumSystems {
     ctx.heroes = ctx.heroes.filter((h) => h !== target && h.active);
     focused.setFusionStack(nextStack);
     ctx.updateEdgePips();
-    ctx.showRetroToast('SUPER-QUANTA !');
+    ctx.showRetroToast(getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.superQuanta);
     gameEvents.emit('hero:fusion', {
       x: focused.x,
       y: focused.y,
@@ -256,7 +248,7 @@ export class QuantumSystems {
     ctx.heroGroup.add(lowerClone);
 
     ctx.updateEdgePips();
-    ctx.showRetroToast('FISSION !');
+    ctx.showRetroToast(getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.fission);
     gameEvents.emit('hero:fission', { x: focused.x, y: focused.y });
     return true;
   }
@@ -509,7 +501,11 @@ export class QuantumSystems {
           hero.body.x = hero.x - hero.body.width / 2;
           hero.tunnelCharges--;
           gameEvents.emit('tunnel:use', { remaining: hero.tunnelCharges });
-          ctx.showRetroToast(`TUNNELING ! (${hero.tunnelCharges} LEFT)`);
+          ctx.showRetroToast(
+            getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.tunnelingLeft(
+              hero.tunnelCharges
+            )
+          );
           tunneled = true;
           break;
         }
@@ -529,7 +525,11 @@ export class QuantumSystems {
           hero.body.x = hero.x - hero.body.width / 2;
           hero.tunnelCharges--;
           gameEvents.emit('tunnel:use', { remaining: hero.tunnelCharges, screenEdge: true });
-          ctx.showRetroToast(`FRAME TUNNELING ! (${hero.tunnelCharges} LEFT)`);
+          ctx.showRetroToast(
+            getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.frameTunnelingLeft(
+              hero.tunnelCharges
+            )
+          );
         }
       }
     }
@@ -551,7 +551,9 @@ export class QuantumSystems {
         hA.pauliGraceUntil = ev.newGraceUntil;
         hB.pauliGraceUntil = ev.newGraceUntil;
         gameEvents.emit('pauli:blast', { hero1Id: hA.id, hero2Id: hB.id });
-        ctx.showRetroToast('PAULI BLAST !');
+        ctx.showRetroToast(
+          getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.pauliBlast
+        );
         this.setPieces.drawPauliFlash(hA.x, hA.y, hB.x, hB.y);
       }
     }

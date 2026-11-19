@@ -78,6 +78,27 @@ export interface Strings {
     nextLevel: (symbol: string, atom: string) => string;
     levelsButton: string;
     codexButton: string;
+    toasts: {
+      bellSync: string;
+      entanglementRevealed: string;
+      conservationRestored: string;
+      superQuanta: string;
+      fission: string;
+      tunnelingLeft: (remaining: number) => string;
+      frameTunnelingLeft: (remaining: number) => string;
+      pauliBlast: string;
+      broglieCrystal: string;
+      powerUps: {
+        antiGravity: string;
+        lowGravity: string;
+        speed: string;
+        duplicate: string;
+        tunnel: string;
+        pauli: string;
+        timeDilation: string;
+        condense: string;
+      };
+    };
   };
   ghost: Record<GhostMode, string>;
   medals: {
@@ -167,7 +188,28 @@ export const STRINGS: Record<Locale, Strings> = {
       jumps: (count) => `JUMPS: ${count}`,
       nextLevel: (symbol, atom) => `[SPACE / TAP] NEXT: ${symbol} ${atom}`,
       levelsButton: '[LEVELS]',
-      codexButton: '[SPECTROSCOPY / CODEX]'
+      codexButton: '[SPECTROSCOPY / CODEX]',
+      toasts: {
+        bellSync: 'BELL SYNC ! (GOLD ISOTOPE)',
+        entanglementRevealed: 'ENTANGLEMENT REVEALED !',
+        conservationRestored: 'CONSERVATION ! CAGE RESTORED',
+        superQuanta: 'SUPER-QUANTA !',
+        fission: 'FISSION !',
+        tunnelingLeft: (remaining) => `TUNNELING ! (${remaining} LEFT)`,
+        frameTunnelingLeft: (remaining) => `FRAME TUNNELING ! (${remaining} LEFT)`,
+        pauliBlast: 'PAULI BLAST !',
+        broglieCrystal: 'BROGLIE CRYSTAL !',
+        powerUps: {
+          antiGravity: 'ANTI GRAVITY !',
+          lowGravity: 'LOW GRAVITY !',
+          speed: 'HIGH SPEED !',
+          duplicate: 'CLONING !',
+          tunnel: 'TUNNELING CHARGE !',
+          pauli: 'PAULI BLAST !',
+          timeDilation: 'TIME DILATION !',
+          condense: 'BROGLIE CONDENSE !'
+        }
+      }
     },
     ghost: {
       off: '[GHOST: OFF]',
@@ -261,7 +303,28 @@ export const STRINGS: Record<Locale, Strings> = {
       jumps: (count) => `SAUTS : ${count}`,
       nextLevel: (symbol, atom) => `[ESPACE / TAP] SUIVANT : ${symbol} ${atom}`,
       levelsButton: '[NIVEAUX]',
-      codexButton: '[SPECTROSCOPIE / CODEX]'
+      codexButton: '[SPECTROSCOPIE / CODEX]',
+      toasts: {
+        bellSync: "SYNCHRO BELL ! (ISOTOPE D'OR)",
+        entanglementRevealed: 'INTRICATION RÉVÉLÉE !',
+        conservationRestored: 'CONSERVATION ! CAGE RESTAURÉE',
+        superQuanta: 'SUPER-QUANTA !',
+        fission: 'FISSION !',
+        tunnelingLeft: (remaining) => `EFFET TUNNEL ! (${remaining} REST.)`,
+        frameTunnelingLeft: (remaining) => `TUNNEL BORDURE ! (${remaining} REST.)`,
+        pauliBlast: 'ONDE DE PAULI !',
+        broglieCrystal: 'CRISTAL DE BROGLIE !',
+        powerUps: {
+          antiGravity: 'ANTI-GRAVITÉ !',
+          lowGravity: 'GRAVITÉ RÉDUITE !',
+          speed: 'HAUTE VITESSE !',
+          duplicate: 'CLONAGE !',
+          tunnel: 'CHARGE TUNNEL !',
+          pauli: 'ONDE DE PAULI !',
+          timeDilation: 'DILATATION TEMPORELLE !',
+          condense: 'CONDENSATION BROGLIE !'
+        }
+      }
     },
     ghost: {
       off: '[FANTÔME : OFF]',

@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { getStrings } from '../../i18n/strings';
 import { PHYSICS } from '../../physics/constants';
 import {
   findHookedTetherPylon,
@@ -64,7 +65,7 @@ export class EntanglementSystem {
           useGameStore.getState().unlockBellSync(levelNum);
         }
         ctx.cameras?.main?.flash?.(400, 255, 215, 0, false);
-        ctx.showRetroToast("BELL SYNC ! (ISOTOPE D'OR)");
+        ctx.showRetroToast(getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.bellSync);
       }
     }
 

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getStrings } from '../../i18n/strings';
 import { PHYSICS } from '../../physics/constants';
 import {
   buildBroglieScaffoldSegments,
@@ -12,6 +13,7 @@ import {
   stepLiquidBuoyancy,
   stepQuantumPinning
 } from '../../physics/matterStates';
+import { useGameStore } from '../../store';
 import { gameEvents } from '../../tools/gameEvents';
 import type { GameSceneContext } from './types';
 
@@ -166,7 +168,9 @@ export class MatterAndFieldController {
       count: segments.length,
       durationMs: PHYSICS.BROGLIE_SCAFFOLD_DURATION_MS
     });
-    ctx.showRetroToast('BROGLIE CRYSTAL !');
+    ctx.showRetroToast(
+      getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.broglieCrystal
+    );
     return true;
   }
 
