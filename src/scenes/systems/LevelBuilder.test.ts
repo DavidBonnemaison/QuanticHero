@@ -30,13 +30,22 @@ vi.mock('phaser', () => {
       this.y = y;
       return this;
     }
-    setVelocity() {
+    setVelocity(vx = 0, vy = 0) {
+      const vel = (this.body as { velocity?: { x: number; y: number } } | null)?.velocity;
+      if (vel) {
+        vel.x = vx;
+        vel.y = vy;
+      }
       return this;
     }
-    setVelocityX() {
+    setVelocityX(vx = 0) {
+      const vel = (this.body as { velocity?: { x: number; y: number } } | null)?.velocity;
+      if (vel) vel.x = vx;
       return this;
     }
-    setVelocityY() {
+    setVelocityY(vy = 0) {
+      const vel = (this.body as { velocity?: { x: number; y: number } } | null)?.velocity;
+      if (vel) vel.y = vy;
       return this;
     }
     setBounce() {
