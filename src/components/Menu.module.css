@@ -25,15 +25,15 @@
   font-size: 30px;
   font-family: inherit;
   width: 100%;
-  max-width: 240px;
+  max-width: 360px;
   text-align: center;
-  padding: 18px 24px;
-  margin: 16px auto;
+  padding: 16px 24px;
+  margin: 12px auto;
   border: 2px solid #e2e2e2;
   background: transparent;
   cursor: pointer;
   border-radius: 4px;
-  transition: background-color 0.15s, color 0.15s, transform 0.1s;
+  transition: background-color 0.15s, color 0.15s, transform 0.1s, border-color 0.15s;
 }
 
 .button:hover {
@@ -45,11 +45,38 @@
   transform: scale(0.97);
 }
 
+.primaryButton {
+  border-color: #00ffcc;
+  color: #00ffcc;
+  box-shadow: 0 0 14px rgba(0, 255, 204, 0.2);
+}
+
+.primaryButton:hover {
+  background-color: #00ffcc;
+  color: #000;
+  box-shadow: 0 0 22px rgba(0, 255, 204, 0.45);
+}
+
+.secondaryButton {
+  border-color: #64748b;
+  color: #94a3b8;
+  font-size: 24px;
+  padding: 12px 20px;
+}
+
+.secondaryButton:hover {
+  background-color: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+}
+
 .topControls {
   position: absolute;
   top: 20px;
   right: 20px;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
   z-index: 10;
 }
@@ -69,6 +96,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
 }
 
 .soundButton:hover {
@@ -79,6 +107,91 @@
 
 .soundButton:active {
   transform: scale(0.95);
+}
+
+.langActive {
+  color: #00ffcc;
+  font-weight: bold;
+}
+
+.langInactive {
+  color: #64748b;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 20, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.modalCard {
+  background: #0b0f19;
+  border: 2px solid #ef4444;
+  border-radius: 6px;
+  padding: 28px 32px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 0 32px rgba(239, 68, 68, 0.25);
+}
+
+.modalTitle {
+  margin: 0 0 12px;
+  font-size: 34px;
+  font-weight: normal;
+  color: #f87171;
+  letter-spacing: 0.06em;
+}
+
+.modalMessage {
+  margin: 0 0 24px;
+  font-size: 22px;
+  color: #e2e8f0;
+  line-height: 1.35;
+}
+
+.modalActions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.modalCancelButton,
+.modalConfirmButton {
+  font-family: inherit;
+  font-size: 24px;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.modalCancelButton {
+  background: transparent;
+  border: 2px solid #64748b;
+  color: #e2e8f0;
+}
+
+.modalCancelButton:hover {
+  background: #334155;
+  border-color: #94a3b8;
+}
+
+.modalConfirmButton {
+  background: #ef4444;
+  border: 2px solid #ef4444;
+  color: #fff;
+}
+
+.modalConfirmButton:hover {
+  background: #dc2626;
+  border-color: #dc2626;
 }
 
 .entanglementButton {

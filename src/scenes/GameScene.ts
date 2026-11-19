@@ -7,6 +7,8 @@ import { getAtomicMass, getElementSpectroscopy } from '../data/spectroscopy';
 import { BohrBackgroundRenderer } from '../effects/BohrBackgroundRenderer';
 import { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
 import { assembleCampaignLevel, assemblePacedLevel } from '../generator/chunkAssembler';
+import { getStrings } from '../i18n/strings';
+import { MobileTouchController } from '../input/MobileTouchController';
 import {
   type DecayPlatformState,
   calculateCollapse,
@@ -15,7 +17,6 @@ import {
   togglePhase,
   updateDecayPlatform
 } from '../mechanics/quantumMechanics';
-import { MobileTouchController } from '../input/MobileTouchController';
 import { PHYSICS } from '../physics/constants';
 import {
   applyToroidalScreenWrap,
@@ -28,11 +29,6 @@ import {
   resolveTetherPylonConstraint,
   shouldBreakCrackedPlatform
 } from '../physics/entanglementTether';
-import {
-  applyLowGravity,
-  computeLookAheadOffset,
-  isHeroOnPressurePlate
-} from '../physics/stepHeroPhysics';
 import {
   type PinnablePlatformRef,
   type QuantumPinningState,
@@ -53,9 +49,14 @@ import {
   stepLiquidBuoyancy,
   stepQuantumPinning
 } from '../physics/matterStates';
-import { push } from '../shims/navigation';
+import {
+  applyLowGravity,
+  computeLookAheadOffset,
+  isHeroOnPressurePlate
+} from '../physics/stepHeroPhysics';
 import { SessionSwarmBuffer, getSwarmSpectrumTint } from '../services/GhostManager';
 import { calculateIsotopeMedal, getMedalDisplayInfo } from '../services/MedalService';
+import { push } from '../shims/navigation';
 import { useGameStore } from '../store';
 import {
   type GhostFrame,
@@ -69,6 +70,7 @@ import { formatScore } from '../tools/formatScore';
 import { gameEvents } from '../tools/gameEvents';
 import { isGodMode } from '../tools/godMode';
 import { decodeLevelFromUrl } from '../tools/levelCodec';
+import { getNextLevelId, isEntanglementLevelId } from '../tools/levelProgression';
 import type {
   CollapseConfig,
   GhostMode,
@@ -557,7 +559,12 @@ export default class GameScene extends Phaser.Scene {
 
     if (!wrapAxes.horizontal) {
       // Left wall: thickness 40, right edge at x = 0
-      const leftWall = this.add.rectangle(-20, this.levelData.height / 2, 40, this.levelData.height);
+      const leftWall = this.add.rectangle(
+        -20,
+        this.levelData.height / 2,
+        40,
+        this.levelData.height
+      );
       this.physics.add.existing(leftWall, true);
       leftWall.setVisible(false);
       leftWall.setData('boundary', 'left');
@@ -1437,10 +1444,7 @@ export default class GameScene extends Phaser.Scene {
 
   private getCurrentAtomicNumber(): number {
     const raw =
-      this.levelData?.symbol ||
-      this.levelData?.id ||
-      useGameStore.getState().currentLevel ||
-      1;
+      this.levelData?.symbol || this.levelData?.id || useGameStore.getState().currentLevel || 1;
     return getElementSpectroscopy(raw).z;
   }
 
@@ -1655,7 +1659,10 @@ export default class GameScene extends Phaser.Scene {
       if (!this.isLevelCompleted && !this.isTransitioningLevel) {
         this.trackBubblePointerMove(worldPt.x, worldPt.y, this.time?.now ?? Date.now());
       }
-      if (pointer.isDown && (this.activePinPointerId === null || this.activePinPointerId === pointer.id)) {
+      if (
+        pointer.isDown &&
+        (this.activePinPointerId === null || this.activePinPointerId === pointer.id)
+      ) {
         if (findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)) {
           this.activePinPointerWorld = worldPt;
           this.activePinPointerId = pointer.id;
@@ -1773,15 +1780,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (this.ghostButton?.active) {
-      const label =
-        mode === 'off'
-          ? '[GHOST: OFF]'
-          : mode === 'optimal'
-            ? '[GHOST: OPTIMAL]'
-            : mode === 'best'
-              ? '[GHOST: BEST]'
-              : '[GHOST: SWARM]';
-      this.ghostButton.setText(label);
+      const t = getStrings(store.locale ?? 'en');
+      this.ghostButton.setText(t.ghost[mode]);
       this.ghostButton.setAlpha(mode !== 'off' ? 1 : 0.45);
       this.ghostButton.setVisible(this.hasAnyGhost || this.swarmBuffer.size > 0);
     }
@@ -1795,6 +1795,8 @@ export default class GameScene extends Phaser.Scene {
     const camW = this.cameras.main.width;
     const camH = this.cameras.main.height;
     const hudHeight = 54;
+    const getHudStrings = () => getStrings(useGameStore.getState().locale ?? 'en');
+    const initialStrings = getHudStrings();
 
     this.hudContainer = this.add.container(0, 0);
     this.hudContainer.setScrollFactor(0);
@@ -1835,7 +1837,7 @@ export default class GameScene extends Phaser.Scene {
     this.hudContainer.add(backButton);
 
     // Restart level button
-    const restartButton = this.add.text(44, 5, '[RST]', {
+    const restartButton = this.add.text(44, 5, initialStrings.hud.restart, {
       fontFamily: 'VT323',
       fontSize: '18px',
       color: '#fbbf24'
@@ -1851,7 +1853,10 @@ export default class GameScene extends Phaser.Scene {
     this.hudContainer.add(restartButton);
 
     // Sound toggle button
-    const getSoundLabel = () => (useGameStore.getState().isMuted ? 'SND:OFF' : 'SND:ON');
+    const getSoundLabel = () => {
+      const s = getHudStrings().hud;
+      return useGameStore.getState().isMuted ? s.soundOff : s.soundOn;
+    };
     const soundButton = this.add.text(92, 5, getSoundLabel(), {
       fontFamily: 'VT323',
       fontSize: '18px',
@@ -1867,7 +1872,10 @@ export default class GameScene extends Phaser.Scene {
     this.hudContainer.add(soundButton);
 
     // Haptic feedback toggle button
-    const getHapticLabel = () => (useGameStore.getState().hapticsEnabled ? 'HAP:ON' : 'HAP:OFF');
+    const getHapticLabel = () => {
+      const s = getHudStrings().hud;
+      return useGameStore.getState().hapticsEnabled ? s.hapticsOn : s.hapticsOff;
+    };
     const hapticButton = this.add.text(154, 5, getHapticLabel(), {
       fontFamily: 'VT323',
       fontSize: '18px',
@@ -1883,7 +1891,10 @@ export default class GameScene extends Phaser.Scene {
     this.hudContainer.add(hapticButton);
 
     // Visual effects toggle button (FX:HI / FX:LO)
-    const getFxLabel = () => (useGameStore.getState().reducedEffects ? 'FX:LO' : 'FX:HI');
+    const getFxLabel = () => {
+      const s = getHudStrings().hud;
+      return useGameStore.getState().reducedEffects ? s.fxLo : s.fxHi;
+    };
     const fxButton = this.add.text(216, 5, getFxLabel(), {
       fontFamily: 'VT323',
       fontSize: '18px',
@@ -1898,18 +1909,11 @@ export default class GameScene extends Phaser.Scene {
     });
     this.hudContainer.add(fxButton);
 
-    // Row 2: Ghost replay toggle button [GHOST: OFF] / [GHOST: OPTIMAL] / [GHOST: BEST] / [GHOST: SWARM]
+    // Row 2: Ghost replay toggle button
     const currentMode =
       useGameStore.getState().ghostMode ??
       (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
-    const ghostLabel =
-      currentMode === 'off'
-        ? '[GHOST: OFF]'
-        : currentMode === 'optimal'
-          ? '[GHOST: OPTIMAL]'
-          : currentMode === 'best'
-            ? '[GHOST: BEST]'
-            : '[GHOST: SWARM]';
+    const ghostLabel = initialStrings.ghost[currentMode];
     this.ghostButton = this.add.text(44, 29, ghostLabel, {
       fontFamily: 'VT323',
       fontSize: '18px',
@@ -1933,7 +1937,7 @@ export default class GameScene extends Phaser.Scene {
       this.phaseIndicatorText = this.add.text(
         phaseX,
         29,
-        `[PHASE: ${this.currentPhase.toUpperCase()}]`,
+        initialStrings.hud.phase(this.currentPhase),
         {
           fontFamily: 'VT323',
           fontSize: '18px',
@@ -1954,7 +1958,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Row 2: Time dilation indicator (shown when active)
     const dilationX = this.hasAnyGhost ? 186 : 44;
-    this.dilationIndicatorText = this.add.text(dilationX, 29, '[TIME: 0.25x]', {
+    this.dilationIndicatorText = this.add.text(dilationX, 29, initialStrings.hud.timeDilation, {
       fontFamily: 'VT323',
       fontSize: '18px',
       color: '#22d3ee'
@@ -1975,6 +1979,7 @@ export default class GameScene extends Phaser.Scene {
       this.unsubHudStore();
     }
     this.unsubHudStore = useGameStore.subscribe(() => {
+      const s = getHudStrings();
       if (soundButton.active) {
         soundButton.setText(getSoundLabel());
       }
@@ -1983,6 +1988,12 @@ export default class GameScene extends Phaser.Scene {
       }
       if (fxButton.active) {
         fxButton.setText(getFxLabel());
+      }
+      if (this.phaseIndicatorText?.active) {
+        this.phaseIndicatorText.setText(s.hud.phase(this.currentPhase));
+      }
+      if (this.dilationIndicatorText?.active) {
+        this.dilationIndicatorText.setText(s.hud.timeDilation);
       }
       if (this.ghostButton?.active) {
         this.applyGhostMode();
@@ -2265,7 +2276,8 @@ export default class GameScene extends Phaser.Scene {
       this.currentPhase = 'cyan';
       this.applyPhase('cyan');
       if (this.phaseIndicatorText?.active) {
-        this.phaseIndicatorText.setText('[PHASE: CYAN]');
+        const t = getStrings(useGameStore.getState().locale ?? 'en');
+        this.phaseIndicatorText.setText(t.hud.phase('cyan'));
         this.phaseIndicatorText.setColor('#00ffff');
       }
     }
@@ -2333,8 +2345,12 @@ export default class GameScene extends Phaser.Scene {
     if (this.collapseConfig && this.collapseTopSpikes && this.collapseBottomSpikes) {
       this.collapseTopSpikes.y = PHYSICS.COLLAPSE_TOP_START_Y / 2;
       this.collapseBottomSpikes.y = this.levelData.height - PHYSICS.COLLAPSE_BOTTOM_MARGIN_Y + 80;
-      (this.collapseTopSpikes.body as Phaser.Physics.Arcade.StaticBody | null)?.updateFromGameObject?.();
-      (this.collapseBottomSpikes.body as Phaser.Physics.Arcade.StaticBody | null)?.updateFromGameObject?.();
+      (
+        this.collapseTopSpikes.body as Phaser.Physics.Arcade.StaticBody | null
+      )?.updateFromGameObject?.();
+      (
+        this.collapseBottomSpikes.body as Phaser.Physics.Arcade.StaticBody | null
+      )?.updateFromGameObject?.();
     }
 
     // 9. Reset timer, split delta, ghost replay & touch state
@@ -2472,7 +2488,7 @@ export default class GameScene extends Phaser.Scene {
           useGameStore.getState().unlockBellSync(levelNum);
         }
         this.cameras?.main?.flash?.(400, 255, 215, 0, false);
-        this.showRetroToast('BELL SYNC ! (ISOTOPE D\'OR)');
+        this.showRetroToast("BELL SYNC ! (ISOTOPE D'OR)");
       }
     }
 
@@ -2713,7 +2729,8 @@ export default class GameScene extends Phaser.Scene {
     this.applyPhase(this.currentPhase);
     gameEvents.emit('phase:shift', { phase: this.currentPhase });
     if (this.phaseIndicatorText?.active) {
-      this.phaseIndicatorText.setText(`[PHASE: ${this.currentPhase.toUpperCase()}]`);
+      const t = getStrings(useGameStore.getState().locale ?? 'en');
+      this.phaseIndicatorText.setText(t.hud.phase(this.currentPhase));
       this.phaseIndicatorText.setColor(this.currentPhase === 'cyan' ? '#00ffff' : '#ec4899');
     }
   }
@@ -2817,20 +2834,20 @@ export default class GameScene extends Phaser.Scene {
         switchCount: this.switchCount,
         medal
       });
-      const nextLevel = currentLvl + 1;
-      store.updateCurrentLevel(nextLevel);
-      if (currentLvl >= 110) {
-        if (store.maxEntanglementLevel < nextLevel) {
-          store.updateMaxEntanglementLevel(nextLevel);
-        }
-      } else {
-        if (store.maxLevel < nextLevel) {
+      const nextLevel = getNextLevelId(currentLvl);
+      if (nextLevel !== null) {
+        store.updateCurrentLevel(nextLevel);
+        if (isEntanglementLevelId(currentLvl)) {
+          if (store.maxEntanglementLevel < nextLevel) {
+            store.updateMaxEntanglementLevel(nextLevel);
+          }
+        } else if (store.maxLevel < nextLevel) {
           store.updateMaxLevel(nextLevel);
         }
-      }
-      if (this.resolveLevelData(nextLevel) || getLevelMetadata(nextLevel)) {
-        nextLevelNumber = nextLevel;
-        preloadLevel(nextLevel);
+        if (this.resolveLevelData(nextLevel) || getLevelMetadata(nextLevel)) {
+          nextLevelNumber = nextLevel;
+          preloadLevel(nextLevel);
+        }
       }
     }
     this.nextLevelNumberPending = nextLevelNumber;
@@ -2889,6 +2906,8 @@ export default class GameScene extends Phaser.Scene {
   ): void {
     if (!this.add?.container || !this.cameras?.main) return;
 
+    const locale = useGameStore.getState().locale ?? 'en';
+    const t = getStrings(locale);
     const camW = this.cameras.main.width;
     const camH = this.cameras.main.height;
 
@@ -2919,7 +2938,7 @@ export default class GameScene extends Phaser.Scene {
     const headerText = this.add.text(
       camW / 2,
       camH / 2 - (isCompact ? 136 : 96),
-      `ELEMENT SYNTHESIZED — ${symbol} ${atom.toUpperCase()}`,
+      t.hud.elementSynthesized(symbol, atom.toUpperCase()),
       {
         fontFamily: 'VT323',
         fontSize: isCompact ? '20px' : '28px',
@@ -2931,18 +2950,18 @@ export default class GameScene extends Phaser.Scene {
     headerText.setOrigin(0.5);
     overlay.add(headerText);
 
-    let deltaLabel = 'NEW RECORD';
+    let deltaLabel = t.hud.newRecord;
     if (prevBestMs > 0) {
       const diffSec = (elapsedMs - prevBestMs) / 1000;
       const sign = diffSec <= 0 ? '-' : '+';
       deltaLabel = `${sign}${Math.abs(diffSec).toFixed(2)}s`;
     }
 
-    const medalInfo = getMedalDisplayInfo(medal);
+    const medalInfo = getMedalDisplayInfo(medal, locale);
     const statsText = this.add.text(
       camW / 2,
       camH / 2 - (isCompact ? 96 : 60),
-      `${formatScore(elapsedMs)}  •  REC ${formatScore(bestMs)}  •  ${deltaLabel}`,
+      `${formatScore(elapsedMs)}  •  ${t.hud.rec} ${formatScore(bestMs)}  •  ${deltaLabel}`,
       {
         fontFamily: 'VT323',
         fontSize: isCompact ? '16px' : '22px',
@@ -2957,7 +2976,7 @@ export default class GameScene extends Phaser.Scene {
     const medalText = this.add.text(
       camW / 2,
       camH / 2 - (isCompact ? 64 : 34),
-      `${medalInfo.symbol} ${medalInfo.label.toUpperCase()}  •  JUMPS: ${this.jumpCount}`,
+      `${medalInfo.symbol} ${medalInfo.label.toUpperCase()}  •  ${t.hud.jumps(this.jumpCount)}`,
       {
         fontFamily: 'VT323',
         fontSize: isCompact ? '15px' : '19px',
@@ -2995,8 +3014,8 @@ export default class GameScene extends Phaser.Scene {
         ? this.resolveLevelData(nextLevelNumber) || getLevelMetadata(nextLevelNumber)
         : undefined;
     const primaryLabel = nextLevelData
-      ? `[SPACE / TAP] NEXT: ${nextLevelData.symbol} ${nextLevelData.atom}`
-      : '[LEVELS]';
+      ? t.hud.nextLevel(nextLevelData.symbol, nextLevelData.atom)
+      : t.hud.levelsButton;
 
     const nextBtn = this.add.text(
       isCompact ? camW / 2 : camW / 2 - 115,
@@ -3034,7 +3053,7 @@ export default class GameScene extends Phaser.Scene {
     const codexBtn = this.add.text(
       isCompact ? camW / 2 : camW / 2 + 135,
       camH / 2 + (isCompact ? 120 : 78),
-      '[SPECTROSCOPIE / CODEX]',
+      t.hud.codexButton,
       {
         fontFamily: 'VT323',
         fontSize: isCompact ? '18px' : '20px',
@@ -3098,7 +3117,10 @@ export default class GameScene extends Phaser.Scene {
   private performLevelTransition(nextData: LevelData, nextNumber: number): void {
     this.isTransitioningLevel = true;
     this.canAdvanceLevel = false;
-    preloadLevel(nextNumber + 1);
+    const preloadTarget = getNextLevelId(nextNumber);
+    if (preloadTarget !== null) {
+      preloadLevel(preloadTarget);
+    }
 
     if (this.cameras?.main?.fadeOut && this.cameras?.main?.once) {
       this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -3348,13 +3370,7 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.add?.circle && this.tweens?.add) {
       for (let i = 0; i < 6; i++) {
-        const shard = this.add.circle(
-          plat.x + (i - 2.5) * 10,
-          plat.y,
-          4,
-          0xfbbf24,
-          0.95
-        );
+        const shard = this.add.circle(plat.x + (i - 2.5) * 10, plat.y, 4, 0xfbbf24, 0.95);
         shard.setDepth(21);
         this.tweens.add({
           targets: shard,
@@ -3446,7 +3462,9 @@ export default class GameScene extends Phaser.Scene {
 
       // Assemble Level 27 platforms around the hero in real-time
       const platChildren =
-        (this.platforms as unknown as { getChildren?: () => Phaser.GameObjects.Rectangle[] })?.getChildren?.() ?? [];
+        (
+          this.platforms as unknown as { getChildren?: () => Phaser.GameObjects.Rectangle[] }
+        )?.getChildren?.() ?? [];
       for (const plat of platChildren) {
         if (!plat) continue;
         plat.setAlpha(0);
@@ -3594,12 +3612,7 @@ export default class GameScene extends Phaser.Scene {
     focused.setFusionStack(focused.fusionStack - 1);
     focused.setVelocityY(upperVy);
 
-    const lowerClone = new Hero(
-      this,
-      focused.x,
-      focused.y + 16 * focused.upsideDown,
-      false
-    );
+    const lowerClone = new Hero(this, focused.x, focused.y + 16 * focused.upsideDown, false);
     lowerClone.createdAtMs = nowMs;
     lowerClone.velocityMultiplier = focused.velocityMultiplier;
     lowerClone.setGravityInverted(focused.upsideDown === -1);
@@ -3784,22 +3797,13 @@ export default class GameScene extends Phaser.Scene {
     if (touchingGround) return false;
 
     const points =
-      focused.trailPoints.length > 0
-        ? focused.trailPoints
-        : [{ x: focused.x, y: focused.y }];
+      focused.trailPoints.length > 0 ? focused.trailPoints : [{ x: focused.x, y: focused.y }];
     const segments = buildBroglieScaffoldSegments(points, 22 * focused.upsideDown);
     if (segments.length === 0) return false;
 
     const expiresAtMs = (this.time?.now ?? 0) + PHYSICS.BROGLIE_SCAFFOLD_DURATION_MS;
     for (const seg of segments) {
-      const crystalRect = this.add.rectangle(
-        seg.x,
-        seg.y,
-        seg.width,
-        seg.height,
-        0x00e5ff,
-        0.85
-      );
+      const crystalRect = this.add.rectangle(seg.x, seg.y, seg.width, seg.height, 0x00e5ff, 0.85);
       crystalRect.setStrokeStyle(1.5, 0xffffff, 0.95);
       crystalRect.setDepth(16);
       this.physics.add.existing(crystalRect, true);
@@ -4072,7 +4076,10 @@ export default class GameScene extends Phaser.Scene {
     if (this.isLevelCompleted || this.isTransitioningLevel || this.isRespawning) {
       if (this.isLevelCompleted && this.swarmPlaybackActive && this.swarmGhosts.length > 0) {
         this.swarmPlaybackElapsedMs += delta * this.swarmPlaybackSpeed;
-        if (this.swarmPlaybackMaxMs > 0 && this.swarmPlaybackElapsedMs > this.swarmPlaybackMaxMs + 600) {
+        if (
+          this.swarmPlaybackMaxMs > 0 &&
+          this.swarmPlaybackElapsedMs > this.swarmPlaybackMaxMs + 600
+        ) {
           this.swarmPlaybackElapsedMs = 0;
         }
         for (const sg of this.swarmGhosts) {

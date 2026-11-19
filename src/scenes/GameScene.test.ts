@@ -162,13 +162,15 @@ vi.mock('phaser', () => {
         updateFromGameObject: vi.fn()
       };
     }
-    public enableBody = vi.fn((_reset: boolean, x: number, y: number, active: boolean, visible: boolean) => {
-      this.x = x;
-      this.y = y;
-      this.active = active;
-      this.visible = visible;
-      if (this.body) this.body.enable = true;
-    });
+    public enableBody = vi.fn(
+      (_reset: boolean, x: number, y: number, active: boolean, visible: boolean) => {
+        this.x = x;
+        this.y = y;
+        this.active = active;
+        this.visible = visible;
+        if (this.body) this.body.enable = true;
+      }
+    );
     public disableBody = vi.fn((disableGameObject: boolean, hideGameObject: boolean) => {
       if (disableGameObject) this.active = false;
       if (hideGameObject) this.visible = false;
@@ -247,7 +249,9 @@ vi.mock('phaser', () => {
       };
       this.add = {
         existing: vi.fn((obj: any) => obj),
-        rectangle: vi.fn((x: number, y: number, w: number, h: number) => new MockRectangle(this, x, y, w, h)),
+        rectangle: vi.fn(
+          (x: number, y: number, w: number, h: number) => new MockRectangle(this, x, y, w, h)
+        ),
         circle: vi.fn((x: number, y: number) => new MockGameObject(this, x, y)),
         sprite: vi.fn((x: number, y: number) => new MockSprite(this, x, y)),
         text: vi.fn((x: number, y: number) => new MockGameObject(this, x, y)),
@@ -585,6 +589,19 @@ describe('GameScene Spec-05: Zero-Cut Loop & quickRespawn', () => {
     expect(scene.levelData.id).toBe('2');
     expect((scene as any).deathEchoes).toHaveLength(0);
   });
+
+  it('completeLevel() on level 109 unlocks level 115 and sets nextLevelNumberPending to 115', () => {
+    useGameStore.setState({ currentLevel: 109, maxLevel: 109, maxEntanglementLevel: 110 });
+    const level109 = makeTestLevel('109', 'Meitnerium', 'Mt');
+    scene.rebuildForLevel(level109);
+
+    (scene as any).completeLevel();
+
+    expect((scene as any).nextLevelNumberPending).toBe(115);
+    expect(useGameStore.getState().maxLevel).toBe(115);
+    expect(useGameStore.getState().maxEntanglementLevel).toBe(110);
+    expect(useGameStore.getState().currentLevel).toBe(115);
+  });
 });
 
 describe('GameScene Spec-06: Swarm Replay & Isotope Medals', () => {
@@ -623,7 +640,15 @@ describe('GameScene Spec-06: Swarm Replay & Isotope Medals', () => {
     // Simulate 3 failed runs
     for (let i = 0; i < 3; i++) {
       (scene as any).ghostRecorder.recordFrame(0, 100, 400, false, 'idle', undefined, true);
-      (scene as any).ghostRecorder.recordFrame(500 + i * 100, 200 + i * 30, 400, false, 'right', undefined, true);
+      (scene as any).ghostRecorder.recordFrame(
+        500 + i * 100,
+        200 + i * 30,
+        400,
+        false,
+        'right',
+        undefined,
+        true
+      );
       scene.quickRespawn({ x: 200 + i * 30, y: 400 });
     }
 

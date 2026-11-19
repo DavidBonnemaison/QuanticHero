@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadLevel } from '../data/levels';
 import type { LevelData } from '../types';
-import { getEffectiveLevel, useGameStore } from './index';
+import { getEffectiveLevel, getNextLevelId, isEntanglementLevelId, useGameStore } from './index';
 
 describe('useGameStore', () => {
   beforeAll(async () => {
@@ -13,12 +13,14 @@ describe('useGameStore', () => {
     useGameStore.setState({
       currentLevel: 0,
       maxLevel: 1,
+      maxEntanglementLevel: 110,
       scores: {},
       customLevels: null,
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
-      ghostEnabled: true
+      ghostEnabled: true,
+      locale: 'en'
     });
   });
 
@@ -33,6 +35,7 @@ describe('useGameStore', () => {
       expect(state.hapticsEnabled).toBe(true);
       expect(state.reducedEffects).toBe(false);
       expect(state.ghostEnabled).toBe(true);
+      expect(state.locale).toBe('en');
     });
   });
 
@@ -106,6 +109,36 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().ghostEnabled).toBe(false);
       useGameStore.getState().setGhostEnabled(true);
       expect(useGameStore.getState().ghostEnabled).toBe(true);
+    });
+
+    it('updates and toggles locale via setLocale and toggleLocale', () => {
+      expect(useGameStore.getState().locale).toBe('en');
+      useGameStore.getState().toggleLocale();
+      expect(useGameStore.getState().locale).toBe('fr');
+      useGameStore.getState().toggleLocale();
+      expect(useGameStore.getState().locale).toBe('en');
+
+      useGameStore.getState().setLocale('fr');
+      expect(useGameStore.getState().locale).toBe('fr');
+    });
+  });
+
+  describe('levelProgression helpers', () => {
+    it('classifies only levels 110..114 as entanglement levels', () => {
+      expect(isEntanglementLevelId(109)).toBe(false);
+      expect(isEntanglementLevelId(110)).toBe(true);
+      expect(isEntanglementLevelId(114)).toBe(true);
+      expect(isEntanglementLevelId(115)).toBe(false);
+      expect(isEntanglementLevelId(118)).toBe(false);
+    });
+
+    it('computes next level IDs cleanly across the 109 -> 115 Classic jump', () => {
+      expect(getNextLevelId(108)).toBe(109);
+      expect(getNextLevelId(109)).toBe(115);
+      expect(getNextLevelId(110)).toBe(111);
+      expect(getNextLevelId(114)).toBeNull();
+      expect(getNextLevelId(115)).toBe(116);
+      expect(getNextLevelId(118)).toBeNull();
     });
   });
 
@@ -185,6 +218,37 @@ describe('useGameStore', () => {
       expect(state.maxLevel).toBe(3); // classic maxLevel unchanged
     });
 
+    it('caps maxEntanglementLevel at 114 when completing level 114 without affecting maxLevel', () => {
+      useGameStore.setState({ maxLevel: 10, maxEntanglementLevel: 114 });
+      useGameStore.getState().recordScore(114, 19000);
+
+      const state = useGameStore.getState();
+      expect(state.maxEntanglementLevel).toBe(114);
+      expect(state.maxLevel).toBe(10);
+    });
+
+    it('jumps maxLevel from 109 directly to 115 on completing level 109', () => {
+      useGameStore.setState({ maxLevel: 109, maxEntanglementLevel: 110 });
+      useGameStore.getState().recordScore(109, 14500);
+
+      const state = useGameStore.getState();
+      expect(state.maxLevel).toBe(115);
+      expect(state.maxEntanglementLevel).toBe(110);
+    });
+
+    it('advances classic maxLevel normally for levels 115..118 without touching maxEntanglementLevel', () => {
+      useGameStore.setState({ maxLevel: 115, maxEntanglementLevel: 110 });
+      useGameStore.getState().recordScore(115, 16000);
+
+      expect(useGameStore.getState().maxLevel).toBe(116);
+      expect(useGameStore.getState().maxEntanglementLevel).toBe(110);
+
+      useGameStore.getState().recordScore(116, 15500);
+      useGameStore.getState().recordScore(117, 15000);
+      expect(useGameStore.getState().maxLevel).toBe(118);
+      expect(useGameStore.getState().maxEntanglementLevel).toBe(110);
+    });
+
     it('updates maxEntanglementLevel via updateMaxEntanglementLevel', () => {
       useGameStore.getState().updateMaxEntanglementLevel(113);
       expect(useGameStore.getState().maxEntanglementLevel).toBe(113);
@@ -192,13 +256,14 @@ describe('useGameStore', () => {
   });
 
   describe('localStorage persistence', () => {
-    it('persists store updates to localStorage under key "qtmhro"', () => {
+    it('persists store updates including locale to localStorage under key "qtmhro"', () => {
       useGameStore.getState().updateCurrentLevel(3);
       useGameStore.getState().recordScore(3, 12345);
       useGameStore.getState().toggleMute();
       useGameStore.getState().setHapticsEnabled(false);
       useGameStore.getState().setReducedEffects(true);
       useGameStore.getState().setGhostEnabled(false);
+      useGameStore.getState().setLocale('fr');
 
       const raw = localStorage.getItem('qtmhro');
       expect(raw).toBeTruthy();
@@ -210,6 +275,7 @@ describe('useGameStore', () => {
       expect(parsed.state.hapticsEnabled).toBe(false);
       expect(parsed.state.reducedEffects).toBe(true);
       expect(parsed.state.ghostEnabled).toBe(false);
+      expect(parsed.state.locale).toBe('fr');
       expect(parsed.state.scores[3]).toEqual({
         last: 12345,
         best: 12345

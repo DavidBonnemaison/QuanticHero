@@ -104,6 +104,28 @@ describe('LevelFinished component', () => {
     ).toBeInTheDocument();
   });
 
+  it('jumps from level 109 to level 115 on Next click in Classic mode', () => {
+    useGameStore.setState({
+      currentLevel: 115, // just finished level 109
+      maxLevel: 115,
+      locale: 'en',
+      scores: {
+        109: { last: 18000, best: 18000, medal: 'gold', lastJumps: 6 }
+      }
+    });
+    renderWithRouter();
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Meitnerium' })).toBeInTheDocument();
+    expect(screen.getByText(/quantum isotope \(gold\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/6 jumps/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    expect(useGameStore.getState().currentLevel).toBe(115);
+    expect(
+      screen.queryByText('Explanation Screen') || screen.queryByText('Game Screen')
+    ).toBeInTheDocument();
+  });
+
   describe('Shared custom level mode', () => {
     beforeEach(() => {
       useGameStore.setState({

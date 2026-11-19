@@ -2,6 +2,7 @@ import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNarrativeForLevel } from '../data/cosmicNarrative';
 import { getLevelMetadata } from '../data/levels';
+import { getStrings } from '../i18n/strings';
 import { useGameStore } from '../store';
 import styles from './Explanation.module.css';
 
@@ -12,6 +13,8 @@ interface LevelLike {
 export default function Explanation(): React.ReactElement {
   const navigate = useNavigate();
   const currentLevel = useGameStore((state) => state.currentLevel);
+  const locale = useGameStore((state) => state.locale ?? 'en');
+  const t = getStrings(locale);
   const customLevels = useGameStore((state) => state.customLevels) as Record<
     string,
     LevelLike
@@ -41,7 +44,7 @@ export default function Explanation(): React.ReactElement {
         ))}
       </div>
       <button type="button" className={styles.button} onClick={handlePlay}>
-        Got it
+        {t.explanation.gotIt}
       </button>
     </div>
   );

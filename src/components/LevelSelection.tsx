@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getAllLevelMetadata, getLevelMetadata } from '../data/levels';
 import { findMoleculeByElements, getMoleculeById } from '../data/molecules';
 import { getElementSpectroscopy } from '../data/spectroscopy';
+import { getStrings } from '../i18n/strings';
 import {
   TOTAL_PERIODIC_ELEMENTS,
   countGoldMedals,
@@ -12,6 +13,7 @@ import {
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
 import { isGodMode } from '../tools/godMode';
+import { isEntanglementLevelId } from '../tools/levelProgression';
 import type { IsotopeMedal } from '../types';
 import styles from './LevelSelection.module.css';
 
@@ -30,6 +32,8 @@ export const LevelSelection: React.FC = () => {
     (state) => state.ghostMode ?? (state.ghostEnabled ? 'optimal' : 'off')
   );
   const toggleGhost = useGameStore((state) => state.toggleGhost);
+  const locale = useGameStore((state) => state.locale ?? 'en');
+  const t = getStrings(locale);
 
   const [alchemyMode, setAlchemyMode] = useState(false);
   const [selectedAtomZ, setSelectedAtomZ] = useState<number | null>(null);
@@ -55,15 +59,7 @@ export const LevelSelection: React.FC = () => {
     (s) => s.best > 0 && Boolean(s.ghostTrajectory)
   );
   const goldCount = countGoldMedals(scores);
-
-  const ghostLabel =
-    ghostMode === 'off'
-      ? '[GHOST: OFF]'
-      : ghostMode === 'optimal'
-        ? '[GHOST: OPTIMAL]'
-        : ghostMode === 'best'
-          ? '[GHOST: BEST]'
-          : '[GHOST: SWARM]';
+  const ghostLabel = t.ghost[ghostMode];
 
   const isEntanglementUnlocked =
     godMode || maxLevel >= 10 || location.search.includes('entanglement=1');
@@ -78,9 +74,9 @@ export const LevelSelection: React.FC = () => {
     .filter((meta) => {
       const idNum = Number(meta.id);
       if (activeTab === 'entanglement') {
-        return idNum >= 110 && idNum <= 114;
+        return isEntanglementLevelId(idNum);
       }
-      return idNum < 110 || idNum >= 115;
+      return !isEntanglementLevelId(idNum);
     })
     .map(({ id, hue, antiHue, symbol, atom }) => ({ id, hue, antiHue, symbol, atom }));
 
@@ -99,7 +95,7 @@ export const LevelSelection: React.FC = () => {
   const isDisabled = (id: string | number) => {
     if (godMode) return false;
     const num = Number(id);
-    if (num >= 110) {
+    if (isEntanglementLevelId(num)) {
       return num > maxEntanglementLevel;
     }
     return num > maxLevel;
@@ -197,15 +193,22 @@ export const LevelSelection: React.FC = () => {
     <div className={styles.selectionContainer}>
       <div className={styles.header}>
         <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
-          ◄ MENU
+          {t.levelSelection.backToMenu}
         </button>
-        <h1 className={styles.title}>Level Selection{godMode ? ' [GOD]' : ''}</h1>
+        <h1 className={styles.title}>
+          {t.levelSelection.title}
+          {godMode ? ' [GOD]' : ''}
+        </h1>
         <button
           type="button"
           className={`${styles.ghostToggle} ${ghostMode !== 'off' ? styles.ghostToggleActive : ''}`}
           onClick={() => toggleGhost(hasPersonalRun)}
-          title={`Ghost replay mode: ${ghostMode}`}
-          aria-label={ghostMode === 'off' ? 'Ghost disabled' : `Ghost enabled (${ghostMode})`}
+          title={t.levelSelection.ghostModeTitle(ghostMode)}
+          aria-label={
+            ghostMode === 'off'
+              ? t.levelSelection.ghostDisabled
+              : t.levelSelection.ghostEnabled(ghostMode)
+          }
         >
           {ghostLabel}
         </button>
@@ -214,7 +217,7 @@ export const LevelSelection: React.FC = () => {
       <div className={styles.isotopeSummary} data-testid="gold-isotope-counter">
         <span className={styles.goldStar}>★</span>
         <span>
-          Isotopes d&apos;Or : <strong>{goldCount}</strong> / {TOTAL_PERIODIC_ELEMENTS}
+          {t.levelSelection.goldIsotopes} <strong>{goldCount}</strong> / {TOTAL_PERIODIC_ELEMENTS}
         </span>
       </div>
 
@@ -228,7 +231,8 @@ export const LevelSelection: React.FC = () => {
           }}
           aria-pressed={alchemyMode}
         >
-          ⚗️ Liaison Chimique {alchemyMode ? '(ON)' : '(Shift+Clic)'}
+          ⚗️ {t.levelSelection.chemicalBond}{' '}
+          {alchemyMode ? t.levelSelection.chemicalBondOn : t.levelSelection.chemicalBondHint}
         </button>
       </div>
 
@@ -271,7 +275,7 @@ export const LevelSelection: React.FC = () => {
             className={`${styles.tabButton} ${activeTab === 'classic' ? styles.tabButtonActive : ''}`}
             onClick={() => setActiveTab('classic')}
           >
-            [ CLASSIC ATOMS ]
+            {t.levelSelection.classicTab}
           </button>
           <button
             type="button"
@@ -280,13 +284,14 @@ export const LevelSelection: React.FC = () => {
             }`}
             onClick={() => setActiveTab('entanglement')}
           >
-            [ ENTANGLEMENT Ψ ⊗ Ψ ]<span className={styles.entanglementTabBadge}>110-114</span>
+            {t.levelSelection.entanglementTab}
+            <span className={styles.entanglementTabBadge}>110-114</span>
           </button>
         </div>
       )}
       {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore, bestJumps, medal }) => {
         const disabled = isDisabled(id);
-        const medalInfo = getMedalDisplayInfo(medal);
+        const medalInfo = getMedalDisplayInfo(medal, locale);
         const isSelectedAlchemy = selectedAtomZ === Number(id);
         return (
           <div
@@ -322,7 +327,11 @@ export const LevelSelection: React.FC = () => {
               <div className={styles.atomScore}>
                 <span>{levelScore}</span>
                 {bestJumps !== undefined && (
-                  <span className={styles.jumpBadge}> • {bestJumps}J</span>
+                  <span className={styles.jumpBadge}>
+                    {' '}
+                    • {bestJumps}
+                    {t.levelSelection.jumpSuffix}
+                  </span>
                 )}
               </div>
             </div>
