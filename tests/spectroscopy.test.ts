@@ -7,10 +7,13 @@ import {
   getNarrativeForLevel
 } from '../src/data/cosmicNarrative';
 import {
+  NOBLE_GAS_NUMBERS,
   SPECTROSCOPY_BY_SYMBOL,
   SPECTROSCOPY_BY_Z,
   SPECTROSCOPY_DATABASE,
-  getElementSpectroscopy
+  getElementSpectroscopy,
+  getPeriodicPosition,
+  isNobleGas
 } from '../src/data/spectroscopy';
 import { assemblePacedLevel } from '../src/generator/chunkAssembler';
 import { PERIODIC_ELEMENTS, generateQuantumLevel } from '../src/generator/dagGenerator';
@@ -260,5 +263,158 @@ describe('Spec-03: Generator & Level Assembly Integration', () => {
     expect(Object.keys(PERIODIC_ELEMENTS)).toHaveLength(118);
     expect(PERIODIC_ELEMENTS[1].symbol).toBe('H');
     expect(PERIODIC_ELEMENTS[118].symbol).toBe('Og');
+  });
+});
+
+describe('Epic 03 Spec-01: IUPAC Periodic Table Positions (18 × 7 + f-block)', () => {
+  it('exposes valid group (1-18), period (1-7), and block (s|p|d|f) on all 118 elements', () => {
+    const coords = new Set<string>();
+
+    for (const el of SPECTROSCOPY_DATABASE) {
+      expect(el.group).toBeGreaterThanOrEqual(1);
+      expect(el.group).toBeLessThanOrEqual(18);
+      expect(el.period).toBeGreaterThanOrEqual(1);
+      expect(el.period).toBeLessThanOrEqual(7);
+      expect(['s', 'p', 'd', 'f']).toContain(el.block);
+
+      const pos = getPeriodicPosition(el.z);
+      expect(pos.group).toBe(el.group);
+      expect(pos.period).toBe(el.period);
+      expect(pos.block).toBe(el.block);
+      expect(pos.gridColumn).toBeGreaterThanOrEqual(1);
+      expect(pos.gridColumn).toBeLessThanOrEqual(18);
+      expect([1, 2, 3, 4, 5, 6, 7, 9, 10]).toContain(pos.gridRow);
+
+      coords.add(`${pos.gridRow}:${pos.gridColumn}`);
+    }
+
+    // All 118 elements must occupy unique visual grid coordinates
+    expect(coords.size).toBe(118);
+  });
+
+  it('places key IUPAC anchor elements at their exact standard coordinates', () => {
+    // Hydrogen (1): group 1, period 1, s-block, row 1 col 1
+    expect(getPeriodicPosition(1)).toEqual({
+      group: 1,
+      period: 1,
+      block: 's',
+      gridRow: 1,
+      gridColumn: 1,
+      isLanthanide: false,
+      isActinide: false
+    });
+
+    // Helium (2): group 18, period 1, s-block, row 1 col 18
+    expect(getPeriodicPosition(2)).toEqual({
+      group: 18,
+      period: 1,
+      block: 's',
+      gridRow: 1,
+      gridColumn: 18,
+      isLanthanide: false,
+      isActinide: false
+    });
+
+    // Lithium (3) & Neon (10)
+    expect(getPeriodicPosition(3)).toMatchObject({
+      group: 1,
+      period: 2,
+      block: 's',
+      gridRow: 2,
+      gridColumn: 1
+    });
+    expect(getPeriodicPosition(10)).toMatchObject({
+      group: 18,
+      period: 2,
+      block: 'p',
+      gridRow: 2,
+      gridColumn: 18
+    });
+
+    // Iron (26)
+    expect(getPeriodicPosition(26)).toMatchObject({
+      group: 8,
+      period: 4,
+      block: 'd',
+      gridRow: 4,
+      gridColumn: 8
+    });
+
+    // Lanthanides (57 La .. 71 Lu): detached on gridRow 9, cols 4..18
+    expect(getPeriodicPosition(57)).toEqual({
+      group: 3,
+      period: 6,
+      block: 'f',
+      gridRow: 9,
+      gridColumn: 4,
+      isLanthanide: true,
+      isActinide: false
+    });
+    expect(getPeriodicPosition(71)).toEqual({
+      group: 3,
+      period: 6,
+      block: 'f',
+      gridRow: 9,
+      gridColumn: 18,
+      isLanthanide: true,
+      isActinide: false
+    });
+    // Hafnium (72) resumes main Period 6 at col 4
+    expect(getPeriodicPosition(72)).toMatchObject({
+      group: 4,
+      period: 6,
+      block: 'd',
+      gridRow: 6,
+      gridColumn: 4
+    });
+
+    // Actinides (89 Ac .. 103 Lr): detached on gridRow 10, cols 4..18
+    expect(getPeriodicPosition(89)).toEqual({
+      group: 3,
+      period: 7,
+      block: 'f',
+      gridRow: 10,
+      gridColumn: 4,
+      isLanthanide: false,
+      isActinide: true
+    });
+    expect(getPeriodicPosition(103)).toEqual({
+      group: 3,
+      period: 7,
+      block: 'f',
+      gridRow: 10,
+      gridColumn: 18,
+      isLanthanide: false,
+      isActinide: true
+    });
+    // Rutherfordium (104) resumes main Period 7 at col 4
+    expect(getPeriodicPosition(104)).toMatchObject({
+      group: 4,
+      period: 7,
+      block: 'd',
+      gridRow: 7,
+      gridColumn: 4
+    });
+
+    // Oganesson (118): group 18, period 7, p-block, row 7 col 18
+    expect(getPeriodicPosition(118)).toEqual({
+      group: 18,
+      period: 7,
+      block: 'p',
+      gridRow: 7,
+      gridColumn: 18,
+      isLanthanide: false,
+      isActinide: false
+    });
+  });
+
+  it('identifies all 7 Noble Gases in group 18', () => {
+    expect(NOBLE_GAS_NUMBERS).toEqual([2, 10, 18, 36, 54, 86, 118]);
+    for (const z of NOBLE_GAS_NUMBERS) {
+      expect(isNobleGas(z)).toBe(true);
+      expect(getPeriodicPosition(z).group).toBe(18);
+    }
+    expect(isNobleGas(1)).toBe(false);
+    expect(isNobleGas(79)).toBe(false);
   });
 });

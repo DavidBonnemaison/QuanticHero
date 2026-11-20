@@ -1,7 +1,188 @@
 // QuantumHero Spectroscopy Database
 // Complete physical and spectroscopic database of all 118 elements of the Periodic Table
 
-export interface ElementSpectroscopy {
+export type PeriodicBlock = 's' | 'p' | 'd' | 'f';
+
+export interface PeriodicPosition {
+  group: number; // 1..18 (Lanthanides 57-71 & Actinides 89-103 have IUPAC group 3)
+  period: number; // 1..7
+  block: PeriodicBlock; // 's' | 'p' | 'd' | 'f'
+  gridRow: number; // 1..7 for main grid, 9 for Lanthanides (57-71), 10 for Actinides (89-103)
+  gridColumn: number; // 1..18 (4..18 for Lanthanides/Actinides)
+  isLanthanide: boolean;
+  isActinide: boolean;
+}
+
+/**
+ * Computes the exact IUPAC periodic table position (group, period, block)
+ * and CSS grid placement (18 columns × 10 rows, with Lanthanides on row 9
+ * and Actinides on row 10) for atomic number Z (1..118).
+ */
+export function getPeriodicPosition(z: number): PeriodicPosition {
+  const clampedZ = Math.max(1, Math.min(118, Math.round(z)));
+
+  // Period 1
+  if (clampedZ === 1) {
+    return {
+      group: 1,
+      period: 1,
+      block: 's',
+      gridRow: 1,
+      gridColumn: 1,
+      isLanthanide: false,
+      isActinide: false
+    };
+  }
+  if (clampedZ === 2) {
+    return {
+      group: 18,
+      period: 1,
+      block: 's',
+      gridRow: 1,
+      gridColumn: 18,
+      isLanthanide: false,
+      isActinide: false
+    };
+  }
+
+  // Period 2 (Z = 3..10)
+  if (clampedZ <= 10) {
+    const isS = clampedZ <= 4;
+    const col = isS ? clampedZ - 2 : clampedZ + 8;
+    return {
+      group: col,
+      period: 2,
+      block: isS ? 's' : 'p',
+      gridRow: 2,
+      gridColumn: col,
+      isLanthanide: false,
+      isActinide: false
+    };
+  }
+
+  // Period 3 (Z = 11..18)
+  if (clampedZ <= 18) {
+    const isS = clampedZ <= 12;
+    const col = isS ? clampedZ - 10 : clampedZ;
+    return {
+      group: col,
+      period: 3,
+      block: isS ? 's' : 'p',
+      gridRow: 3,
+      gridColumn: col,
+      isLanthanide: false,
+      isActinide: false
+    };
+  }
+
+  // Period 4 (Z = 19..36)
+  if (clampedZ <= 36) {
+    const col = clampedZ - 18;
+    const block: PeriodicBlock = col <= 2 ? 's' : col <= 12 ? 'd' : 'p';
+    return {
+      group: col,
+      period: 4,
+      block,
+      gridRow: 4,
+      gridColumn: col,
+      isLanthanide: false,
+      isActinide: false
+    };
+  }
+
+  // Period 5 (Z = 37..54)
+  if (clampedZ <= 54) {
+    const col = clampedZ - 36;
+    const block: PeriodicBlock = col <= 2 ? 's' : col <= 12 ? 'd' : 'p';
+    return {
+      group: col,
+      period: 5,
+      block,
+      gridRow: 5,
+      gridColumn: col,
+      isLanthanide: false,
+      isActinide: false
+    };
+  }
+
+  // Period 6 (Z = 55..86)
+  if (clampedZ <= 86) {
+    if (clampedZ <= 56) {
+      const col = clampedZ - 54;
+      return {
+        group: col,
+        period: 6,
+        block: 's',
+        gridRow: 6,
+        gridColumn: col,
+        isLanthanide: false,
+        isActinide: false
+      };
+    }
+    if (clampedZ <= 71) {
+      // Lanthanides (57..71): detached on gridRow 9, cols 4..18
+      return {
+        group: 3,
+        period: 6,
+        block: 'f',
+        gridRow: 9,
+        gridColumn: 4 + (clampedZ - 57),
+        isLanthanide: true,
+        isActinide: false
+      };
+    }
+    const col = clampedZ - 68;
+    const block: PeriodicBlock = col <= 12 ? 'd' : 'p';
+    return {
+      group: col,
+      period: 6,
+      block,
+      gridRow: 6,
+      gridColumn: col,
+      isLanthanide: false,
+      isActinide: false
+    };
+  }
+
+  // Period 7 (Z = 87..118)
+  if (clampedZ <= 88) {
+    const col = clampedZ - 86;
+    return {
+      group: col,
+      period: 7,
+      block: 's',
+      gridRow: 7,
+      gridColumn: col,
+      isLanthanide: false,
+      isActinide: false
+    };
+  }
+  if (clampedZ <= 103) {
+    // Actinides (89..103): detached on gridRow 10, cols 4..18
+    return {
+      group: 3,
+      period: 7,
+      block: 'f',
+      gridRow: 10,
+      gridColumn: 4 + (clampedZ - 89),
+      isLanthanide: false,
+      isActinide: true
+    };
+  }
+  const col = clampedZ - 100;
+  const block: PeriodicBlock = col <= 12 ? 'd' : 'p';
+  return {
+    group: col,
+    period: 7,
+    block,
+    gridRow: 7,
+    gridColumn: col,
+    isLanthanide: false,
+    isActinide: false
+  };
+}
+
+interface RawElementSpectroscopy {
   z: number;
   symbol: string;
   name: string; // Nom anglais de l'élément (Hydrogen, Helium, etc.)
@@ -12,7 +193,13 @@ export interface ElementSpectroscopy {
   description: string; // Brève description scientifique de la signature optique
 }
 
-export const SPECTROSCOPY_DATABASE: ElementSpectroscopy[] = [
+export interface ElementSpectroscopy extends RawElementSpectroscopy {
+  group: number; // 1..18 (IUPAC)
+  period: number; // 1..7
+  block: PeriodicBlock; // 's' | 'p' | 'd' | 'f'
+}
+
+const RAW_SPECTROSCOPY_DATABASE: RawElementSpectroscopy[] = [
   {
     z: 1,
     symbol: 'H',
@@ -1165,6 +1352,16 @@ export const SPECTROSCOPY_DATABASE: ElementSpectroscopy[] = [
   }
 ];
 
+export const SPECTROSCOPY_DATABASE: ElementSpectroscopy[] = RAW_SPECTROSCOPY_DATABASE.map((el) => {
+  const pos = getPeriodicPosition(el.z);
+  return {
+    ...el,
+    group: pos.group,
+    period: pos.period,
+    block: pos.block
+  };
+});
+
 export const SPECTROSCOPY_BY_Z: Record<number, ElementSpectroscopy> = Object.fromEntries(
   SPECTROSCOPY_DATABASE.map((el) => [el.z, el])
 );
@@ -1205,7 +1402,13 @@ export type ChemicalFamily =
   | 'metalloid'
   | 'post_transition';
 
-const NOBLE_GASES = new Set([2, 10, 18, 36, 54, 86, 118]);
+export const NOBLE_GAS_NUMBERS = [2, 10, 18, 36, 54, 86, 118] as const;
+
+const NOBLE_GASES = new Set<number>(NOBLE_GAS_NUMBERS);
+
+export function isNobleGas(z: number): boolean {
+  return NOBLE_GASES.has(Math.round(z));
+}
 const ALKALI_AND_ALKALINE_EARTH = new Set([3, 4, 11, 12, 19, 20, 37, 38, 55, 56, 87, 88]);
 const METALLOIDS = new Set([5, 14, 32, 33, 51, 52, 84]);
 const NONMETALS_AND_HALOGENS = new Set([1, 6, 7, 8, 9, 15, 16, 17, 34, 35, 53, 85, 117]);

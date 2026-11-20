@@ -1,21 +1,18 @@
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getAllLevelMetadata, getLevelMetadata } from '../data/levels';
 import { findMoleculeByElements, getMoleculeById } from '../data/molecules';
-import { getElementSpectroscopy } from '../data/spectroscopy';
+import { getElementSpectroscopy, isNobleGas } from '../data/spectroscopy';
 import { getStrings } from '../i18n/strings';
-import {
-  TOTAL_PERIODIC_ELEMENTS,
-  countGoldMedals,
-  getMedalDisplayInfo
-} from '../services/MedalService';
+import { TOTAL_PERIODIC_ELEMENTS, countGoldMedals } from '../services/MedalService';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
 import { isGodMode } from '../tools/godMode';
 import { isEntanglementLevelId } from '../tools/levelProgression';
 import type { IsotopeMedal } from '../types';
 import styles from './LevelSelection.module.css';
+import { PeriodicTable, type PeriodicTableElementItem } from './PeriodicTable';
 
 export const LevelSelection: React.FC = () => {
   const navigate = useNavigate();
@@ -70,28 +67,6 @@ export const LevelSelection: React.FC = () => {
       : 'classic'
   );
 
-  const raw = getAllLevelMetadata()
-    .filter((meta) => {
-      const idNum = Number(meta.id);
-      if (activeTab === 'entanglement') {
-        return isEntanglementLevelId(idNum);
-      }
-      return !isEntanglementLevelId(idNum);
-    })
-    .map(({ id, hue, antiHue, symbol, atom }) => ({ id, hue, antiHue, symbol, atom }));
-
-  const enriched = raw.map((r) => {
-    const scoreEntry = scores[Number(r.id)];
-    const medal: IsotopeMedal =
-      scoreEntry?.medal ?? (scoreEntry?.best && scoreEntry.best > 0 ? 'bronze' : 'none');
-    return {
-      ...r,
-      score: scoreEntry ? formatScore(scoreEntry.best) : '00:00:00',
-      bestJumps: scoreEntry?.bestJumps,
-      medal
-    };
-  });
-
   const isDisabled = (id: string | number) => {
     if (godMode) return false;
     const num = Number(id);
@@ -100,6 +75,44 @@ export const LevelSelection: React.FC = () => {
     }
     return num > maxLevel;
   };
+
+  const enriched = useMemo<PeriodicTableElementItem[]>(() => {
+    return getAllLevelMetadata()
+      .filter((meta) => {
+        const idNum = Number(meta.id);
+        if (activeTab === 'entanglement') {
+          return isEntanglementLevelId(idNum);
+        }
+        return !isEntanglementLevelId(idNum);
+      })
+      .map((meta) => {
+        const idNum = Number(meta.id);
+        const scoreEntry = scores[idNum];
+        const medal: IsotopeMedal =
+          scoreEntry?.medal ?? (scoreEntry?.best && scoreEntry.best > 0 ? 'bronze' : 'none');
+        return {
+          id: idNum,
+          symbol: meta.symbol,
+          atom: meta.atom,
+          hue: meta.hue,
+          antiHue: meta.antiHue,
+          score: scoreEntry ? formatScore(scoreEntry.best) : '00:00:00',
+          bestMs: scoreEntry?.best,
+          bestJumps: scoreEntry?.bestJumps,
+          medal,
+          disabled: godMode
+            ? false
+            : isEntanglementLevelId(idNum)
+              ? idNum > maxEntanglementLevel
+              : idNum > maxLevel,
+          isNobleGas: isNobleGas(idNum),
+          isEntanglement: isEntanglementLevelId(idNum),
+          noblePlayground: meta.noblePlayground,
+          parJumps: meta.parJumps,
+          authorTime: meta.authorTime
+        };
+      });
+  }, [activeTab, godMode, maxEntanglementLevel, maxLevel, scores]);
 
   const tryCombineElements = (z1: number, z2: number) => {
     const recipe = findMoleculeByElements(z1, z2);
@@ -140,34 +153,32 @@ export const LevelSelection: React.FC = () => {
     }
   };
 
-  const handleAtomClick = (id: string | number, e: React.MouseEvent) => {
-    const z = Number(id);
+  const handleAtomClick = (id: number, e: React.MouseEvent) => {
     if (e.shiftKey || alchemyMode) {
       e.preventDefault();
       if (selectedAtomZ === null) {
-        setSelectedAtomZ(z);
-      } else if (selectedAtomZ === z) {
+        setSelectedAtomZ(id);
+      } else if (selectedAtomZ === id) {
         setSelectedAtomZ(null);
       } else {
-        tryCombineElements(selectedAtomZ, z);
+        tryCombineElements(selectedAtomZ, id);
       }
       return;
     }
     handleSelect(id);
   };
 
-  const handleAtomTouchStart = (id: string | number, e: React.TouchEvent) => {
-    const z = Number(id);
-    if (e.touches.length >= 2 && heldAtomZRef.current !== null && heldAtomZRef.current !== z) {
+  const handleAtomTouchStart = (id: number, e: React.TouchEvent) => {
+    if (e.touches.length >= 2 && heldAtomZRef.current !== null && heldAtomZRef.current !== id) {
       e.preventDefault();
-      tryCombineElements(heldAtomZRef.current, z);
+      tryCombineElements(heldAtomZRef.current, id);
       return;
     }
     if (e.touches.length === 1) {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       holdTimerRef.current = setTimeout(() => {
-        heldAtomZRef.current = z;
-        setSelectedAtomZ(z);
+        heldAtomZRef.current = id;
+        setSelectedAtomZ(id);
       }, 260);
     }
   };
@@ -180,13 +191,6 @@ export const LevelSelection: React.FC = () => {
     if (e.touches.length === 0) {
       heldAtomZRef.current = null;
     }
-  };
-
-  const getMedalClass = (medal: IsotopeMedal): string => {
-    if (medal === 'gold') return styles.medalGold;
-    if (medal === 'silver') return styles.medalSilver;
-    if (medal === 'bronze') return styles.medalBronze;
-    return '';
   };
 
   return (
@@ -289,55 +293,20 @@ export const LevelSelection: React.FC = () => {
           </button>
         </div>
       )}
-      {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore, bestJumps, medal }) => {
-        const disabled = isDisabled(id);
-        const medalInfo = getMedalDisplayInfo(medal, locale);
-        const isSelectedAlchemy = selectedAtomZ === Number(id);
-        return (
-          <div
-            key={`${id}-${symbol}`}
-            className={`${styles.menuItem} ${getMedalClass(medal)} ${
-              disabled ? styles.menuItemDisabled : ''
-            } ${isSelectedAlchemy ? styles.menuItemSelectedAlchemy : ''}`}
-            onClick={(e) => handleAtomClick(id, e)}
-            onTouchStart={(e) => handleAtomTouchStart(id, e)}
-            onTouchEnd={handleAtomTouchEnd}
-            role="button"
-            tabIndex={disabled ? -1 : 0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') handleSelect(id);
-            }}
-          >
-            <div className={styles.atom} style={{ backgroundColor: hue, color: antiHue }}>
-              {symbol}
-              <div className={styles.atomicNumber}>{id}</div>
-              {medal !== 'none' && (
-                <span
-                  className={styles.medalStar}
-                  style={{ color: medalInfo.color }}
-                  title={medalInfo.label}
-                  aria-label={medalInfo.label}
-                >
-                  {medalInfo.symbol}
-                </span>
-              )}
-            </div>
-            <div className={styles.atomDescription}>
-              <h2 className={styles.atomTitle}>{atom}</h2>
-              <div className={styles.atomScore}>
-                <span>{levelScore}</span>
-                {bestJumps !== undefined && (
-                  <span className={styles.jumpBadge}>
-                    {' '}
-                    • {bestJumps}
-                    {t.levelSelection.jumpSuffix}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+
+      <PeriodicTable
+        elements={enriched}
+        locale={locale}
+        activeTab={activeTab}
+        isEntanglementUnlocked={isEntanglementUnlocked}
+        onOpenEntanglement={() => setActiveTab('entanglement')}
+        alchemyMode={alchemyMode}
+        selectedAtomZ={selectedAtomZ}
+        onAtomClick={handleAtomClick}
+        onAtomSelect={handleSelect}
+        onAtomTouchStart={handleAtomTouchStart}
+        onAtomTouchEnd={handleAtomTouchEnd}
+      />
     </div>
   );
 };

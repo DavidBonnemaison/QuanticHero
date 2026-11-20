@@ -1,8 +1,8 @@
 .selectionContainer {
   width: 100%;
-  max-width: 500px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 16px 12px calc(30px + env(safe-area-inset-bottom, 20px));
+  padding: 16px 16px calc(30px + env(safe-area-inset-bottom, 20px));
   box-sizing: border-box;
 }
 

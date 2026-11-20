@@ -42,6 +42,57 @@ export interface Strings {
     ghostEnabled: (mode: GhostMode) => string;
     jumpSuffix: string;
   };
+  periodicTable: {
+    viewTable: string;
+    viewPeriod: string;
+    zoomIn: string;
+    zoomOut: string;
+    zoomReset: string;
+    periodShort: (p: number) => string;
+    periodFull: (p: number) => string;
+    lanthanides: string;
+    actinides: string;
+    entanglementRift: string;
+    filters: {
+      all: string;
+      incomplete: string;
+      noGold: string;
+      nobleGases: string;
+      entanglementShort: string;
+    };
+    preview: {
+      bestTime: string;
+      bestJumps: string;
+      medal: string;
+      family: string;
+      mechanics: string;
+      position: (group: number, period: number, block: string) => string;
+      locked: string;
+      play: string;
+      nobleGasBadge: string;
+      entanglementBadge: string;
+      noRecord: string;
+    };
+    families: {
+      noble_gas: string;
+      alkali_alkaline_earth: string;
+      transition_metal: string;
+      nonmetal_halogen: string;
+      lanthanide_actinide: string;
+      metalloid: string;
+      post_transition: string;
+    };
+    mechanicsLabels: {
+      noblePlayground: string;
+      entanglement: string;
+      precisionJump: string;
+      tunneling: string;
+      gravityPhase: string;
+      waveSuperposition: string;
+      pauliRepulsion: string;
+      relativisticHorizon: string;
+    };
+  };
   levelFinished: {
     customLevelFallback: string;
     unknownFallback: string;
@@ -148,6 +199,57 @@ export const STRINGS: Record<Locale, Strings> = {
       ghostDisabled: 'Ghost disabled',
       ghostEnabled: (mode) => `Ghost enabled (${mode})`,
       jumpSuffix: 'J'
+    },
+    periodicTable: {
+      viewTable: 'Table View',
+      viewPeriod: 'Period View',
+      zoomIn: 'Zoom in',
+      zoomOut: 'Zoom out',
+      zoomReset: 'Reset zoom',
+      periodShort: (p) => `P${p}`,
+      periodFull: (p) => `Period ${p}`,
+      lanthanides: '57–71 La–Lu',
+      actinides: '89–103 Ac–Lr',
+      entanglementRift: 'Ψ 110–114',
+      filters: {
+        all: 'All',
+        incomplete: 'Incomplete',
+        noGold: 'No Gold',
+        nobleGases: 'Noble Gases',
+        entanglementShort: 'Ψ 110–114'
+      },
+      preview: {
+        bestTime: 'Best Time',
+        bestJumps: 'Jumps',
+        medal: 'Isotope',
+        family: 'Family',
+        mechanics: 'Mechanics',
+        position: (group, period, block) => `Group ${group} · Period ${period} · ${block}-block`,
+        locked: 'Locked',
+        play: 'PLAY ►',
+        nobleGasBadge: '✦ Noble Gas',
+        entanglementBadge: 'Ψ Entangled',
+        noRecord: '--:--:--'
+      },
+      families: {
+        noble_gas: 'Noble Gas',
+        alkali_alkaline_earth: 'Alkali / Alkaline Earth',
+        transition_metal: 'Transition Metal',
+        nonmetal_halogen: 'Nonmetal / Halogen',
+        lanthanide_actinide: 'Lanthanide / Actinide',
+        metalloid: 'Metalloid',
+        post_transition: 'Post-Transition Metal'
+      },
+      mechanicsLabels: {
+        noblePlayground: 'Noble Playground',
+        entanglement: 'Quantum Entanglement',
+        precisionJump: 'Quantum Jump',
+        tunneling: 'Tunneling Barrier',
+        gravityPhase: 'Gravity & Phase',
+        waveSuperposition: 'Wave Superposition',
+        pauliRepulsion: 'Pauli Repulsion',
+        relativisticHorizon: 'Relativistic Horizon'
+      }
     },
     levelFinished: {
       customLevelFallback: 'Custom Level',
@@ -262,6 +364,57 @@ export const STRINGS: Record<Locale, Strings> = {
       ghostDisabled: 'Fantôme désactivé',
       ghostEnabled: (mode) => `Fantôme activé (${mode})`,
       jumpSuffix: 'S'
+    },
+    periodicTable: {
+      viewTable: 'Vue Tableau',
+      viewPeriod: 'Vue Période',
+      zoomIn: 'Zoomer',
+      zoomOut: 'Dézoomer',
+      zoomReset: 'Réinitialiser le zoom',
+      periodShort: (p) => `P${p}`,
+      periodFull: (p) => `Période ${p}`,
+      lanthanides: '57–71 La–Lu',
+      actinides: '89–103 Ac–Lr',
+      entanglementRift: 'Ψ 110–114',
+      filters: {
+        all: 'Tous',
+        incomplete: 'Non complétés',
+        noGold: 'Sans Or',
+        nobleGases: 'Gaz Nobles',
+        entanglementShort: 'Ψ 110–114'
+      },
+      preview: {
+        bestTime: 'Meilleur temps',
+        bestJumps: 'Sauts',
+        medal: 'Isotope',
+        family: 'Famille',
+        mechanics: 'Mécaniques',
+        position: (group, period, block) => `Groupe ${group} · Période ${period} · bloc ${block}`,
+        locked: 'Verrouillé',
+        play: 'JOUER ►',
+        nobleGasBadge: '✦ Gaz Noble',
+        entanglementBadge: 'Ψ Intriqué',
+        noRecord: '--:--:--'
+      },
+      families: {
+        noble_gas: 'Gaz Noble',
+        alkali_alkaline_earth: 'Alcalin / Alcalino-terreux',
+        transition_metal: 'Métal de transition',
+        nonmetal_halogen: 'Non-métal / Halogène',
+        lanthanide_actinide: 'Lanthanide / Actinide',
+        metalloid: 'Métalloïde',
+        post_transition: 'Métal pauvre'
+      },
+      mechanicsLabels: {
+        noblePlayground: 'Sanctuaire Gaz Noble',
+        entanglement: 'Intrication Quantique',
+        precisionJump: 'Saut Quantique',
+        tunneling: 'Effet Tunnel',
+        gravityPhase: 'Gravité & Phase',
+        waveSuperposition: 'Superposition Ondulatoire',
+        pauliRepulsion: 'Répulsion de Pauli',
+        relativisticHorizon: 'Horizon Relativiste'
+      }
     },
     levelFinished: {
       customLevelFallback: 'Niveau Personnalisé',
