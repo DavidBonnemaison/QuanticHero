@@ -122,7 +122,7 @@ async function run() {
     const newGameFound = await page.evaluate(() => {
       const els = Array.from(document.querySelectorAll('*'));
       for (const el of els) {
-        if (el.textContent.trim() === 'New game') {
+        if (el.textContent.trim().toLowerCase() === 'new game') {
           el.click();
           return true;
         }
@@ -462,34 +462,44 @@ async function run() {
         x: toast?.x
       };
     });
-    if (!powerUpResult || !powerUpResult.found || powerUpResult.fontSize !== '150px') {
+    if (!powerUpResult || !powerUpResult.found || powerUpResult.fontSize !== '24px') {
       throw new Error(`PowerUp text invalid: ${JSON.stringify(powerUpResult)}`);
     }
     console.log(
-      `✓ PowerUp banner verified (fontSize=150px, startX=${powerUpResult.x}, alpha=${powerUpResult.alpha})`
+      `✓ PowerUp toast verified (fontSize=${powerUpResult.fontSize}, startX=${powerUpResult.x}, alpha=${powerUpResult.alpha})`
     );
 
-    // REGRESSION TEST: Verify restart when hero falls out through the bottom
+    // REGRESSION TEST: Verify Zero-Cut quickRespawn (or restart) when hero falls out through the bottom
     const restartResult = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
       if (!gs) return false;
       const hero = gs.heroes[0];
       const origRestart = gs.scene.restart.bind(gs.scene);
+      const origQuickRespawn =
+        typeof gs.quickRespawn === 'function' ? gs.quickRespawn.bind(gs) : null;
       const origY = hero.y;
-      let restarted = false;
+      let respawned = false;
       gs.scene.restart = () => {
-        restarted = true;
+        respawned = true;
       };
+      if (origQuickRespawn) {
+        gs.quickRespawn = () => {
+          respawned = true;
+        };
+      }
       hero.y = gs.levelData.height + 30;
-      gs.update();
+      gs.update(gs.time?.now ?? 1000, 16.67);
       hero.y = origY;
       gs.scene.restart = origRestart;
-      return restarted;
+      if (origQuickRespawn) {
+        gs.quickRespawn = origQuickRespawn;
+      }
+      return respawned;
     });
     if (!restartResult) {
-      throw new Error('Scene did not restart when hero fell out of the bottom of the scene');
+      throw new Error('Scene did not respawn/restart when hero fell out of the bottom of the scene');
     }
-    console.log('✓ Bottom exit restart verified (restarts cleanly when hero.y > height + 20)');
+    console.log('✓ Bottom exit respawn verified (triggers cleanly when hero.y > height + 20)');
 
     await page.screenshot({ path: '/tmp/gameplay_screenshot.png' });
     console.log('Screenshot saved to /tmp/gameplay_screenshot.png');
@@ -606,10 +616,19 @@ async function run() {
       throw new Error('Unable to trigger portal arrival in GameScene');
     }
 
-    console.log('Waiting for automatic navigation to /done after level completion...');
-    await page.waitForFunction(() => window.location.pathname === '/done', { timeout: 5000 });
-    console.log('✓ Successfully arrived at /done via portal arrival!');
+    console.log('Waiting for Zero-Cut level completion overlay after portal arrival...');
+    await page.waitForFunction(
+      () => {
+        const gs = window.game?.scene?.getScene('Game');
+        return Boolean(gs?.isLevelCompleted && gs?.levelCompleteOverlay);
+      },
+      { timeout: 5000 }
+    );
+    console.log('✓ Zero-Cut in-canvas level completion overlay verified!');
 
+    // Also verify /done (LevelFinished) route directly
+    await page.goto('http://localhost:4173/done', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => window.location.pathname === '/done', { timeout: 5000 });
     await new Promise((r) => setTimeout(r, 500));
     const donePageInfo = await page.evaluate(() => {
       const shareBtn = Array.from(document.querySelectorAll('button')).find((b) =>
@@ -743,8 +762,14 @@ async function run() {
         throw new Error(`Level ${lvl} failed portal clearance`);
       }
 
-      await page.waitForFunction(() => window.location.pathname === '/done', { timeout: 6000 });
-      console.log(`✓ Level ${lvl} successfully reached portal and cleared to /done!`);
+      await page.waitForFunction(
+        () => {
+          const gs = window.game?.scene?.getScene('Game');
+          return Boolean(gs?.isLevelCompleted && gs?.levelCompleteOverlay);
+        },
+        { timeout: 6000 }
+      );
+      console.log(`✓ Level ${lvl} successfully reached portal and showed Zero-Cut overlay!`);
     }
 
     // SPEC-05 DELIVERABLE 2: Test Procedural Debug Route /game?seed=1337&atom=7
@@ -991,6 +1016,22 @@ async function run() {
       { timeout: 10000 }
     );
 
+    // Wait for dynamic entanglement zoom-out to settle and frame both heroes
+    await page.waitForFunction(
+      () => {
+        const gs = window.game?.scene?.getScene('Game');
+        if (!gs?.cameras?.main || !gs.heroes) return false;
+        const alpha = gs.heroes.find((h) => !h.isBeta);
+        const beta = gs.heroes.find((h) => h.isBeta);
+        if (!alpha || !beta) return false;
+        return (
+          gs.cameras.main.worldView.contains(alpha.x, alpha.y) &&
+          gs.cameras.main.worldView.contains(beta.x, beta.y)
+        );
+      },
+      { timeout: 5000 }
+    );
+
     // Verify Entanglement scene state
     const entanglementState = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
@@ -1109,9 +1150,18 @@ async function run() {
       throw new Error('Failed to trigger dual portal arrival in Entanglement level 110');
     }
 
-    console.log('Waiting for automatic navigation to /done after Entanglement completion...');
+    console.log('Waiting for Zero-Cut level completion overlay after Entanglement completion...');
+    await page.waitForFunction(
+      () => {
+        const gs = window.game?.scene?.getScene('Game');
+        return Boolean(gs?.isLevelCompleted && gs?.levelCompleteOverlay);
+      },
+      { timeout: 6000 }
+    );
+    console.log('✓ Zero-Cut overlay verified after Quantum Entanglement completion!');
+
+    await page.goto('http://localhost:4173/done', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.location.pathname === '/done', { timeout: 6000 });
-    console.log('✓ Successfully arrived at /done after Quantum Entanglement completion!');
 
     await new Promise((r) => setTimeout(r, 600));
     const entanglementDoneInfo = await page.evaluate(() => {
@@ -1243,10 +1293,10 @@ async function run() {
     if (!godLevelsCheck.hasGodTitle || !godLevelsCheck.isMtUnlocked || !godLevelsCheck.hasEntTab) {
       throw new Error(`God Mode /levels check failed: ${JSON.stringify(godLevelsCheck)}`);
     }
-    // Load Level 2 (which has spikes) and verify spike overlap does NOT kill hero in God Mode
+    // Load Level 3 (Lithium, which has spikes; Level 2 He is a Noble Gas playground with 0 spikes)
     await page.evaluate(() => {
       const store = JSON.parse(localStorage.getItem('qtmhro') || '{"state":{}}');
-      store.state.currentLevel = 2;
+      store.state.currentLevel = 3;
       localStorage.setItem('qtmhro', JSON.stringify(store));
     });
     await page.goto('http://localhost:4173/game?god=1', { waitUntil: 'domcontentloaded' });

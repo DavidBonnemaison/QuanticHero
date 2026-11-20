@@ -2,6 +2,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { SECRET_MOLECULES } from '../src/data/molecules';
+import { listSmartArchetypes } from '../src/generator/archetypes';
 import {
   MILESTONE_LEVEL_NUMBERS,
   NOBLE_GAS_LEVELS,
@@ -9,7 +10,6 @@ import {
   isMilestoneLevel,
   isNobleGasLevel
 } from '../src/generator/campaignDirector';
-import { listSmartArchetypes } from '../src/generator/archetypes';
 import { validateAuthorGhost } from '../src/generator/simulator';
 import type { LevelData } from '../src/types';
 
@@ -34,10 +34,7 @@ export function verifyAllLevels(): VerificationReport {
 
   const metadataPath = path.join(dataDir, 'levelMetadata.json');
   const metadata = fs.existsSync(metadataPath)
-    ? (JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as Record<
-        string,
-        { parJumps?: number }
-      >)
+    ? (JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as Record<string, { parJumps?: number }>)
     : {};
 
   // 1. Validate all 118 campaign levels
@@ -199,9 +196,7 @@ function main() {
 
   const report = verifyAllLevels();
   console.log(`Campaign Levels Verified : ${report.campaignCount}/118`);
-  console.log(
-    `Noble Gas Playgrounds    : ${report.nobleGasCount}/${NOBLE_GAS_LEVELS.length}`
-  );
+  console.log(`Noble Gas Playgrounds    : ${report.nobleGasCount}/${NOBLE_GAS_LEVELS.length}`);
   console.log(
     `Milestone Discovery Boxes: ${report.milestoneCount}/${MILESTONE_LEVEL_NUMBERS.length}`
   );

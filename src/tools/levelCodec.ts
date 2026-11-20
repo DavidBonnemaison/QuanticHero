@@ -180,25 +180,29 @@ export function compressLevel(level: LevelData): string {
   }
 
   if (level.gates && level.gates.length > 0) {
-    minified.gt = level.gates.slice(0, 50).map((gate) => [
-      sanitizeText(gate.id, 30, 'g'),
-      Math.round(gate.x),
-      Math.round(gate.y),
-      Math.round(gate.width),
-      Math.round(gate.height)
-    ]);
+    minified.gt = level.gates
+      .slice(0, 50)
+      .map((gate) => [
+        sanitizeText(gate.id, 30, 'g'),
+        Math.round(gate.x),
+        Math.round(gate.y),
+        Math.round(gate.width),
+        Math.round(gate.height)
+      ]);
   }
 
   if (level.pressurePlates && level.pressurePlates.length > 0) {
-    minified.pp = level.pressurePlates.slice(0, 50).map((plate) => [
-      sanitizeText(plate.id, 30, 'p'),
-      Math.round(plate.x),
-      Math.round(plate.y),
-      Math.round(plate.width),
-      Math.round(plate.height),
-      sanitizeText(plate.targetGateId, 30, 'g'),
-      plate.requireLock ? 1 : 0
-    ]);
+    minified.pp = level.pressurePlates
+      .slice(0, 50)
+      .map((plate) => [
+        sanitizeText(plate.id, 30, 'p'),
+        Math.round(plate.x),
+        Math.round(plate.y),
+        Math.round(plate.width),
+        Math.round(plate.height),
+        sanitizeText(plate.targetGateId, 30, 'g'),
+        plate.requireLock ? 1 : 0
+      ]);
   }
 
   if (
@@ -241,11 +245,13 @@ export function compressLevel(level: LevelData): string {
   }
 
   if (level.tetherPylons && level.tetherPylons.length > 0) {
-    minified.py = level.tetherPylons.slice(0, 30).map((py) =>
-      typeof py.maxLength === 'number' && py.maxLength > 0
-        ? [Math.round(py.x), Math.round(py.y), Math.round(py.radius), Math.round(py.maxLength)]
-        : [Math.round(py.x), Math.round(py.y), Math.round(py.radius)]
-    );
+    minified.py = level.tetherPylons
+      .slice(0, 30)
+      .map((py) =>
+        typeof py.maxLength === 'number' && py.maxLength > 0
+          ? [Math.round(py.x), Math.round(py.y), Math.round(py.radius), Math.round(py.maxLength)]
+          : [Math.round(py.x), Math.round(py.y), Math.round(py.radius)]
+      );
   }
 
   if (level.allowCloneFusion === false) {
@@ -438,7 +444,12 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
             y: item[5],
             time: Math.max(100, item[6])
           };
-          if (item.length >= 8 && item[7] && typeof item[7] === 'object' && !Array.isArray(item[7])) {
+          if (
+            item.length >= 8 &&
+            item[7] &&
+            typeof item[7] === 'object' &&
+            !Array.isArray(item[7])
+          ) {
             applyPlatformOpts(plat, item[7] as Record<string, unknown>);
           }
         } else if (
@@ -809,8 +820,7 @@ function unpackAndValidateLevel(raw: any): LevelData | null {
     }
   }
 
-  const allowCloneFusion =
-    raw.acf === 0 || raw.allowCloneFusion === false ? false : undefined;
+  const allowCloneFusion = raw.acf === 0 || raw.allowCloneFusion === false ? false : undefined;
 
   // Unpack screenWrap & wormholes
   let screenWrap: LevelData['screenWrap'];

@@ -9,9 +9,11 @@ describe('LevelSelection component', () => {
     useGameStore.setState({
       currentLevel: 0,
       maxLevel: 1,
+      maxEntanglementLevel: 110,
       scores: {},
       customLevels: null,
-      unlockedMolecules: []
+      unlockedMolecules: [],
+      locale: 'en'
     });
   });
 
@@ -224,9 +226,10 @@ describe('LevelSelection component', () => {
     expect(rg.className).not.toMatch(/menuItemDisabled/);
   });
 
-  it('displays total Gold Isotopes out of 118 and per-tile isotope medal stars', () => {
+  it('displays total Gold Isotopes out of 118 and per-tile isotope medal stars in English', () => {
     useGameStore.setState({
       maxLevel: 4,
+      locale: 'en',
       scores: {
         1: { best: 8000, last: 8000, bestJumps: 3, medal: 'gold' },
         2: { best: 11000, last: 11000, bestJumps: 5, medal: 'silver' },
@@ -236,10 +239,28 @@ describe('LevelSelection component', () => {
     renderWithRouter();
 
     const counter = screen.getByTestId('gold-isotope-counter');
-    expect(counter).toHaveTextContent("Isotopes d'Or : 1 / 118");
+    expect(counter).toHaveTextContent('Gold Isotopes: 1 / 118');
+    expect(screen.getByLabelText('Quantum Isotope (Gold)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Pure Isotope (Silver)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Stable Isotope (Bronze)')).toBeInTheDocument();
+  });
+
+  it('displays fully localized French UI when locale is "fr"', () => {
+    useGameStore.setState({
+      maxLevel: 10,
+      locale: 'fr',
+      scores: {
+        1: { best: 8000, last: 8000, bestJumps: 3, medal: 'gold' }
+      }
+    });
+    renderWithRouter();
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: /sélection des niveaux/i })
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('gold-isotope-counter')).toHaveTextContent("Isotopes d'Or : 1 / 118");
+    expect(screen.getByRole('button', { name: /liaison chimique/i })).toBeInTheDocument();
     expect(screen.getByLabelText('Isotope Quantique (Or)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Isotope Pur (Argent)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Isotope Stable (Bronze)')).toBeInTheDocument();
   });
 
   it('Spec-10: Shift+Click combining H (1) and O (8) unlocks H2O in store and navigates to /game/molecule/H2O', () => {
@@ -256,9 +277,10 @@ describe('LevelSelection component', () => {
   });
 
   it('Spec-10: Alchemy Mode toggle allows combining H (1) and O (8) without holding Shift', () => {
+    useGameStore.setState({ locale: 'en' });
     renderWithRouter();
 
-    const alchemyBtn = screen.getByRole('button', { name: /liaison chimique/i });
+    const alchemyBtn = screen.getByRole('button', { name: /chemical bond/i });
     fireEvent.click(alchemyBtn);
     expect(alchemyBtn).toHaveAttribute('aria-pressed', 'true');
 
@@ -288,6 +310,28 @@ describe('LevelSelection component', () => {
 
     expect(useGameStore.getState().unlockedMolecules).toContain('OgH');
     expect(screen.getByText('Molecule Game Page')).toBeInTheDocument();
+  });
+
+  it('unlocks levels 115-118 based on classic maxLevel rather than maxEntanglementLevel', () => {
+    useGameStore.setState({ maxLevel: 115, maxEntanglementLevel: 110 });
+    renderWithRouter();
+
+    const moscovium = screen.getByText('Moscovium').closest('[role="button"]') as HTMLElement;
+    const livermorium = screen.getByText('Livermorium').closest('[role="button"]') as HTMLElement;
+
+    expect(moscovium).toHaveAttribute('tabindex', '0');
+    expect(moscovium.className).not.toMatch(/menuItemDisabled/);
+    expect(livermorium).toHaveAttribute('tabindex', '-1');
+    expect(livermorium.className).toMatch(/menuItemDisabled/);
+  });
+
+  it('keeps levels 115-118 locked when maxLevel is 109 even if maxEntanglementLevel is 114', () => {
+    useGameStore.setState({ maxLevel: 109, maxEntanglementLevel: 114 });
+    renderWithRouter();
+
+    const moscovium = screen.getByText('Moscovium').closest('[role="button"]') as HTMLElement;
+    expect(moscovium).toHaveAttribute('tabindex', '-1');
+    expect(moscovium.className).toMatch(/menuItemDisabled/);
   });
 
   it('clears sharedLevel when selecting a normal level', () => {

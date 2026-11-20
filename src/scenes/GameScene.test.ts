@@ -162,13 +162,15 @@ vi.mock('phaser', () => {
         updateFromGameObject: vi.fn()
       };
     }
-    public enableBody = vi.fn((_reset: boolean, x: number, y: number, active: boolean, visible: boolean) => {
-      this.x = x;
-      this.y = y;
-      this.active = active;
-      this.visible = visible;
-      if (this.body) this.body.enable = true;
-    });
+    public enableBody = vi.fn(
+      (_reset: boolean, x: number, y: number, active: boolean, visible: boolean) => {
+        this.x = x;
+        this.y = y;
+        this.active = active;
+        this.visible = visible;
+        if (this.body) this.body.enable = true;
+      }
+    );
     public disableBody = vi.fn((disableGameObject: boolean, hideGameObject: boolean) => {
       if (disableGameObject) this.active = false;
       if (hideGameObject) this.visible = false;
@@ -231,6 +233,7 @@ vi.mock('phaser', () => {
     public events: any;
     public scene: any;
     public game: any;
+    public scale: any;
 
     constructor() {
       const eventMap = new Map<string, Function[]>();
@@ -247,7 +250,9 @@ vi.mock('phaser', () => {
       };
       this.add = {
         existing: vi.fn((obj: any) => obj),
-        rectangle: vi.fn((x: number, y: number, w: number, h: number) => new MockRectangle(this, x, y, w, h)),
+        rectangle: vi.fn(
+          (x: number, y: number, w: number, h: number) => new MockRectangle(this, x, y, w, h)
+        ),
         circle: vi.fn((x: number, y: number) => new MockGameObject(this, x, y)),
         sprite: vi.fn((x: number, y: number) => new MockSprite(this, x, y)),
         text: vi.fn((x: number, y: number) => new MockGameObject(this, x, y)),
@@ -307,9 +312,15 @@ vi.mock('phaser', () => {
           zoom: 1,
           midPoint: { x: 400, y: 300 },
           followOffset: { x: 0, y: 0, set: vi.fn() },
+          setViewport: vi.fn(function (this: any, _x: number, _y: number, w: number, h: number) {
+            this.width = w;
+            this.height = h;
+          }),
           setBounds: vi.fn(),
           setBackgroundColor: vi.fn(),
-          setZoom: vi.fn(),
+          setZoom: vi.fn(function (this: any, z: number) {
+            this.zoom = z;
+          }),
           centerOn: vi.fn(),
           startFollow: vi.fn(),
           flash: vi.fn(),
@@ -317,6 +328,26 @@ vi.mock('phaser', () => {
           fadeIn: vi.fn(),
           once: vi.fn((_ev: string, cb: Function) => cb())
         }
+      };
+      const scaleEventMap = new Map<string, Array<{ fn: Function; ctx?: any }>>();
+      this.scale = {
+        on: vi.fn((ev: string, fn: Function, ctx?: any) => {
+          const list = scaleEventMap.get(ev) || [];
+          list.push({ fn, ctx });
+          scaleEventMap.set(ev, list);
+        }),
+        off: vi.fn((ev: string, fn: Function) => {
+          const list = scaleEventMap.get(ev) || [];
+          scaleEventMap.set(
+            ev,
+            list.filter((entry) => entry.fn !== fn)
+          );
+        }),
+        emit: vi.fn((ev: string, ...args: any[]) => {
+          for (const entry of scaleEventMap.get(ev) || []) {
+            entry.fn.apply(entry.ctx, args);
+          }
+        })
       };
       this.tweens = {
         add: vi.fn(),
@@ -585,6 +616,19 @@ describe('GameScene Spec-05: Zero-Cut Loop & quickRespawn', () => {
     expect(scene.levelData.id).toBe('2');
     expect((scene as any).deathEchoes).toHaveLength(0);
   });
+
+  it('completeLevel() on level 109 unlocks level 115 and sets nextLevelNumberPending to 115', () => {
+    useGameStore.setState({ currentLevel: 109, maxLevel: 109, maxEntanglementLevel: 110 });
+    const level109 = makeTestLevel('109', 'Meitnerium', 'Mt');
+    scene.rebuildForLevel(level109);
+
+    (scene as any).completeLevel();
+
+    expect((scene as any).nextLevelNumberPending).toBe(115);
+    expect(useGameStore.getState().maxLevel).toBe(115);
+    expect(useGameStore.getState().maxEntanglementLevel).toBe(110);
+    expect(useGameStore.getState().currentLevel).toBe(115);
+  });
 });
 
 describe('GameScene Spec-06: Swarm Replay & Isotope Medals', () => {
@@ -623,7 +667,15 @@ describe('GameScene Spec-06: Swarm Replay & Isotope Medals', () => {
     // Simulate 3 failed runs
     for (let i = 0; i < 3; i++) {
       (scene as any).ghostRecorder.recordFrame(0, 100, 400, false, 'idle', undefined, true);
-      (scene as any).ghostRecorder.recordFrame(500 + i * 100, 200 + i * 30, 400, false, 'right', undefined, true);
+      (scene as any).ghostRecorder.recordFrame(
+        500 + i * 100,
+        200 + i * 30,
+        400,
+        false,
+        'right',
+        undefined,
+        true
+      );
       scene.quickRespawn({ x: 200 + i * 30, y: 400 });
     }
 
@@ -1046,5 +1098,42 @@ describe('GameScene Spec-10: Curiosity Secrets (HUD Phase, Bubble Antigravity & 
     for (const obj of scene.discoveryBoxObjects as any[]) {
       expect(obj.depth).toBe(2);
     }
+  });
+
+  it('Spec-02: handles scale resize events by updating camera, edge-anchored HUD, and Bohr background', () => {
+    scene.levelData = makeTestLevel('6', 'Carbon', 'C');
+    scene.create();
+
+    expect((scene as any).scale.on).toHaveBeenCalledWith('resize', scene.handleResize, scene);
+
+    // Emit a resize event simulating desktop wide 1280x800
+    (scene as any).scale.emit('resize', { width: 1280, height: 800 });
+
+    expect(scene.cameras.main.width).toBe(1280);
+    expect(scene.cameras.main.height).toBe(800);
+
+    // Top-right HUD anchored to new width
+    expect((scene as any).timerText.x).toBe(1270);
+    expect((scene as any).timerText.y).toBe(3);
+    expect((scene as any).splitDeltaText.x).toBe(1270);
+    expect((scene as any).splitDeltaText.y).toBe(28);
+
+    // Bottom-right quick restart button anchored to new bottom-right corner
+    expect((scene as any).thumbRestartBg.x).toBe(1244);
+    expect((scene as any).thumbRestartBg.y).toBe(764);
+    expect((scene as any).thumbRestartLabel.x).toBe(1244);
+    expect((scene as any).thumbRestartLabel.y).toBe(764);
+    expect((scene as any).thumbRestartZone.x).toBe(1244);
+    expect((scene as any).thumbRestartZone.y).toBe(764);
+
+    // BohrBackgroundRenderer re-centered without artifacts
+    expect(scene.bohrBackground?.getCenter()).toEqual({ x: 640, y: 400 });
+
+    // Rotating to mobile portrait 390x844 repositions cleanly again
+    (scene as any).scale.emit('resize', { width: 390, height: 844 });
+    expect((scene as any).timerText.x).toBe(380);
+    expect((scene as any).thumbRestartBg.x).toBe(354);
+    expect((scene as any).thumbRestartBg.y).toBe(808);
+    expect(scene.bohrBackground?.getCenter()).toEqual({ x: 195, y: 422 });
   });
 });

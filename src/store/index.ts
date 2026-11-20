@@ -1,8 +1,17 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { getCachedLevel } from '../data/levels';
-import type { GhostMode, IsotopeMedal, LevelData, ScoreItem } from '../types';
+import type { Locale } from '../i18n/strings';
 import { bestMedal } from '../services/MedalService';
+import {
+  ENTANGLEMENT_LEVEL_MAX,
+  getNextLevelId,
+  isEntanglementLevelId
+} from '../tools/levelProgression';
+import type { GhostMode, IsotopeMedal, LevelData, ScoreItem } from '../types';
+
+export { getNextLevelId, isEntanglementLevelId };
+export type { GhostMode, Locale };
 
 export interface UpdateLevelFieldParams {
   level: number;
@@ -11,8 +20,6 @@ export interface UpdateLevelFieldParams {
   prop?: string;
   value: any;
 }
-
-export type { GhostMode };
 
 export interface GameStoreState {
   currentLevel: number;
@@ -25,6 +32,7 @@ export interface GameStoreState {
   reducedEffects: boolean;
   ghostMode: GhostMode;
   ghostEnabled: boolean;
+  locale: Locale;
   sharedLevel: LevelData | null;
   unlockedMolecules: string[];
 }
@@ -65,6 +73,8 @@ export interface GameStoreActions {
   toggleGhost: (hasPersonalBest?: boolean, hasSwarm?: boolean) => void;
   setGhostMode: (mode: GhostMode) => void;
   setGhostEnabled: (enabled: boolean) => void;
+  setLocale: (locale: Locale) => void;
+  toggleLocale: () => void;
   unlockMolecule: (moleculeId: string) => void;
   unlockBellSync: (level: number) => void;
 }
@@ -139,7 +149,8 @@ const customStorage = {
             (parsed.state?.ghostEnabled === false ? 'off' : 'optimal')) as GhostMode,
           ghostEnabled:
             parsed.state?.ghostEnabled ??
-            (parsed.state?.ghostMode ? parsed.state.ghostMode !== 'off' : true)
+            (parsed.state?.ghostMode ? parsed.state.ghostMode !== 'off' : true),
+          locale: (parsed.state?.locale === 'fr' ? 'fr' : 'en') as Locale
         },
         version: 0
       };
@@ -174,6 +185,7 @@ export const useGameStore = create<GameStore>()(
       reducedEffects: false,
       ghostMode: 'optimal',
       ghostEnabled: true,
+      locale: 'en',
       unlockedMolecules: [],
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
@@ -184,6 +196,9 @@ export const useGameStore = create<GameStore>()(
 
       toggleReducedEffects: () => set((state) => ({ reducedEffects: !state.reducedEffects })),
       setReducedEffects: (reduced: boolean) => set({ reducedEffects: reduced }),
+
+      setLocale: (locale: Locale) => set({ locale }),
+      toggleLocale: () => set((state) => ({ locale: state.locale === 'en' ? 'fr' : 'en' })),
 
       toggleGhost: (hasPersonalBest?: boolean, hasSwarm = false) =>
         set((state) => {
@@ -309,12 +324,16 @@ export const useGameStore = create<GameStore>()(
               ...(prevItem?.bellSync ? { bellSync: true } : {})
             }
           };
-          const isEntangled = level >= 110;
+          const isEntangled = isEntanglementLevelId(level);
+          const nextClassicLevel = level === 109 ? 115 : level + 1;
           const maxLevel =
-            !isEntangled && score > 0 ? Math.max(state.maxLevel, level + 1) : state.maxLevel;
+            !isEntangled && score > 0 ? Math.max(state.maxLevel, nextClassicLevel) : state.maxLevel;
           const maxEntanglementLevel =
             isEntangled && score > 0
-              ? Math.max(state.maxEntanglementLevel ?? 110, level + 1)
+              ? Math.min(
+                  ENTANGLEMENT_LEVEL_MAX,
+                  Math.max(state.maxEntanglementLevel ?? 110, level + 1)
+                )
               : (state.maxEntanglementLevel ?? 110);
 
           return {
@@ -541,6 +560,7 @@ export const useGameStore = create<GameStore>()(
         reducedEffects: state.reducedEffects,
         ghostMode: state.ghostMode,
         ghostEnabled: state.ghostEnabled,
+        locale: state.locale,
         unlockedMolecules: state.unlockedMolecules
       })
     }

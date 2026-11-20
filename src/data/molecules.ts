@@ -261,7 +261,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'HgS',
     name: 'Cinnabar Alchemical Bath',
     elements: [80, 16],
-    mechanicSummary: 'Bassins de mercure liquide à haute poussée d’Archimède et téléportation torique.',
+    mechanicSummary:
+      'Bassins de mercure liquide à haute poussée d’Archimède et téléportation torique.',
     levelData: {
       id: 'molecule-HgS',
       symbol: 'HgS',
@@ -354,7 +355,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'HeNe',
     name: 'Laser Cavity Interferometer',
     elements: [2, 10],
-    mechanicSummary: 'Niveau-jouet musical sans piques avec cordes d’intrication et rebonds plasma.',
+    mechanicSummary:
+      'Niveau-jouet musical sans piques avec cordes d’intrication et rebonds plasma.',
     levelData: {
       id: 'molecule-HeNe',
       symbol: 'HeNe',

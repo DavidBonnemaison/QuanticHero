@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  type SimWorld,
-  createInitialHeroState,
-  stepSimulation
-} from '../../generator/simulator';
+import { type SimWorld, createInitialHeroState, stepSimulation } from '../../generator/simulator';
 import { PHYSICS } from '../constants';
 import {
   clampFallVelocity,
@@ -173,11 +169,7 @@ describe('Spec-04 Toy Factor Physics', () => {
     hero.touchingGround = false;
 
     // Trigger dive
-    hero = stepSimulation(
-      hero,
-      { left: false, right: true, jump: false, dive: true },
-      FLAT_WORLD
-    );
+    hero = stepSimulation(hero, { left: false, right: true, jump: false, dive: true }, FLAT_WORLD);
     expect(hero.isDiving).toBe(true);
 
     // Fall until landing on y=500 platform

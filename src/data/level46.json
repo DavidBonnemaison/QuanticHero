@@ -7,10 +7,7 @@
   "height": 1250,
   "hue": "#111827",
   "antiHue": "#cbd5e1",
-  "explanations": [
-    "The supernova reaches its crest.",
-    "Speed, passage, and shifting ground."
-  ],
+  "explanations": ["The supernova reaches its crest.", "Speed, passage, and shifting ground."],
   "player": {
     "position": {
       "x": 180,

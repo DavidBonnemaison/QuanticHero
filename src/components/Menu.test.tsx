@@ -4,21 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGameStore } from '../store';
 import Menu from './Menu';
 
-vi.mock('./Molecules', () => ({
-  default: {
-    start: vi.fn(),
-    end: vi.fn()
-  }
-}));
-
 describe('Menu component', () => {
   beforeEach(() => {
     useGameStore.setState({
       currentLevel: 0,
       maxLevel: 1,
+      maxEntanglementLevel: 110,
       scores: {},
       customLevels: null,
-      isMuted: false
+      isMuted: false,
+      hapticsEnabled: true,
+      reducedEffects: false,
+      locale: 'en',
+      unlockedMolecules: []
     });
   });
 
@@ -28,6 +26,7 @@ describe('Menu component', () => {
         <Routes>
           <Route path="/" element={<Menu />} />
           <Route path="/explanation" element={<div>Explanation Page</div>} />
+          <Route path="/game" element={<div>Game Page</div>} />
           <Route path="/levels" element={<div>Levels Page</div>} />
           <Route path="/editor" element={<div>Editor Page</div>} />
         </Routes>
@@ -35,15 +34,17 @@ describe('Menu component', () => {
     );
   };
 
-  it('renders the game title and main navigation buttons', () => {
+  it('renders the game title and main navigation buttons when no progress exists', () => {
     renderWithRouter();
 
     expect(screen.getByRole('heading', { level: 1, name: /quantum hero/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /new game/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /levels/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /periodic table/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /level lab/i })).not.toBeInTheDocument();
   });
 
-  it('navigates to explanation and sets current level to 1 on "New game" click', () => {
+  it('navigates directly to explanation and sets current level to 1 on "New Game" click without progress', () => {
     renderWithRouter();
 
     const newGameButton = screen.getByRole('button', { name: /new game/i });
@@ -53,23 +54,87 @@ describe('Menu component', () => {
     expect(screen.getByText('Explanation Page')).toBeInTheDocument();
   });
 
-  it('hides level editor button from main menu', () => {
+  it('displays Continue button with Atom #Z (Symbol) when player has progress and resumes game', () => {
+    useGameStore.setState({
+      currentLevel: 0,
+      maxLevel: 6,
+      scores: { 1: { last: 10000, best: 10000 } }
+    });
     renderWithRouter();
-    expect(screen.queryByRole('button', { name: /editor/i })).not.toBeInTheDocument();
+
+    const continueBtn = screen.getByRole('button', { name: /continue — atom #6 \(C\)/i });
+    expect(continueBtn).toBeInTheDocument();
+
+    fireEvent.click(continueBtn);
+    expect(useGameStore.getState().currentLevel).toBe(6);
+    expect(screen.getByText('Game Page')).toBeInTheDocument();
   });
 
-  it('does not display Entanglement Mode button on main menu', () => {
+  it('opens confirmation modal on "New Game" when progress exists and preserves progress on Cancel', () => {
+    useGameStore.setState({
+      currentLevel: 5,
+      maxLevel: 8,
+      scores: { 1: { last: 10000, best: 10000, medal: 'gold' } },
+      unlockedMolecules: ['H2O']
+    });
     renderWithRouter();
-    expect(screen.queryByRole('button', { name: /entanglement mode/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /new game/i }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(
+      screen.getByText(/reset all progress, medals and unlocked molecules\?/i)
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(useGameStore.getState().maxLevel).toBe(8);
+    expect(useGameStore.getState().unlockedMolecules).toEqual(['H2O']);
   });
 
-  it('navigates to levels page on "Levels" click', () => {
+  it('resets progress and navigates to /explanation when confirming New Game reset modal', () => {
+    useGameStore.setState({
+      currentLevel: 5,
+      maxLevel: 8,
+      scores: { 1: { last: 10000, best: 10000, medal: 'gold' } },
+      unlockedMolecules: ['H2O']
+    });
     renderWithRouter();
 
-    const levelsButton = screen.getByRole('button', { name: /levels/i });
-    fireEvent.click(levelsButton);
+    fireEvent.click(screen.getByRole('button', { name: /new game/i }));
+    fireEvent.click(screen.getByRole('button', { name: /reset & start/i }));
 
+    const state = useGameStore.getState();
+    expect(state.currentLevel).toBe(1);
+    expect(state.maxLevel).toBe(1);
+    expect(state.scores).toEqual({});
+    expect(state.unlockedMolecules).toEqual([]);
+    expect(screen.getByText('Explanation Page')).toBeInTheDocument();
+  });
+
+  it('navigates to /levels on "Periodic Table" click and keeps Level Lab hidden', () => {
+    renderWithRouter();
+    expect(screen.queryByRole('button', { name: /level lab/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /periodic table/i }));
     expect(screen.getByText('Levels Page')).toBeInTheDocument();
+  });
+
+  it('toggles EN / FR locale and renders fully localized French labels', () => {
+    useGameStore.setState({ maxLevel: 2 });
+    renderWithRouter();
+
+    const localeToggle = screen.getByTestId('locale-toggle');
+    expect(localeToggle).toHaveTextContent('EN/FR');
+
+    fireEvent.click(localeToggle);
+    expect(useGameStore.getState().locale).toBe('fr');
+
+    expect(
+      screen.getByRole('button', { name: /continuer — atome #2 \(He\)/i })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /tableau périodique/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /labo de niveaux/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /nouvelle partie/i })).toBeInTheDocument();
   });
 
   it('shows install button when beforeinstallprompt event is fired', () => {

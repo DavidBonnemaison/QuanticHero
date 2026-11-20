@@ -205,26 +205,17 @@ describe('Spec-09: Matter States, Quantum Pinning, Wormholes, Broglie & Ghost Su
 
       // Descending hero within hitbox -> triggers
       expect(
-        canGhostSurf(
-          { x: 410, y: 290, vy: 220, upsideDown: 1, hasSurfedThisJump: false },
-          ghost
-        )
+        canGhostSurf({ x: 410, y: 290, vy: 220, upsideDown: 1, hasSurfedThisJump: false }, ghost)
       ).toBe(true);
 
       // Ascending hero -> does not trigger
       expect(
-        canGhostSurf(
-          { x: 410, y: 290, vy: -220, upsideDown: 1, hasSurfedThisJump: false },
-          ghost
-        )
+        canGhostSurf({ x: 410, y: 290, vy: -220, upsideDown: 1, hasSurfedThisJump: false }, ghost)
       ).toBe(false);
 
       // Already surfed this jump -> does not trigger
       expect(
-        canGhostSurf(
-          { x: 410, y: 290, vy: 220, upsideDown: 1, hasSurfedThisJump: true },
-          ghost
-        )
+        canGhostSurf({ x: 410, y: 290, vy: 220, upsideDown: 1, hasSurfedThisJump: true }, ghost)
       ).toBe(false);
 
       // Ghost hidden -> does not trigger

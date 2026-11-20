@@ -92,10 +92,7 @@
   "discoveryBox": {
     "enabled": true,
     "mechanic": "living_floor",
-    "hintSteps": [
-      "ALIGN +G / -G",
-      "WALK SOLE-TO-SOLE"
-    ],
+    "hintSteps": ["ALIGN +G / -G", "WALK SOLE-TO-SOLE"],
     "safeZoneRatio": 0.35
   },
   "authorTime": 9500,

@@ -29,7 +29,7 @@ export class MobileTouchController {
   public pointerY = 0;
   public minPointerY = 0;
 
-  private lastPointerDownTime = -Infinity;
+  private lastPointerDownTime = Number.NEGATIVE_INFINITY;
   private anchorTimeMs = 0;
   private jumpActive = false;
 
@@ -42,18 +42,13 @@ export class MobileTouchController {
     diveRequested: false
   };
 
-  public onPointerDown(
-    x: number,
-    y: number,
-    timeMs: number,
-    pointerId = 0
-  ): PointerDownResult {
+  public onPointerDown(x: number, y: number, timeMs: number, pointerId = 0): PointerDownResult {
     if (this.isPointerDown && this.activePointerId !== null && this.activePointerId !== pointerId) {
       return { doubleTap: false, isPrimary: false };
     }
 
     const doubleTap = timeMs - this.lastPointerDownTime < DOUBLE_TAP_WINDOW_MS;
-    this.lastPointerDownTime = doubleTap ? -Infinity : timeMs;
+    this.lastPointerDownTime = doubleTap ? Number.NEGATIVE_INFINITY : timeMs;
 
     this.isPointerDown = true;
     this.activePointerId = pointerId;
@@ -173,7 +168,7 @@ export class MobileTouchController {
 
   public reset(): void {
     this.onPointerUp();
-    this.lastPointerDownTime = -Infinity;
+    this.lastPointerDownTime = Number.NEGATIVE_INFINITY;
     this.anchorX = 0;
     this.anchorY = 0;
     this.pointerX = 0;

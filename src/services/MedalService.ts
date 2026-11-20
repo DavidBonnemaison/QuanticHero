@@ -1,3 +1,4 @@
+import { type Locale, getStrings } from '../i18n/strings';
 import { type GhostFrame, decompressTrajectory } from '../tools/GhostRecorder';
 import type { IsotopeMedal, LevelData, ScoreItem } from '../types';
 
@@ -140,37 +141,38 @@ export function countGoldMedals(scores: Record<number, ScoreItem>): number {
 /**
  * Returns UI display metadata for an Isotope Medal tier.
  */
-export function getMedalDisplayInfo(medal?: IsotopeMedal): MedalDisplayInfo {
+export function getMedalDisplayInfo(medal?: IsotopeMedal, locale: Locale = 'en'): MedalDisplayInfo {
+  const m = getStrings(locale).medals;
   switch (medal) {
     case 'gold':
       return {
         medal: 'gold',
-        label: 'Isotope Quantique (Or)',
-        shortLabel: 'OR',
+        label: m.gold.label,
+        shortLabel: m.gold.shortLabel,
         symbol: '★',
         color: '#fbbf24'
       };
     case 'silver':
       return {
         medal: 'silver',
-        label: 'Isotope Pur (Argent)',
-        shortLabel: 'ARGENT',
+        label: m.silver.label,
+        shortLabel: m.silver.shortLabel,
         symbol: '◆',
         color: '#e2e8f0'
       };
     case 'bronze':
       return {
         medal: 'bronze',
-        label: 'Isotope Stable (Bronze)',
-        shortLabel: 'BRONZE',
+        label: m.bronze.label,
+        shortLabel: m.bronze.shortLabel,
         symbol: '●',
         color: '#d97706'
       };
     default:
       return {
         medal: 'none',
-        label: 'Non synthétisé',
-        shortLabel: '--',
+        label: m.none.label,
+        shortLabel: m.none.shortLabel,
         symbol: '',
         color: '#64748b'
       };

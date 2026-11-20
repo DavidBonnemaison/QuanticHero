@@ -7,10 +7,7 @@
   "height": 1400,
   "hue": "#06132a",
   "antiHue": "#3b82f6",
-  "explanations": [
-    "Beyond iron, the star shatters.",
-    "Echoes and thin walls drift in the blast."
-  ],
+  "explanations": ["Beyond iron, the star shatters.", "Echoes and thin walls drift in the blast."],
   "player": {
     "position": {
       "x": 180,

@@ -25,13 +25,13 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public tunnelCharges = 0;
   public pauliGraceUntil = 0;
   public isDiving = false;
-  public lastGroundedTimeMs = -Infinity;
-  public lastJumpPressedTimeMs = -Infinity;
+  public lastGroundedTimeMs = Number.NEGATIVE_INFINITY;
+  public lastJumpPressedTimeMs = Number.NEGATIVE_INFINITY;
   public hasJumpedSinceGrounded = false;
   public prevJumpPressed = false;
   public jumpCutApplied = false;
-  public lastDiveEndTimeMs = -Infinity;
-  public waveDashUntilMs = -Infinity;
+  public lastDiveEndTimeMs = Number.NEGATIVE_INFINITY;
+  public waveDashUntilMs = Number.NEGATIVE_INFINITY;
   public wasTouchingGround = false;
   public lastLandedPlatform: Phaser.GameObjects.GameObject | null = null;
   public fusionStack = 1;
@@ -42,7 +42,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public hasSurfedThisJump = false;
   public levitateUntilMs = 0;
   public trailPoints: Array<{ x: number; y: number }> = [];
-  private lastTrailSampleMs = -Infinity;
+  private lastTrailSampleMs = Number.NEGATIVE_INFINITY;
   private elapsedTimeMs = 0;
   private lastAirborneVy = 0;
 
@@ -387,14 +387,14 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       this.isDiving = false;
       this.hasJumpedSinceGrounded = true;
       this.jumpCutApplied = false;
-      this.lastJumpPressedTimeMs = -Infinity;
-      this.lastGroundedTimeMs = -Infinity;
+      this.lastJumpPressedTimeMs = Number.NEGATIVE_INFINITY;
+      this.lastGroundedTimeMs = Number.NEGATIVE_INFINITY;
       this.levitateUntilMs = 0;
       this.setVelocityY(res.vy);
       this.tweenSquashStretch(0.78, 1.25, 140, 'Back.easeOut');
       if (res.waveDashed) {
         this.waveDashUntilMs = nowMs + PHYSICS.WAVE_DASH_DURATION_MS;
-        this.lastDiveEndTimeMs = -Infinity;
+        this.lastDiveEndTimeMs = Number.NEGATIVE_INFINITY;
         gameEvents.emit('hero:wavedash', { x: this.x, y: this.y });
       }
       gameEvents.emit('hero:jump');

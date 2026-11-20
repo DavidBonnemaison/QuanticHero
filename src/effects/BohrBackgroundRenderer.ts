@@ -1,6 +1,11 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { getElementSpectroscopy, getSpectralLineColors } from '../data/spectroscopy';
 import { gameEvents } from '../tools/gameEvents';
+
+function hexToColorNumber(hex: string): number {
+  const parsed = Number.parseInt(hex.replace('#', ''), 16);
+  return Number.isNaN(parsed) ? 0xffffff : parsed;
+}
 
 // Aufbau subshell filling order: [shellIndex (0=K..6=Q), maxElectrons]
 const AUFBAU_SUBSHELLS: ReadonlyArray<readonly [number, number]> = [
@@ -118,9 +123,7 @@ export class BohrBackgroundRenderer {
     this.centerX = centerX;
     this.centerY = centerY;
     this.shells = getElectronShells(this.z);
-    this.spectralColors = getSpectralLineColors(this.z).map((hex) =>
-      Phaser.Display.Color.HexStringToColor(hex).color
-    );
+    this.spectralColors = getSpectralLineColors(this.z).map((hex) => hexToColorNumber(hex));
 
     this.build();
 
@@ -131,7 +134,7 @@ export class BohrBackgroundRenderer {
 
   private build(): void {
     const el = getElementSpectroscopy(this.z);
-    const primaryColor = Phaser.Display.Color.HexStringToColor(el.antiHue).color;
+    const primaryColor = hexToColorNumber(el.antiHue);
 
     // 1. Luminescent Nucleus (parallax 0.25, depth 1)
     const nucleusRadius = 14 + Math.min(18, Math.floor(this.z / 7));
@@ -276,7 +279,11 @@ export class BohrBackgroundRenderer {
     for (const item of this.orbitalRings) {
       if (item.ring.active) {
         item.ring.setScale(pulseScale);
-        item.ring.setStrokeStyle(1.5 + this.beatPulse * 1.2, item.color, item.baseAlpha + this.beatPulse * 0.22);
+        item.ring.setStrokeStyle(
+          1.5 + this.beatPulse * 1.2,
+          item.color,
+          item.baseAlpha + this.beatPulse * 0.22
+        );
       }
     }
 
@@ -289,6 +296,38 @@ export class BohrBackgroundRenderer {
         this.centerY + Math.sin(el.angle) * r
       );
     }
+  }
+
+  public resize(centerX: number, centerY: number): void {
+    this.centerX = centerX;
+    this.centerY = centerY;
+
+    if (this.nucleusHalo?.active) {
+      this.nucleusHalo.setPosition(centerX, centerY);
+    }
+    if (this.nucleusCore?.active) {
+      this.nucleusCore.setPosition(centerX, centerY);
+    }
+
+    for (const item of this.orbitalRings) {
+      if (item.ring.active) {
+        item.ring.setPosition(centerX, centerY);
+      }
+    }
+
+    const pulseScale = 1 + this.beatPulse * 0.035;
+    for (const el of this.electrons) {
+      if (!el.circle.active) continue;
+      const r = el.radius * pulseScale;
+      el.circle.setPosition(
+        this.centerX + Math.cos(el.angle) * r,
+        this.centerY + Math.sin(el.angle) * r
+      );
+    }
+  }
+
+  public getCenter(): { x: number; y: number } {
+    return { x: this.centerX, y: this.centerY };
   }
 
   public getShells(): number[] {

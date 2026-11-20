@@ -2,9 +2,11 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCachedLevel, getLevelMetadata, loadLevel } from '../data/levels';
+import { getStrings } from '../i18n/strings';
 import { getMedalDisplayInfo } from '../services/MedalService';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
+import { getNextLevelId } from '../tools/levelProgression';
 import type { LevelData } from '../types';
 import ShareModal from './Editor/ShareModal';
 import styles from './LevelFinished.module.css';
@@ -21,12 +23,15 @@ export default function LevelFinished(): React.ReactElement {
   const sharedLevel = useGameStore((state) => state.sharedLevel);
   const setSharedLevel = useGameStore((state) => state.setSharedLevel);
   const saveSharedLevelToCustom = useGameStore((state) => state.saveSharedLevelToCustom);
+  const locale = useGameStore((state) => state.locale ?? 'en');
+  const t = getStrings(locale);
 
   const isShared = Boolean(sharedLevel);
-  const levelIndex = isShared ? 0 : Math.max(1, currentLevel - 1);
+  const levelIndex = isShared ? 0 : currentLevel === 115 ? 109 : Math.max(1, currentLevel - 1);
+  const nextLevelId = isShared ? null : getNextLevelId(levelIndex);
   const currentLevelScore = scores[levelIndex] || { best: 0, last: 0 };
   const { last, best, medal, lastJumps } = currentLevelScore;
-  const medalInfo = getMedalDisplayInfo(medal ?? (best > 0 ? 'bronze' : 'none'));
+  const medalInfo = getMedalDisplayInfo(medal ?? (best > 0 ? 'bronze' : 'none'), locale);
 
   useEffect(() => {
     if (!isShared && levelIndex >= 1) {
@@ -48,25 +53,30 @@ export default function LevelFinished(): React.ReactElement {
           hue: sharedLevel.hue || '#070737',
           antiHue: sharedLevel.antiHue || '#c56805',
           symbol: sharedLevel.symbol || '?',
-          atom: sharedLevel.atom || 'Custom Level'
+          atom: sharedLevel.atom || t.levelFinished.customLevelFallback
         }
       : getLevelMetadata(levelIndex) || {
           id: String(levelIndex),
           hue: '#070737',
           antiHue: '#c56805',
           symbol: '?',
-          atom: 'Unknown'
+          atom: t.levelFinished.unknownFallback
         };
 
   const { id, hue, antiHue, symbol, atom } = currentLevelData;
 
   const handleNextLevel = () => {
-    const nextLevelData = getLevelMetadata(currentLevel);
+    if (nextLevelId === null) {
+      navigate('/levels');
+      return;
+    }
+    updateCurrentLevel(nextLevelId);
+    const nextLevelData = getLevelMetadata(nextLevelId);
     if (!nextLevelData) {
       navigate('/levels');
       return;
     }
-    if (nextLevelData?.explanations && nextLevelData.explanations.length > 0) {
+    if (nextLevelData.explanations && nextLevelData.explanations.length > 0) {
       navigate('/explanation');
     } else {
       navigate('/game');
@@ -89,7 +99,7 @@ export default function LevelFinished(): React.ReactElement {
 
   const handleSaveToMyLevels = () => {
     saveSharedLevelToCustom(1);
-    setSaveMessage('Level saved to your custom levels!');
+    setSaveMessage(t.levelFinished.savedToCustomToast);
     setTimeout(() => setSaveMessage(null), 3000);
   };
 
@@ -97,22 +107,25 @@ export default function LevelFinished(): React.ReactElement {
     <div className={styles.container}>
       {isShared && (
         <div className={styles.customBadge}>
-          {sharedLevel?.authorTime
-            ? `★ SPEEDRUN CHALLENGE: ${atom} (${formatScore(sharedLevel.authorTime)}) ★`
-            : `★ SPEEDRUN CHALLENGE: ${atom} ★`}
+          {t.levelFinished.speedrunChallenge(
+            atom,
+            sharedLevel?.authorTime ? formatScore(sharedLevel.authorTime) : undefined
+          )}
         </div>
       )}
       <h1 className={styles.done}>{atom}</h1>
 
       <div className={styles.scoresWrapper}>
         <div className={styles.scoreBox}>
-          <span className={styles.scoreType}>Last game</span>
+          <span className={styles.scoreType}>{t.levelFinished.lastGame}</span>
           <span className={styles.scoreValue}>{formatScore(last)}</span>
-          {best === last && best > 0 && <div className={styles.bestBadge}>New record !</div>}
+          {best === last && best > 0 && (
+            <div className={styles.bestBadge}>{t.levelFinished.newRecord}</div>
+          )}
         </div>
 
         <div className={styles.scoreBox}>
-          <span className={styles.scoreType}>All Time Best</span>
+          <span className={styles.scoreType}>{t.levelFinished.allTimeBest}</span>
           <span className={styles.scoreValue}>{formatScore(best)}</span>
         </div>
       </div>
@@ -120,7 +133,7 @@ export default function LevelFinished(): React.ReactElement {
       {medalInfo.medal !== 'none' && (
         <div style={{ color: medalInfo.color, fontSize: 22, marginBottom: 10 }}>
           {medalInfo.symbol} {medalInfo.label}
-          {lastJumps !== undefined ? ` • ${lastJumps} sauts` : ''}
+          {lastJumps !== undefined ? ` • ${t.levelFinished.jumpsCount(lastJumps)}` : ''}
         </div>
       )}
 
@@ -136,28 +149,28 @@ export default function LevelFinished(): React.ReactElement {
             className={`${styles.button} ${styles.buttonMenu}`}
             onClick={handleGoToMenu}
           >
-            Menu
+            {t.levelFinished.menu}
           </button>
           <button
             type="button"
             className={`${styles.button} ${styles.buttonRetry}`}
             onClick={handleRetry}
           >
-            Retry
+            {t.levelFinished.retry}
           </button>
           <button
             type="button"
             className={`${styles.button} ${styles.buttonSave}`}
             onClick={handleSaveToMyLevels}
           >
-            Save
+            {t.levelFinished.save}
           </button>
           <button
             type="button"
             className={`${styles.button} ${styles.buttonShare}`}
             onClick={() => setIsShareOpen(true)}
           >
-            Share
+            {t.levelFinished.share}
           </button>
           <button
             type="button"
@@ -167,7 +180,7 @@ export default function LevelFinished(): React.ReactElement {
               navigate('/levels');
             }}
           >
-            Levels
+            {t.levelFinished.levels}
           </button>
         </div>
       ) : (
@@ -177,28 +190,28 @@ export default function LevelFinished(): React.ReactElement {
             className={`${styles.button} ${styles.buttonMenu}`}
             onClick={handleGoToMenu}
           >
-            Menu
+            {t.levelFinished.menu}
           </button>
           <button
             type="button"
             className={`${styles.button} ${styles.buttonRetry}`}
             onClick={handleRetry}
           >
-            Retry
+            {t.levelFinished.retry}
           </button>
           <button
             type="button"
             className={`${styles.button} ${styles.buttonShare}`}
             onClick={() => setIsShareOpen(true)}
           >
-            Share
+            {t.levelFinished.share}
           </button>
           <button
             type="button"
             className={`${styles.button} ${styles.buttonNext}`}
             onClick={handleNextLevel}
           >
-            Next
+            {t.levelFinished.next}
           </button>
         </div>
       )}
@@ -218,7 +231,7 @@ export default function LevelFinished(): React.ReactElement {
                   hue: '#070737',
                   antiHue: '#c56805',
                   symbol: '?',
-                  atom: 'Unknown',
+                  atom: t.levelFinished.unknownFallback,
                   width: 800,
                   height: 600,
                   player: { position: { x: 100, y: 100 } },

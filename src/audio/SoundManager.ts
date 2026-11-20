@@ -6,7 +6,14 @@ import type { ParticleType } from '../types';
 export interface FamilyMusicalProfile {
   family: ChemicalFamily;
   label: string;
-  mode: 'lydian' | 'acid_minor' | 'dorian' | 'mixolydian' | 'phrygian' | 'aeolian' | 'pentatonic_syncopated';
+  mode:
+    | 'lydian'
+    | 'acid_minor'
+    | 'dorian'
+    | 'mixolydian'
+    | 'phrygian'
+    | 'aeolian'
+    | 'pentatonic_syncopated';
   baseBpm: number;
   rootHz: number;
   /** Semitone offsets for scale degrees */
@@ -363,7 +370,8 @@ export class SoundManager {
 
   private updateActiveChordFrequencies(chordIndex: number): void {
     const profile = FAMILY_MUSICAL_PROFILES[this.currentFamily];
-    const chordRootOffset = profile.progressionSemitones[chordIndex % profile.progressionSemitones.length];
+    const chordRootOffset =
+      profile.progressionSemitones[chordIndex % profile.progressionSemitones.length];
     const chordRootHz = semitonesToHz(profile.rootHz, chordRootOffset);
     // 1st, 3rd, 5th, 7th, 9th
     this.activeChordFrequencies = profile.chordIntervals.map((interval) =>
@@ -381,7 +389,8 @@ export class SoundManager {
     }
     const idx =
       degreeIndex !== undefined
-        ? ((degreeIndex % this.activeChordFrequencies.length) + this.activeChordFrequencies.length) %
+        ? ((degreeIndex % this.activeChordFrequencies.length) +
+            this.activeChordFrequencies.length) %
           this.activeChordFrequencies.length
         : this.sfxDegreeCursor++ % this.activeChordFrequencies.length;
     const base = this.activeChordFrequencies[idx] ?? 220;

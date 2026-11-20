@@ -148,5 +148,28 @@ describe('BohrBackgroundRenderer & getElectronShells', () => {
 
       renderer.destroy();
     });
+
+    it('repositions nucleus, orbital rings, and electrons cleanly on resize()', () => {
+      const mockScene = createMockScene();
+      const renderer = new BohrBackgroundRenderer(mockScene as any, 6, 400, 300);
+
+      renderer.resize(640, 400);
+      expect(renderer.getCenter()).toEqual({ x: 640, y: 400 });
+
+      // Circle creation order for C (Z=6 -> shells [2, 4]):
+      // [0]=nucleusHalo, [1]=nucleusCore, [2]=ring0, [3..4]=shell0 electrons, [5]=ring1
+      expect(mockScene.createdCircles[0].x).toBe(640);
+      expect(mockScene.createdCircles[0].y).toBe(400);
+      expect(mockScene.createdCircles[1].x).toBe(640);
+      expect(mockScene.createdCircles[1].y).toBe(400);
+      expect(mockScene.createdCircles[2].x).toBe(640);
+      expect(mockScene.createdCircles[2].y).toBe(400);
+      expect(mockScene.createdCircles[3].x).toBe(640 + mockScene.createdCircles[2].radius);
+      expect(mockScene.createdCircles[3].y).toBe(400);
+      expect(mockScene.createdCircles[5].x).toBe(640);
+      expect(mockScene.createdCircles[5].y).toBe(400);
+
+      renderer.destroy();
+    });
   });
 });
