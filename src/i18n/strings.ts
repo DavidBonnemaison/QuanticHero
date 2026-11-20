@@ -77,7 +77,6 @@ export interface Strings {
     jumps: (count: number) => string;
     nextLevel: (symbol: string, atom: string) => string;
     levelsButton: string;
-    codexButton: string;
     toasts: {
       bellSync: string;
       entanglementRevealed: string;
@@ -188,7 +187,6 @@ export const STRINGS: Record<Locale, Strings> = {
       jumps: (count) => `JUMPS: ${count}`,
       nextLevel: (symbol, atom) => `[SPACE / TAP] NEXT: ${symbol} ${atom}`,
       levelsButton: '[LEVELS]',
-      codexButton: '[SPECTROSCOPY / CODEX]',
       toasts: {
         bellSync: 'BELL SYNC ! (GOLD ISOTOPE)',
         entanglementRevealed: 'ENTANGLEMENT REVEALED !',
@@ -303,7 +301,6 @@ export const STRINGS: Record<Locale, Strings> = {
       jumps: (count) => `SAUTS : ${count}`,
       nextLevel: (symbol, atom) => `[ESPACE / TAP] SUIVANT : ${symbol} ${atom}`,
       levelsButton: '[NIVEAUX]',
-      codexButton: '[SPECTROSCOPIE / CODEX]',
       toasts: {
         bellSync: "SYNCHRO BELL ! (ISOTOPE D'OR)",
         entanglementRevealed: 'INTRICATION RÉVÉLÉE !',

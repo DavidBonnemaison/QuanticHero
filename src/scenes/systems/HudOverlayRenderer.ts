@@ -191,19 +191,14 @@ export function showLevelCompleteOverlay(
     ? t.hud.nextLevel(nextLevelData.symbol, nextLevelData.atom)
     : t.hud.levelsButton;
 
-  const nextBtn = ctx.add.text(
-    isCompact ? camW / 2 : camW / 2 - 115,
-    camH / 2 + (isCompact ? 72 : 78),
-    primaryLabel,
-    {
-      fontFamily: 'VT323',
-      fontSize: isCompact ? '20px' : '22px',
-      color: '#00ffcc',
-      backgroundColor: '#083344',
-      padding: { x: 12, y: 6 },
-      wordWrap: { width: cardW - 32 }
-    }
-  );
+  const nextBtn = ctx.add.text(camW / 2, camH / 2 + 78, primaryLabel, {
+    fontFamily: 'VT323',
+    fontSize: isCompact ? '20px' : '22px',
+    color: '#00ffcc',
+    backgroundColor: '#083344',
+    padding: { x: 12, y: 6 },
+    wordWrap: { width: cardW - 32 }
+  });
   nextBtn.setOrigin(0.5);
   nextBtn.setInteractive({ useHandCursor: true });
   nextBtn.on('pointerdown', () => {
@@ -223,35 +218,6 @@ export function showLevelCompleteOverlay(
     }
   });
   overlay.add(nextBtn);
-
-  const codexBtn = ctx.add.text(
-    isCompact ? camW / 2 : camW / 2 + 135,
-    camH / 2 + (isCompact ? 120 : 78),
-    t.hud.codexButton,
-    {
-      fontFamily: 'VT323',
-      fontSize: isCompact ? '18px' : '20px',
-      color: '#fbbf24',
-      backgroundColor: '#1e293b',
-      padding: { x: 10, y: 6 },
-      wordWrap: { width: cardW - 32 }
-    }
-  );
-  codexBtn.setOrigin(0.5);
-  codexBtn.setInteractive({ useHandCursor: true });
-  codexBtn.on('pointerdown', () => {
-    ctx.uiPointerConsumed = true;
-    soundManager.stopBgm();
-    useGameStore.getState().setSharedLevel(null);
-    try {
-      ctx.game.destroy(true);
-    } catch {
-      // safe
-    }
-    window.game = null;
-    push('/explanation');
-  });
-  overlay.add(codexBtn);
 
   if (ctx.tweens?.add) {
     ctx.tweens.add({
