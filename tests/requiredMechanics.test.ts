@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { assembleCampaignLevel } from '../src/generator/chunkAssembler';
-import { type SimWorld, simulateFullLevel } from '../src/generator/simulator';
+import { type SimWorld, simulateFullLevel, simulateLevelData } from '../src/generator/simulator';
 import { PHYSICS } from '../src/physics/constants';
 import type { LevelData, Platform } from '../src/types';
 
@@ -20,13 +20,32 @@ function buildSimWorld(levelData: LevelData): SimWorld {
 }
 
 describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
-  it('Levels 1-4 (H to Be): pure platforming with 0 power-up particles', () => {
-    const seeds = [42, 50, 56, 63];
-    for (let lvl = 1; lvl <= 4; lvl++) {
+  it('Levels 1-3 (H to Li): pure platforming with 0 power-up particles', () => {
+    const seeds = [42, 50, 56];
+    for (let lvl = 1; lvl <= 3; lvl++) {
       const assembly = assembleCampaignLevel(lvl, seeds[lvl - 1]);
       expect(assembly.simulation.success).toBe(true);
       expect(assembly.levelData.particles.length).toBe(0);
     }
+  });
+
+  it('Level 4 (Be): passes with duplicate + requireLock plate, FAILS without duplicate', () => {
+    const assembly = assembleCampaignLevel(4, 63);
+    expect(assembly.simulation.success).toBe(true);
+    expect(assembly.levelData.particles.some((p) => p.type === 'duplicate')).toBe(true);
+    expect(assembly.levelData.pressurePlates?.some((pl) => pl.requireLock)).toBe(true);
+
+    const worldWithoutDuplicate: SimWorld = {
+      ...buildSimWorld(assembly.levelData),
+      particles: assembly.levelData.particles.filter((p) => p.type !== 'duplicate')
+    };
+    const res = simulateFullLevel(
+      worldWithoutDuplicate,
+      assembly.levelData.player.position,
+      assembly.levelData.door,
+      assembly.fullPlatformPath
+    );
+    expect(res.success).toBe(false);
   });
 
   it('Level 5 (B): passes with speed, FAILS without speed particle', () => {
@@ -63,17 +82,17 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     expect(res.success).toBe(false);
   });
 
-  it('Level 14 (Si): passes with duplicate + requireLock plate, FAILS without duplicate', () => {
+  it('Level 14 (Si): passes with condense (de Broglie wave), FAILS without condense', () => {
     const assembly = assembleCampaignLevel(14, 133);
     expect(assembly.simulation.success).toBe(true);
-    expect(assembly.levelData.pressurePlates?.some((pl) => pl.requireLock)).toBe(true);
+    expect(assembly.levelData.particles.some((p) => p.type === 'condense')).toBe(true);
 
-    const worldWithoutDuplicate: SimWorld = {
+    const worldWithoutCondense: SimWorld = {
       ...buildSimWorld(assembly.levelData),
-      particles: assembly.levelData.particles.filter((p) => p.type !== 'duplicate')
+      particles: assembly.levelData.particles.filter((p) => p.type !== 'condense')
     };
     const res = simulateFullLevel(
-      worldWithoutDuplicate,
+      worldWithoutCondense,
       assembly.levelData.player.position,
       assembly.levelData.door,
       assembly.fullPlatformPath
@@ -232,5 +251,56 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
         expect(mechanicCount).toBeGreaterThanOrEqual(2);
       }
     }
+  });
+
+  it('Global Contract (1-118): 0 levels with blocking power-ups pass when particles are stripped', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const blockingTypes = new Set([
+      'duplicate',
+      'speed',
+      'tunnel',
+      'condense',
+      'lowGravity',
+      'antiGravity',
+      'pauli'
+    ]);
+    const violations: string[] = [];
+
+    for (let lvl = 1; lvl <= 118; lvl++) {
+      const filePath = path.resolve(process.cwd(), `src/data/level${lvl}.json`);
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as LevelData;
+      const blocking = (data.particles ?? []).filter((p) => blockingTypes.has(p.type));
+      if (blocking.length === 0) continue;
+
+      const withoutParticles = simulateLevelData({ ...data, particles: [] });
+      if (withoutParticles.success) {
+        violations.push(`L${lvl} (${Array.from(new Set(blocking.map((p) => p.type))).join('+')})`);
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('Global Contract (1-118): 100% of entangled levels pass real dual Alpha+Beta physics simulation', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    let entangledCount = 0;
+    const failures: string[] = [];
+
+    for (let lvl = 1; lvl <= 118; lvl++) {
+      const filePath = path.resolve(process.cwd(), `src/data/level${lvl}.json`);
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as LevelData;
+      if (!data.entanglement) continue;
+      entangledCount++;
+
+      const sim = simulateLevelData(data);
+      if (!sim.success) {
+        failures.push(`L${lvl}: ${sim.failureReason}`);
+      }
+    }
+
+    expect(entangledCount).toBeGreaterThanOrEqual(18);
+    expect(failures).toEqual([]);
   });
 });

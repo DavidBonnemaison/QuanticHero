@@ -140,4 +140,45 @@ describe('CameraDirector', () => {
     expect(ctx.cameras.main.startFollow).toHaveBeenCalledWith(ctx.heroes[1], true, 0.1, 0.1);
     expect(ctx.updateEdgePips).toHaveBeenCalledTimes(1);
   });
+
+  it('frames Alpha at readable zoom on narrow mobile portrait when entangled heroes start far apart', () => {
+    const ctx = makeCameraContext();
+    ctx.cameras.main.width = 390;
+    ctx.cameras.main.height = 844;
+    delete ctx.levelData.entanglement!.revealAtX;
+    ctx.heroes[0].x = 190;
+    ctx.heroes[0].y = 831;
+    ctx.betaHero!.x = 2361;
+    ctx.betaHero!.y = 291;
+
+    const hud = { repositionOnResize: vi.fn() } as unknown as HudController;
+    const director = new CameraDirector(ctx, hud);
+    director.setupInitialFraming(ctx.heroes[0]);
+
+    expect(ctx.cameras.main.zoom).toBeGreaterThanOrEqual(0.65);
+    expect(ctx.cameras.main.centerOn).toHaveBeenCalledWith(190, 831);
+  });
+
+  it('hands camera focus to Beta once Alpha enters their portal', () => {
+    const ctx = makeCameraContext();
+    delete ctx.levelData.entanglement!.revealAtX;
+    ctx.cameras.main.width = 390;
+    ctx.cameras.main.height = 844;
+    ctx.cameras.main.midPoint.x = 2200;
+    ctx.cameras.main.midPoint.y = 800;
+    ctx.heroes[0].x = 2271;
+    ctx.heroes[0].y = 840;
+    ctx.heroes[0].enteredPortal = true;
+    ctx.heroes[1].x = 500;
+    ctx.heroes[1].y = 300;
+    ctx.heroes[1].enteredPortal = false;
+
+    const hud = { repositionOnResize: vi.fn() } as unknown as HudController;
+    const director = new CameraDirector(ctx, hud);
+    director.updateFraming(16);
+
+    const [targetX, targetY] = (ctx.cameras.main.centerOn as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(targetX).toBeLessThan(2200);
+    expect(targetY).toBeLessThan(800);
+  });
 });

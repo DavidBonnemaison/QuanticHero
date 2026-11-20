@@ -7,7 +7,10 @@
   "height": 1100,
   "hue": "#041f19",
   "antiHue": "#22c55e",
-  "explanations": ["Solid stone, yet mostly empty space.", "What passes through without breaking?"],
+  "explanations": [
+    "Solid stone, yet mostly empty space.",
+    "What passes through without breaking?"
+  ],
   "player": {
     "position": {
       "x": 180,

@@ -38,6 +38,7 @@ export class EntanglementSystem {
     }
 
     hero.enteredPortal = true;
+    ctx.hookedTetherPylon = null;
     if (hero.body) {
       (hero.body as Phaser.Physics.Arcade.Body).enable = false;
       hero.setVelocity(0, 0);
@@ -105,13 +106,25 @@ export class EntanglementSystem {
 
     const tetherEnabled = ctx.levelData.entanglement?.tetherPhysical !== false;
 
+    if (alpha.enteredPortal || beta.enteredPortal) {
+      ctx.hookedTetherPylon = null;
+      return;
+    }
+
     const pylons = ctx.levelData.tetherPylons;
     if (pylons && pylons.length > 0) {
       if (!ctx.hookedTetherPylon) {
         const found = findHookedTetherPylon(alpha, beta, pylons);
         if (found) {
-          ctx.hookedTetherPylon = found;
-          gameEvents.emit('tether:pylon_hook', { x: found.x, y: found.y });
+          const maxLen =
+            found.maxLength ??
+            ctx.levelData.entanglement?.tetherMaxLength ??
+            PHYSICS.TETHER_DEFAULT_MAX_LENGTH;
+          const dAlpha = Math.hypot(alpha.x - found.x, alpha.y - found.y);
+          if (dAlpha <= maxLen * 0.8) {
+            ctx.hookedTetherPylon = found;
+            gameEvents.emit('tether:pylon_hook', { x: found.x, y: found.y });
+          }
         }
       }
 
@@ -120,20 +133,29 @@ export class EntanglementSystem {
           ctx.hookedTetherPylon.maxLength ??
           ctx.levelData.entanglement?.tetherMaxLength ??
           PHYSICS.TETHER_DEFAULT_MAX_LENGTH;
-        const betaBody = beta.body as Phaser.Physics.Arcade.Body | null;
-        const betaVel = betaBody?.velocity ?? { x: 0, y: 0 };
-        const constraint = resolveTetherPylonConstraint(
-          alpha,
-          beta,
-          betaVel,
-          ctx.hookedTetherPylon,
-          maxLen
+        const dAlpha = Math.hypot(
+          alpha.x - ctx.hookedTetherPylon.x,
+          alpha.y - ctx.hookedTetherPylon.y
         );
-        if (constraint.constrained) {
-          beta.x = constraint.betaPos.x;
-          beta.y = constraint.betaPos.y;
-          if (betaBody) {
-            beta.setVelocity(constraint.betaVel.x, constraint.betaVel.y);
+        if (dAlpha > maxLen * 0.85) {
+          // Release magnetic pylon hook cleanly instead of pinning Beta permanently on top of the pylon
+          ctx.hookedTetherPylon = null;
+        } else {
+          const betaBody = beta.body as Phaser.Physics.Arcade.Body | null;
+          const betaVel = betaBody?.velocity ?? { x: 0, y: 0 };
+          const constraint = resolveTetherPylonConstraint(
+            alpha,
+            beta,
+            betaVel,
+            ctx.hookedTetherPylon,
+            maxLen
+          );
+          if (constraint.constrained) {
+            beta.x = constraint.betaPos.x;
+            beta.y = constraint.betaPos.y;
+            if (betaBody) {
+              beta.setVelocity(constraint.betaVel.x, constraint.betaVel.y);
+            }
           }
         }
       }

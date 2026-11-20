@@ -152,6 +152,12 @@ export class MatterAndFieldController {
     const points =
       focused.trailPoints.length > 0 ? focused.trailPoints : [{ x: focused.x, y: focused.y }];
     const segments = buildBroglieScaffoldSegments(points, 22 * focused.upsideDown);
+    segments.push({
+      x: focused.x,
+      y: focused.y + 22 * focused.upsideDown,
+      width: 68,
+      height: 12
+    });
     if (segments.length === 0) return false;
 
     const expiresAtMs = (ctx.time?.now ?? 0) + PHYSICS.BROGLIE_SCAFFOLD_DURATION_MS;

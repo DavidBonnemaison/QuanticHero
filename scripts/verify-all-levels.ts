@@ -10,8 +10,53 @@ import {
   isMilestoneLevel,
   isNobleGasLevel
 } from '../src/generator/campaignDirector';
-import { validateAuthorGhost } from '../src/generator/simulator';
+import {
+  simulateLevelData,
+  validateAuthorGhost,
+  validateGhostNoWallPenetration
+} from '../src/generator/simulator';
 import type { LevelData } from '../src/types';
+
+export interface CampaignQuotaCounts {
+  duplicate: number;
+  phase: number;
+  matterState: number;
+  tunnel: number;
+  condense: number;
+  wormholes: number;
+  entanglement: number;
+  tetherPhysical: number;
+  gatesAndPlates: number;
+  smartArchetypeLevels: number;
+  period2DupOrPhase: number;
+  maxWidth: number;
+  over5500Count: number;
+}
+
+export const SPEC02_QUOTAS = {
+  duplicate: 25,
+  phase: 30,
+  matterState: 30,
+  tunnel: 20,
+  condense: 12,
+  wormholes: 15,
+  entanglement: 18,
+  tetherPhysical: 6,
+  gatesAndPlates: 15,
+  smartArchetypeLevels: 24,
+  period2MinRatio: 0.6,
+  maxAllowedWidth: 5500
+} as const;
+
+export const BLOCKING_POWERUP_TYPES = new Set([
+  'duplicate',
+  'speed',
+  'tunnel',
+  'condense',
+  'lowGravity',
+  'antiGravity',
+  'pauli'
+]);
 
 export interface VerificationReport {
   campaignCount: number;
@@ -20,6 +65,8 @@ export interface VerificationReport {
   milestoneCount: number;
   smartArchetypesFound: number;
   parJumpsCount: number;
+  uniqueAuthorGhosts: number;
+  quotas: CampaignQuotaCounts;
   errors: string[];
 }
 
@@ -31,6 +78,23 @@ export function verifyAllLevels(): VerificationReport {
   let milestoneCount = 0;
   let parJumpsCount = 0;
   const seenArchetypes = new Set<string>();
+  const uniqueGhosts = new Set<string>();
+
+  const quotas: CampaignQuotaCounts = {
+    duplicate: 0,
+    phase: 0,
+    matterState: 0,
+    tunnel: 0,
+    condense: 0,
+    wormholes: 0,
+    entanglement: 0,
+    tetherPhysical: 0,
+    gatesAndPlates: 0,
+    smartArchetypeLevels: 0,
+    period2DupOrPhase: 0,
+    maxWidth: 0,
+    over5500Count: 0
+  };
 
   const metadataPath = path.join(dataDir, 'levelMetadata.json');
   const metadata = fs.existsSync(metadataPath)
@@ -54,6 +118,38 @@ export function verifyAllLevels(): VerificationReport {
     if (levelData.width <= 0 || levelData.height <= 0) {
       errors.push(`Level ${z}: invalid dimensions ${levelData.width}x${levelData.height}`);
     }
+    if (levelData.width > quotas.maxWidth) {
+      quotas.maxWidth = levelData.width;
+    }
+    if (levelData.width > SPEC02_QUOTAS.maxAllowedWidth) {
+      quotas.over5500Count++;
+      errors.push(
+        `Level ${z}: width ${levelData.width}px exceeds Spec-02 max (${SPEC02_QUOTAS.maxAllowedWidth}px)`
+      );
+    }
+
+    // Track Spec-02 mechanic quotas
+    const hasDup = (levelData.particles ?? []).some((p) => p.type === 'duplicate');
+    const hasPhase = levelData.platforms.some((p) => p.phase === 'cyan' || p.phase === 'magenta');
+    const hasMatter = levelData.platforms.some((p) => p.matterState && p.matterState !== 'solid');
+    const hasTunnel = (levelData.particles ?? []).some((p) => p.type === 'tunnel');
+    const hasCondense = (levelData.particles ?? []).some((p) => p.type === 'condense');
+    const hasWormholes = (levelData.wormholes?.length ?? 0) > 0;
+    const hasEntanglement = Boolean(levelData.entanglement);
+    const hasTether = Boolean(levelData.entanglement?.tetherPhysical);
+    const hasGatesPlates =
+      (levelData.gates?.length ?? 0) > 0 && (levelData.pressurePlates?.length ?? 0) > 0;
+
+    if (hasDup) quotas.duplicate++;
+    if (hasPhase) quotas.phase++;
+    if (hasMatter) quotas.matterState++;
+    if (hasTunnel) quotas.tunnel++;
+    if (hasCondense) quotas.condense++;
+    if (hasWormholes) quotas.wormholes++;
+    if (hasEntanglement) quotas.entanglement++;
+    if (hasTether) quotas.tetherPhysical++;
+    if (hasGatesPlates) quotas.gatesAndPlates++;
+    if (z >= 3 && z <= 10 && (hasDup || hasPhase)) quotas.period2DupOrPhase++;
 
     if (levelData.meta && 'path' in levelData.meta && levelData.meta.path !== undefined) {
       errors.push(`Level ${z}: meta.path must not be present`);
@@ -71,6 +167,7 @@ export function verifyAllLevels(): VerificationReport {
 
     if (levelData.archetype) {
       seenArchetypes.add(levelData.archetype);
+      quotas.smartArchetypeLevels++;
     }
 
     const expectedPeriod = getPeriodForLevel(z).period;
@@ -81,6 +178,38 @@ export function verifyAllLevels(): VerificationReport {
     const ghostCheck = validateAuthorGhost(levelData);
     if (!ghostCheck.valid) {
       errors.push(`Level ${z}: invalid authorGhost (${ghostCheck.reason})`);
+    } else if (levelData.authorGhost) {
+      uniqueGhosts.add(levelData.authorGhost);
+    }
+
+    // Enforce dual Alpha+Beta simulation on every entangled level
+    if (hasEntanglement) {
+      const dualSim = simulateLevelData(levelData);
+      if (!dualSim.success) {
+        errors.push(
+          `Level ${z}: failed dual Alpha+Beta entanglement simulation (${dualSim.failureReason})`
+        );
+      }
+    }
+
+    // Enforce zero optional/useless blocking power-ups across all 118 levels
+    const hasBlockingPowerup = (levelData.particles ?? []).some((p) =>
+      BLOCKING_POWERUP_TYPES.has(p.type)
+    );
+    if (hasBlockingPowerup) {
+      const strippedSim = simulateLevelData({ ...levelData, particles: [] });
+      if (strippedSim.success) {
+        const types = Array.from(
+          new Set(
+            (levelData.particles ?? [])
+              .filter((p) => BLOCKING_POWERUP_TYPES.has(p.type))
+              .map((p) => p.type)
+          )
+        ).join('+');
+        errors.push(
+          `Level ${z}: blocking power-up (${types}) is optional — level still passes with particles: []`
+        );
+      }
     }
 
     if (isNobleGasLevel(z)) {
@@ -113,7 +242,6 @@ export function verifyAllLevels(): VerificationReport {
 
     // v3 Milestone & Set-piece checks
     if (z === 6) {
-      const hasDup = levelData.particles.some((p) => p.type === 'duplicate');
       const hasCracked = levelData.platforms.some((p) => p.cracked === true);
       if (!hasDup || !hasCracked) {
         errors.push('Level 6 (C): missing Super-Quanta duplicate particle or cracked platform');
@@ -164,7 +292,54 @@ export function verifyAllLevels(): VerificationReport {
     }
   }
 
-  // 2. Validate all 12 Secret Molecular levels
+  // Enforce Spec-02 global mechanic quotas
+  if (quotas.duplicate < SPEC02_QUOTAS.duplicate) {
+    errors.push(`Spec-02 quota failed: duplicate=${quotas.duplicate} < ${SPEC02_QUOTAS.duplicate}`);
+  }
+  if (quotas.phase < SPEC02_QUOTAS.phase) {
+    errors.push(`Spec-02 quota failed: phase=${quotas.phase} < ${SPEC02_QUOTAS.phase}`);
+  }
+  if (quotas.matterState < SPEC02_QUOTAS.matterState) {
+    errors.push(
+      `Spec-02 quota failed: matterState=${quotas.matterState} < ${SPEC02_QUOTAS.matterState}`
+    );
+  }
+  if (quotas.tunnel < SPEC02_QUOTAS.tunnel) {
+    errors.push(`Spec-02 quota failed: tunnel=${quotas.tunnel} < ${SPEC02_QUOTAS.tunnel}`);
+  }
+  if (quotas.condense < SPEC02_QUOTAS.condense) {
+    errors.push(`Spec-02 quota failed: condense=${quotas.condense} < ${SPEC02_QUOTAS.condense}`);
+  }
+  if (quotas.wormholes < SPEC02_QUOTAS.wormholes) {
+    errors.push(`Spec-02 quota failed: wormholes=${quotas.wormholes} < ${SPEC02_QUOTAS.wormholes}`);
+  }
+  if (quotas.entanglement < SPEC02_QUOTAS.entanglement) {
+    errors.push(
+      `Spec-02 quota failed: entanglement=${quotas.entanglement} < ${SPEC02_QUOTAS.entanglement}`
+    );
+  }
+  if (quotas.tetherPhysical < SPEC02_QUOTAS.tetherPhysical) {
+    errors.push(
+      `Spec-02 quota failed: tetherPhysical=${quotas.tetherPhysical} < ${SPEC02_QUOTAS.tetherPhysical}`
+    );
+  }
+  if (quotas.gatesAndPlates < SPEC02_QUOTAS.gatesAndPlates) {
+    errors.push(
+      `Spec-02 quota failed: gatesAndPlates=${quotas.gatesAndPlates} < ${SPEC02_QUOTAS.gatesAndPlates}`
+    );
+  }
+  if (quotas.smartArchetypeLevels < SPEC02_QUOTAS.smartArchetypeLevels) {
+    errors.push(
+      `Spec-02 quota failed: smartArchetypeLevels=${quotas.smartArchetypeLevels} < ${SPEC02_QUOTAS.smartArchetypeLevels}`
+    );
+  }
+  if (quotas.period2DupOrPhase / 8 < SPEC02_QUOTAS.period2MinRatio) {
+    errors.push(
+      `Spec-02 Period 2 density failed: ${quotas.period2DupOrPhase}/8 < ${SPEC02_QUOTAS.period2MinRatio * 100}%`
+    );
+  }
+
+  // 2. Validate all 12 Secret Molecular levels (real simulated ghosts, zero wall penetration)
   let moleculeCount = 0;
   for (const mol of SECRET_MOLECULES) {
     moleculeCount++;
@@ -176,6 +351,18 @@ export function verifyAllLevels(): VerificationReport {
     if (!ghostCheck.valid) {
       errors.push(`Molecule ${mol.id}: invalid authorGhost (${ghostCheck.reason})`);
     }
+    const wallCheck = validateGhostNoWallPenetration(data);
+    if (!wallCheck.valid) {
+      errors.push(`Molecule ${mol.id}: ghost wall penetration (${wallCheck.reason})`);
+    }
+    const sim = simulateLevelData(data);
+    if (!sim.success) {
+      errors.push(`Molecule ${mol.id}: failed real physics simulation (${sim.failureReason})`);
+    }
+  }
+
+  if (uniqueGhosts.size < 110) {
+    errors.push(`Topography variety failed: uniqueAuthorGhosts=${uniqueGhosts.size}/118 < 110`);
   }
 
   return {
@@ -185,6 +372,8 @@ export function verifyAllLevels(): VerificationReport {
     milestoneCount,
     smartArchetypesFound,
     parJumpsCount,
+    uniqueAuthorGhosts: uniqueGhosts.size,
+    quotas,
     errors
   };
 }
@@ -195,14 +384,28 @@ function main() {
   console.log('===============================================================');
 
   const report = verifyAllLevels();
+  const q = report.quotas;
   console.log(`Campaign Levels Verified : ${report.campaignCount}/118`);
+  console.log(`Unique Topographies/Ghost: ${report.uniqueAuthorGhosts}/118 (min 110)`);
   console.log(`Noble Gas Playgrounds    : ${report.nobleGasCount}/${NOBLE_GAS_LEVELS.length}`);
   console.log(
     `Milestone Discovery Boxes: ${report.milestoneCount}/${MILESTONE_LEVEL_NUMBERS.length}`
   );
-  console.log(`Smart Archetypes Wired   : ${report.smartArchetypesFound}/6`);
+  console.log(`Smart Archetypes Wired   : ${report.smartArchetypesFound}/6 (${q.smartArchetypeLevels} levels >= ${SPEC02_QUOTAS.smartArchetypeLevels})`);
   console.log(`parJumps Configured      : ${report.parJumpsCount}/118`);
-  console.log(`Secret Molecules Verified: ${report.moleculeCount}/12`);
+  console.log(`Secret Molecules Verified: ${report.moleculeCount}/12 (100% real simulated ghosts)`);
+  console.log('---------------------------------------------------------------');
+  console.log(' Spec-02 Mechanic Quotas & Density:');
+  console.log(`  duplicate        : ${q.duplicate} (min ${SPEC02_QUOTAS.duplicate})`);
+  console.log(`  phase            : ${q.phase} (min ${SPEC02_QUOTAS.phase})`);
+  console.log(`  matterState      : ${q.matterState} (min ${SPEC02_QUOTAS.matterState})`);
+  console.log(`  tunnel           : ${q.tunnel} (min ${SPEC02_QUOTAS.tunnel})`);
+  console.log(`  condense         : ${q.condense} (min ${SPEC02_QUOTAS.condense})`);
+  console.log(`  wormholes        : ${q.wormholes} (min ${SPEC02_QUOTAS.wormholes})`);
+  console.log(`  entanglement     : ${q.entanglement} (min ${SPEC02_QUOTAS.entanglement}) [tetherPhysical: ${q.tetherPhysical} >= ${SPEC02_QUOTAS.tetherPhysical}]`);
+  console.log(`  gates + plates   : ${q.gatesAndPlates} (min ${SPEC02_QUOTAS.gatesAndPlates})`);
+  console.log(`  Period 2 dup/phs : ${q.period2DupOrPhase}/8 (${Math.round((q.period2DupOrPhase / 8) * 100)}% >= 60%)`);
+  console.log(`  Max level width  : ${q.maxWidth}px (limit <= ${SPEC02_QUOTAS.maxAllowedWidth}px, violations: ${q.over5500Count})`);
 
   if (report.errors.length > 0) {
     console.error('\nVerification FAILED with errors:');

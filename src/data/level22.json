@@ -7,7 +7,10 @@
   "height": 1100,
   "hue": "#121929",
   "antiHue": "#a5f3fc",
-  "explanations": ["Up and down have traded places.", "Fall toward the sky."],
+  "explanations": [
+    "Up and down have traded places.",
+    "Fall toward the sky."
+  ],
   "player": {
     "position": {
       "x": 180,

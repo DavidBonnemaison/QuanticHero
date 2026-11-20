@@ -7,6 +7,13 @@ import {
 } from '../mechanics/quantumMechanics';
 import { PHYSICS } from '../physics/constants';
 import {
+  computeWormholeExit,
+  getPlasmaBounceVelocity,
+  isHeroInWormholeInlet,
+  isHeroOverlappingRect,
+  stepGasUpdraft
+} from '../physics/matterStates';
+import {
   type MovingPlatformSimState,
   applyLowGravity,
   clampFallVelocity,
@@ -21,12 +28,14 @@ import { type GhostFrame, compressTrajectory, decompressTrajectory } from '../to
 import type {
   CollapseConfig,
   Door,
+  EntanglementConfig,
   Gate,
   LevelData,
   Particle,
   Platform,
   PressurePlate,
   Spike,
+  TetherPylon,
   Wormhole
 } from '../types';
 
@@ -65,6 +74,15 @@ export interface SimHeroState {
   isDiving?: boolean;
   lastDiveEndTimeMs?: number;
   waveDashUntilMs?: number;
+  hasCondenseAbility?: boolean;
+  broglieScaffolds?: Array<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    expiresAtMs: number;
+  }>;
+  wormholeCooldownUntil?: number;
 }
 
 export interface SimInput {
@@ -72,6 +90,7 @@ export interface SimInput {
   right: boolean;
   jump: boolean;
   dive?: boolean;
+  condense?: boolean;
 }
 
 export interface SimWorld {
@@ -87,6 +106,8 @@ export interface SimWorld {
   bounceWalls?: boolean;
   wormholes?: Wormhole[];
   screenWrap?: boolean | 'horizontal' | 'vertical' | 'both';
+  entanglement?: EntanglementConfig;
+  tetherPylons?: TetherPylon[];
 }
 
 export interface TrajectoryPoint {
@@ -387,10 +408,34 @@ export function stepSimulation(
           next.hasClone = true;
         } else if (part.type === 'timeDilation') {
           next.timeDilationUntilMs = next.timeMs + PHYSICS.TIME_DILATION_DURATION_MS;
+        } else if (part.type === 'condense') {
+          next.hasCondenseAbility = true;
         }
       }
     }
   }
+
+  // 4b. De Broglie wave crystallization (solidify trail into temporary scaffold mid-air)
+  let activeScaffolds = (hero.broglieScaffolds ?? []).filter((s) => next.timeMs < s.expiresAtMs);
+  if (input.condense && next.hasCondenseAbility && !next.touchingGround) {
+    const scaffoldWidth = 72;
+    const scaffoldHeight = 14;
+    const scaffoldY =
+      next.upsideDown === 1
+        ? newY + halfH + 2
+        : newY - halfH - scaffoldHeight - 2;
+    activeScaffolds = [
+      ...activeScaffolds,
+      {
+        x: newX - scaffoldWidth / 2,
+        y: scaffoldY,
+        width: scaffoldWidth,
+        height: scaffoldHeight,
+        expiresAtMs: next.timeMs + PHYSICS.BROGLIE_SCAFFOLD_DURATION_MS
+      }
+    ];
+  }
+  next.broglieScaffolds = activeScaffolds;
 
   // Update gravitational collapse offset (slowed during time dilation)
   if (world.collapse) {
@@ -475,7 +520,7 @@ export function stepSimulation(
   for (let idx = 0; idx < world.platforms.length; idx++) {
     if (idx === tunneledPlatformIdx) continue;
     const p = getEffectivePlatform(world.platforms[idx], idx);
-    if (p.kind === 'wall' || p.height < 60) continue;
+    if (p.kind === 'wall' || p.matterState === 'gas' || p.ephemeral || p.height < 60) continue;
     if (p.phase && next.currentPhase && p.phase !== next.currentPhase) continue;
     if (p.decayMs && p.decayMs > 0 && nextDecayStates[idx]?.collapsed) continue;
     const vOverlap = newY + halfH > p.y + 8 && newY - halfH < p.y + p.height - 8;
@@ -502,7 +547,7 @@ export function stepSimulation(
 
     for (let idx = 0; idx < world.platforms.length; idx++) {
       const p = getEffectivePlatform(world.platforms[idx], idx);
-      if (p.kind === 'wall') continue;
+      if (p.kind === 'wall' || p.matterState === 'gas') continue;
 
       // Phase Shift filter: non-active phase platforms are intangible
       if (p.phase && next.currentPhase && p.phase !== next.currentPhase) {
@@ -529,9 +574,15 @@ export function stepSimulation(
           nextBottom >= p.y - 2 - Math.abs(mpDy)
         ) {
           newY = p.y - halfH;
-          next.vy = 0;
-          landed = true;
           landedPlatformIndex = idx;
+          if (p.matterState === 'plasma') {
+            next.vy = getPlasmaBounceVelocity(next.upsideDown);
+            next.isDiving = false;
+            landed = false;
+          } else {
+            next.vy = 0;
+            landed = true;
+          }
 
           // Trigger decay platform on contact
           if (
@@ -553,7 +604,7 @@ export function stepSimulation(
 
     for (let idx = 0; idx < world.platforms.length; idx++) {
       const p = getEffectivePlatform(world.platforms[idx], idx);
-      if (p.kind === 'wall') continue;
+      if (p.kind === 'wall' || p.matterState === 'gas') continue;
 
       if (p.phase && next.currentPhase && p.phase !== next.currentPhase) {
         continue;
@@ -577,9 +628,15 @@ export function stepSimulation(
           nextTop <= pBottom + 2 + Math.abs(mpDy)
         ) {
           newY = pBottom + halfH;
-          next.vy = 0;
-          landed = true;
           landedPlatformIndex = idx;
+          if (p.matterState === 'plasma') {
+            next.vy = getPlasmaBounceVelocity(next.upsideDown);
+            next.isDiving = false;
+            landed = false;
+          } else {
+            next.vy = 0;
+            landed = true;
+          }
           if (
             p.decayMs &&
             p.decayMs > 0 &&
@@ -590,6 +647,114 @@ export function stepSimulation(
           }
           break;
         }
+      }
+    }
+  }
+
+  // 6b. Landing on active de Broglie crystallized scaffolds
+  if (!landed && activeScaffolds.length > 0) {
+    const heroLeft = newX - halfW;
+    const heroRight = newX + halfW;
+    if (next.upsideDown === 1) {
+      const prevBottom = hero.y + halfH;
+      const nextBottom = newY + halfH;
+      for (const sc of activeScaffolds) {
+        if (
+          heroRight > sc.x &&
+          heroLeft < sc.x + sc.width &&
+          next.vy >= 0 &&
+          prevBottom <= sc.y + 12 &&
+          nextBottom >= sc.y - 2
+        ) {
+          newY = sc.y - halfH;
+          next.vy = 0;
+          landed = true;
+          break;
+        }
+      }
+    } else {
+      const prevTop = hero.y - halfH;
+      const nextTop = newY - halfH;
+      for (const sc of activeScaffolds) {
+        const scBottom = sc.y + sc.height;
+        if (
+          heroRight > sc.x &&
+          heroLeft < sc.x + sc.width &&
+          next.vy <= 0 &&
+          prevTop >= scBottom - 12 &&
+          nextTop <= scBottom + 2
+        ) {
+          newY = scBottom + halfH;
+          next.vy = 0;
+          landed = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // 6c. Living Floor (inverted_gravity + allowHeroCollision): Alpha & Beta meet sole-to-sole over open chasms
+  if (
+    !landed &&
+    world.entanglement?.mode === 'inverted_gravity' &&
+    world.entanglement?.allowHeroCollision
+  ) {
+    const hasPlatformInColumn = world.platforms.some((p) => {
+      if (p.kind === 'wall' || p.matterState === 'gas' || p.ephemeral) return false;
+      if (newX + halfW <= p.x || newX - halfW >= p.x + p.width) return false;
+      return next.upsideDown === 1
+        ? p.y >= newY + halfH && p.y <= world.height - 60
+        : p.y + p.height <= newY - halfH && p.y + p.height >= 60;
+    });
+    if (!hasPlatformInColumn) {
+      if (
+        next.upsideDown === 1 &&
+        next.vy >= 0 &&
+        newY >= world.height * 0.45 &&
+        newY <= world.height - 60
+      ) {
+        next.vy = 0;
+        landed = true;
+      } else if (
+        next.upsideDown === -1 &&
+        next.vy <= 0 &&
+        newY <= world.height * 0.55 &&
+        newY >= 60
+      ) {
+        next.vy = 0;
+        landed = true;
+      }
+    }
+  }
+
+  // 6d. Noble-gas updraft volumes (matterState === 'gas')
+  for (let idx = 0; idx < world.platforms.length; idx++) {
+    const p = getEffectivePlatform(world.platforms[idx], idx);
+    if (p.matterState !== 'gas') continue;
+    if (isHeroOverlappingRect(newX, newY, p, false)) {
+      next.vy = stepGasUpdraft(next.vy, dt, next.upsideDown);
+      landed = false;
+      break;
+    }
+  }
+
+  // 6e. Momentum-conserving wormholes
+  if (
+    world.wormholes &&
+    world.wormholes.length > 0 &&
+    next.timeMs >= (next.wormholeCooldownUntil ?? 0)
+  ) {
+    for (const wh of world.wormholes) {
+      if (isHeroInWormholeInlet(newX, newY, wh)) {
+        const exit = computeWormholeExit(next.vx, next.vy, wh);
+        newX = exit.x;
+        newY = exit.y;
+        next.vx = exit.vx;
+        next.vy = exit.vy;
+        next.isDiving = false;
+        landed = false;
+        next.wormholeCooldownUntil = next.timeMs + PHYSICS.WORMHOLE_COOLDOWN_MS;
+        break;
       }
     }
   }
@@ -606,7 +771,7 @@ export function stepSimulation(
  * Checks if hero is safely grounded on a specific platform.
  */
 export function isHeroOnPlatform(hero: SimHeroState, platform: Platform): boolean {
-  if (!hero.touchingGround) return false;
+  if (!hero.touchingGround && platform.matterState !== 'plasma') return false;
   let effectivePlatform = platform;
   if (platform.movesTo && hero.movingPlatforms) {
     const mp = Object.values(hero.movingPlatforms).find(
@@ -637,9 +802,10 @@ export function simulatePlatformTransition(
   toPlatform: Platform,
   world: SimWorld,
   maxSteps = 600
-): { success: boolean; history: SimHeroState[]; finalState: SimHeroState } {
+): { success: boolean; history: SimHeroState[]; inputs: SimInput[]; finalState: SimHeroState } {
   let current = { ...startState };
   const history: SimHeroState[] = [current];
+  const inputs: SimInput[] = [];
 
   // Target landing center
   const targetCenterX = toPlatform.x + toPlatform.width / 2;
@@ -651,9 +817,39 @@ export function simulatePlatformTransition(
 
   const hasBounceWall = world.platforms.some((p) => p.kind === 'wall');
   const needsWallBounce = hasBounceWall && fromPlatform.y - toPlatform.y > 135;
+  const toPlatIdx = world.platforms.indexOf(toPlatform);
+
+  // Detect wormhole bridging fromPlatform -> toPlatform
+  const bridgeWormhole = (world.wormholes ?? []).find((wh) => {
+    const inNearFrom =
+      wh.inX >= fromPlatform.x - 140 &&
+      wh.inX <= fromPlatform.x + fromPlatform.width + 140 &&
+      Math.abs(wh.inY - fromPlatform.y) <= 140;
+    const outNearTo =
+      wh.outX >= toPlatform.x - 180 &&
+      wh.outX <= toPlatform.x + toPlatform.width + 180 &&
+      Math.abs(wh.outY - toPlatform.y) <= 180;
+    return inNearFrom && outNearTo;
+  });
+
+  // Detect tall gas updraft column vertically bridging fromPlatform and elevated toPlatform
+  const bridgeGas =
+    !needsWallBounce && fromPlatform.y - toPlatform.y > 90
+      ? world.platforms.find((p) => {
+          if (p.matterState !== 'gas' || p.height < 100) return false;
+          const minX = Math.min(fromPlatform.x, toPlatform.x) - 40;
+          const maxX = Math.max(fromPlatform.x + fromPlatform.width, toPlatform.x + toPlatform.width) + 40;
+          const vOverlap = p.y <= fromPlatform.y && p.y + p.height >= toPlatform.y;
+          return vOverlap && p.x + p.width >= minX && p.x <= maxX;
+        })
+      : undefined;
+
   let wallBounced = false;
-  let jumped = false;
+  let jumped = fromPlatform.matterState === 'plasma' && !current.touchingGround;
   let settled = false;
+  let usedWormhole = false;
+  let lastCondenseMs = Number.NEGATIVE_INFINITY;
+  let condenseCount = 0;
 
   for (let step = 0; step < maxSteps; step++) {
     const input: SimInput = { left: false, right: false, jump: false };
@@ -768,6 +964,14 @@ export function simulatePlatformTransition(
       }
     } else {
       // Phase 2: In-flight steering towards target
+      if (current.wormholeCooldownUntil && current.wormholeCooldownUntil > current.timeMs) {
+        usedWormhole = true;
+      }
+
+      if (toPlatform.matterState === 'plasma' && current.groundedPlatformIndex === toPlatIdx) {
+        return { success: true, history, inputs, finalState: current };
+      }
+
       if (current.touchingGround && isHeroOnPlatform(current, toPlatform)) {
         // Landed on target platform! Settle towards its center
         const distToCenter = liveTargetCenterX - current.x;
@@ -777,6 +981,20 @@ export function simulatePlatformTransition(
         } else {
           settled = true;
         }
+      } else if (bridgeWormhole && !usedWormhole) {
+        // Steer into bridging wormhole inlet
+        const whDistX = bridgeWormhole.inX - current.x;
+        if (whDistX > 6) input.right = true;
+        else if (whDistX < -6) input.left = true;
+        if (current.touchingGround && bridgeWormhole.inY < current.y - 16) {
+          input.jump = true;
+        }
+      } else if (bridgeGas && current.y + halfH > liveTo.y - 6) {
+        // Ride gas updraft column until above target platform
+        const gasCenterX = bridgeGas.x + bridgeGas.width / 2;
+        const gasDistX = gasCenterX - current.x;
+        if (gasDistX > 8) input.right = true;
+        else if (gasDistX < -8) input.left = true;
       } else if (usedPauliChasm && !current.touchingGround) {
         // Ballistic Pauli arc: do not steer with arrow keys, let momentum carry hero across the chasm
         input.right = false;
@@ -786,7 +1004,7 @@ export function simulatePlatformTransition(
         if (isTargetRight) input.right = true;
         else input.left = true;
       } else {
-        // In air: steer towards target
+        // In air (or on a crystallized de Broglie scaffold): steer towards target
         const dist = liveTargetCenterX - current.x;
         // If we are over the target platform and moving fast, brake
         const overTarget =
@@ -798,6 +1016,36 @@ export function simulatePlatformTransition(
         } else {
           if (dist > 5) input.right = true;
           else if (dist < -5) input.left = true;
+        }
+
+        // De Broglie wave crystallization over wide chasms
+        if (current.hasCondenseAbility && horizontalGap > 240 && !overTarget) {
+          const overFrom =
+            current.x + halfW > liveFrom.x && current.x - halfW < liveFrom.x + liveFrom.width;
+          if (
+            !current.touchingGround &&
+            !overFrom &&
+            condenseCount < 2 &&
+            current.timeMs - lastCondenseMs > 350 &&
+            current.vy * current.upsideDown > 40
+          ) {
+            input.condense = true;
+            lastCondenseMs = current.timeMs;
+            condenseCount++;
+          } else if (current.touchingGround && !overFrom) {
+            // Landed on a crystallized de Broglie scaffold -> leap towards target
+            input.jump = true;
+          }
+        }
+
+        // Living Floor sole-to-sole ascent towards elevated target platform
+        if (
+          world.entanglement?.mode === 'inverted_gravity' &&
+          world.entanglement?.allowHeroCollision &&
+          current.touchingGround &&
+          current.y > liveTo.y
+        ) {
+          input.jump = true;
         }
       }
     }
@@ -829,16 +1077,21 @@ export function simulatePlatformTransition(
       }
     }
 
+    inputs.push(input);
     current = stepSimulation(current, input, world);
     history.push(current);
 
+    if (toPlatform.matterState === 'plasma' && current.groundedPlatformIndex === toPlatIdx) {
+      return { success: true, history, inputs, finalState: current };
+    }
+
     if (settled && current.touchingGround && isHeroOnPlatform(current, toPlatform)) {
-      return { success: true, history, finalState: current };
+      return { success: true, history, inputs, finalState: current };
     }
 
     // Abort if hero falls below screen or dies in spikes/collapse
     if (current.y > world.height + 50) {
-      return { success: false, history, finalState: current };
+      return { success: false, history, inputs, finalState: current };
     }
 
     if (world.collapse) {
@@ -847,7 +1100,7 @@ export function simulatePlatformTransition(
         current.collapseOffsetY ?? 0
       );
       if (current.y - halfH <= topSpikeBottom || current.y + halfH >= bottomSpikeTop) {
-        return { success: false, history, finalState: current };
+        return { success: false, history, inputs, finalState: current };
       }
     }
 
@@ -861,18 +1114,103 @@ export function simulatePlatformTransition(
           current.y + halfH > s.y &&
           current.y - halfH < s.y + sh
         ) {
-          return { success: false, history, finalState: current };
+          return { success: false, history, inputs, finalState: current };
         }
       }
     }
   }
 
   const success = isHeroOnPlatform(current, toPlatform);
-  return { success, history, finalState: current };
+  return { success, history, inputs, finalState: current };
+}
+
+function hasHeroSupportAtPosition(
+  x: number,
+  y: number,
+  upsideDown: number,
+  platforms: Platform[]
+): boolean {
+  const halfW = PHYSICS.HERO_WIDTH / 2;
+  const halfH = PHYSICS.HERO_HEIGHT / 2;
+  return platforms.some((p) => {
+    if (p.kind === 'wall' || p.matterState === 'gas' || p.ephemeral) return false;
+    const onX = x + halfW > p.x && x - halfW < p.x + p.width;
+    if (!onX) return false;
+    if (upsideDown === 1) {
+      const drop = p.y - (y + halfH);
+      return drop >= -24 && drop <= 80;
+    }
+    const rise = y - halfH - (p.y + p.height);
+    return rise >= -24 && rise <= 80;
+  });
+}
+
+function transformInputForBeta(input: SimInput, mode: EntanglementConfig['mode']): SimInput {
+  if (mode === 'mirror_x' || mode === 'mirror_and_gravity') {
+    return {
+      ...input,
+      left: input.right,
+      right: input.left
+    };
+  }
+  return { ...input };
+}
+
+function checkHeroHazards(hero: SimHeroState, world: SimWorld): string | null {
+  const halfW = PHYSICS.HERO_WIDTH / 2;
+  const halfH = PHYSICS.HERO_HEIGHT / 2;
+  const wrapH =
+    world.screenWrap === true ||
+    world.screenWrap === 'horizontal' ||
+    world.screenWrap === 'both';
+  const wrapV =
+    world.screenWrap === true ||
+    world.screenWrap === 'vertical' ||
+    world.screenWrap === 'both';
+
+  if (!wrapV && (hero.y > world.height + 60 || hero.y < -60)) {
+    return `fell out of vertical bounds (y=${Math.round(hero.y)})`;
+  }
+  if (!wrapH && (hero.x < -60 || hero.x > world.width + 60)) {
+    return `went out of horizontal bounds (x=${Math.round(hero.x)})`;
+  }
+
+  if (world.collapse) {
+    const { topSpikeBottom, bottomSpikeTop } = getCollapseBounds(
+      world.height,
+      hero.collapseOffsetY ?? 0
+    );
+    if (hero.y - halfH <= topSpikeBottom || hero.y + halfH >= bottomSpikeTop) {
+      return 'crushed by gravitational collapse';
+    }
+  }
+
+  if (world.spikes && world.spikes.length > 0) {
+    for (const s of world.spikes) {
+      const sw = s.width ?? 32;
+      const sh = s.height ?? 32;
+      if (
+        hero.x + halfW > s.x &&
+        hero.x - halfW < s.x + sw &&
+        hero.y + halfH > s.y &&
+        hero.y - halfH < s.y + sh
+      ) {
+        return `hit spike at (${s.x}, ${s.y})`;
+      }
+    }
+  }
+
+  return null;
+}
+
+function isHeroAtPortal(hero: SimHeroState, portal: Door): boolean {
+  return Math.abs(hero.x - portal.x) <= 56 && Math.abs(hero.y - portal.y) <= 96;
 }
 
 /**
  * Simulates a full level playthrough from player start to the door across a DAG sequence of platforms.
+ * When `world.entanglement` is configured, also simulates Beta in parallel using real transformed inputs,
+ * verifying Beta's spawn support, hazard/boundary safety, and portal arrival.
  */
 export function simulateFullLevel(
   world: SimWorld,
@@ -887,29 +1225,92 @@ export function simulateFullLevel(
   let success = true;
   let failureReason: string | undefined;
 
-  // Traverse through each platform leg in the planned path
-  for (let i = 1; i < platformPath.length; i++) {
-    const currentPlatform = platformPath[i - 1];
-    const targetPlatform = platformPath[i];
+  // Entanglement parallel Beta setup
+  const entanglement = world.entanglement;
+  let beta: SimHeroState | null = null;
+  let betaEnteredPortal = false;
+  let betaDoor: Door = door;
 
-    const legResult = simulatePlatformTransition(hero, currentPlatform, targetPlatform, world);
-    if (!legResult.success) {
+  if (entanglement) {
+    const betaUpsideDown =
+      entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity'
+        ? -1
+        : 1;
+    const betaStartX = entanglement.betaSpawn
+      ? entanglement.betaSpawn.x
+      : world.width - startPos.x;
+    const betaStartY = entanglement.betaSpawn ? entanglement.betaSpawn.y : startPos.y;
+    const isDualPortal = entanglement.portalMode === 'dual' || Boolean(entanglement.betaDoor);
+    betaDoor = isDualPortal && entanglement.betaDoor ? entanglement.betaDoor : door;
+
+    if (!hasHeroSupportAtPosition(betaStartX, betaStartY, betaUpsideDown, world.platforms)) {
       success = false;
-      failureReason = `Failed to transition from platform #${i - 1} to platform #${i}`;
-      allStates.push(...legResult.history.slice(1));
-      hero = legResult.finalState;
-      break;
+      failureReason = `Beta spawn at (${Math.round(betaStartX)}, ${Math.round(betaStartY)}) has no supporting platform`;
+    } else {
+      beta = createInitialHeroState(betaStartX, betaStartY, velocityMultiplier, betaUpsideDown);
+      if (isHeroAtPortal(beta, betaDoor)) {
+        betaEnteredPortal = true;
+      }
     }
-
-    allStates.push(...legResult.history.slice(1));
-    hero = legResult.finalState;
   }
 
-  // Final step: Move to door if not already there
+  const stepBetaWithAlphaInput = (
+    alphaInput: SimInput,
+    alphaState: SimHeroState
+  ): boolean => {
+    if (!entanglement || !beta || betaEnteredPortal) return true;
+    const betaInput = transformInputForBeta(alphaInput, entanglement.mode);
+    // Sync global world state (gates & phase) with Alpha just like GameScene.ts
+    beta.activeGates = alphaState.activeGates;
+    beta = stepSimulation(beta, betaInput, world);
+    beta.currentPhase = alphaState.currentPhase;
+
+    const hazard = checkHeroHazards(beta, world);
+    if (hazard) {
+      success = false;
+      failureReason = `Beta ${hazard}`;
+      return false;
+    }
+    if (isHeroAtPortal(beta, betaDoor)) {
+      betaEnteredPortal = true;
+    }
+    return true;
+  };
+
+  // Traverse through each platform leg in the planned path
+  if (success) {
+    for (let i = 1; i < platformPath.length; i++) {
+      const currentPlatform = platformPath[i - 1];
+      const targetPlatform = platformPath[i];
+
+      const legResult = simulatePlatformTransition(hero, currentPlatform, targetPlatform, world);
+      if (!legResult.success) {
+        success = false;
+        failureReason = `Failed to transition from platform #${i - 1} to platform #${i}`;
+        allStates.push(...legResult.history.slice(1));
+        hero = legResult.finalState;
+        break;
+      }
+
+      // Replay exact inputs on Beta in parallel
+      for (let k = 0; k < legResult.inputs.length; k++) {
+        const alphaStep = legResult.history[k + 1] ?? legResult.finalState;
+        if (!stepBetaWithAlphaInput(legResult.inputs[k], alphaStep)) {
+          break;
+        }
+      }
+
+      allStates.push(...legResult.history.slice(1));
+      hero = legResult.finalState;
+      if (!success) break;
+    }
+  }
+
+  // Final step: Move Alpha to door if not already there
   if (success) {
     const doorTargetX = door.x;
     const halfH = PHYSICS.HERO_HEIGHT / 2;
-    for (let step = 0; step < 120; step++) {
+    for (let step = 0; step < 420; step++) {
       const dist = doorTargetX - hero.x;
       if (Math.abs(dist) < 15) {
         break;
@@ -917,6 +1318,10 @@ export function simulateFullLevel(
       const input: SimInput = { left: dist < 0, right: dist > 0, jump: false };
       hero = stepSimulation(hero, input, world);
       allStates.push(hero);
+
+      if (!stepBetaWithAlphaInput(input, hero)) {
+        break;
+      }
 
       if (world.collapse) {
         const { topSpikeBottom, bottomSpikeTop } = getCollapseBounds(
@@ -933,6 +1338,38 @@ export function simulateFullLevel(
     if (success && Math.abs(doorTargetX - hero.x) >= 20) {
       success = false;
       failureReason = 'Blocked before reaching door';
+    }
+  }
+
+  // Final step for Beta: once Alpha is docked at its portal, guide Beta into betaDoor if not yet docked
+  if (success && entanglement && beta && !betaEnteredPortal) {
+    for (let step = 0; step < 220; step++) {
+      if (isHeroAtPortal(beta, betaDoor)) {
+        betaEnteredPortal = true;
+        break;
+      }
+      const dist = betaDoor.x - beta.x;
+      const betaDirectInput: SimInput = {
+        left: dist < -8,
+        right: dist > 8,
+        jump: false
+      };
+      beta.activeGates = hero.activeGates;
+      beta = stepSimulation(beta, betaDirectInput, world);
+      const hazard = checkHeroHazards(beta, world);
+      if (hazard) {
+        success = false;
+        failureReason = `Beta ${hazard} while approaching portal`;
+        break;
+      }
+      if (isHeroAtPortal(beta, betaDoor)) {
+        betaEnteredPortal = true;
+        break;
+      }
+    }
+    if (success && !betaEnteredPortal) {
+      success = false;
+      failureReason = `Beta failed to reach portal at (${Math.round(betaDoor.x)}, ${Math.round(betaDoor.y)}) — ended at (${Math.round(beta.x)}, ${Math.round(beta.y)})`;
     }
   }
 
@@ -1008,6 +1445,45 @@ export function validateAuthorGhost(levelData: LevelData): GhostValidationResult
 }
 
 /**
+ * Validates that no authorGhost frame strictly penetrates a solid wall or opaque platform
+ * (ignoring pass-through gas/liquid/phase/ephemeral/moving platforms and thin tunnelable walls when tunnel is present).
+ */
+export function validateGhostNoWallPenetration(levelData: LevelData): {
+  valid: boolean;
+  reason?: string;
+} {
+  if (!levelData.authorGhost || !levelData.authorGhost.startsWith('v1|')) {
+    return { valid: false, reason: 'Missing authorGhost' };
+  }
+  const frames = decompressTrajectory(levelData.authorGhost);
+  const hasTunnel = (levelData.particles ?? []).some((p) => p.type === 'tunnel');
+  const solidObstacles = levelData.platforms.filter((p) => {
+    if (p.matterState === 'gas' || p.matterState === 'liquid') return false;
+    if (p.phase || p.ephemeral || p.movesTo || (p.decayMs ?? 0) > 0) return false;
+    if (hasTunnel && p.width <= 80 && p.height >= 100 && p.kind !== 'wall') return false;
+    return p.kind === 'wall' || p.height >= 60;
+  });
+
+  const inset = 4;
+  for (const frame of frames) {
+    for (const obs of solidObstacles) {
+      if (
+        frame.x > obs.x + inset &&
+        frame.x < obs.x + obs.width - inset &&
+        frame.y > obs.y + inset &&
+        frame.y < obs.y + obs.height - inset
+      ) {
+        return {
+          valid: false,
+          reason: `Ghost frame at (${frame.x}, ${frame.y}) penetrates solid obstacle at (${obs.x}, ${obs.y}, ${obs.width}x${obs.height})`
+        };
+      }
+    }
+  }
+  return { valid: true };
+}
+
+/**
  * Simulates an arbitrary LevelData (campaign JSON or secret molecule) from player.position to door.
  */
 export function simulateLevelData(levelData: LevelData): SimulationResult {
@@ -1023,47 +1499,195 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
     collapse: levelData.collapse,
     wormholes: levelData.wormholes,
     screenWrap: levelData.screenWrap,
+    entanglement: levelData.entanglement,
+    tetherPylons: levelData.tetherPylons,
     bounceWalls: true
   };
 
   const walkable = levelData.platforms.filter(
-    (p) => p.kind !== 'wall' && !(p.width <= 40 && p.height >= 100)
+    (p) =>
+      p.kind !== 'wall' &&
+      p.matterState !== 'gas' &&
+      !p.ephemeral &&
+      !(p.width <= 80 && p.height >= 100)
   );
   const startX = levelData.player.position.x;
   const startY = levelData.player.position.y;
   const doorX = levelData.door.x;
   const doorY = levelData.door.y;
 
-  // Pick starting platform closest to player.position
-  const sortedByStart = [...walkable].sort((a, b) => {
-    const da = Math.hypot(startX - (a.x + a.width / 2), startY - a.y);
-    const db = Math.hypot(startX - (b.x + b.width / 2), startY - b.y);
-    return da - db;
+  // Pick starting platform directly supporting player.position, falling back to closest
+  const heroFeetY = startY + PHYSICS.HERO_HEIGHT / 2;
+  const underPlayer = walkable.filter(
+    (p) => startX >= p.x - 16 && startX <= p.x + p.width + 16 && Math.abs(p.y - heroFeetY) <= 45
+  );
+  const startPlat =
+    (underPlayer.length > 0 ? underPlayer : walkable).sort((a, b) => {
+      const da = Math.hypot(startX - (a.x + a.width / 2), startY - a.y);
+      const db = Math.hypot(startX - (b.x + b.width / 2), startY - b.y);
+      return da - db;
+    })[0];
+
+  const underDoor = walkable.filter(
+    (p) => doorX >= p.x - 16 && doorX <= p.x + p.width + 16 && Math.abs(p.y - doorY) <= 80
+  );
+  const doorPlat =
+    (underDoor.length > 0 ? underDoor : walkable).sort((a, b) => {
+      const da = Math.hypot(doorX - (a.x + a.width / 2), doorY - a.y);
+      const db = Math.hypot(doorX - (b.x + b.width / 2), doorY - b.y);
+      return da - db;
+    })[0];
+
+  if (!startPlat || !doorPlat) {
+    return simulateFullLevel(world, levelData.player.position, levelData.door, []);
+  }
+
+  // Filter out non-path safety floors and inverted-gravity Beta ceiling platforms
+  const isSafetyFloor = (p: Platform) =>
+    p !== startPlat &&
+    p !== doorPlat &&
+    p.y >= levelData.height - 60 &&
+    p.height >= 32 &&
+    p.width >= 350;
+
+  const ent = levelData.entanglement;
+  const betaSpawnY = ent?.betaSpawn?.y ?? startY;
+  const isSinglePortal = ent?.portalMode === 'single' && !ent.betaDoor;
+  const isDualVerticalLane =
+    Boolean(ent) &&
+    !isSinglePortal &&
+    startPlat.y > levelData.height * 0.48 &&
+    betaSpawnY < levelData.height * 0.48;
+
+  const isBetaLane = (p: Platform) => {
+    if (p === startPlat || p === doorPlat || !ent) return false;
+    if (isSinglePortal) {
+      return startX < doorX
+        ? p.x >= doorPlat.x + doorPlat.width - 8
+        : p.x + p.width <= doorPlat.x + 8;
+    }
+    if (isDualVerticalLane) {
+      return p.y < levelData.height * 0.48;
+    }
+    return false;
+  };
+
+  const candidates = walkable.filter((p) => !isSafetyFloor(p) && !isBetaLane(p));
+
+  // Filter out optional decorative upper perches sitting directly above a wider main platform
+  const mainCandidates = candidates.filter((p) => {
+    if (p === startPlat || p === doorPlat) return true;
+    const isUpperPerch = candidates.some(
+      (other) =>
+        other !== p &&
+        other.y > p.y + 50 &&
+        other.y - p.y <= 130 &&
+        p.x >= other.x - 10 &&
+        p.x + p.width <= other.x + other.width + 10 &&
+        p.width <= 120
+    );
+    return !isUpperPerch;
   });
 
-  const startPlat = sortedByStart[0];
-  const doorPlat = [...walkable].sort((a, b) => {
-    const da = Math.hypot(doorX - (a.x + a.width / 2), doorY - a.y);
-    const db = Math.hypot(doorX - (b.x + b.width / 2), doorY - b.y);
-    return da - db;
-  })[0];
-
-  const pathPlatforms: Platform[] = [];
-  if (startPlat) {
-    pathPlatforms.push(startPlat);
-    const dir = doorX >= startX ? 1 : -1;
-    const middle = walkable
+  // 1. Fast path: preserve JSON author order / X-sorted order for standard horizontal levels
+  const dir = doorX >= startX ? 1 : -1;
+  const buildOrderedPath = (pool: Platform[], sortByX: boolean): Platform[] => {
+    const mid = pool
       .filter((p) => p !== startPlat && p !== doorPlat)
       .filter((p) => {
         const cx = p.x + p.width / 2;
-        return dir > 0 ? cx > startX && cx < doorX : cx < startX && cx > doorX;
+        return dir > 0 ? cx >= startX - 60 && cx <= doorX + 60 : cx <= startX + 60 && cx >= doorX - 60;
+      });
+    if (sortByX) {
+      mid.sort((a, b) => (dir > 0 ? a.x - b.x : b.x - a.x));
+    }
+    return doorPlat === startPlat ? [startPlat] : [startPlat, ...mid, doorPlat];
+  };
+
+  // Try JSON declaration order first (naturally preserves zigzag gravity wells & anti-gravity arcs)
+  const jsonOrderAttempt = simulateFullLevel(
+    world,
+    levelData.player.position,
+    levelData.door,
+    buildOrderedPath(mainCandidates, false)
+  );
+  if (jsonOrderAttempt.success) {
+    return jsonOrderAttempt;
+  }
+
+  // Try X-sorted order next
+  const xOrderAttempt = simulateFullLevel(
+    world,
+    levelData.player.position,
+    levelData.door,
+    buildOrderedPath(mainCandidates, true)
+  );
+  if (xOrderAttempt.success) {
+    return xOrderAttempt;
+  }
+
+  // 2. Physics-guided greedy/BFS search over candidate platforms
+  const initialHero = createInitialHeroState(startX, startY);
+  const visited = new Set<Platform>([startPlat]);
+  const queue: Array<{ plat: Platform; state: SimHeroState; path: Platform[] }> = [
+    { plat: startPlat, state: initialHero, path: [startPlat] }
+  ];
+
+  let expansions = 0;
+  const maxExpansions = 120;
+
+  while (queue.length > 0 && expansions < maxExpansions) {
+    // Prioritize node closest to doorPlat
+    queue.sort((a, b) => {
+      const da = Math.hypot(
+        a.plat.x + a.plat.width / 2 - (doorPlat.x + doorPlat.width / 2),
+        a.plat.y - doorPlat.y
+      );
+      const db = Math.hypot(
+        b.plat.x + b.plat.width / 2 - (doorPlat.x + doorPlat.width / 2),
+        b.plat.y - doorPlat.y
+      );
+      return da - db;
+    });
+
+    const node = queue.shift()!;
+    expansions++;
+
+    if (node.plat === doorPlat) {
+      const res = simulateFullLevel(world, levelData.player.position, levelData.door, node.path);
+      if (res.success) return res;
+      continue;
+    }
+
+    // Score unvisited candidate platforms by proximity to current platform
+    const curRight = node.plat.x + node.plat.width;
+    const curCenterX = node.plat.x + node.plat.width / 2;
+    const neighbors = candidates
+      .filter((p) => !visited.has(p))
+      .filter((p) => {
+        const hGap = Math.max(0, p.x - curRight, node.plat.x - (p.x + p.width));
+        const dy = Math.abs(p.y - node.plat.y);
+        return hGap <= 750 && dy <= 600;
       })
-      .sort((a, b) => (dir > 0 ? a.x - b.x : b.x - a.x));
-    pathPlatforms.push(...middle);
-    if (doorPlat && doorPlat !== startPlat) {
-      pathPlatforms.push(doorPlat);
+      .sort((a, b) => {
+        const da = Math.hypot(a.x + a.width / 2 - curCenterX, a.y - node.plat.y);
+        const db = Math.hypot(b.x + b.width / 2 - curCenterX, b.y - node.plat.y);
+        return da - db;
+      })
+      .slice(0, 4);
+
+    for (const nextPlat of neighbors) {
+      const leg = simulatePlatformTransition(node.state, node.plat, nextPlat, world, 450);
+      if (leg.success) {
+        visited.add(nextPlat);
+        queue.push({
+          plat: nextPlat,
+          state: leg.finalState,
+          path: [...node.path, nextPlat]
+        });
+      }
     }
   }
 
-  return simulateFullLevel(world, levelData.player.position, levelData.door, pathPlatforms);
+  return jsonOrderAttempt;
 }
