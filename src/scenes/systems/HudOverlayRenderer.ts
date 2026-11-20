@@ -43,30 +43,75 @@ export function showLevelTitle(ctx: GameSceneContext): void {
   });
 }
 
+const activeToastMap = new WeakMap<
+  GameSceneContext,
+  { destroy: () => void }
+>();
+
 export function showRetroToast(ctx: GameSceneContext, message: string): void {
   if (!message) return;
-  const anchorHero = ctx.heroes.find((h) => h.isFocused && h.active) || ctx.heroes[0];
-  const startX = anchorHero ? anchorHero.x : (ctx.cameras.main?.width || 800) / 2;
-  const startY = anchorHero ? anchorHero.y - 36 : (ctx.cameras.main?.height || 600) / 2 - 36;
+
+  const prev = activeToastMap.get(ctx);
+  if (prev) {
+    try {
+      prev.destroy();
+    } catch {
+      // Ignore already-destroyed game objects
+    }
+    activeToastMap.delete(ctx);
+  }
+
+  const camW = ctx.cameras?.main?.width || 800;
+  const startX = camW / 2;
+  const startY = 88;
+  const accentHex = ctx.levelData?.antiHue || '#38bdf8';
+  const accentColor = Number.parseInt(accentHex.replace('#', ''), 16) || 0x38bdf8;
 
   const toast = ctx.add.text(startX, startY, message, {
     fontFamily: 'VT323',
-    fontSize: '24px',
-    color: ctx.levelData?.antiHue || '#ffffff',
-    stroke: '#000000',
-    strokeThickness: 3
+    fontSize: '36px',
+    fontStyle: 'bold',
+    color: '#ffffff',
+    stroke: '#050814',
+    strokeThickness: 5,
+    align: 'center'
   });
   toast.setOrigin(0.5);
-  toast.setAlpha(0.95);
-  toast.setDepth(25);
+  toast.setScrollFactor?.(0);
+  toast.setAlpha(1);
+  toast.setDepth(121);
 
+  const pillWidth = Math.min(camW - 32, Math.max(220, message.length * 18 + 44));
+  const pill =
+    typeof ctx.add.rectangle === 'function'
+      ? ctx.add.rectangle(startX, startY, pillWidth, 48, 0x050814, 0.85)
+      : null;
+  if (pill) {
+    pill.setOrigin?.(0.5);
+    pill.setScrollFactor?.(0);
+    pill.setStrokeStyle?.(2, accentColor, 0.95);
+    pill.setDepth?.(120);
+  }
+
+  const cleanup = () => {
+    if (toast?.active !== false) toast.destroy?.();
+    if (pill && pill.active !== false) pill.destroy?.();
+    if (activeToastMap.get(ctx) === handle) {
+      activeToastMap.delete(ctx);
+    }
+  };
+  const handle = { destroy: cleanup };
+  activeToastMap.set(ctx, handle);
+
+  const targets = pill ? [pill, toast] : [toast];
   ctx.tweens.add({
-    targets: toast,
-    y: startY - 44,
+    targets,
+    y: startY - 12,
     alpha: 0,
-    duration: 1000,
+    delay: 1600,
+    duration: 600,
     ease: 'Cubic.easeOut',
-    onComplete: () => toast.destroy()
+    onComplete: cleanup
   });
 }
 

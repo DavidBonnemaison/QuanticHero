@@ -840,18 +840,19 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 14: {
-      // Niv 14 (Si - Milestone de_broglie_wave): particule condense + gouffre franchissable en solidifiant son onde de Broglie
+      // Niv 14 (Si - Milestone de_broglie_wave): zone safe continue jusqu'à la particule condense (0 soft-lock),
+      // puis deux gouffres calibrés 420-440 px au-dessus de piques (respawn propre, franchissables en 1 saut + 1 condense)
       width = 2900;
       height = 1100;
       const baseY = 700;
-      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 240 });
+      awakeningChunk = createSpawnChunk({ originX: 100, originY: baseY, width: 520 });
 
-      const p1: Platform = { x: 420, y: baseY - 20, width: 240, height: 20 };
-      const condensePart: Particle = { x: p1.x + 120, y: p1.y - 30, type: 'condense' };
-      // 540px chasm strictly requiring de Broglie wave crystallization mid-jump
-      const p2: Platform = { x: p1.x + p1.width + 540, y: baseY - 20, width: 240, height: 20 };
-      // Second 560px chasm to consolidate mastery
-      const p3: Platform = { x: p2.x + p2.width + 560, y: baseY - 40, width: 240, height: 20 };
+      const p1: Platform = { x: 680, y: baseY - 20, width: 280, height: 20 };
+      const condensePart: Particle = { x: p1.x + 150, y: p1.y - 30, type: 'condense' };
+      // 445px elevated chasm strictly requiring de Broglie wave crystallization (1 jump + 1 air SPACE/[C])
+      const p2: Platform = { x: p1.x + p1.width + 445, y: p1.y - 35, width: 240, height: 20 };
+      // Second 455px elevated chasm to consolidate mastery
+      const p3: Platform = { x: p2.x + p2.width + 455, y: p2.y - 35, width: 240, height: 20 };
       const accelPlats = [p1, p2, p3];
 
       accelerationChunk = {
@@ -1167,11 +1168,68 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       const progress = Math.min(1, Math.max(0, (level - 1) / 117));
       const levelAlpha = 0.75 + progress * 0.1;
       const decayMs = Math.round(820 - progress * 220);
-      const speedChasm = Math.round(510 + progress * 55);
+      const speedChasm = Math.round(500 + progress * 50 + (rng.next() - 0.5) * 24);
 
-      height = 1200;
-      const baseY = 780;
-      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 220 });
+      const isEntangledDualLane =
+        Boolean(plan.entanglement) && plan.entanglement?.portalMode !== 'single';
+
+      // Varied topography profiles driven by level & seed
+      type TopographyProfile = 'ascent' | 'canyon' | 'valley' | 'undulation';
+      const profiles: readonly TopographyProfile[] = ['ascent', 'canyon', 'valley', 'undulation'];
+      const profile: TopographyProfile = profiles[(level * 3 + seed) % profiles.length];
+
+      height = isEntangledDualLane ? 1320 : 1200;
+      const minYBound = isEntangledDualLane ? 740 : 280;
+      const maxYBound = isEntangledDualLane ? 1060 : 940;
+      const clampY = (y: number): number => Math.max(minYBound, Math.min(maxYBound, Math.round(y)));
+
+      const jitter = (range: number): number => Math.round((rng.next() - 0.5) * 2 * range);
+
+      let baseY: number;
+      if (isEntangledDualLane) {
+        baseY =
+          profile === 'ascent'
+            ? clampY(980 + jitter(24))
+            : profile === 'canyon'
+              ? clampY(790 + jitter(24))
+              : profile === 'valley'
+                ? clampY(850 + jitter(24))
+                : clampY(890 + jitter(28));
+      } else {
+        baseY =
+          profile === 'ascent'
+            ? clampY(860 + jitter(28))
+            : profile === 'canyon'
+              ? clampY(420 + jitter(28))
+              : profile === 'valley'
+                ? clampY(560 + jitter(28))
+                : clampY(680 + jitter(36));
+      }
+
+      // Compute topography-guided vertical delta for step i of total steps
+      const stepDy = (i: number, total: number, scale = 1): number => {
+        const j = jitter(7);
+        if (profile === 'ascent') {
+          return Math.round((-26 - rng.next() * 14) * scale) + j;
+        }
+        if (profile === 'canyon') {
+          return Math.round((26 + rng.next() * 20) * scale) + j;
+        }
+        if (profile === 'valley') {
+          const half = Math.max(1, Math.floor(total / 2));
+          return i < half
+            ? Math.round((28 + rng.next() * 16) * scale) + j
+            : Math.round((-28 - rng.next() * 12) * scale) + j;
+        }
+        // undulation
+        return i % 2 === 0
+          ? Math.round((-28 - rng.next() * 10) * scale) + j
+          : Math.round((28 + rng.next() * 16) * scale) + j;
+      };
+
+      const spawnW = Math.round(210 + rng.next() * 44);
+      awakeningChunk = createSpawnChunk({ originX: 110 + Math.round(rng.next() * 24), originY: baseY, width: spawnW });
+      const startAfterSpawnX = awakeningChunk.platforms[0].x + awakeningChunk.platforms[0].width + Math.round(62 + rng.next() * 26);
 
       if (plan.screenWrap) screenWrap = plan.screenWrap;
       if (plan.allowCloneFusion) allowCloneFusion = true;
@@ -1187,53 +1245,71 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       const buildDenseClimax = (anchor: Chunk, priorPathCount: number): Chunk => {
         const usePhase = Boolean(plan.addPhaseClimax) && plan.primary !== 'phase';
         const useDecay = Boolean(plan.addDecayClimax) && !usePhase;
+        const climaxSteps = 3 + (Math.floor(rng.next() * 3) % 3); // 3, 4, or 5 steps
+        const climaxVStep =
+          profile === 'ascent'
+            ? -Math.round(22 + rng.next() * 14)
+            : profile === 'canyon'
+              ? Math.round(20 + rng.next() * 22)
+              : profile === 'valley'
+                ? -Math.round(20 + rng.next() * 14)
+                : (rng.next() > 0.5 ? -1 : 1) * Math.round(14 + rng.next() * 14);
+        const anchorLastY = anchor.pathPlatforms[anchor.pathPlatforms.length - 1]?.y ?? baseY;
+        const safeVStep =
+          anchorLastY + climaxVStep * climaxSteps < minYBound
+            ? Math.abs(climaxVStep)
+            : anchorLastY + climaxVStep * climaxSteps > maxYBound
+              ? -Math.abs(climaxVStep)
+              : climaxVStep;
+        const connDy = safeVStep < 0 ? -15 : 15;
+
         if (usePhase) {
           const rawPhase = createSuperpositionChamberChunk({
             id: `chunk_climax_phase_${level}`,
-            steps: 4,
-            stepSpacing: 175,
-            platformWidth: 155,
-            verticalStep: -20,
+            steps: climaxSteps,
+            stepSpacing: Math.round(158 + rng.next() * 30),
+            platformWidth: Math.round(145 + rng.next() * 28),
+            verticalStep: safeVStep,
             initialPhase: computePhaseParity(priorPathCount)
           });
-          return connectAndTranslateChunk(anchor, rawPhase, levelAlpha, -15);
+          return connectAndTranslateChunk(anchor, rawPhase, levelAlpha, connDy);
         }
         if (useDecay) {
           const rawDecay = createDecayZoneChunk({
             id: `chunk_climax_decay_${level}`,
-            steps: 4,
+            steps: climaxSteps,
             decayMs,
-            stepSpacing: 170,
-            platformWidth: 150,
-            verticalDelta: -18,
+            stepSpacing: Math.round(155 + rng.next() * 28),
+            platformWidth: Math.round(142 + rng.next() * 26),
+            verticalDelta: safeVStep,
             includeStableExit: true
           });
-          return connectAndTranslateChunk(anchor, rawDecay, levelAlpha, -15);
+          return connectAndTranslateChunk(anchor, rawDecay, levelAlpha, connDy);
         }
         const rawDyn = createDynamicCourseChunk({
           id: `chunk_climax_dyn_${level}`,
-          steps: 4,
+          steps: climaxSteps,
           rng,
           progress,
           allowSpikes: true,
           allowMoving: level >= 15
         });
-        return connectAndTranslateChunk(anchor, rawDyn, levelAlpha, -15);
+        return connectAndTranslateChunk(anchor, rawDyn, levelAlpha, connDy);
       };
 
       if (isSpeedTunnelBoss) {
         const { intro1, intro2, chunk: introChunk } = makeIntro(`chunk_boss_intro_${level}`, baseY);
-        const p1: Platform = { x: 890, y: baseY - 60, width: 210, height: 20 };
+        const p1: Platform = { x: 890, y: clampY(baseY - 60), width: 210, height: 20 };
         const speedPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'speed' };
         const p2: Platform = {
           x: p1.x + p1.width + speedChasm,
-          y: baseY - 60,
+          y: p1.y,
           width: 220,
           height: 20
         };
         const tunnelPart: Particle = { x: p2.x + 100, y: p2.y - 30, type: 'tunnel' };
         const barrier: Platform = { x: p2.x + p2.width + 25, y: 0, width: 32, height };
-        const p3: Platform = { x: barrier.x + 56, y: baseY - 60, width: 210, height: 20 };
+        const p3: Platform = { x: barrier.x + 56, y: p1.y, width: 210, height: 20 };
         const bossPlats = [intro1, intro2, p1, p2, barrier, p3];
         const bossParts = [speedPart, tunnelPart];
         if (level === 84) {
@@ -1275,10 +1351,10 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         }
       } else if (isPauliBoss) {
         const { intro1, intro2, chunk: introChunk } = makeIntro(`chunk_pauli_intro_${level}`, baseY);
-        const p1: Platform = { x: 890, y: baseY - 60, width: 260, height: 20 };
+        const p1: Platform = { x: 890, y: clampY(baseY - 60), width: 260, height: 20 };
         const dupPart: Particle = { x: p1.x + 120, y: p1.y - 30, type: 'duplicate' };
         const pauliPart: Particle = { x: p1.x + 200, y: p1.y - 30, type: 'pauli' };
-        const p2: Platform = { x: p1.x + p1.width + 560, y: baseY - 60, width: 240, height: 20 };
+        const p2: Platform = { x: p1.x + p1.width + 560, y: p1.y, width: 240, height: 20 };
         const bossPlats = [intro1, intro2, p1, p2];
         const bossParts = [dupPart, pauliPart];
         const pathPlats = [intro1, intro2, p1, p2];
@@ -1286,7 +1362,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         if (level === 100) {
           const tunPart: Particle = { x: p2.x + 115, y: p2.y - 30, type: 'tunnel' };
           const barrier: Platform = { x: p2.x + p2.width + 25, y: 0, width: 32, height };
-          const p3: Platform = { x: barrier.x + 56, y: baseY - 60, width: 210, height: 20 };
+          const p3: Platform = { x: barrier.x + 56, y: p1.y, width: 210, height: 20 };
           bossPlats.push(barrier, p3);
           pathPlats.push(p3);
           bossParts.push(tunPart);
@@ -1310,17 +1386,19 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           1 + accelerationChunk.pathPlatforms.length
         );
       } else if (isAntiGravBoss) {
-        const { intro1, intro2, chunk: introChunk } = makeIntro(`chunk_ag_intro_${level}`, baseY);
-        const p1: Platform = { x: 890, y: baseY - 60, width: 200, height: 20 };
+        const agBaseY = 780;
+        awakeningChunk = createSpawnChunk({ originX: 120, originY: agBaseY, width: 220 });
+        const { intro1, intro2, chunk: introChunk } = makeIntro(`chunk_ag_intro_${level}`, agBaseY);
+        const p1: Platform = { x: 890, y: agBaseY - 60, width: 200, height: 20 };
         const ag1: Particle = { x: p1.x + 170, y: p1.y - 120, type: 'antiGravity' };
         const ceilingY = 260;
         const p2: Platform = { x: 1180, y: ceilingY, width: 230, height: 20 };
         const p3: Platform = { x: 1490, y: ceilingY, width: 230, height: 20 };
         const ag2: Particle = { x: 1770, y: ceilingY + 110, type: 'antiGravity' };
-        const p4: Platform = { x: 1810, y: baseY - 80, width: 230, height: 20 };
+        const p4: Platform = { x: 1810, y: agBaseY - 80, width: 230, height: 20 };
         const tunPart: Particle = { x: p4.x + 115, y: p4.y - 30, type: 'tunnel' };
         const barrier: Platform = { x: p4.x + p4.width + 25, y: 0, width: 32, height };
-        const p5: Platform = { x: barrier.x + 56, y: baseY - 80, width: 210, height: 20 };
+        const p5: Platform = { x: barrier.x + 56, y: agBaseY - 80, width: 210, height: 20 };
         const bossPlats = [intro1, intro2, p1, p2, p3, p4, barrier, p5];
         const bossParts = [ag1, ag2, tunPart];
         accelerationChunk = {
@@ -1340,41 +1418,60 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           1 + accelerationChunk.pathPlatforms.length
         );
       } else if (plan.primary === 'archetype' && plan.archetypeId) {
-        // Smart Archetype Multi-Room Variant (Period 5, 6, 7)
+        // Smart Archetype Multi-Room Variant (Period 5, 6, 7) with seeded topography variation
         const archId = plan.archetypeId;
         if (archId === 'living_floor') {
-          height = 900;
-          const midY = 480;
-          awakeningChunk = createSpawnChunk({ originX: 120, originY: 740, width: 240 });
-          const ceilStart: Platform = { x: 80, y: 120, width: 280, height: 24 };
-          const landAlpha: Platform = { x: 960, y: midY + 40, width: 240, height: 24 };
-          const landBeta: Platform = { x: 960, y: midY - 140, width: 240, height: 24 };
-          const pNext1: Platform = { x: 1280, y: midY + 15, width: 200, height: 20 };
-          const pNext2: Platform = { x: 1560, y: midY - 10, width: 200, height: 20 };
+          height = 1200;
+          const lfY = 860 + jitter(20);
+          const landY = 700 + jitter(16);
+          awakeningChunk = createSpawnChunk({ originX: 110 + Math.round(rng.next() * 20), originY: lfY, width: 240 });
+          const landX = 900 + Math.round(rng.next() * 70);
+          const landAlpha: Platform = { x: landX, y: landY, width: 230 + jitter(15), height: 24 };
+          const pNext1: Platform = {
+            x: landAlpha.x + landAlpha.width + Math.round(75 + rng.next() * 24),
+            y: Math.max(700, landAlpha.y - Math.round(10 + rng.next() * 14)),
+            width: 195 + jitter(16),
+            height: 20
+          };
+          const pNext2: Platform = {
+            x: pNext1.x + pNext1.width + Math.round(75 + rng.next() * 24),
+            y: Math.max(700, pNext1.y + (rng.next() > 0.5 ? -16 : 18)),
+            width: 195 + jitter(16),
+            height: 20
+          };
           accelerationChunk = {
             id: `chunk_arch_living_${level}`,
             name: 'Plancher Vivant',
             archetype: 'electron_chasm',
             entry: { x: landAlpha.x + 40, y: landAlpha.y },
             exit: { x: pNext2.x + pNext2.width - 40, y: pNext2.y },
-            platforms: [ceilStart, landAlpha, landBeta, pNext1, pNext2],
+            platforms: [landAlpha, pNext1, pNext2],
             pathPlatforms: [landAlpha, pNext1, pNext2],
             spikes: [],
             particles: [],
-            bounds: computeChunkBounds([ceilStart, landAlpha, landBeta, pNext1, pNext2])
+            bounds: computeChunkBounds([landAlpha, pNext1, pNext2])
           };
           climaxChunk = buildDenseClimax(
             accelerationChunk,
             1 + accelerationChunk.pathPlatforms.length
           );
         } else if (archId === 'phase_remote') {
-          const p1: Platform = { x: 420, y: baseY - 20, width: 210, height: 20 };
-          const dupPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'duplicate' };
-          const wLeft: Platform = { x: 396, y: baseY - 200, width: 20, height: 180, kind: 'wall' };
-          const p2: Platform = { x: 700, y: baseY - 35, width: 185, height: 20, phase: 'cyan' };
-          const p3: Platform = { x: 955, y: baseY - 50, width: 185, height: 20, phase: 'magenta' };
-          const p4: Platform = { x: 1210, y: baseY - 65, width: 185, height: 20, phase: 'cyan' };
-          const tunnelCeil: Platform = { x: 690, y: baseY - 245, width: 710, height: 24 };
+          const y1 = clampY(baseY + stepDy(0, 4, 0.7));
+          const p1: Platform = { x: startAfterSpawnX, y: y1, width: 205 + jitter(18), height: 20 };
+          const dupPart: Particle = { x: p1.x + Math.round(p1.width * 0.5), y: p1.y - 30, type: 'duplicate' };
+          const wLeft: Platform = { x: p1.x - 24, y: p1.y - 180, width: 20, height: 180, kind: 'wall' };
+          const y2 = clampY(y1 + stepDy(1, 4, 0.7));
+          const p2: Platform = { x: p1.x + p1.width + Math.round(68 + rng.next() * 24), y: y2, width: 190 + jitter(16), height: 20, phase: 'cyan' };
+          const y3 = clampY(y2 + stepDy(2, 4, 0.7));
+          const p3: Platform = { x: p2.x + p2.width + Math.round(68 + rng.next() * 24), y: y3, width: 200 + jitter(16), height: 20, phase: 'magenta' };
+          const y4 = clampY(y3 + stepDy(3, 4, 0.7));
+          const p4: Platform = { x: p3.x + p3.width + Math.round(68 + rng.next() * 24), y: y4, width: 185 + jitter(16), height: 20, phase: 'cyan' };
+          const tunnelCeil: Platform = {
+            x: p2.x - 10,
+            y: Math.min(y2, y3, y4) - 210,
+            width: p4.x + p4.width - p2.x + 20,
+            height: 24
+          };
           const plats = [wLeft, p1, tunnelCeil, p2, p3, p4];
           accelerationChunk = {
             id: `chunk_arch_phase_remote_${level}`,
@@ -1388,18 +1485,44 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             particles: [dupPart],
             bounds: computeChunkBounds(plats, [], [dupPart])
           };
+          // Gate + requireLock plate makes duplicate strictly required
+          gates = [
+            {
+              id: `gate_pr_${level}`,
+              x: p3.x + Math.round(p3.width * 0.55),
+              y: 0,
+              width: 24,
+              height
+            }
+          ];
+          pressurePlates = [
+            {
+              id: `plate_pr_${level}`,
+              x: p2.x + Math.round(p2.width * 0.3),
+              y: p2.y - 12,
+              width: 88,
+              height: 12,
+              targetGateId: `gate_pr_${level}`,
+              requireLock: true,
+              autoSwitchOnTrigger: true
+            }
+          ];
           climaxChunk = buildDenseClimax(
             accelerationChunk,
             1 + accelerationChunk.pathPlatforms.length
           );
         } else if (archId === 'perpetual_metronome') {
-          const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
-          const dupPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'duplicate' };
-          const p2: Platform = { x: 710, y: baseY - 35, width: 220, height: 20, decayMs: 650 };
-          const wallL: Platform = { x: 682, y: baseY + 10, width: 22, height: 110, kind: 'wall' };
-          const wallR: Platform = { x: 938, y: baseY + 10, width: 22, height: 110, kind: 'wall' };
-          const p3: Platform = { x: 1010, y: baseY - 55, width: 260, height: 20 };
-          const p4: Platform = { x: 1350, y: baseY - 75, width: 210, height: 20 };
+          const y1 = clampY(baseY + stepDy(0, 4, 0.7));
+          const p1: Platform = { x: startAfterSpawnX, y: y1, width: 215 + jitter(16), height: 20 };
+          const dupPart: Particle = { x: p1.x + Math.round(p1.width * 0.5), y: p1.y - 30, type: 'duplicate' };
+          const y2 = clampY(y1 + stepDy(1, 4, 0.7));
+          const p2: Platform = { x: p1.x + p1.width + Math.round(70 + rng.next() * 24), y: y2, width: 220 + jitter(16), height: 20, decayMs: 650 };
+          const wallL: Platform = { x: p2.x - 28, y: y2 + 25, width: 22, height: 110, kind: 'wall' };
+          const wallR: Platform = { x: p2.x + p2.width + 6, y: y2 + 25, width: 22, height: 110, kind: 'wall' };
+          const y3 = clampY(y2 + stepDy(2, 4, 0.7));
+          const p3: Platform = { x: p2.x + p2.width + Math.round(76 + rng.next() * 24), y: y3, width: 255 + jitter(18), height: 20 };
+          const y4 = clampY(y3 + stepDy(3, 4, 0.7));
+          const p4: Platform = { x: p3.x + p3.width + Math.round(74 + rng.next() * 24), y: y4, width: 205 + jitter(16), height: 20 };
           const plats = [p1, wallL, p2, wallR, p3, p4];
           accelerationChunk = {
             id: `chunk_arch_metronome_${level}`,
@@ -1416,16 +1539,16 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           gates = [
             {
               id: `gate_met_${level}`,
-              x: p3.x + 140,
+              x: p3.x + Math.round(p3.width * 0.55),
               y: 0,
               width: 24,
-              height: p3.y
+              height
             }
           ];
           pressurePlates = [
             {
               id: `plate_met_${level}`,
-              x: p2.x + 65,
+              x: p2.x + Math.round(p2.width * 0.3),
               y: p2.y - 12,
               width: 90,
               height: 12,
@@ -1438,11 +1561,15 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             1 + accelerationChunk.pathPlatforms.length
           );
         } else if (archId === 'midair_assist') {
-          const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
-          const dupPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'duplicate' };
-          const p2: Platform = { x: 720, y: baseY - 40, width: 220, height: 20 };
-          const p3: Platform = { x: 1020, y: baseY - 60, width: 260, height: 20 };
-          const p4: Platform = { x: 1360, y: baseY - 80, width: 200, height: 20 };
+          const y1 = clampY(baseY + stepDy(0, 4, 0.7));
+          const p1: Platform = { x: startAfterSpawnX, y: y1, width: 215 + jitter(18), height: 20 };
+          const dupPart: Particle = { x: p1.x + Math.round(p1.width * 0.5), y: p1.y - 30, type: 'duplicate' };
+          const y2 = clampY(y1 + stepDy(1, 4, 0.7));
+          const p2: Platform = { x: p1.x + p1.width + Math.round(72 + rng.next() * 24), y: y2, width: 220 + jitter(16), height: 20 };
+          const y3 = clampY(y2 + stepDy(2, 4, 0.7));
+          const p3: Platform = { x: p2.x + p2.width + Math.round(72 + rng.next() * 24), y: y3, width: 250 + jitter(18), height: 20 };
+          const y4 = clampY(y3 + stepDy(3, 4, 0.7));
+          const p4: Platform = { x: p3.x + p3.width + Math.round(72 + rng.next() * 24), y: y4, width: 200 + jitter(16), height: 20 };
           const plats = [p1, p2, p3, p4];
           accelerationChunk = {
             id: `chunk_arch_midair_${level}`,
@@ -1459,21 +1586,21 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           gates = [
             {
               id: `gate_mid_${level}`,
-              x: p3.x + 130,
+              x: p3.x + Math.round(p3.width * 0.5),
               y: 0,
               width: 24,
-              height: p3.y
+              height
             }
           ];
           pressurePlates = [
             {
               id: `plate_mid_${level}`,
-              x: p2.x + 65,
+              x: p2.x + Math.round(p2.width * 0.3),
               y: p2.y - 12,
               width: 96,
               height: 12,
               targetGateId: `gate_mid_${level}`,
-              requireLock: false,
+              requireLock: true,
               autoSwitchOnTrigger: true
             }
           ];
@@ -1482,11 +1609,14 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             1 + accelerationChunk.pathPlatforms.length
           );
         } else if (archId === 'pauli_trampoline') {
-          const p1: Platform = { x: 420, y: baseY - 20, width: 270, height: 20 };
+          const y1 = clampY(baseY + stepDy(0, 3, 0.7));
+          const p1: Platform = { x: startAfterSpawnX, y: y1, width: 265 + jitter(16), height: 20 };
           const dupPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'duplicate' };
           const pauliPart: Particle = { x: p1.x + 205, y: p1.y - 30, type: 'pauli' };
-          const p2: Platform = { x: p1.x + p1.width + 540, y: baseY - 50, width: 260, height: 20 };
-          const p3: Platform = { x: p2.x + p2.width + 95, y: baseY - 75, width: 220, height: 20 };
+          const y2 = clampY(y1 - Math.round(20 + rng.next() * 22));
+          const p2: Platform = { x: p1.x + p1.width + Math.round(525 + rng.next() * 30), y: y2, width: 255 + jitter(16), height: 20 };
+          const y3 = clampY(y2 + stepDy(2, 3, 0.7));
+          const p3: Platform = { x: p2.x + p2.width + Math.round(80 + rng.next() * 24), y: y3, width: 220 + jitter(16), height: 20 };
           const plats = [p1, p2, p3];
           const parts = [dupPart, pauliPart];
           accelerationChunk = {
@@ -1504,16 +1634,16 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           gates = [
             {
               id: `gate_pauli_${level}`,
-              x: p3.x + 90,
+              x: p3.x + Math.round(p3.width * 0.45),
               y: 0,
               width: 24,
-              height: p3.y
+              height
             }
           ];
           pressurePlates = [
             {
               id: `plate_pauli_${level}`,
-              x: p2.x + 70,
+              x: p2.x + Math.round(p2.width * 0.3),
               y: p2.y - 12,
               width: 90,
               height: 12,
@@ -1526,13 +1656,16 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             1 + accelerationChunk.pathPlatforms.length
           );
         } else {
-          // conservation_cage
-          const p1: Platform = { x: 420, y: baseY - 20, width: 210, height: 20 };
-          const p2: Platform = { x: 705, y: baseY - 45, width: 210, height: 20 };
-          const p3: Platform = { x: 990, y: baseY - 70, width: 280, height: 20 };
-          const bait: Particle = {
-            x: p3.x + 60,
-            y: p3.y - 85,
+          // conservation_cage: speed particle strictly required to clear the post-cage chasm (390-430px)
+          const y1 = clampY(baseY + stepDy(0, 4, 0.7));
+          const p1: Platform = { x: startAfterSpawnX, y: y1, width: 205 + jitter(18), height: 20 };
+          const y2 = clampY(y1 + stepDy(1, 4, 0.7));
+          const p2: Platform = { x: p1.x + p1.width + Math.round(70 + rng.next() * 24), y: y2, width: 205 + jitter(18), height: 20 };
+          const y3 = clampY(y2 + stepDy(2, 4, 0.7));
+          const p3: Platform = { x: p2.x + p2.width + Math.round(70 + rng.next() * 24), y: y3, width: 270 + jitter(18), height: 20 };
+          const speedOrb: Particle = {
+            x: p3.x + 85,
+            y: p3.y - 30,
             type: 'speed',
             restoresEphemeral: true
           };
@@ -1560,18 +1693,21 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             color: '#f1c40f',
             ephemeral: true
           };
-          const plats = [p1, p2, p3, cageL, cageTop, cageR];
+          // 480-520px chasm strictly requiring the speed boost collected on p3
+          const speedGap = Math.round(480 + rng.next() * 40);
+          const p4: Platform = { x: p3.x + p3.width + speedGap, y: y3, width: 220 + jitter(16), height: 20 };
+          const plats = [p1, p2, p3, cageL, cageTop, cageR, p4];
           accelerationChunk = {
             id: `chunk_arch_cage_${level}`,
             name: 'Cage de Conservation',
             archetype: 'speedrun_highway',
             entry: { x: p1.x + 40, y: p1.y },
-            exit: { x: p3.x + p3.width - 40, y: p3.y },
+            exit: { x: p4.x + p4.width - 40, y: p4.y },
             platforms: plats,
-            pathPlatforms: [p1, p2, p3],
+            pathPlatforms: [p1, p2, p3, p4],
             spikes: [],
-            particles: [bait],
-            bounds: computeChunkBounds(plats, [], [bait])
+            particles: [speedOrb],
+            bounds: computeChunkBounds(plats, [], [speedOrb])
           };
           climaxChunk = buildDenseClimax(
             accelerationChunk,
@@ -1579,12 +1715,16 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           );
         }
       } else if (plan.primary === 'clone_fusion') {
-        const p1: Platform = { x: 420, y: baseY - 20, width: 230, height: 20 };
-        const dup1: Particle = { x: p1.x + 90, y: p1.y - 30, type: 'duplicate' };
-        const dup2: Particle = { x: p1.x + 165, y: p1.y - 30, type: 'duplicate' };
-        const p2: Platform = { x: 725, y: baseY - 40, width: 200, height: 20, cracked: true };
-        const p3: Platform = { x: 1005, y: baseY - 60, width: 200, height: 20, cracked: true };
-        const p4: Platform = { x: 1285, y: baseY - 80, width: 210, height: 20 };
+        const y1 = clampY(baseY + stepDy(0, 4, 0.7));
+        const p1: Platform = { x: startAfterSpawnX, y: y1, width: 225 + jitter(18), height: 20 };
+        const dup1: Particle = { x: p1.x + 85, y: p1.y - 30, type: 'duplicate' };
+        const dup2: Particle = { x: p1.x + 160, y: p1.y - 30, type: 'duplicate' };
+        const y2 = clampY(y1 + stepDy(1, 4, 0.7));
+        const p2: Platform = { x: p1.x + p1.width + Math.round(70 + rng.next() * 24), y: y2, width: 205 + jitter(16), height: 20, cracked: true };
+        const y3 = clampY(y2 + stepDy(2, 4, 0.7));
+        const p3: Platform = { x: p2.x + p2.width + Math.round(70 + rng.next() * 24), y: y3, width: 215 + jitter(16), height: 20, cracked: true };
+        const y4 = clampY(y3 + stepDy(3, 4, 0.7));
+        const p4: Platform = { x: p3.x + p3.width + Math.round(70 + rng.next() * 24), y: y4, width: 205 + jitter(16), height: 20 };
         const plats = [p1, p2, p3, p4];
         const parts = [dup1, dup2];
         accelerationChunk = {
@@ -1599,16 +1739,42 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           particles: parts,
           bounds: computeChunkBounds(plats, [], parts)
         };
+        // Full-height gate + requireLock plate makes duplicate strictly required even on Noble Gas playgrounds
+        gates = [
+          {
+            id: `gate_fus_${level}`,
+            x: p3.x + Math.round(p3.width * 0.5),
+            y: 0,
+            width: 24,
+            height
+          }
+        ];
+        pressurePlates = [
+          {
+            id: `plate_fus_${level}`,
+            x: p2.x + Math.round(p2.width * 0.3),
+            y: p2.y - 12,
+            width: 88,
+            height: 12,
+            targetGateId: `gate_fus_${level}`,
+            requireLock: true,
+            autoSwitchOnTrigger: true
+          }
+        ];
         climaxChunk = buildDenseClimax(
           accelerationChunk,
           1 + accelerationChunk.pathPlatforms.length
         );
       } else if (plan.primary === 'duplicate_gate') {
-        const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
-        const dupPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'duplicate' };
-        const p2: Platform = { x: 715, y: baseY - 40, width: 220, height: 20 };
-        const p3: Platform = { x: 1010, y: baseY - 60, width: 240, height: 20 };
-        const p4: Platform = { x: 1325, y: baseY - 80, width: 200, height: 20 };
+        const y1 = clampY(baseY + stepDy(0, 4, 0.7));
+        const p1: Platform = { x: startAfterSpawnX, y: y1, width: 215 + jitter(18), height: 20 };
+        const dupPart: Particle = { x: p1.x + Math.round(p1.width * 0.5), y: p1.y - 30, type: 'duplicate' };
+        const y2 = clampY(y1 + stepDy(1, 4, 0.7));
+        const p2: Platform = { x: p1.x + p1.width + Math.round(70 + rng.next() * 24), y: y2, width: 215 + jitter(16), height: 20 };
+        const y3 = clampY(y2 + stepDy(2, 4, 0.7));
+        const p3: Platform = { x: p2.x + p2.width + Math.round(70 + rng.next() * 24), y: y3, width: 235 + jitter(18), height: 20 };
+        const y4 = clampY(y3 + stepDy(3, 4, 0.7));
+        const p4: Platform = { x: p3.x + p3.width + Math.round(70 + rng.next() * 24), y: y4, width: 200 + jitter(16), height: 20 };
         const plats = [p1, p2, p3, p4];
         accelerationChunk = {
           id: `chunk_dupgate_${level}`,
@@ -1625,16 +1791,16 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         gates = [
           {
             id: `gate_dup_${level}`,
-            x: p3.x + 80,
+            x: p3.x + Math.round(p3.width * 0.4),
             y: 0,
             width: 24,
-            height: p3.y
+            height
           }
         ];
         pressurePlates = [
           {
             id: `plate_dup_${level}`,
-            x: p2.x + 65,
+            x: p2.x + Math.round(p2.width * 0.3),
             y: p2.y - 12,
             width: 90,
             height: 12,
@@ -1648,10 +1814,16 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           1 + accelerationChunk.pathPlatforms.length
         );
       } else if (plan.primary === 'condense') {
-        const p1: Platform = { x: 420, y: baseY - 20, width: 230, height: 20 };
-        const condensePart: Particle = { x: p1.x + 115, y: p1.y - 30, type: 'condense' };
-        const p2: Platform = { x: p1.x + p1.width + 480, y: baseY - 20, width: 220, height: 20 };
-        const p3: Platform = { x: p2.x + p2.width + 480, y: baseY - 40, width: 220, height: 20 };
+        const y1 = clampY(baseY + stepDy(0, 3, 0.6));
+        const p1: Platform = { x: startAfterSpawnX, y: y1, width: 225 + jitter(18), height: 20 };
+        const condensePart: Particle = { x: p1.x + Math.round(p1.width * 0.5), y: p1.y - 30, type: 'condense' };
+        // Calibrated 442-460px elevated chasms (strictly impossible without condense, smooth in 1 jump + 1 air condense)
+        const gap1 = Math.round(442 + rng.next() * 18);
+        const y2 = clampY(y1 - 35);
+        const p2: Platform = { x: p1.x + p1.width + gap1, y: y2, width: 215 + jitter(18), height: 20 };
+        const gap2 = Math.round(442 + rng.next() * 18);
+        const y3 = clampY(y2 - 35);
+        const p3: Platform = { x: p2.x + p2.width + gap2, y: y3, width: 215 + jitter(18), height: 20 };
         const plats = [p1, p2, p3];
         accelerationChunk = {
           id: `chunk_condense_${level}`,
@@ -1670,13 +1842,16 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           1 + accelerationChunk.pathPlatforms.length
         );
       } else if (plan.primary === 'tunnel') {
-        const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
-        const tun1: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'tunnel' };
+        const y1 = clampY(baseY + stepDy(0, 3, 0.7));
+        const p1: Platform = { x: startAfterSpawnX, y: y1, width: 215 + jitter(18), height: 20 };
+        const tun1: Particle = { x: p1.x + Math.round(p1.width * 0.5), y: p1.y - 30, type: 'tunnel' };
         const wall1: Platform = { x: p1.x + p1.width + 25, y: 0, width: 32, height };
-        const p2: Platform = { x: wall1.x + wall1.width + 25, y: baseY - 30, width: 220, height: 20 };
-        const tun2: Particle = { x: p2.x + 110, y: p2.y - 30, type: 'tunnel' };
+        const y2 = clampY(y1 + stepDy(1, 3, 0.6));
+        const p2: Platform = { x: wall1.x + wall1.width + 25, y: y2, width: 215 + jitter(18), height: 20 };
+        const tun2: Particle = { x: p2.x + Math.round(p2.width * 0.5), y: p2.y - 30, type: 'tunnel' };
         const wall2: Platform = { x: p2.x + p2.width + 25, y: 0, width: 34, height };
-        const p3: Platform = { x: wall2.x + wall2.width + 25, y: baseY - 45, width: 220, height: 20 };
+        const y3 = clampY(y2 + stepDy(2, 3, 0.6));
+        const p3: Platform = { x: wall2.x + wall2.width + 25, y: y3, width: 215 + jitter(18), height: 20 };
         const plats = [p1, wall1, p2, wall2, p3];
         const parts = [tun1, tun2];
         accelerationChunk = {
@@ -1697,10 +1872,14 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         );
       } else if (plan.primary === 'phase') {
         // Phase platforms starting immediately in the discovery zone (crucial for Milestone L47 quantum_pinning!)
-        const p1: Platform = { x: 420, y: baseY - 20, width: 175, height: 20, phase: 'magenta' };
-        const p2: Platform = { x: 660, y: baseY - 40, width: 175, height: 20, phase: 'cyan' };
-        const p3: Platform = { x: 900, y: baseY - 60, width: 175, height: 20, phase: 'magenta' };
-        const p4: Platform = { x: 1140, y: baseY - 80, width: 175, height: 20, phase: 'cyan' };
+        const y1 = clampY(baseY + stepDy(0, 4, 0.7));
+        const p1: Platform = { x: startAfterSpawnX, y: y1, width: 175 + jitter(16), height: 20, phase: 'magenta' };
+        const y2 = clampY(y1 + stepDy(1, 4, 0.7));
+        const p2: Platform = { x: p1.x + p1.width + Math.round(62 + rng.next() * 24), y: y2, width: 175 + jitter(16), height: 20, phase: 'cyan' };
+        const y3 = clampY(y2 + stepDy(2, 4, 0.7));
+        const p3: Platform = { x: p2.x + p2.width + Math.round(62 + rng.next() * 24), y: y3, width: 175 + jitter(16), height: 20, phase: 'magenta' };
+        const y4 = clampY(y3 + stepDy(3, 4, 0.7));
+        const p4: Platform = { x: p3.x + p3.width + Math.round(62 + rng.next() * 24), y: y4, width: 175 + jitter(16), height: 20, phase: 'cyan' };
         const plats = [p1, p2, p3, p4];
         accelerationChunk = {
           id: `chunk_phase_${level}`,
@@ -1719,25 +1898,29 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           1 + accelerationChunk.pathPlatforms.length
         );
       } else if (plan.primary === 'liquid_basin') {
+        const y1 = clampY(baseY + stepDy(0, 4, 0.7));
         const p1: Platform = {
-          x: 420,
-          y: baseY - 20,
-          width: 240,
+          x: startAfterSpawnX,
+          y: y1,
+          width: 230 + jitter(20),
           height: 55,
           matterState: 'liquid'
         };
+        const y2 = clampY(y1 + stepDy(1, 4, 0.7));
         const p2: Platform = {
-          x: 735,
-          y: baseY - 45,
-          width: 220,
+          x: p1.x + p1.width + Math.round(68 + rng.next() * 24),
+          y: y2,
+          width: 215 + jitter(18),
           height: 55,
           matterState: 'liquid'
         };
-        const p3: Platform = { x: 1030, y: baseY - 65, width: 210, height: 20 };
+        const y3 = clampY(y2 + stepDy(2, 4, 0.7));
+        const p3: Platform = { x: p2.x + p2.width + Math.round(68 + rng.next() * 24), y: y3, width: 205 + jitter(18), height: 20 };
+        const y4 = clampY(y3 + stepDy(3, 4, 0.7));
         const p4: Platform = {
-          x: 1315,
-          y: baseY - 85,
-          width: 220,
+          x: p3.x + p3.width + Math.round(68 + rng.next() * 24),
+          y: y4,
+          width: 215 + jitter(18),
           height: 55,
           matterState: 'liquid'
         };
@@ -1759,11 +1942,16 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           1 + accelerationChunk.pathPlatforms.length
         );
       } else if (plan.primary === 'wormhole') {
-        const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
-        const p2: Platform = { x: 720, y: baseY - 40, width: 240, height: 20 };
+        const y1 = clampY(baseY + stepDy(0, 4, 0.6));
+        const p1: Platform = { x: startAfterSpawnX, y: y1, width: 215 + jitter(18), height: 20 };
+        const y2 = clampY(y1 + stepDy(1, 4, 0.6));
+        const p2: Platform = { x: p1.x + p1.width + Math.round(70 + rng.next() * 24), y: y2, width: 235 + jitter(18), height: 20 };
         // Elevated platform reached via momentum-conserving wormhole
-        const p3: Platform = { x: 1120, y: baseY - 220, width: 240, height: 20 };
-        const p4: Platform = { x: 1440, y: baseY - 235, width: 210, height: 20 };
+        const whRise = isEntangledDualLane ? 130 + Math.round(rng.next() * 35) : 170 + Math.round(rng.next() * 55);
+        const y3 = clampY(y2 - whRise);
+        const p3: Platform = { x: p2.x + p2.width + Math.round(145 + rng.next() * 40), y: y3, width: 235 + jitter(18), height: 20 };
+        const y4 = clampY(y3 + stepDy(3, 4, 0.6));
+        const p4: Platform = { x: p3.x + p3.width + Math.round(72 + rng.next() * 24), y: y4, width: 205 + jitter(16), height: 20 };
         const plats = [p1, p2, p3, p4];
         wormholes = [
           {
@@ -1794,7 +1982,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           1 + accelerationChunk.pathPlatforms.length
         );
       } else if (plan.primary === 'wall') {
-        height = 1300;
+        height = isEntangledDualLane ? 1320 : 1300;
         const rawLead = createDynamicCourseChunk({
           id: `chunk_wall_lead_${level}`,
           steps: 3,
@@ -1840,16 +2028,16 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         const anchorPlat = accelerationChunk.pathPlatforms[0];
         if (anchorPlat) {
           accelerationChunk.particles.push({
-            x: anchorPlat.x + Math.round(anchorPlat.width * 0.5),
+            x: anchorPlat.x + Math.round(anchorPlat.width * 0.45),
             y: anchorPlat.y - 30,
             type: 'tunnel'
           });
-          // Place a thin vertical barrier on the right side of anchorPlat
+          // Full-height vertical barrier on the right side of anchorPlat (strictly requires tunnel)
           accelerationChunk.platforms.push({
             x: anchorPlat.x + anchorPlat.width - 28,
             y: 0,
             width: 28,
-            height: anchorPlat.y
+            height
           });
         }
       }
@@ -1866,7 +2054,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         }
       }
 
-      // Optional duplicate particle (when not already present)
+      // Optional duplicate particle + mandatory requireLock gate/plate (never sprinkle useless duplicate!)
       if (
         plan.addDuplicate &&
         !accelerationChunk.particles.some((p) => p.type === 'duplicate')
@@ -1881,8 +2069,13 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         }
       }
 
-      // Optional gate + pressure plate (when not already present)
-      if (plan.addGatePlate && !gates && accelerationChunk.pathPlatforms.length >= 3) {
+      // Gate + pressure plate whenever plan.addGatePlate OR plan.addDuplicate without an existing gate
+      const needsDuplicateGate =
+        (plan.addGatePlate ||
+          (plan.addDuplicate && accelerationChunk.particles.some((p) => p.type === 'duplicate'))) &&
+        !gates &&
+        accelerationChunk.pathPlatforms.length >= 3;
+      if (needsDuplicateGate) {
         const platePlat = accelerationChunk.pathPlatforms[1];
         const gatePlat = accelerationChunk.pathPlatforms[2];
         const hasDupBeforeOrOnPlate = accelerationChunk.particles.some(
@@ -1894,7 +2087,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             x: gatePlat.x + Math.round(gatePlat.width * 0.5),
             y: 0,
             width: 24,
-            height: gatePlat.y
+            height
           }
         ];
         pressurePlates = [
@@ -1933,7 +2126,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         }
       }
 
-      // Optional matterState enrichment (liquid, cryo, plasma, gas)
+      // Optional matterState enrichment (liquid, cryo, plasma, gas) — strictly on main path!
+      let plasmaLaunchBeforeRes = false;
       if (plan.matterState) {
         const ms = plan.matterState;
         if (ms === 'gas') {
@@ -1941,9 +2135,9 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           if (refPlat) {
             accelerationChunk.platforms.push({
               x: refPlat.x + refPlat.width + 6,
-              y: refPlat.y + 16,
+              y: refPlat.y - 110,
               width: 72,
-              height: 180,
+              height: 160,
               matterState: 'gas'
             });
           }
@@ -1969,15 +2163,20 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             return true;
           });
           if (candidates.length === 0 && ms === 'plasma') {
-            const refPlat = accelerationChunk.pathPlatforms[0];
-            if (refPlat) {
-              accelerationChunk.platforms.push({
-                x: refPlat.x + 20,
-                y: refPlat.y + 80,
-                width: 120,
+            // Insert a real on-path plasma trampoline right before resolutionChunk
+            const lastClimax = climaxChunk.pathPlatforms[climaxChunk.pathPlatforms.length - 1];
+            if (lastClimax) {
+              const springboard: Platform = {
+                x: lastClimax.x + lastClimax.width + 85,
+                y: clampY(lastClimax.y - 10),
+                width: 145,
                 height: 20,
                 matterState: 'plasma'
-              });
+              };
+              climaxChunk.platforms.push(springboard);
+              climaxChunk.pathPlatforms.push(springboard);
+              climaxChunk.exit = { x: springboard.x + springboard.width - 40, y: springboard.y };
+              plasmaLaunchBeforeRes = true;
             }
           } else {
             const tagCount = Math.min(2, candidates.length);
@@ -1993,76 +2192,26 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       }
 
       const rawRes = createResolutionChunk({ width: 260 });
-      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, levelAlpha, -15);
+      resolutionChunk = connectAndTranslateChunk(
+        climaxChunk,
+        rawRes,
+        levelAlpha,
+        plasmaLaunchBeforeRes ? -75 : -15
+      );
       width = Math.max(2200, Math.round(resolutionChunk.exit.x + 280));
 
-      // Wire Entanglement configuration (mirror_x, inverted_gravity, mirror_and_gravity, revealAtX, tetherPhysical + pylons)
+      // Wire Entanglement configuration (mirror geometry & exact Beta spawns/doors built below)
       if (plan.entanglement) {
         const ent = plan.entanglement;
         const safeMaxX = Math.floor(width * 0.32);
         const portalMode = ent.portalMode ?? 'dual';
-        if (ent.mode === 'inverted_gravity') {
-          entanglementConfig = {
-            mode: 'inverted_gravity',
-            ...(ent.allowHeroCollision ? { allowHeroCollision: true } : {}),
-            betaSpawn: {
-              x: Math.round(awakeningChunk.entry.x),
-              y: 160
-            },
-            portalMode,
-            ...(portalMode === 'dual'
-              ? {
-                  betaDoor: {
-                    x: Math.round(resolutionChunk.exit.x),
-                    y: Math.max(120, Math.round(resolutionChunk.exit.y - 140))
-                  }
-                }
-              : {})
-          };
-        } else if (ent.mode === 'mirror_and_gravity') {
-          entanglementConfig = {
-            mode: 'mirror_and_gravity',
-            betaSpawn: {
-              x: Math.max(900, width - 180),
-              y: 180
-            },
-            portalMode,
-            ...(portalMode === 'dual'
-              ? {
-                  betaDoor: {
-                    x: Math.min(600, Math.max(180, width - Math.round(resolutionChunk.exit.x))),
-                    y: 180
-                  }
-                }
-              : {})
-          };
-        } else {
-          entanglementConfig = {
-            mode: 'mirror_x',
-            betaSpawn: {
-              x: Math.max(200, width - 180),
-              y: Math.round(awakeningChunk.entry.y - PHYSICS.HERO_HEIGHT / 2)
-            },
-            portalMode,
-            ...(portalMode === 'dual'
-              ? {
-                  betaDoor: {
-                    x: Math.max(180, width - Math.round(resolutionChunk.exit.x)),
-                    y: Math.round(resolutionChunk.exit.y - 10)
-                  }
-                }
-              : {}),
-            ...(ent.revealInSafeZone ? { revealAtX: safeMaxX } : {}),
-            ...(ent.tetherPhysical ? { tetherPhysical: true, tetherMaxLength: 540 } : {})
-          };
-          if (ent.tetherPhysical) {
-            tetherPylons = [
-              { x: Math.min(640, safeMaxX), y: baseY - 190, radius: 18, maxLength: 540 },
-              { x: Math.round(width * 0.52), y: baseY - 210, radius: 18, maxLength: 540 },
-              { x: Math.round(width * 0.78), y: baseY - 200, radius: 18, maxLength: 540 }
-            ];
-          }
-        }
+        entanglementConfig = {
+          mode: ent.mode,
+          portalMode,
+          ...(ent.allowHeroCollision ? { allowHeroCollision: true } : {}),
+          ...(ent.revealInSafeZone ? { revealAtX: safeMaxX } : {}),
+          ...(ent.tetherPhysical ? { tetherPhysical: true, tetherMaxLength: 540 } : {})
+        };
       }
       break;
     }
@@ -2106,6 +2255,389 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     x: Math.round(resolutionChunk.exit.x),
     y: Math.round(resolutionChunk.exit.y - 10)
   };
+
+  // --- Entanglement Mirror Geometry Builder (guarantees real Alpha + Beta dual playability) ---
+  if (entanglementConfig) {
+    const mode = entanglementConfig.mode;
+    const isSinglePortal = entanglementConfig.portalMode === 'single';
+    const origHeight = height;
+    const isTunnelWall = (p: Platform) =>
+      p.width <= 80 && p.height >= 400 && p.kind !== 'wall';
+    const isBottomPitSpike = (s: Spike) => s.y >= origHeight - 25 && (s.width ?? 0) >= width * 0.5;
+    const isWidePitSpike = (s: Spike) => isBottomPitSpike(s) || (s.width ?? 32) >= 160;
+
+    const applyVerticalShift = (shiftDown: number) => {
+      if (shiftDown <= 0) return;
+      const shifted = new Set<Platform>();
+      for (const p of [...allPlatforms, ...fullPlatformPath]) {
+        if (shifted.has(p) || isTunnelWall(p)) continue;
+        shifted.add(p);
+        p.y += shiftDown;
+        if (p.movesTo?.y !== undefined) p.movesTo.y += shiftDown;
+      }
+      for (const pt of allParticles) pt.y += shiftDown;
+      for (const s of allSpikes) {
+        if (!isBottomPitSpike(s)) s.y += shiftDown;
+      }
+      if (pressurePlates) {
+        for (const pl of pressurePlates) pl.y += shiftDown;
+      }
+      if (wormholes) {
+        for (const wh of wormholes) {
+          wh.inY += shiftDown;
+          wh.outY += shiftDown;
+        }
+      }
+      player.position.y += shiftDown;
+      door.y += shiftDown;
+    };
+
+    if (mode === 'mirror_x' && isSinglePortal) {
+      // Single center portal: Alpha runs left -> center, Beta runs right -> center
+      const centerX = door.x;
+      width = Math.max(2200, Math.round(centerX * 2));
+      for (const s of allSpikes) {
+        if (isBottomPitSpike(s)) {
+          s.width = width;
+        }
+      }
+      const doorPlat = fullPlatformPath[fullPlatformPath.length - 1];
+      const doorPlatInAll = allPlatforms.find(
+        (p) => doorPlat && p.x === doorPlat.x && p.y === doorPlat.y && p.width === doorPlat.width
+      );
+      if (doorPlat) {
+        const halfSpan = Math.max(130, centerX - doorPlat.x);
+        const newX = Math.round(centerX - halfSpan);
+        const newW = Math.round(halfSpan * 2);
+        doorPlat.x = newX;
+        doorPlat.width = newW;
+        if (doorPlatInAll && doorPlatInAll !== doorPlat) {
+          doorPlatInAll.x = newX;
+          doorPlatInAll.width = newW;
+        }
+      }
+      const alphaPlats = [...allPlatforms];
+      for (const p of alphaPlats) {
+        if (p === doorPlat || p === doorPlatInAll) continue;
+        const mirroredX = Math.round(width - p.x - p.width);
+        const mirrored: Platform = { ...p, x: mirroredX };
+        if (p.movesTo) {
+          mirrored.movesTo = {
+            ...(p.movesTo.x !== undefined ? { x: Math.round(mirroredX - (p.movesTo.x - p.x)) } : {}),
+            ...(p.movesTo.y !== undefined ? { y: p.movesTo.y } : {}),
+            ...(p.movesTo.time !== undefined ? { time: p.movesTo.time } : {})
+          };
+        }
+        allPlatforms.push(mirrored);
+      }
+      const alphaParts = [...allParticles];
+      for (const pt of alphaParts) {
+        allParticles.push({ ...pt, x: Math.round(width - pt.x) });
+      }
+      if (wormholes) {
+        const alphaWhs = [...wormholes];
+        for (const wh of alphaWhs) {
+          wormholes.push({
+            ...wh,
+            id: `${wh.id}_beta`,
+            inX: Math.round(width - wh.inX),
+            outX: Math.round(width - wh.outX),
+            inNormalAngleDeg: (180 - wh.inNormalAngleDeg + 360) % 360,
+            outNormalAngleDeg: (180 - wh.outNormalAngleDeg + 360) % 360
+          });
+        }
+      }
+      const alphaSpikes = allSpikes.filter((s) => !isWidePitSpike(s));
+      for (const s of alphaSpikes) {
+        allSpikes.push({ ...s, x: Math.round(width - s.x - (s.width ?? 32)) });
+      }
+      entanglementConfig = {
+        ...entanglementConfig,
+        betaSpawn: {
+          x: Math.round(width - player.position.x),
+          y: player.position.y
+        },
+        portalMode: 'single'
+      };
+      delete entanglementConfig.betaDoor;
+    } else if (mode === 'mirror_x') {
+      // Dual-lane horizontal mirror: Alpha in lower half (y >= 700), Beta in upper half (y' = y - laneShift)
+      const walkableAlpha = allPlatforms.filter((p) => !isTunnelWall(p));
+      const minAlphaY = Math.min(...walkableAlpha.map((p) => p.y));
+      applyVerticalShift(minAlphaY < 700 ? Math.round(700 - minAlphaY) : 0);
+
+      const maxAlphaY = Math.max(...walkableAlpha.map((p) => p.y + p.height));
+      const minAlphaAfter = Math.min(...walkableAlpha.map((p) => p.y));
+      const laneShift = Math.max(460, Math.min(540, minAlphaAfter - 200));
+      const maxBetaY = maxAlphaY - laneShift;
+      height = Math.max(1320, maxAlphaY + 180);
+      const splitY = Math.round((maxBetaY + minAlphaAfter) / 2);
+
+      for (const s of allSpikes) {
+        if (isBottomPitSpike(s)) {
+          s.y = height - 15;
+          s.width = width;
+        }
+      }
+      if (gates) {
+        for (const g of gates) {
+          g.y = splitY;
+          g.height = height - splitY;
+        }
+      }
+
+      const alphaPlats = [...allPlatforms];
+      for (const p of alphaPlats) {
+        if (isTunnelWall(p)) {
+          p.y = splitY;
+          p.height = height - splitY;
+          allPlatforms.push({
+            ...p,
+            x: Math.round(width - p.x - p.width),
+            y: 0,
+            height: splitY
+          });
+          continue;
+        }
+        const mirroredX = Math.round(width - p.x - p.width);
+        const mirroredY = Math.round(p.y - laneShift);
+        const mirrored: Platform = { ...p, x: mirroredX, y: mirroredY };
+        if (p.movesTo) {
+          mirrored.movesTo = {
+            ...(p.movesTo.x !== undefined ? { x: Math.round(mirroredX - (p.movesTo.x - p.x)) } : {}),
+            ...(p.movesTo.y !== undefined ? { y: Math.round(p.movesTo.y - laneShift) } : {}),
+            ...(p.movesTo.time !== undefined ? { time: p.movesTo.time } : {})
+          };
+        }
+        allPlatforms.push(mirrored);
+      }
+
+      const alphaParts = [...allParticles];
+      for (const pt of alphaParts) {
+        allParticles.push({
+          ...pt,
+          x: Math.round(width - pt.x),
+          y: Math.round(pt.y - laneShift)
+        });
+      }
+      if (wormholes) {
+        const alphaWhs = [...wormholes];
+        for (const wh of alphaWhs) {
+          wormholes.push({
+            ...wh,
+            id: `${wh.id}_beta`,
+            inX: Math.round(width - wh.inX),
+            inY: Math.round(wh.inY - laneShift),
+            outX: Math.round(width - wh.outX),
+            outY: Math.round(wh.outY - laneShift),
+            inNormalAngleDeg: (180 - wh.inNormalAngleDeg + 360) % 360,
+            outNormalAngleDeg: (180 - wh.outNormalAngleDeg + 360) % 360
+          });
+        }
+      }
+      const alphaSpikes = allSpikes.filter((s) => !isWidePitSpike(s));
+      for (const s of alphaSpikes) {
+        allSpikes.push({
+          ...s,
+          x: Math.round(width - s.x - (s.width ?? 32)),
+          y: Math.round(s.y - laneShift)
+        });
+      }
+
+      entanglementConfig = {
+        ...entanglementConfig,
+        betaSpawn: {
+          x: Math.round(width - player.position.x),
+          y: Math.round(player.position.y - laneShift)
+        },
+        portalMode: 'dual',
+        betaDoor: {
+          x: Math.round(width - door.x),
+          y: Math.round(door.y - laneShift)
+        }
+      };
+
+      if (entanglementConfig.tetherPhysical) {
+        const safeMaxX = Math.floor(width * 0.32);
+        tetherPylons = [
+          { x: Math.min(640, safeMaxX), y: splitY - 10, radius: 18, maxLength: 540 },
+          { x: Math.round(width * 0.52), y: splitY - 10, radius: 18, maxLength: 540 },
+          { x: Math.round(width * 0.78), y: splitY - 10, radius: 18, maxLength: 540 }
+        ];
+      }
+    } else if (mode === 'inverted_gravity') {
+      // Exact vertical ceiling mirror: y' = height - y - h
+      const walkableAlpha = allPlatforms.filter((p) => !isTunnelWall(p));
+      const hasPlasma = walkableAlpha.some((p) => p.matterState === 'plasma');
+      const minTarget = hasPlasma ? 880 : 720;
+      const minAlphaY = Math.min(...walkableAlpha.map((p) => p.y));
+      applyVerticalShift(minAlphaY < minTarget ? Math.round(minTarget - minAlphaY) : 0);
+      const maxAlphaY = Math.max(...walkableAlpha.map((p) => p.y + p.height));
+      height = Math.max(hasPlasma ? 1440 : 1320, maxAlphaY + 140);
+      const splitY = Math.round(height / 2);
+      for (const s of allSpikes) {
+        if (isBottomPitSpike(s)) {
+          s.y = height - 15;
+          s.width = width;
+        }
+      }
+      if (gates) {
+        for (const g of gates) {
+          g.y = splitY;
+          g.height = height - splitY;
+        }
+      }
+
+      const alphaPlats = [...allPlatforms];
+      for (const p of alphaPlats) {
+        if (isTunnelWall(p)) {
+          p.y = splitY;
+          p.height = height - splitY;
+          allPlatforms.push({ ...p, y: 0, height: splitY });
+          continue;
+        }
+        const mirroredY = Math.round(height - p.y - p.height);
+        const mirrored: Platform = { ...p, y: mirroredY };
+        if (p.movesTo) {
+          mirrored.movesTo = {
+            ...(p.movesTo.x !== undefined ? { x: p.movesTo.x } : {}),
+            ...(p.movesTo.y !== undefined ? { y: Math.round(mirroredY - (p.movesTo.y - p.y)) } : {}),
+            ...(p.movesTo.time !== undefined ? { time: p.movesTo.time } : {})
+          };
+        }
+        allPlatforms.push(mirrored);
+      }
+
+      const alphaParts = [...allParticles];
+      for (const pt of alphaParts) {
+        allParticles.push({ ...pt, y: Math.round(height - pt.y) });
+      }
+      if (wormholes) {
+        const alphaWhs = [...wormholes];
+        for (const wh of alphaWhs) {
+          wormholes.push({
+            ...wh,
+            id: `${wh.id}_beta`,
+            inY: Math.round(height - wh.inY),
+            outY: Math.round(height - wh.outY),
+            inNormalAngleDeg: (-wh.inNormalAngleDeg + 360) % 360,
+            outNormalAngleDeg: (-wh.outNormalAngleDeg + 360) % 360
+          });
+        }
+      }
+      const alphaSpikes = allSpikes.filter((s) => !isWidePitSpike(s));
+      for (const s of alphaSpikes) {
+        allSpikes.push({ ...s, y: Math.round(height - s.y - (s.height ?? 32)) });
+      }
+
+      entanglementConfig = {
+        ...entanglementConfig,
+        betaSpawn: {
+          x: player.position.x,
+          y: Math.round(height - player.position.y)
+        },
+        portalMode: 'dual',
+        betaDoor: {
+          x: door.x,
+          y: Math.round(height - door.y)
+        }
+      };
+    } else {
+      // mirror_and_gravity: exact double symmetry (x' = width - x - w, y' = height - y - h)
+      const walkableAlpha = allPlatforms.filter((p) => !isTunnelWall(p));
+      const minAlphaY = Math.min(...walkableAlpha.map((p) => p.y));
+      const shiftForClearance = minAlphaY < 780 ? Math.round(780 - minAlphaY) : 0;
+      const shiftForBetaTop = player.position.y < 880 ? Math.round(880 - player.position.y) : 0;
+      applyVerticalShift(Math.max(shiftForClearance, shiftForBetaTop));
+      const maxAlphaY = Math.max(...walkableAlpha.map((p) => p.y + p.height));
+      height = Math.max(1320, maxAlphaY + 140);
+      const splitY = Math.round(height / 2);
+
+      for (const s of allSpikes) {
+        if (isBottomPitSpike(s)) {
+          s.y = height - 15;
+          s.width = width;
+        }
+      }
+      if (gates) {
+        for (const g of gates) {
+          g.y = splitY;
+          g.height = height - splitY;
+        }
+      }
+
+      const alphaPlats = [...allPlatforms];
+      for (const p of alphaPlats) {
+        if (isTunnelWall(p)) {
+          p.y = splitY;
+          p.height = height - splitY;
+          allPlatforms.push({
+            ...p,
+            x: Math.round(width - p.x - p.width),
+            y: 0,
+            height: splitY
+          });
+          continue;
+        }
+        const mirroredX = Math.round(width - p.x - p.width);
+        const mirroredY = Math.round(height - p.y - p.height);
+        const mirrored: Platform = { ...p, x: mirroredX, y: mirroredY };
+        if (p.movesTo) {
+          mirrored.movesTo = {
+            ...(p.movesTo.x !== undefined ? { x: Math.round(mirroredX - (p.movesTo.x - p.x)) } : {}),
+            ...(p.movesTo.y !== undefined ? { y: Math.round(mirroredY - (p.movesTo.y - p.y)) } : {}),
+            ...(p.movesTo.time !== undefined ? { time: p.movesTo.time } : {})
+          };
+        }
+        allPlatforms.push(mirrored);
+      }
+
+      const alphaParts = [...allParticles];
+      for (const pt of alphaParts) {
+        allParticles.push({
+          ...pt,
+          x: Math.round(width - pt.x),
+          y: Math.round(height - pt.y)
+        });
+      }
+      if (wormholes) {
+        const alphaWhs = [...wormholes];
+        for (const wh of alphaWhs) {
+          wormholes.push({
+            ...wh,
+            id: `${wh.id}_beta`,
+            inX: Math.round(width - wh.inX),
+            inY: Math.round(height - wh.inY),
+            outX: Math.round(width - wh.outX),
+            outY: Math.round(height - wh.outY),
+            inNormalAngleDeg: (180 + wh.inNormalAngleDeg) % 360,
+            outNormalAngleDeg: (180 + wh.outNormalAngleDeg) % 360
+          });
+        }
+      }
+      const alphaSpikes = allSpikes.filter((s) => !isWidePitSpike(s));
+      for (const s of alphaSpikes) {
+        allSpikes.push({
+          ...s,
+          x: Math.round(width - s.x - (s.width ?? 32)),
+          y: Math.round(height - s.y - (s.height ?? 32))
+        });
+      }
+
+      entanglementConfig = {
+        ...entanglementConfig,
+        betaSpawn: {
+          x: Math.round(width - player.position.x),
+          y: Math.round(height - player.position.y)
+        },
+        portalMode: 'dual',
+        betaDoor: {
+          x: Math.round(width - door.x),
+          y: Math.round(height - door.y)
+        }
+      };
+    }
+  }
 
   const baseLevelData: LevelData = {
     id: String(level),

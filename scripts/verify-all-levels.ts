@@ -48,6 +48,16 @@ export const SPEC02_QUOTAS = {
   maxAllowedWidth: 5500
 } as const;
 
+export const BLOCKING_POWERUP_TYPES = new Set([
+  'duplicate',
+  'speed',
+  'tunnel',
+  'condense',
+  'lowGravity',
+  'antiGravity',
+  'pauli'
+]);
+
 export interface VerificationReport {
   campaignCount: number;
   moleculeCount: number;
@@ -55,6 +65,7 @@ export interface VerificationReport {
   milestoneCount: number;
   smartArchetypesFound: number;
   parJumpsCount: number;
+  uniqueAuthorGhosts: number;
   quotas: CampaignQuotaCounts;
   errors: string[];
 }
@@ -67,6 +78,7 @@ export function verifyAllLevels(): VerificationReport {
   let milestoneCount = 0;
   let parJumpsCount = 0;
   const seenArchetypes = new Set<string>();
+  const uniqueGhosts = new Set<string>();
 
   const quotas: CampaignQuotaCounts = {
     duplicate: 0,
@@ -166,6 +178,38 @@ export function verifyAllLevels(): VerificationReport {
     const ghostCheck = validateAuthorGhost(levelData);
     if (!ghostCheck.valid) {
       errors.push(`Level ${z}: invalid authorGhost (${ghostCheck.reason})`);
+    } else if (levelData.authorGhost) {
+      uniqueGhosts.add(levelData.authorGhost);
+    }
+
+    // Enforce dual Alpha+Beta simulation on every entangled level
+    if (hasEntanglement) {
+      const dualSim = simulateLevelData(levelData);
+      if (!dualSim.success) {
+        errors.push(
+          `Level ${z}: failed dual Alpha+Beta entanglement simulation (${dualSim.failureReason})`
+        );
+      }
+    }
+
+    // Enforce zero optional/useless blocking power-ups across all 118 levels
+    const hasBlockingPowerup = (levelData.particles ?? []).some((p) =>
+      BLOCKING_POWERUP_TYPES.has(p.type)
+    );
+    if (hasBlockingPowerup) {
+      const strippedSim = simulateLevelData({ ...levelData, particles: [] });
+      if (strippedSim.success) {
+        const types = Array.from(
+          new Set(
+            (levelData.particles ?? [])
+              .filter((p) => BLOCKING_POWERUP_TYPES.has(p.type))
+              .map((p) => p.type)
+          )
+        ).join('+');
+        errors.push(
+          `Level ${z}: blocking power-up (${types}) is optional — level still passes with particles: []`
+        );
+      }
     }
 
     if (isNobleGasLevel(z)) {
@@ -317,6 +361,10 @@ export function verifyAllLevels(): VerificationReport {
     }
   }
 
+  if (uniqueGhosts.size < 110) {
+    errors.push(`Topography variety failed: uniqueAuthorGhosts=${uniqueGhosts.size}/118 < 110`);
+  }
+
   return {
     campaignCount,
     moleculeCount,
@@ -324,6 +372,7 @@ export function verifyAllLevels(): VerificationReport {
     milestoneCount,
     smartArchetypesFound,
     parJumpsCount,
+    uniqueAuthorGhosts: uniqueGhosts.size,
     quotas,
     errors
   };
@@ -337,6 +386,7 @@ function main() {
   const report = verifyAllLevels();
   const q = report.quotas;
   console.log(`Campaign Levels Verified : ${report.campaignCount}/118`);
+  console.log(`Unique Topographies/Ghost: ${report.uniqueAuthorGhosts}/118 (min 110)`);
   console.log(`Noble Gas Playgrounds    : ${report.nobleGasCount}/${NOBLE_GAS_LEVELS.length}`);
   console.log(
     `Milestone Discovery Boxes: ${report.milestoneCount}/${MILESTONE_LEVEL_NUMBERS.length}`

@@ -341,7 +341,7 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
       hue: '#2e0522',
       antiHue: '#f472b6',
       player: { position: { x: 140, y: 440 } },
-      door: { x: 820, y: 200 },
+      door: { x: 480, y: 200 },
       entanglement: {
         mode: 'mirror_x',
         betaSpawn: { x: 820, y: 440 },
@@ -353,7 +353,7 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
         { x: 40, y: 510, width: 880, height: 20, matterState: 'plasma' },
         { x: 240, y: 380, width: 180, height: 20, matterState: 'plasma' },
         { x: 540, y: 380, width: 180, height: 20, matterState: 'plasma' },
-        { x: 740, y: 260, width: 160, height: 20 }
+        { x: 400, y: 260, width: 160, height: 20 }
       ],
       spikes: [],
       particles: [

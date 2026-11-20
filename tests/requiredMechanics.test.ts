@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { assembleCampaignLevel } from '../src/generator/chunkAssembler';
-import { type SimWorld, simulateFullLevel } from '../src/generator/simulator';
+import { type SimWorld, simulateFullLevel, simulateLevelData } from '../src/generator/simulator';
 import { PHYSICS } from '../src/physics/constants';
 import type { LevelData, Platform } from '../src/types';
 
@@ -251,5 +251,56 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
         expect(mechanicCount).toBeGreaterThanOrEqual(2);
       }
     }
+  });
+
+  it('Global Contract (1-118): 0 levels with blocking power-ups pass when particles are stripped', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const blockingTypes = new Set([
+      'duplicate',
+      'speed',
+      'tunnel',
+      'condense',
+      'lowGravity',
+      'antiGravity',
+      'pauli'
+    ]);
+    const violations: string[] = [];
+
+    for (let lvl = 1; lvl <= 118; lvl++) {
+      const filePath = path.resolve(process.cwd(), `src/data/level${lvl}.json`);
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as LevelData;
+      const blocking = (data.particles ?? []).filter((p) => blockingTypes.has(p.type));
+      if (blocking.length === 0) continue;
+
+      const withoutParticles = simulateLevelData({ ...data, particles: [] });
+      if (withoutParticles.success) {
+        violations.push(`L${lvl} (${Array.from(new Set(blocking.map((p) => p.type))).join('+')})`);
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('Global Contract (1-118): 100% of entangled levels pass real dual Alpha+Beta physics simulation', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    let entangledCount = 0;
+    const failures: string[] = [];
+
+    for (let lvl = 1; lvl <= 118; lvl++) {
+      const filePath = path.resolve(process.cwd(), `src/data/level${lvl}.json`);
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as LevelData;
+      if (!data.entanglement) continue;
+      entangledCount++;
+
+      const sim = simulateLevelData(data);
+      if (!sim.success) {
+        failures.push(`L${lvl}: ${sim.failureReason}`);
+      }
+    }
+
+    expect(entangledCount).toBeGreaterThanOrEqual(18);
+    expect(failures).toEqual([]);
   });
 });

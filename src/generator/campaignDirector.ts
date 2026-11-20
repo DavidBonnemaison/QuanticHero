@@ -150,7 +150,7 @@ export const MILESTONE_DEFINITIONS: Readonly<Record<number, MilestoneDefinition>
     symbol: 'Si',
     mechanic: 'de_broglie_wave',
     label: 'Échafaudage d’Onde de Broglie solidifiée',
-    hintSteps: ['CONDENSE WAVE', 'WALK ON TRAIL']
+    hintSteps: ['AIR SPACE / [C]', 'SOLIDIFY TRAIL']
   },
   18: {
     level: 18,

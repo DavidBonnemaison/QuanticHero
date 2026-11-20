@@ -314,7 +314,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
         if (this.isLevelCompleted && this.canAdvanceLevel) {
           this.advanceToNextLevel();
         } else if (!this.isLevelCompleted && !this.isTransitioningLevel) {
-          this.tryInFlightFission();
+          if (!this.tryInFlightFission() && this.hasCondenseAbility) {
+            this.tryCrystallizeBroglieTrail();
+          }
         }
       });
 
@@ -414,6 +416,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       );
       if (doubleTap) {
         if (this.tryInFlightFission()) return;
+        if (this.hasCondenseAbility && this.tryCrystallizeBroglieTrail()) return;
         if (this.heroes.length > 1 && !this.isEntangled) {
           this.cycleFocusNext();
         }
