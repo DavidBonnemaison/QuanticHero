@@ -35,6 +35,7 @@ export interface GameStoreState {
   locale: Locale;
   sharedLevel: LevelData | null;
   unlockedMolecules: string[];
+  moleculeScores: Record<string, ScoreItem>;
 }
 
 export interface RecordScoreMeta {
@@ -52,6 +53,12 @@ export interface GameStoreActions {
   resetGame: () => void;
   recordScore: (
     level: number,
+    score: number,
+    ghostTrajectory?: string,
+    meta?: RecordScoreMeta
+  ) => void;
+  recordMoleculeScore: (
+    moleculeId: string,
     score: number,
     ghostTrajectory?: string,
     meta?: RecordScoreMeta
@@ -190,6 +197,7 @@ export const useGameStore = create<GameStore>()(
       ghostEnabled: true,
       locale: 'en',
       unlockedMolecules: [],
+      moleculeScores: {},
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
       setMuted: (muted: boolean) => set({ isMuted: muted }),
@@ -277,7 +285,75 @@ export const useGameStore = create<GameStore>()(
           maxEntanglementLevel: 110,
           scores: {},
           sharedLevel: null,
-          unlockedMolecules: []
+          unlockedMolecules: [],
+          moleculeScores: {}
+        }),
+
+      recordMoleculeScore: (
+        moleculeId: string,
+        score: number,
+        ghostTrajectory?: string,
+        meta?: RecordScoreMeta
+      ) =>
+        set((state) => {
+          const currentMap = state.moleculeScores ?? {};
+          const prevItem = currentMap[moleculeId];
+          const currentBest = prevItem?.best ?? 0;
+          const isNewBest = currentBest === 0 || score < currentBest;
+          const best = currentBest === 0 ? score : Math.min(currentBest, score);
+          const trajectoryToSave = isNewBest
+            ? (ghostTrajectory ?? prevItem?.ghostTrajectory)
+            : prevItem?.ghostTrajectory;
+
+          const bestJumps =
+            meta?.jumpCount !== undefined
+              ? prevItem?.bestJumps !== undefined
+                ? Math.min(prevItem.bestJumps, meta.jumpCount)
+                : meta.jumpCount
+              : prevItem?.bestJumps;
+
+          const lastJumps = meta?.jumpCount !== undefined ? meta.jumpCount : prevItem?.lastJumps;
+
+          const bestSwitches =
+            meta?.switchCount !== undefined
+              ? prevItem?.bestSwitches !== undefined
+                ? Math.min(prevItem.bestSwitches, meta.switchCount)
+                : meta.switchCount
+              : prevItem?.bestSwitches;
+
+          const medal =
+            meta?.medal !== undefined ? bestMedal(prevItem?.medal, meta.medal) : prevItem?.medal;
+
+          const coherentRun = Boolean(prevItem?.coherentRun || meta?.coherentRun);
+          const bestStyleScore =
+            meta?.styleScore !== undefined
+              ? Math.max(prevItem?.bestStyleScore ?? 0, meta.styleScore)
+              : prevItem?.bestStyleScore;
+          const lastStyleScore =
+            meta?.styleScore !== undefined ? meta.styleScore : prevItem?.lastStyleScore;
+
+          const unlockedMolecules = state.unlockedMolecules.includes(moleculeId)
+            ? state.unlockedMolecules
+            : [...state.unlockedMolecules, moleculeId];
+
+          return {
+            unlockedMolecules,
+            moleculeScores: {
+              ...currentMap,
+              [moleculeId]: {
+                last: score,
+                best,
+                ...(trajectoryToSave ? { ghostTrajectory: trajectoryToSave } : {}),
+                ...(bestJumps !== undefined ? { bestJumps } : {}),
+                ...(lastJumps !== undefined ? { lastJumps } : {}),
+                ...(bestSwitches !== undefined ? { bestSwitches } : {}),
+                ...(medal !== undefined ? { medal } : {}),
+                ...(coherentRun ? { coherentRun: true } : {}),
+                ...(bestStyleScore !== undefined && bestStyleScore > 0 ? { bestStyleScore } : {}),
+                ...(lastStyleScore !== undefined && lastStyleScore > 0 ? { lastStyleScore } : {})
+              }
+            }
+          };
         }),
 
       recordScore: (
@@ -593,7 +669,8 @@ export const useGameStore = create<GameStore>()(
         ghostMode: state.ghostMode,
         ghostEnabled: state.ghostEnabled,
         locale: state.locale,
-        unlockedMolecules: state.unlockedMolecules
+        unlockedMolecules: state.unlockedMolecules,
+        moleculeScores: state.moleculeScores
       })
     }
   )

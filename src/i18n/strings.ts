@@ -35,12 +35,28 @@ export interface Strings {
     chemicalBond: string;
     chemicalBondOn: string;
     chemicalBondHint: string;
+    alchemyDragHint: string;
+    alchemySelectPartner: (symbol: string) => string;
+    noStableBond: string;
+    codexButton: (unlocked: number, total: number) => string;
     classicTab: string;
     entanglementTab: string;
     ghostModeTitle: (mode: GhostMode) => string;
     ghostDisabled: string;
     ghostEnabled: (mode: GhostMode) => string;
     jumpSuffix: string;
+  };
+  codex: {
+    title: string;
+    subtitle: string;
+    unlockedCounter: (unlocked: number, total: number) => string;
+    close: string;
+    undiscovered: string;
+    hintLabel: string;
+    bestTime: string;
+    medal: string;
+    noRecord: string;
+    play: string;
   };
   periodicTable: {
     viewTable: string;
@@ -192,13 +208,30 @@ export const STRINGS: Record<Locale, Strings> = {
       goldIsotopes: 'Gold Isotopes:',
       chemicalBond: 'Chemical Bond',
       chemicalBondOn: '(ON)',
-      chemicalBondHint: '(Shift+Click)',
+      chemicalBondHint: '(Drag / Tap)',
+      alchemyDragHint: 'Drag an atom onto another or tap Alchemy',
+      alchemySelectPartner: (symbol) => `Select partner for ${symbol}...`,
+      noStableBond: 'No stable bond found',
+      codexButton: (unlocked, total) => `Codex (${unlocked} / ${total})`,
       classicTab: '[ CLASSIC ATOMS ]',
       entanglementTab: '[ ENTANGLEMENT Ψ ⊗ Ψ ]',
       ghostModeTitle: (mode) => `Ghost replay mode: ${mode}`,
       ghostDisabled: 'Ghost disabled',
       ghostEnabled: (mode) => `Ghost enabled (${mode})`,
       jumpSuffix: 'J'
+    },
+    codex: {
+      title: 'Molecular Codex',
+      subtitle:
+        'Combine two unlocked atoms on the Periodic Table via drag-and-drop or Alchemy mode.',
+      unlockedCounter: (unlocked, total) => `Unlocked: ${unlocked} / ${total}`,
+      close: 'Close',
+      undiscovered: 'Undiscovered Molecule',
+      hintLabel: 'Alchemical Hint',
+      bestTime: 'Best Time',
+      medal: 'Isotope',
+      noRecord: '--:--:--',
+      play: 'PLAY ►'
     },
     periodicTable: {
       viewTable: 'Table View',
@@ -357,13 +390,30 @@ export const STRINGS: Record<Locale, Strings> = {
       goldIsotopes: "Isotopes d'Or :",
       chemicalBond: 'Liaison Chimique',
       chemicalBondOn: '(ON)',
-      chemicalBondHint: '(Shift+Clic)',
+      chemicalBondHint: '(Glisser / Tap)',
+      alchemyDragHint: 'Glissez un atome sur un autre ou activez Alchimie',
+      alchemySelectPartner: (symbol) => `Choisissez un partenaire pour ${symbol}...`,
+      noStableBond: 'Aucune liaison stable trouvée',
+      codexButton: (unlocked, total) => `Codex (${unlocked} / ${total})`,
       classicTab: '[ ATOMES CLASSIQUES ]',
       entanglementTab: '[ INTRICATION Ψ ⊗ Ψ ]',
       ghostModeTitle: (mode) => `Mode fantôme : ${mode}`,
       ghostDisabled: 'Fantôme désactivé',
       ghostEnabled: (mode) => `Fantôme activé (${mode})`,
       jumpSuffix: 'S'
+    },
+    codex: {
+      title: 'Codex Moléculaire',
+      subtitle:
+        'Combinez deux atomes débloqués sur le Tableau Périodique par glisser-déposer ou en mode Alchimie.',
+      unlockedCounter: (unlocked, total) => `Débloquées : ${unlocked} / ${total}`,
+      close: 'Fermer',
+      undiscovered: 'Molécule non découverte',
+      hintLabel: 'Indice alchimique',
+      bestTime: 'Meilleur temps',
+      medal: 'Isotope',
+      noRecord: '--:--:--',
+      play: 'JOUER ►'
     },
     periodicTable: {
       viewTable: 'Vue Tableau',

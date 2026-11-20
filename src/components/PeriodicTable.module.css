@@ -268,6 +268,87 @@
   z-index: 12;
 }
 
+.alchemyPartnerCandidate {
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.85), 0 0 12px rgba(192, 132, 252, 0.45);
+  animation: alchemyCandidatePulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes alchemyCandidatePulse {
+  from {
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55), 0 0 8px rgba(192, 132, 252, 0.3);
+  }
+  to {
+    box-shadow: 0 0 0 2px rgba(232, 121, 249, 0.9), 0 0 16px rgba(56, 189, 248, 0.65);
+  }
+}
+
+.elementTileDragTarget {
+  transform: scale(1.12);
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 2px #38bdf8, 0 0 22px rgba(56, 189, 248, 0.85) !important;
+  z-index: 15;
+}
+
+.elementTileRejectBounce {
+  animation: alchemyRejectBounce 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  border-color: #f87171 !important;
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.65) !important;
+}
+
+@keyframes alchemyRejectBounce {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  20% {
+    transform: translateX(-6px) scale(0.95);
+  }
+  45% {
+    transform: translateX(6px) scale(1.04);
+  }
+  70% {
+    transform: translateX(-4px) scale(0.98);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+.covalentArcOverlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 900;
+  overflow: visible;
+}
+
+.covalentArcGlow {
+  fill: none;
+  stroke: url(#covalent-arc-gradient);
+  stroke-width: 8;
+  stroke-linecap: round;
+  opacity: 0.35;
+}
+
+.covalentArcCore {
+  fill: none;
+  stroke: url(#covalent-arc-gradient);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 10 6;
+  animation: covalentArcFlow 0.45s linear infinite;
+}
+
+@keyframes covalentArcFlow {
+  from {
+    stroke-dashoffset: 32;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 .medalGold {
   border-color: #fbbf24 !important;
   box-shadow: 0 0 10px rgba(251, 191, 36, 0.55), inset 0 0 8px rgba(251, 191, 36, 0.25);

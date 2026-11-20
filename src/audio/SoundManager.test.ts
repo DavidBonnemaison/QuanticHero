@@ -473,6 +473,26 @@ describe('SoundManager', () => {
     });
   });
 
+  describe('Alchemy SFX (Epic 03 Spec-02)', () => {
+    it('plays harmonic synthesis chord via playAlchemySynthesis()', () => {
+      mockCtx.createOscillator.mockClear();
+      mockCtx.createBiquadFilter.mockClear();
+
+      soundManager.playAlchemySynthesis();
+
+      expect(mockCtx.createBiquadFilter).toHaveBeenCalledTimes(1);
+      expect(mockCtx.createOscillator).toHaveBeenCalledTimes(6);
+    });
+
+    it('plays soft descending bounce via playAlchemyReject()', () => {
+      mockCtx.createOscillator.mockClear();
+
+      soundManager.playAlchemyReject();
+
+      expect(mockCtx.createOscillator).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('destroy', () => {
     it('stops BGM, unhooks listeners, and closes audio context', () => {
       soundManager.startBgm();

@@ -1583,6 +1583,89 @@ export class SoundManager {
     }
   }
 
+  /**
+   * SFX: Alchemy Covalent Synthesis (Harmonic crystalline chord + resonant sweep)
+   */
+  public playAlchemySynthesis(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.5;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(3.5, now);
+      filter.frequency.setValueAtTime(420, now);
+      filter.frequency.exponentialRampToValueAtTime(5200, now + duration);
+      filter.connect(this.sfxGain);
+
+      // Luminous Lydian/Maj9 arpeggio chord
+      const freqs = [392.0, 493.88, 587.33, 739.99, 880.0, 1174.66];
+      freqs.forEach((freq, idx) => {
+        const start = now + idx * 0.04;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = idx % 2 === 0 ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.19, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.38);
+
+        osc.connect(gain);
+        gain.connect(filter);
+        osc.start(start);
+        osc.stop(start + 0.4);
+      });
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Alchemy Reject (Soft elastic descending bounce when no stable bond exists)
+   */
+  public playAlchemyReject(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const notes: ReadonlyArray<{ start: number; from: number; to: number; dur: number }> = [
+        { start: 0, from: 280, to: 210, dur: 0.085 },
+        { start: 0.075, from: 215, to: 155, dur: 0.11 }
+      ];
+
+      for (const note of notes) {
+        const t = now + note.start;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(note.from, t);
+        osc.frequency.exponentialRampToValueAtTime(note.to, t + note.dur);
+
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.linearRampToValueAtTime(0.16, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + note.dur);
+
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(t);
+        osc.stop(t + note.dur + 0.01);
+      }
+    } catch {
+      // safe fallback
+    }
+  }
+
   public destroy(): void {
     this.stopBgm();
     if (this.unsubStore) {

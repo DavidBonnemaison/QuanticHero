@@ -1,8 +1,9 @@
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { soundManager } from '../audio/SoundManager';
 import { getAllLevelMetadata, getLevelMetadata } from '../data/levels';
-import { findMoleculeByElements, getMoleculeById } from '../data/molecules';
+import { SECRET_MOLECULES, findMoleculeByElements, getMoleculeById } from '../data/molecules';
 import { getElementSpectroscopy, isNobleGas } from '../data/spectroscopy';
 import { getStrings } from '../i18n/strings';
 import { TOTAL_PERIODIC_ELEMENTS, countGoldMedals } from '../services/MedalService';
@@ -12,6 +13,7 @@ import { isGodMode } from '../tools/godMode';
 import { isEntanglementLevelId } from '../tools/levelProgression';
 import type { IsotopeMedal } from '../types';
 import styles from './LevelSelection.module.css';
+import { MoleculeCodex } from './MoleculeCodex';
 import { PeriodicTable, type PeriodicTableElementItem } from './PeriodicTable';
 
 export const LevelSelection: React.FC = () => {
@@ -22,6 +24,7 @@ export const LevelSelection: React.FC = () => {
   const maxEntanglementLevel = useGameStore((state) => state.maxEntanglementLevel ?? 110);
   const scores = useGameStore((state) => state.scores);
   const unlockedMolecules = useGameStore((state) => state.unlockedMolecules ?? []);
+  const moleculeScores = useGameStore((state) => state.moleculeScores ?? {});
   const unlockMolecule = useGameStore((state) => state.unlockMolecule);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
   const setSharedLevel = useGameStore((state) => state.setSharedLevel);
@@ -34,6 +37,10 @@ export const LevelSelection: React.FC = () => {
 
   const [alchemyMode, setAlchemyMode] = useState(false);
   const [selectedAtomZ, setSelectedAtomZ] = useState<number | null>(null);
+  const [isCodexOpen, setIsCodexOpen] = useState(false);
+  const [noBondToast, setNoBondToast] = useState(false);
+  const [rejectedAtomZs, setRejectedAtomZs] = useState<number[]>([]);
+  const [spectralFlash, setSpectralFlash] = useState(false);
   const [synthesisBanner, setSynthesisBanner] = useState<{
     formula: string;
     name: string;
@@ -44,11 +51,17 @@ export const LevelSelection: React.FC = () => {
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heldAtomZRef = useRef<number | null>(null);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rejectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      if (rejectTimerRef.current) clearTimeout(rejectTimerRef.current);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     };
   }, []);
 
@@ -118,7 +131,30 @@ export const LevelSelection: React.FC = () => {
     const recipe = findMoleculeByElements(z1, z2);
     setSelectedAtomZ(null);
     heldAtomZRef.current = null;
-    if (!recipe) return;
+
+    if (!recipe) {
+      soundManager.playAlchemyReject();
+      setRejectedAtomZs([z1, z2]);
+      setNoBondToast(true);
+      if (rejectTimerRef.current) clearTimeout(rejectTimerRef.current);
+      rejectTimerRef.current = setTimeout(() => {
+        setRejectedAtomZs([]);
+      }, 550);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => {
+        setNoBondToast(false);
+      }, 2200);
+      return;
+    }
+
+    setNoBondToast(false);
+    setRejectedAtomZs([]);
+    soundManager.playAlchemySynthesis();
+    setSpectralFlash(true);
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = setTimeout(() => {
+      setSpectralFlash(false);
+    }, 620);
 
     unlockMolecule(recipe.id);
     const aSpec = getElementSpectroscopy(z1);
@@ -193,8 +229,19 @@ export const LevelSelection: React.FC = () => {
     }
   };
 
+  const selectedAtomSymbol =
+    selectedAtomZ !== null ? getElementSpectroscopy(selectedAtomZ).symbol : null;
+
   return (
     <div className={styles.selectionContainer}>
+      {spectralFlash && (
+        <div
+          className={styles.spectralFlash}
+          data-testid="alchemy-spectral-flash"
+          aria-hidden="true"
+        />
+      )}
+
       <div className={styles.header}>
         <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
           {t.levelSelection.backToMenu}
@@ -238,7 +285,35 @@ export const LevelSelection: React.FC = () => {
           ⚗️ {t.levelSelection.chemicalBond}{' '}
           {alchemyMode ? t.levelSelection.chemicalBondOn : t.levelSelection.chemicalBondHint}
         </button>
+
+        <button
+          type="button"
+          className={styles.codexButton}
+          data-testid="open-codex-button"
+          onClick={() => setIsCodexOpen(true)}
+        >
+          📖 {t.levelSelection.codexButton(unlockedMolecules.length, SECRET_MOLECULES.length)}
+        </button>
       </div>
+
+      {alchemyMode && (
+        <div className={styles.alchemyStatusHint} data-testid="alchemy-status-hint">
+          {selectedAtomSymbol
+            ? t.levelSelection.alchemySelectPartner(selectedAtomSymbol)
+            : t.levelSelection.alchemyDragHint}
+        </div>
+      )}
+
+      {noBondToast && (
+        <div
+          className={styles.noBondToast}
+          data-testid="alchemy-no-bond-toast"
+          role="status"
+          aria-live="polite"
+        >
+          ⚡ {t.levelSelection.noStableBond}
+        </div>
+      )}
 
       {synthesisBanner && (
         <div className={styles.covalentBanner} data-testid="covalent-bond-banner">
@@ -302,10 +377,24 @@ export const LevelSelection: React.FC = () => {
         onOpenEntanglement={() => setActiveTab('entanglement')}
         alchemyMode={alchemyMode}
         selectedAtomZ={selectedAtomZ}
+        rejectedAtomZs={rejectedAtomZs}
         onAtomClick={handleAtomClick}
         onAtomSelect={handleSelect}
+        onAtomCombine={tryCombineElements}
         onAtomTouchStart={handleAtomTouchStart}
         onAtomTouchEnd={handleAtomTouchEnd}
+      />
+
+      <MoleculeCodex
+        isOpen={isCodexOpen}
+        onClose={() => setIsCodexOpen(false)}
+        unlockedMolecules={unlockedMolecules}
+        moleculeScores={moleculeScores}
+        locale={locale}
+        onPlayMolecule={(molId) => {
+          setIsCodexOpen(false);
+          navigate(`/game/molecule/${molId}`);
+        }}
       />
     </div>
   );

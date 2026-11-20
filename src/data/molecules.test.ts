@@ -45,4 +45,13 @@ describe('Secret Molecules Data (Spec-10)', () => {
     expect(findMoleculeByElements(1, 1)).toBeUndefined();
     expect(findMoleculeByElements(3, 4)).toBeUndefined();
   });
+
+  it('defines non-empty poetic/chemical hints (EN & FR) for all 12 recipes without spoiling formulas', () => {
+    for (const mol of SECRET_MOLECULES) {
+      expect(mol.hint.trim().length).toBeGreaterThan(8);
+      expect(mol.hintFr.trim().length).toBeGreaterThan(8);
+      expect(mol.hint).not.toContain(mol.formula);
+      expect(mol.hintFr).not.toContain(mol.formula);
+    }
+  });
 });

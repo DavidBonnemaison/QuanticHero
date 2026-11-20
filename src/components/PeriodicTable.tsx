@@ -40,11 +40,32 @@ export interface PeriodicTableProps {
   onOpenEntanglement?: () => void;
   alchemyMode?: boolean;
   selectedAtomZ?: number | null;
+  rejectedAtomZs?: number[];
   onAtomClick: (id: number, e: React.MouseEvent) => void;
   onAtomSelect: (id: number) => void;
+  onAtomCombine?: (z1: number, z2: number) => void;
   onAtomTouchStart?: (id: number, e: React.TouchEvent) => void;
   onAtomTouchEnd?: (e: React.TouchEvent) => void;
   elementRefCallback?: (z: number, el: HTMLDivElement | null) => void;
+}
+
+interface CovalentArcState {
+  sourceZ: number;
+  targetZ: number | null;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+interface CovalentDragSession {
+  sourceZ: number;
+  startX: number;
+  startY: number;
+  originX: number;
+  originY: number;
+  active: boolean;
+  hoveredZ: number | null;
 }
 
 interface PositionedElement {
@@ -57,6 +78,7 @@ const PERIODS = [1, 2, 3, 4, 5, 6, 7] as const;
 const MIN_ZOOM = 0.65;
 const MAX_ZOOM = 1.6;
 const ZOOM_STEP = 0.15;
+const DRAG_THRESHOLD_PX = 8;
 
 function getElementMechanics(
   item: PeriodicTableElementItem,
@@ -106,8 +128,10 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
   onOpenEntanglement,
   alchemyMode = false,
   selectedAtomZ = null,
+  rejectedAtomZs = [],
   onAtomClick,
   onAtomSelect,
+  onAtomCombine,
   onAtomTouchStart,
   onAtomTouchEnd,
   elementRefCallback
@@ -121,10 +145,27 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
   const [highlightedPeriod, setHighlightedPeriod] = useState<number | null>(null);
   const [zoom, setZoom] = useState<number>(1);
   const [previewZ, setPreviewZ] = useState<number | null>(elements[0]?.id ?? null);
+  const [covalentArc, setCovalentArc] = useState<CovalentArcState | null>(null);
 
   const tileRefs = useRef<Map<number, HTMLDivElement | null>>(new Map());
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const dragPanRef = useRef<{ startX: number; scrollLeft: number } | null>(null);
+  const covalentDragRef = useRef<CovalentDragSession | null>(null);
+  const suppressNextClickRef = useRef<boolean>(false);
+  const onAtomCombineRef = useRef(onAtomCombine);
+  onAtomCombineRef.current = onAtomCombine;
+
+  const unlockedZSet = useMemo(() => {
+    const set = new Set<number>();
+    for (const el of elements) {
+      if (!el.disabled) set.add(el.id);
+    }
+    return set;
+  }, [elements]);
+  const unlockedZSetRef = useRef(unlockedZSet);
+  unlockedZSetRef.current = unlockedZSet;
+
+  const rejectedSet = useMemo(() => new Set<number>(rejectedAtomZs), [rejectedAtomZs]);
 
   const positionedElements = useMemo<PositionedElement[]>(
     () =>
@@ -318,6 +359,167 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
     dragPanRef.current = null;
   };
 
+  const findUnlockedTargetZ = useCallback(
+    (clientX: number, clientY: number, eventTarget: EventTarget | null, sourceZ: number) => {
+      const unlocked = unlockedZSetRef.current;
+
+      // 1. Check exact tile bounding rects first (real browser layout)
+      for (const [z, node] of tileRefs.current.entries()) {
+        if (!node || z === sourceZ || !unlocked.has(z)) continue;
+        const rect = node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) continue;
+        if (
+          clientX >= rect.left &&
+          clientX <= rect.right &&
+          clientY >= rect.top &&
+          clientY <= rect.bottom
+        ) {
+          return z;
+        }
+      }
+
+      // 2. Fallback to document.elementFromPoint
+      if (typeof document !== 'undefined' && typeof document.elementFromPoint === 'function') {
+        const hit = document.elementFromPoint(clientX, clientY);
+        const tileEl = hit?.closest?.('[data-z]') as HTMLElement | null;
+        if (tileEl) {
+          const z = Number(tileEl.getAttribute('data-z'));
+          if (!Number.isNaN(z) && z !== sourceZ && unlocked.has(z)) {
+            return z;
+          }
+        }
+      }
+
+      // 3. Fallback to event.target (for jsdom synthetic pointer events)
+      const targetEl = (eventTarget as HTMLElement | null)?.closest?.(
+        '[data-z]'
+      ) as HTMLElement | null;
+      if (targetEl) {
+        const z = Number(targetEl.getAttribute('data-z'));
+        if (!Number.isNaN(z) && z !== sourceZ && unlocked.has(z)) {
+          return z;
+        }
+      }
+
+      return null;
+    },
+    []
+  );
+
+  const cleanupDragListenersRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      cleanupDragListenersRef.current?.();
+    };
+  }, []);
+
+  const handleTilePointerDown = (
+    item: PeriodicTableElementItem,
+    e: React.PointerEvent<HTMLDivElement>
+  ) => {
+    if (item.disabled) return;
+    if (e.pointerType === 'touch') return;
+    if (e.button !== undefined && e.button !== 0) return;
+
+    const node = tileRefs.current.get(item.id);
+    const rect = node?.getBoundingClientRect();
+    const originX = rect && rect.width > 0 ? rect.left + rect.width / 2 : e.clientX;
+    const originY = rect && rect.height > 0 ? rect.top + rect.height / 2 : e.clientY;
+
+    covalentDragRef.current = {
+      sourceZ: item.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX,
+      originY,
+      active: false,
+      hoveredZ: null
+    };
+
+    const handleWindowPointerMove = (moveEvent: PointerEvent) => {
+      const drag = covalentDragRef.current;
+      if (!drag) return;
+      const dist = Math.hypot(moveEvent.clientX - drag.startX, moveEvent.clientY - drag.startY);
+      if (!drag.active && dist > DRAG_THRESHOLD_PX) {
+        drag.active = true;
+      }
+      if (!drag.active) return;
+
+      const hoveredZ = findUnlockedTargetZ(
+        moveEvent.clientX,
+        moveEvent.clientY,
+        moveEvent.target,
+        drag.sourceZ
+      );
+      drag.hoveredZ = hoveredZ;
+
+      let endX = moveEvent.clientX;
+      let endY = moveEvent.clientY;
+      if (hoveredZ !== null) {
+        const targetNode = tileRefs.current.get(hoveredZ);
+        const targetRect = targetNode?.getBoundingClientRect();
+        if (targetRect && targetRect.width > 0 && targetRect.height > 0) {
+          endX = targetRect.left + targetRect.width / 2;
+          endY = targetRect.top + targetRect.height / 2;
+        }
+      }
+
+      setCovalentArc({
+        sourceZ: drag.sourceZ,
+        targetZ: hoveredZ,
+        x1: drag.originX,
+        y1: drag.originY,
+        x2: endX,
+        y2: endY
+      });
+    };
+
+    const finishDrag = (upEvent?: PointerEvent) => {
+      const drag = covalentDragRef.current;
+      covalentDragRef.current = null;
+      cleanupDragListenersRef.current?.();
+      cleanupDragListenersRef.current = null;
+      setCovalentArc(null);
+
+      if (drag?.active && upEvent) {
+        suppressNextClickRef.current = true;
+        setTimeout(() => {
+          suppressNextClickRef.current = false;
+        }, 0);
+
+        const dropZ =
+          findUnlockedTargetZ(upEvent.clientX, upEvent.clientY, upEvent.target, drag.sourceZ) ??
+          drag.hoveredZ;
+        if (dropZ !== null && dropZ !== drag.sourceZ) {
+          onAtomCombineRef.current?.(drag.sourceZ, dropZ);
+        }
+      }
+    };
+
+    const handleWindowPointerUp = (upEvent: PointerEvent) => finishDrag(upEvent);
+    const handleWindowPointerCancel = () => finishDrag();
+
+    cleanupDragListenersRef.current?.();
+    window.addEventListener('pointermove', handleWindowPointerMove);
+    window.addEventListener('pointerup', handleWindowPointerUp);
+    window.addEventListener('pointercancel', handleWindowPointerCancel);
+    cleanupDragListenersRef.current = () => {
+      window.removeEventListener('pointermove', handleWindowPointerMove);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+      window.removeEventListener('pointercancel', handleWindowPointerCancel);
+    };
+  };
+
+  const handleTileClick = (id: number, e: React.MouseEvent) => {
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      e.preventDefault();
+      return;
+    }
+    onAtomClick(id, e);
+  };
+
   const periodViewElements = useMemo(
     () =>
       positionedElements.filter(
@@ -463,7 +665,14 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
           <div className={styles.periodCardsGrid}>
             {positionedElements.map(({ item, pos }) => {
               const medalInfo = getMedalDisplayInfo(item.medal, locale);
-              const isSelectedAlchemy = selectedAtomZ === item.id;
+              const isSelectedAlchemy =
+                selectedAtomZ === item.id || covalentArc?.sourceZ === item.id;
+              const isDragTarget = covalentArc?.targetZ === item.id;
+              const isAlchemyCandidate =
+                !item.disabled &&
+                ((alchemyMode && selectedAtomZ !== null && selectedAtomZ !== item.id) ||
+                  (covalentArc !== null && covalentArc.sourceZ !== item.id));
+              const isRejected = rejectedSet.has(item.id);
               return (
                 <div
                   key={`${item.id}-${item.symbol}`}
@@ -473,12 +682,20 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
                   data-group={pos.group}
                   data-period={pos.period}
                   data-block={pos.block}
+                  data-alchemy-candidate={isAlchemyCandidate ? 'true' : undefined}
+                  data-alchemy-rejected={isRejected ? 'true' : undefined}
+                  data-drag-target={isDragTarget ? 'true' : undefined}
                   role="button"
                   tabIndex={item.disabled ? -1 : 0}
                   className={`${styles.periodCard} ${getMedalClass(item.medal)} ${
                     item.disabled ? styles.menuItemDisabled : ''
-                  } ${isSelectedAlchemy ? styles.menuItemSelectedAlchemy : ''}`}
-                  onClick={(e) => onAtomClick(item.id, e)}
+                  } ${isSelectedAlchemy ? styles.menuItemSelectedAlchemy : ''} ${
+                    isAlchemyCandidate ? styles.alchemyPartnerCandidate : ''
+                  } ${isDragTarget ? styles.elementTileDragTarget : ''} ${
+                    isRejected ? styles.elementTileRejectBounce : ''
+                  }`}
+                  onPointerDown={(e) => handleTilePointerDown(item, e)}
+                  onClick={(e) => handleTileClick(item.id, e)}
                   onMouseEnter={() => setPreviewZ(item.id)}
                   onFocus={() => setPreviewZ(item.id)}
                   onTouchStart={(e) => {
@@ -531,7 +748,14 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
             <div className={styles.periodCardsGrid}>
               {periodViewElements.map(({ item, pos }) => {
                 const medalInfo = getMedalDisplayInfo(item.medal, locale);
-                const isSelectedAlchemy = selectedAtomZ === item.id;
+                const isSelectedAlchemy =
+                  selectedAtomZ === item.id || covalentArc?.sourceZ === item.id;
+                const isDragTarget = covalentArc?.targetZ === item.id;
+                const isAlchemyCandidate =
+                  !item.disabled &&
+                  ((alchemyMode && selectedAtomZ !== null && selectedAtomZ !== item.id) ||
+                    (covalentArc !== null && covalentArc.sourceZ !== item.id));
+                const isRejected = rejectedSet.has(item.id);
                 return (
                   <div
                     key={`${item.id}-${item.symbol}`}
@@ -544,12 +768,20 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
                     data-grid-row={pos.gridRow}
                     data-grid-col={pos.gridColumn}
                     data-noble={item.isNobleGas ? 'true' : undefined}
+                    data-alchemy-candidate={isAlchemyCandidate ? 'true' : undefined}
+                    data-alchemy-rejected={isRejected ? 'true' : undefined}
+                    data-drag-target={isDragTarget ? 'true' : undefined}
                     role="button"
                     tabIndex={item.disabled ? -1 : 0}
                     className={`${styles.periodCard} ${getMedalClass(item.medal)} ${
                       item.disabled ? styles.menuItemDisabled : ''
-                    } ${isSelectedAlchemy ? styles.menuItemSelectedAlchemy : ''}`}
-                    onClick={(e) => onAtomClick(item.id, e)}
+                    } ${isSelectedAlchemy ? styles.menuItemSelectedAlchemy : ''} ${
+                      isAlchemyCandidate ? styles.alchemyPartnerCandidate : ''
+                    } ${isDragTarget ? styles.elementTileDragTarget : ''} ${
+                      isRejected ? styles.elementTileRejectBounce : ''
+                    }`}
+                    onPointerDown={(e) => handleTilePointerDown(item, e)}
+                    onClick={(e) => handleTileClick(item.id, e)}
                     onMouseEnter={() => setPreviewZ(item.id)}
                     onFocus={() => setPreviewZ(item.id)}
                     onTouchStart={(e) => {
@@ -658,7 +890,14 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
               {/* All Classic Periodic Table Tiles placed at exact IUPAC gridRow / gridColumn */}
               {positionedElements.map(({ item, pos }) => {
                 const medalInfo = getMedalDisplayInfo(item.medal, locale);
-                const isSelectedAlchemy = selectedAtomZ === item.id;
+                const isSelectedAlchemy =
+                  selectedAtomZ === item.id || covalentArc?.sourceZ === item.id;
+                const isDragTarget = covalentArc?.targetZ === item.id;
+                const isAlchemyCandidate =
+                  !item.disabled &&
+                  ((alchemyMode && selectedAtomZ !== null && selectedAtomZ !== item.id) ||
+                    (covalentArc !== null && covalentArc.sourceZ !== item.id));
+                const isRejected = rejectedSet.has(item.id);
                 const isMatch = matchesFilter(item, filter);
                 const isPeriodHighlighted = highlightedPeriod === pos.period;
                 const isPreviewed = previewEntry?.item.id === item.id;
@@ -676,6 +915,9 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
                     data-grid-col={pos.gridColumn}
                     data-noble={item.isNobleGas ? 'true' : undefined}
                     data-filtered-out={!isMatch ? 'true' : undefined}
+                    data-alchemy-candidate={isAlchemyCandidate ? 'true' : undefined}
+                    data-alchemy-rejected={isRejected ? 'true' : undefined}
+                    data-drag-target={isDragTarget ? 'true' : undefined}
                     role="button"
                     tabIndex={item.disabled ? -1 : 0}
                     style={{
@@ -689,10 +931,15 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
                       item.isNobleGas ? styles.nobleGasTile : ''
                     } ${item.disabled ? styles.menuItemDisabled : ''} ${
                       isSelectedAlchemy ? styles.menuItemSelectedAlchemy : ''
-                    } ${!isMatch ? styles.elementTileFilteredOut : ''} ${
-                      isPeriodHighlighted ? styles.elementTilePeriodHighlight : ''
-                    } ${isPreviewed ? styles.elementTilePreviewed : ''}`}
-                    onClick={(e) => onAtomClick(item.id, e)}
+                    } ${isAlchemyCandidate ? styles.alchemyPartnerCandidate : ''} ${
+                      isDragTarget ? styles.elementTileDragTarget : ''
+                    } ${isRejected ? styles.elementTileRejectBounce : ''} ${
+                      !isMatch ? styles.elementTileFilteredOut : ''
+                    } ${isPeriodHighlighted ? styles.elementTilePeriodHighlight : ''} ${
+                      isPreviewed ? styles.elementTilePreviewed : ''
+                    }`}
+                    onPointerDown={(e) => handleTilePointerDown(item, e)}
+                    onClick={(e) => handleTileClick(item.id, e)}
                     onMouseEnter={() => setPreviewZ(item.id)}
                     onFocus={() => setPreviewZ(item.id)}
                     onTouchStart={(e) => {
@@ -730,6 +977,59 @@ export const PeriodicTable: React.FC<PeriodicTableProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Covalent Bond SVG Arc Overlay during Desktop Drag-and-Drop */}
+      {covalentArc && (
+        <svg
+          className={styles.covalentArcOverlay}
+          data-testid="covalent-arc-overlay"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id="covalent-arc-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#38bdf8" />
+              <stop offset="50%" stopColor="#c084fc" />
+              <stop offset="100%" stopColor="#f472b6" />
+            </linearGradient>
+          </defs>
+          {(() => {
+            const { x1, y1, x2, y2 } = covalentArc;
+            const mx = (x1 + x2) / 2;
+            const my = (y1 + y2) / 2;
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const dist = Math.hypot(dx, dy);
+            const curveOffset = Math.min(72, Math.max(18, dist * 0.22));
+            const cx = mx;
+            const cy = my - curveOffset;
+            const d = `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+            return (
+              <>
+                <path d={d} className={styles.covalentArcGlow} />
+                <path d={d} className={styles.covalentArcCore} data-testid="covalent-arc-path" />
+                <circle cx={x1} cy={y1} r={12} fill="rgba(56, 189, 248, 0.28)" />
+                <circle cx={x1} cy={y1} r={5} fill="#38bdf8" />
+                <circle
+                  cx={x2}
+                  cy={y2}
+                  r={covalentArc.targetZ !== null ? 16 : 10}
+                  fill={
+                    covalentArc.targetZ !== null
+                      ? 'rgba(244, 114, 182, 0.35)'
+                      : 'rgba(192, 132, 252, 0.28)'
+                  }
+                />
+                <circle
+                  cx={x2}
+                  cy={y2}
+                  r={covalentArc.targetZ !== null ? 6 : 4}
+                  fill={covalentArc.targetZ !== null ? '#f472b6' : '#e879f9'}
+                />
+              </>
+            );
+          })()}
+        </svg>
       )}
 
       {/* Element Preview Panel */}

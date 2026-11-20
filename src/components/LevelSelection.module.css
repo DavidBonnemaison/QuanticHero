@@ -243,6 +243,7 @@
 
 .alchemyToolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -251,6 +252,7 @@
 
 .alchemyButton {
   flex: 1;
+  min-width: 220px;
   background: rgba(168, 85, 247, 0.12);
   border: 1px solid rgba(168, 85, 247, 0.45);
   color: #e9d5ff;
@@ -271,6 +273,91 @@
   border-color: #c084fc;
   color: #ffffff;
   box-shadow: 0 0 12px rgba(192, 132, 252, 0.5);
+}
+
+.codexButton {
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  color: #e0f2fe;
+  font-family: inherit;
+  font-size: 18px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.codexButton:hover {
+  background: rgba(56, 189, 248, 0.28);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.alchemyStatusHint {
+  text-align: center;
+  color: #d8b4fe;
+  font-size: 16px;
+  margin: -6px 0 12px;
+}
+
+.noBondToast {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.14);
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  color: #fecaca;
+  font-size: 18px;
+  animation: noBondShake 0.35s ease-out;
+}
+
+@keyframes noBondShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  60% {
+    transform: translateX(5px);
+  }
+}
+
+.spectralFlash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 950;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.65) 0%,
+    rgba(192, 132, 252, 0.35) 40%,
+    rgba(56, 189, 248, 0.15) 75%,
+    transparent 100%
+  );
+  animation: spectralFlashAnim 0.6s ease-out forwards;
+}
+
+@keyframes spectralFlashAnim {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
 }
 
 .menuItemSelectedAlchemy {

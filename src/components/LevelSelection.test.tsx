@@ -519,4 +519,104 @@ describe('LevelSelection component', () => {
     fireEvent.click(screen.getByRole('button', { name: /table view/i }));
     expect(screen.getByTestId('periodic-table-grid')).toBeInTheDocument();
   });
+
+  it('Epic 03 Spec-02: synthesizes H2O via desktop covalent drag-and-drop with live SVG arc', () => {
+    useGameStore.setState({ maxLevel: 10, unlockedMolecules: [], moleculeScores: {} });
+    renderWithRouter();
+
+    const hydrogen = screen.getByText('Hydrogen').closest('[role="button"]') as HTMLElement;
+    const oxygen = screen.getByText('Oxygen').closest('[role="button"]') as HTMLElement;
+
+    // Start mouse pointer down on unlocked Hydrogen
+    fireEvent.pointerDown(hydrogen, { pointerType: 'mouse', button: 0, clientX: 20, clientY: 20 });
+
+    // Moving less than 8px does not activate covalent arc
+    fireEvent.pointerMove(window, { clientX: 24, clientY: 22 });
+    expect(screen.queryByTestId('covalent-arc-overlay')).not.toBeInTheDocument();
+
+    // Moving > 8px over Oxygen activates covalent arc overlay
+    fireEvent.pointerMove(oxygen, { clientX: 240, clientY: 80 });
+    expect(screen.getByTestId('covalent-arc-overlay')).toBeInTheDocument();
+    expect(screen.getByTestId('covalent-arc-path')).toBeInTheDocument();
+
+    // Release on Oxygen completes covalent synthesis
+    fireEvent.pointerUp(oxygen, { clientX: 240, clientY: 80 });
+
+    expect(useGameStore.getState().unlockedMolecules).toContain('H2O');
+    expect(screen.getByText('Molecule Game Page')).toBeInTheDocument();
+  });
+
+  it('Epic 03 Spec-02: illuminates partner candidates in Alchemy tap-to-pair mode and synthesizes on second tap', () => {
+    useGameStore.setState({ maxLevel: 10, unlockedMolecules: [] });
+    renderWithRouter();
+
+    const alchemyBtn = screen.getByRole('button', { name: /chemical bond/i });
+    fireEvent.click(alchemyBtn);
+    expect(alchemyBtn).toHaveAttribute('aria-pressed', 'true');
+
+    const hydrogen = screen.getByText('Hydrogen').closest('[role="button"]') as HTMLElement;
+    const oxygen = screen.getByText('Oxygen').closest('[role="button"]') as HTMLElement;
+    const lithium = screen.getByText('Lithium').closest('[role="button"]') as HTMLElement;
+
+    // Tap atom A (Hydrogen)
+    fireEvent.click(hydrogen);
+    expect(screen.getByTestId('alchemy-status-hint')).toHaveTextContent('Select partner for H...');
+    expect(oxygen).toHaveAttribute('data-alchemy-candidate', 'true');
+    expect(lithium).toHaveAttribute('data-alchemy-candidate', 'true');
+    expect(hydrogen).not.toHaveAttribute('data-alchemy-candidate', 'true');
+
+    // Tap atom B (Oxygen)
+    fireEvent.click(oxygen);
+    expect(useGameStore.getState().unlockedMolecules).toContain('H2O');
+    expect(screen.getByText('Molecule Game Page')).toBeInTheDocument();
+  });
+
+  it('Epic 03 Spec-02: shows clean rejection toast and elastic bounce without navigating for non-reactive pair', () => {
+    useGameStore.setState({ maxLevel: 10, unlockedMolecules: [] });
+    renderWithRouter();
+
+    const alchemyBtn = screen.getByRole('button', { name: /chemical bond/i });
+    fireEvent.click(alchemyBtn);
+
+    const lithium = screen.getByText('Lithium').closest('[role="button"]') as HTMLElement;
+    const beryllium = screen.getByText('Beryllium').closest('[role="button"]') as HTMLElement;
+
+    fireEvent.click(lithium);
+    fireEvent.click(beryllium);
+
+    const toast = screen.getByTestId('alchemy-no-bond-toast');
+    expect(toast).toBeInTheDocument();
+    expect(toast).toHaveAttribute('role', 'status');
+    expect(toast).toHaveTextContent('No stable bond found');
+    expect(lithium).toHaveAttribute('data-alchemy-rejected', 'true');
+    expect(beryllium).toHaveAttribute('data-alchemy-rejected', 'true');
+    expect(useGameStore.getState().unlockedMolecules).toEqual([]);
+    expect(screen.queryByText('Molecule Game Page')).not.toBeInTheDocument();
+  });
+
+  it('Epic 03 Spec-02: opens Molecular Codex from toolbar, reflects unlockedMolecules persistence, and launches discovered molecule', () => {
+    useGameStore.setState({
+      maxLevel: 10,
+      unlockedMolecules: ['H2O'],
+      moleculeScores: {
+        H2O: { best: 10500, last: 10500, medal: 'gold' }
+      }
+    });
+    renderWithRouter();
+
+    const codexBtn = screen.getByTestId('open-codex-button');
+    expect(codexBtn).toHaveTextContent('Codex (1 / 12)');
+    fireEvent.click(codexBtn);
+
+    expect(screen.getByTestId('molecule-codex-dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('codex-unlocked-counter')).toHaveTextContent('Unlocked: 1 / 12');
+
+    const h2oSlot = screen.getByTestId('codex-slot-H2O');
+    expect(h2oSlot).toHaveTextContent('H₂O');
+    expect(h2oSlot).toHaveTextContent('00:10:50');
+
+    const playBtn = h2oSlot.querySelector('button') as HTMLButtonElement;
+    fireEvent.click(playBtn);
+    expect(screen.getByText('Molecule Game Page')).toBeInTheDocument();
+  });
 });
