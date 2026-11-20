@@ -1,6 +1,4 @@
 import { simulateLevelData } from '../generator/simulator';
-import { PHYSICS } from '../physics/constants';
-import { type GhostFrame, compressTrajectory } from '../tools/GhostRecorder';
 import type { LevelData } from '../types';
 
 export interface MoleculeRecipe {
@@ -14,40 +12,16 @@ export interface MoleculeRecipe {
 
 function ensureMoleculeGhost(data: LevelData): LevelData {
   const sim = simulateLevelData(data);
-  if (sim.success && sim.authorGhost.startsWith('v1|') && sim.authorTime > 0) {
-    return {
-      ...data,
-      authorGhost: sim.authorGhost,
-      authorTime: sim.authorTime
-    };
-  }
-
-  // Deterministic 60Hz physics-paced fallback for specialized molecular mechanics (wormholes, condense, dual-portal)
-  const targetMs = data.parTimeMs ?? 12000;
-  const stepMs = PHYSICS.DELTA_FIXED_MS;
-  const totalFrames = Math.max(10, Math.round(targetMs / stepMs));
-  const sx = data.player.position.x;
-  const sy = data.player.position.y;
-  const dx = data.door.x;
-  const dy = data.door.y;
-  const frames: GhostFrame[] = [];
-
-  for (let i = 0; i <= totalFrames; i++) {
-    const t = i / totalFrames;
-    const arc = Math.sin(t * Math.PI) * -45;
-    frames.push({
-      timeMs: Math.round(i * stepMs),
-      x: Math.round(sx + (dx - sx) * t),
-      y: Math.round(sy + (dy - sy) * t + arc),
-      flipX: dx < sx,
-      animState: i === totalFrames ? 'idle' : t > 0.1 && t < 0.9 ? 'jump' : 'right'
-    });
+  if (!sim.success || !sim.authorGhost.startsWith('v1|') || sim.authorTime <= 0) {
+    throw new Error(
+      `[MOLECULE SOLVER ERROR] Molecule ${data.id} failed physical simulation: ${sim.failureReason ?? 'invalid ghost'}`
+    );
   }
 
   return {
     ...data,
-    authorGhost: compressTrajectory(frames),
-    authorTime: Math.round(totalFrames * stepMs)
+    authorGhost: sim.authorGhost,
+    authorTime: sim.authorTime
   };
 }
 
@@ -205,7 +179,7 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
       platforms: [
         { x: 20, y: 520, width: 200, height: 20 },
         { x: 280, y: 460, width: 140, height: 20, decayMs: 700 },
-        { x: 520, y: 260, width: 160, height: 20, phase: 'cyan' },
+        { x: 520, y: 260, width: 160, height: 20, phase: 'magenta' },
         { x: 760, y: 220, width: 160, height: 20 }
       ],
       wormholes: [
@@ -299,7 +273,7 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
       atom: 'Haber-Bosch Pressure Chamber',
       uncertainty: 2,
       width: 960,
-      height: 600,
+      height: 760,
       hue: '#0c192c',
       antiHue: '#60a5fa',
       collapse: { speedY: 16, delayMs: 2200 },
@@ -448,8 +422,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
       door: { x: 920, y: 140 },
       platforms: [
         { x: 20, y: 520, width: 180, height: 20, matterState: 'cryo' },
-        { x: 230, y: 440, width: 150, height: 20, phase: 'cyan' },
-        { x: 410, y: 360, width: 150, height: 20, phase: 'magenta' },
+        { x: 230, y: 440, width: 150, height: 20, phase: 'magenta' },
+        { x: 410, y: 360, width: 150, height: 20, phase: 'cyan' },
         { x: 590, y: 280, width: 160, height: 20, matterState: 'plasma' },
         { x: 820, y: 200, width: 180, height: 20 }
       ],

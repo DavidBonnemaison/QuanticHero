@@ -7,13 +7,19 @@ import type {
   EntanglementConfig,
   Gate,
   LevelData,
+  MatterState,
   Particle,
   Platform,
   PressurePlate,
   Spike,
-  TetherPylon
+  TetherPylon,
+  Wormhole
 } from '../types';
-import { applyCampaignDirectives } from './campaignDirector';
+import {
+  type CampaignArchetypeId,
+  applyCampaignDirectives,
+  getPeriodMechanicPlan
+} from './campaignDirector';
 import {
   type Chunk,
   type ChunkArchetype,
@@ -482,6 +488,10 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
   let pressurePlates: PressurePlate[] | undefined;
   let entanglementConfig: EntanglementConfig | undefined;
   let tetherPylons: TetherPylon[] | undefined;
+  let wormholes: Wormhole[] | undefined;
+  let screenWrap: 'horizontal' | 'vertical' | 'both' | undefined;
+  let allowCloneFusion: boolean | undefined;
+  let archetype: CampaignArchetypeId | undefined;
 
   const makeIntro = (id: string, baseY: number) => {
     const intro1: Platform = { x: 420, y: baseY - 25, width: 170, height: 20 };
@@ -505,7 +515,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     case 1:
     case 2:
     case 3: {
-      // Univers 1 (Niv 1-3): Plateforme pure progressive (montées, descentes, pics dès N2, mobiles dès N3)
+      // Période 1 (Niv 1-2) & Niv 3: Mouvement pur, murs néon & gaz ascendant (He), 0 particules
       const rng = new SeededRandom(seed + level * 19);
       height = 1200;
       const baseY = 760;
@@ -520,7 +530,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         steps: 3 + level,
         rng,
         progress: level * 0.06,
-        allowSpikes: level >= 2,
+        allowSpikes: level === 3,
         allowMoving: level >= 3
       });
       accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawAccel, alpha, -15);
@@ -534,6 +544,19 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         allowMoving: false
       });
       climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -15);
+
+      if (level === 2) {
+        // He (Noble Gas): ascending gas columns & decorative neon bounce walls
+        const midA = accelerationChunk.pathPlatforms[Math.floor(accelerationChunk.pathPlatforms.length / 2)];
+        const midC = climaxChunk.pathPlatforms[0];
+        accelerationChunk.platforms.push(
+          { x: midA.x + midA.width + 10, y: midA.y - 160, width: 70, height: 180, matterState: 'gas' },
+          { x: midA.x - 24, y: midA.y - 260, width: 20, height: 180, kind: 'wall' }
+        );
+        climaxChunk.platforms.push(
+          { x: midC.x + midC.width + 10, y: midC.y - 160, width: 70, height: 180, matterState: 'gas' }
+        );
+      }
 
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
@@ -628,15 +651,15 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         bounds: computeChunkBounds(accelPlats, [], [speedPart])
       };
 
-      const rawClimax = createSpeedrunHighwayChunk({
+      const rawClimax = createSuperpositionChamberChunk({
         id: 'chunk_speedrun_climax',
         steps: 4,
-        horizontalSpacing: 220,
-        verticalDrop: 28,
-        platformWidth: 180,
-        speedBoostParticle: false
+        stepSpacing: 180,
+        platformWidth: 170,
+        verticalStep: -20,
+        initialPhase: 'magenta'
       });
-      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -10);
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -15);
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
       width = Math.max(width, Math.round(resolutionChunk.exit.x + 300));
@@ -715,17 +738,18 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           [...introChunk.particles, ...chasmT.particles]
         )
       };
-      const rawClimax = createSpeedrunHighwayChunk({
+      const rawClimax = createSuperpositionChamberChunk({
         id: 'chunk_chasm_climax',
         steps: 3,
-        horizontalSpacing: 190,
-        verticalDrop: 22,
-        platformWidth: 180,
-        speedBoostParticle: false
+        stepSpacing: 180,
+        platformWidth: 170,
+        verticalStep: -20,
+        initialPhase: 'magenta'
       });
-      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -10);
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -15);
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      width = Math.max(width, Math.round(resolutionChunk.exit.x + 300));
       break;
     }
 
@@ -1032,6 +1056,28 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       climaxChunk = connectAndTranslateChunk(accelerationChunk, rawSuperpos, alpha, -20);
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      width = Math.max(2500, Math.round(resolutionChunk.exit.x + 300));
+      if (accelerationChunk.platforms[0]) {
+        accelerationChunk.platforms[0].matterState = 'liquid';
+      }
+      entanglementConfig = {
+        mode: 'mirror_x',
+        betaSpawn: {
+          x: width - 180,
+          y: 700 - Math.round(PHYSICS.HERO_HEIGHT / 2)
+        },
+        portalMode: 'dual',
+        betaDoor: {
+          x: Math.max(180, width - Math.round(resolutionChunk.exit.x)),
+          y: Math.round(resolutionChunk.exit.y - 10)
+        },
+        tetherPhysical: true,
+        tetherMaxLength: 520
+      };
+      tetherPylons = [
+        { x: 700, y: 520, radius: 18, maxLength: 520 },
+        { x: 1500, y: 480, radius: 18, maxLength: 520 }
+      ];
       break;
     }
 
@@ -1115,40 +1161,68 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     default: {
-      // Levels 11-109: Progressive Universe Campaign + Multi-Power-Up Bosses
+      // Spec 02: Dense 7-period plan-driven campaign generator (2 000 - 4 800 px, 0 > 5 500 px)
+      const plan = getPeriodMechanicPlan(level);
       const rng = new SeededRandom(seed + level * 31);
-      const progress = Math.min(1, Math.max(0, (level - 11) / 98));
-      const levelAlpha = 0.74 + progress * 0.12;
-      const decayMs = Math.round(850 - progress * 280);
-      const speedChasm = Math.round(520 + progress * 70);
-      const lowGChasm = Math.round(450 + progress * 40);
+      const progress = Math.min(1, Math.max(0, (level - 1) / 117));
+      const levelAlpha = 0.75 + progress * 0.1;
+      const decayMs = Math.round(820 - progress * 220);
+      const speedChasm = Math.round(510 + progress * 55);
 
-      height = 1250;
-      const baseY = 820;
-      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 230 });
+      height = 1200;
+      const baseY = 780;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 220 });
 
-      // Introductory 2-step approach before power-up so player earns it first
-      const intro1: Platform = { x: 420, y: baseY - 25, width: 165, height: 20 };
-      const intro2: Platform = { x: 655, y: baseY - 50, width: 165, height: 20 };
-      const introChunk: Chunk = {
-        id: `chunk_intro_${level}`,
-        name: 'Approche',
-        archetype: 'speedrun_highway',
-        entry: { x: intro1.x + 40, y: intro1.y },
-        exit: { x: intro2.x + intro2.width - 40, y: intro2.y },
-        platforms: [intro1, intro2],
-        pathPlatforms: [intro1, intro2],
-        spikes: [],
-        particles: [],
-        bounds: computeChunkBounds([intro1, intro2])
-      };
+      if (plan.screenWrap) screenWrap = plan.screenWrap;
+      if (plan.allowCloneFusion) allowCloneFusion = true;
+      if (plan.archetypeId) archetype = plan.archetypeId;
 
       const isSpeedTunnelBoss = level === 46 || level === 84 || level === 109;
       const isPauliBoss = level === 68 || level === 100;
-      const isAntiGravBoss = level === 26 || level === 88;
+      const isAntiGravBoss = level === 88;
+
+      const computePhaseParity = (priorPathCount: number): 'cyan' | 'magenta' =>
+        priorPathCount % 2 === 1 ? 'magenta' : 'cyan';
+
+      const buildDenseClimax = (anchor: Chunk, priorPathCount: number): Chunk => {
+        const usePhase = Boolean(plan.addPhaseClimax) && plan.primary !== 'phase';
+        const useDecay = Boolean(plan.addDecayClimax) && !usePhase;
+        if (usePhase) {
+          const rawPhase = createSuperpositionChamberChunk({
+            id: `chunk_climax_phase_${level}`,
+            steps: 4,
+            stepSpacing: 175,
+            platformWidth: 155,
+            verticalStep: -20,
+            initialPhase: computePhaseParity(priorPathCount)
+          });
+          return connectAndTranslateChunk(anchor, rawPhase, levelAlpha, -15);
+        }
+        if (useDecay) {
+          const rawDecay = createDecayZoneChunk({
+            id: `chunk_climax_decay_${level}`,
+            steps: 4,
+            decayMs,
+            stepSpacing: 170,
+            platformWidth: 150,
+            verticalDelta: -18,
+            includeStableExit: true
+          });
+          return connectAndTranslateChunk(anchor, rawDecay, levelAlpha, -15);
+        }
+        const rawDyn = createDynamicCourseChunk({
+          id: `chunk_climax_dyn_${level}`,
+          steps: 4,
+          rng,
+          progress,
+          allowSpikes: true,
+          allowMoving: level >= 15
+        });
+        return connectAndTranslateChunk(anchor, rawDyn, levelAlpha, -15);
+      };
 
       if (isSpeedTunnelBoss) {
-        // Boss combining speed chasm + 30px tunnel barrier (+ phase on 46, lowGravity on 84, timeDilation & collapse on 109)
+        const { intro1, intro2, chunk: introChunk } = makeIntro(`chunk_boss_intro_${level}`, baseY);
         const p1: Platform = { x: 890, y: baseY - 60, width: 210, height: 20 };
         const speedPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'speed' };
         const p2: Platform = {
@@ -1158,14 +1232,13 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           height: 20
         };
         const tunnelPart: Particle = { x: p2.x + 100, y: p2.y - 30, type: 'tunnel' };
-        const barrier: Platform = { x: p2.x + p2.width + 25, y: 0, width: 30, height: height };
-        const p3: Platform = { x: barrier.x + 55, y: baseY - 60, width: 210, height: 20 };
+        const barrier: Platform = { x: p2.x + p2.width + 25, y: 0, width: 32, height };
+        const p3: Platform = { x: barrier.x + 56, y: baseY - 60, width: 210, height: 20 };
         const bossPlats = [intro1, intro2, p1, p2, barrier, p3];
         const bossParts = [speedPart, tunnelPart];
         if (level === 84) {
           bossParts.push({ x: p3.x + 100, y: p3.y - 30, type: 'lowGravity' });
         }
-
         accelerationChunk = {
           id: `chunk_boss_st_${level}`,
           name: 'Creuset Vitesse-Tunnel',
@@ -1178,34 +1251,15 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           particles: bossParts,
           bounds: computeChunkBounds(bossPlats, [], bossParts)
         };
-
-        const rawClimax =
-          level === 109
-            ? createSpeedrunHighwayChunk({
-                steps: 4,
-                horizontalSpacing: 190,
-                verticalDrop: 24,
-                platformWidth: 165,
-                speedBoostParticle: false
-              })
-            : level === 46
-              ? createSuperpositionChamberChunk({
-                  steps: 4,
-                  stepSpacing: 185,
-                  platformWidth: 155,
-                  verticalStep: -20,
-                  initialPhase: 'cyan'
-                })
-              : createDecayZoneChunk({
-                  steps: 4,
-                  decayMs,
-                  stepSpacing: 175,
-                  platformWidth: 150,
-                  verticalDelta: -20,
-                  includeStableExit: true
-                });
-        climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, levelAlpha, -15);
         if (level === 109) {
+          const rawSpeed = createSpeedrunHighwayChunk({
+            steps: 3,
+            horizontalSpacing: 185,
+            verticalDrop: 22,
+            platformWidth: 165,
+            speedBoostParticle: false
+          });
+          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawSpeed, levelAlpha, -15);
           const midP = climaxChunk.platforms[0];
           climaxChunk.particles.push({
             x: midP.x + Math.round(midP.width / 2),
@@ -1213,21 +1267,26 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             type: 'timeDilation'
           });
           collapseConfig = { speedY: 14, delayMs: 2000 };
+        } else {
+          climaxChunk = buildDenseClimax(
+            accelerationChunk,
+            1 + accelerationChunk.pathPlatforms.length
+          );
         }
       } else if (isPauliBoss) {
-        // Boss combining duplicate + pauli 580px chasm + decay (+ tunnel barrier on 100)
-        const p1: Platform = { x: 890, y: baseY - 60, width: 270, height: 20 };
-        const dupPart: Particle = { x: p1.x + 135, y: p1.y - 30, type: 'duplicate' };
-        const pauliPart: Particle = { x: p1.x + 215, y: p1.y - 30, type: 'pauli' };
-        const p2: Platform = { x: p1.x + p1.width + 580, y: baseY - 60, width: 250, height: 20 };
+        const { intro1, intro2, chunk: introChunk } = makeIntro(`chunk_pauli_intro_${level}`, baseY);
+        const p1: Platform = { x: 890, y: baseY - 60, width: 260, height: 20 };
+        const dupPart: Particle = { x: p1.x + 120, y: p1.y - 30, type: 'duplicate' };
+        const pauliPart: Particle = { x: p1.x + 200, y: p1.y - 30, type: 'pauli' };
+        const p2: Platform = { x: p1.x + p1.width + 560, y: baseY - 60, width: 240, height: 20 };
         const bossPlats = [intro1, intro2, p1, p2];
         const bossParts = [dupPart, pauliPart];
         const pathPlats = [intro1, intro2, p1, p2];
 
         if (level === 100) {
-          const tunPart: Particle = { x: p2.x + 120, y: p2.y - 30, type: 'tunnel' };
-          const barrier: Platform = { x: p2.x + p2.width + 25, y: 0, width: 30, height: height };
-          const p3: Platform = { x: barrier.x + 55, y: baseY - 60, width: 200, height: 20 };
+          const tunPart: Particle = { x: p2.x + 115, y: p2.y - 30, type: 'tunnel' };
+          const barrier: Platform = { x: p2.x + p2.width + 25, y: 0, width: 32, height };
+          const p3: Platform = { x: barrier.x + 56, y: baseY - 60, width: 210, height: 20 };
           bossPlats.push(barrier, p3);
           pathPlats.push(p3);
           bossParts.push(tunPart);
@@ -1242,338 +1301,769 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           exit: { x: lastP.x + lastP.width - 40, y: lastP.y },
           platforms: bossPlats,
           pathPlatforms: pathPlats,
-          spikes: [{ x: p1.x + p1.width, y: height - 20, width: 580, height: 20 }],
+          spikes: [{ x: p1.x + p1.width, y: height - 20, width: 560, height: 20 }],
           particles: bossParts,
           bounds: computeChunkBounds(bossPlats, [], bossParts)
         };
-
-        const rawDecay = createDecayZoneChunk({
-          steps: 4,
-          decayMs,
-          stepSpacing: 175,
-          platformWidth: 150,
-          verticalDelta: -20,
-          includeStableExit: true
-        });
-        climaxChunk = connectAndTranslateChunk(accelerationChunk, rawDecay, levelAlpha, -15);
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
       } else if (isAntiGravBoss) {
-        // Boss combining antiGravity ceiling run + phase or decay
+        const { intro1, intro2, chunk: introChunk } = makeIntro(`chunk_ag_intro_${level}`, baseY);
         const p1: Platform = { x: 890, y: baseY - 60, width: 200, height: 20 };
-        const antiGravPart: Particle = { x: p1.x + 170, y: p1.y - 120, type: 'antiGravity' };
+        const ag1: Particle = { x: p1.x + 170, y: p1.y - 120, type: 'antiGravity' };
         const ceilingY = 260;
-        const p2: Platform = { x: 1180, y: ceilingY, width: 240, height: 20 };
-        const p3: Platform = { x: 1500, y: ceilingY, width: 240, height: 20 };
-        const restorePart: Particle = { x: 1790, y: ceilingY + 110, type: 'antiGravity' };
-        const p4: Platform = { x: 1830, y: baseY - 80, width: 230, height: 20 };
-        const bossPlats = [intro1, intro2, p1, p2, p3, p4];
-        const bossParts = [antiGravPart, restorePart];
-        const pathPlats = [intro1, intro2, p1, p2, p3, p4];
-
-        if (level === 88) {
-          bossParts.push({ x: p4.x + 115, y: p4.y - 30, type: 'tunnel' });
-          const barrier: Platform = { x: p4.x + p4.width + 25, y: 0, width: 30, height: height };
-          const p5: Platform = { x: barrier.x + 55, y: baseY - 80, width: 210, height: 20 };
-          bossPlats.push(barrier, p5);
-          pathPlats.push(p5);
-        }
-
-        const lastAgP = pathPlats[pathPlats.length - 1];
+        const p2: Platform = { x: 1180, y: ceilingY, width: 230, height: 20 };
+        const p3: Platform = { x: 1490, y: ceilingY, width: 230, height: 20 };
+        const ag2: Particle = { x: 1770, y: ceilingY + 110, type: 'antiGravity' };
+        const p4: Platform = { x: 1810, y: baseY - 80, width: 230, height: 20 };
+        const tunPart: Particle = { x: p4.x + 115, y: p4.y - 30, type: 'tunnel' };
+        const barrier: Platform = { x: p4.x + p4.width + 25, y: 0, width: 32, height };
+        const p5: Platform = { x: barrier.x + 56, y: baseY - 80, width: 210, height: 20 };
+        const bossPlats = [intro1, intro2, p1, p2, p3, p4, barrier, p5];
+        const bossParts = [ag1, ag2, tunPart];
         accelerationChunk = {
           id: `chunk_boss_ag_${level}`,
           name: 'Inversion Critique',
           archetype: 'speedrun_highway',
           entry: introChunk.entry,
-          exit: { x: lastAgP.x + lastAgP.width - 40, y: lastAgP.y },
+          exit: { x: p5.x + p5.width - 40, y: p5.y },
           platforms: bossPlats,
-          pathPlatforms: pathPlats,
+          pathPlatforms: [intro1, intro2, p1, p2, p3, p4, p5],
           spikes: [],
           particles: bossParts,
           bounds: computeChunkBounds(bossPlats, [], bossParts)
         };
-
-        const rawClimax =
-          level === 88
-            ? createSuperpositionChamberChunk({
-                steps: 4,
-                stepSpacing: 185,
-                platformWidth: 155,
-                verticalStep: -20,
-                initialPhase: 'cyan'
-              })
-            : createDecayZoneChunk({
-                steps: 4,
-                decayMs,
-                stepSpacing: 175,
-                platformWidth: 150,
-                verticalDelta: -20,
-                includeStableExit: true
-              });
-        climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, levelAlpha, -15);
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
+      } else if (plan.primary === 'archetype' && plan.archetypeId) {
+        // Smart Archetype Multi-Room Variant (Period 5, 6, 7)
+        const archId = plan.archetypeId;
+        if (archId === 'living_floor') {
+          height = 900;
+          const midY = 480;
+          awakeningChunk = createSpawnChunk({ originX: 120, originY: 740, width: 240 });
+          const ceilStart: Platform = { x: 80, y: 120, width: 280, height: 24 };
+          const landAlpha: Platform = { x: 960, y: midY + 40, width: 240, height: 24 };
+          const landBeta: Platform = { x: 960, y: midY - 140, width: 240, height: 24 };
+          const pNext1: Platform = { x: 1280, y: midY + 15, width: 200, height: 20 };
+          const pNext2: Platform = { x: 1560, y: midY - 10, width: 200, height: 20 };
+          accelerationChunk = {
+            id: `chunk_arch_living_${level}`,
+            name: 'Plancher Vivant',
+            archetype: 'electron_chasm',
+            entry: { x: landAlpha.x + 40, y: landAlpha.y },
+            exit: { x: pNext2.x + pNext2.width - 40, y: pNext2.y },
+            platforms: [ceilStart, landAlpha, landBeta, pNext1, pNext2],
+            pathPlatforms: [landAlpha, pNext1, pNext2],
+            spikes: [],
+            particles: [],
+            bounds: computeChunkBounds([ceilStart, landAlpha, landBeta, pNext1, pNext2])
+          };
+          climaxChunk = buildDenseClimax(
+            accelerationChunk,
+            1 + accelerationChunk.pathPlatforms.length
+          );
+        } else if (archId === 'phase_remote') {
+          const p1: Platform = { x: 420, y: baseY - 20, width: 210, height: 20 };
+          const dupPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'duplicate' };
+          const wLeft: Platform = { x: 396, y: baseY - 200, width: 20, height: 180, kind: 'wall' };
+          const p2: Platform = { x: 700, y: baseY - 35, width: 185, height: 20, phase: 'cyan' };
+          const p3: Platform = { x: 955, y: baseY - 50, width: 185, height: 20, phase: 'magenta' };
+          const p4: Platform = { x: 1210, y: baseY - 65, width: 185, height: 20, phase: 'cyan' };
+          const tunnelCeil: Platform = { x: 690, y: baseY - 245, width: 710, height: 24 };
+          const plats = [wLeft, p1, tunnelCeil, p2, p3, p4];
+          accelerationChunk = {
+            id: `chunk_arch_phase_remote_${level}`,
+            name: 'Télécommandeur de Phase',
+            archetype: 'superposition_chamber',
+            entry: { x: p1.x + 40, y: p1.y },
+            exit: { x: p4.x + p4.width - 40, y: p4.y },
+            platforms: plats,
+            pathPlatforms: [p1, p2, p3, p4],
+            spikes: [],
+            particles: [dupPart],
+            bounds: computeChunkBounds(plats, [], [dupPart])
+          };
+          climaxChunk = buildDenseClimax(
+            accelerationChunk,
+            1 + accelerationChunk.pathPlatforms.length
+          );
+        } else if (archId === 'perpetual_metronome') {
+          const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
+          const dupPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'duplicate' };
+          const p2: Platform = { x: 710, y: baseY - 35, width: 220, height: 20, decayMs: 650 };
+          const wallL: Platform = { x: 682, y: baseY + 10, width: 22, height: 110, kind: 'wall' };
+          const wallR: Platform = { x: 938, y: baseY + 10, width: 22, height: 110, kind: 'wall' };
+          const p3: Platform = { x: 1010, y: baseY - 55, width: 260, height: 20 };
+          const p4: Platform = { x: 1350, y: baseY - 75, width: 210, height: 20 };
+          const plats = [p1, wallL, p2, wallR, p3, p4];
+          accelerationChunk = {
+            id: `chunk_arch_metronome_${level}`,
+            name: 'Métronome Perpétuel',
+            archetype: 'decay_zone',
+            entry: { x: p1.x + 40, y: p1.y },
+            exit: { x: p4.x + p4.width - 40, y: p4.y },
+            platforms: plats,
+            pathPlatforms: [p1, p2, p3, p4],
+            spikes: [],
+            particles: [dupPart],
+            bounds: computeChunkBounds(plats, [], [dupPart])
+          };
+          gates = [
+            {
+              id: `gate_met_${level}`,
+              x: p3.x + 140,
+              y: 0,
+              width: 24,
+              height: p3.y
+            }
+          ];
+          pressurePlates = [
+            {
+              id: `plate_met_${level}`,
+              x: p2.x + 65,
+              y: p2.y - 12,
+              width: 90,
+              height: 12,
+              targetGateId: `gate_met_${level}`,
+              requireLock: true
+            }
+          ];
+          climaxChunk = buildDenseClimax(
+            accelerationChunk,
+            1 + accelerationChunk.pathPlatforms.length
+          );
+        } else if (archId === 'midair_assist') {
+          const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
+          const dupPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'duplicate' };
+          const p2: Platform = { x: 720, y: baseY - 40, width: 220, height: 20 };
+          const p3: Platform = { x: 1020, y: baseY - 60, width: 260, height: 20 };
+          const p4: Platform = { x: 1360, y: baseY - 80, width: 200, height: 20 };
+          const plats = [p1, p2, p3, p4];
+          accelerationChunk = {
+            id: `chunk_arch_midair_${level}`,
+            name: 'Passe Décisive',
+            archetype: 'speedrun_highway',
+            entry: { x: p1.x + 40, y: p1.y },
+            exit: { x: p4.x + p4.width - 40, y: p4.y },
+            platforms: plats,
+            pathPlatforms: [...plats],
+            spikes: [],
+            particles: [dupPart],
+            bounds: computeChunkBounds(plats, [], [dupPart])
+          };
+          gates = [
+            {
+              id: `gate_mid_${level}`,
+              x: p3.x + 130,
+              y: 0,
+              width: 24,
+              height: p3.y
+            }
+          ];
+          pressurePlates = [
+            {
+              id: `plate_mid_${level}`,
+              x: p2.x + 65,
+              y: p2.y - 12,
+              width: 96,
+              height: 12,
+              targetGateId: `gate_mid_${level}`,
+              requireLock: false,
+              autoSwitchOnTrigger: true
+            }
+          ];
+          climaxChunk = buildDenseClimax(
+            accelerationChunk,
+            1 + accelerationChunk.pathPlatforms.length
+          );
+        } else if (archId === 'pauli_trampoline') {
+          const p1: Platform = { x: 420, y: baseY - 20, width: 270, height: 20 };
+          const dupPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'duplicate' };
+          const pauliPart: Particle = { x: p1.x + 205, y: p1.y - 30, type: 'pauli' };
+          const p2: Platform = { x: p1.x + p1.width + 540, y: baseY - 50, width: 260, height: 20 };
+          const p3: Platform = { x: p2.x + p2.width + 95, y: baseY - 75, width: 220, height: 20 };
+          const plats = [p1, p2, p3];
+          const parts = [dupPart, pauliPart];
+          accelerationChunk = {
+            id: `chunk_arch_pauli_${level}`,
+            name: 'Trampoline de Pauli',
+            archetype: 'electron_chasm',
+            entry: { x: p1.x + 40, y: p1.y },
+            exit: { x: p3.x + p3.width - 40, y: p3.y },
+            platforms: plats,
+            pathPlatforms: [...plats],
+            spikes: [],
+            particles: parts,
+            bounds: computeChunkBounds(plats, [], parts)
+          };
+          gates = [
+            {
+              id: `gate_pauli_${level}`,
+              x: p3.x + 90,
+              y: 0,
+              width: 24,
+              height: p3.y
+            }
+          ];
+          pressurePlates = [
+            {
+              id: `plate_pauli_${level}`,
+              x: p2.x + 70,
+              y: p2.y - 12,
+              width: 90,
+              height: 12,
+              targetGateId: `gate_pauli_${level}`,
+              requireLock: true
+            }
+          ];
+          climaxChunk = buildDenseClimax(
+            accelerationChunk,
+            1 + accelerationChunk.pathPlatforms.length
+          );
+        } else {
+          // conservation_cage
+          const p1: Platform = { x: 420, y: baseY - 20, width: 210, height: 20 };
+          const p2: Platform = { x: 705, y: baseY - 45, width: 210, height: 20 };
+          const p3: Platform = { x: 990, y: baseY - 70, width: 280, height: 20 };
+          const bait: Particle = {
+            x: p3.x + 60,
+            y: p3.y - 85,
+            type: 'speed',
+            restoresEphemeral: true
+          };
+          const cageL: Platform = {
+            x: p3.x + 140,
+            y: p3.y - 130,
+            width: 20,
+            height: 130,
+            color: '#f1c40f',
+            ephemeral: true
+          };
+          const cageTop: Platform = {
+            x: p3.x + 140,
+            y: p3.y - 150,
+            width: 120,
+            height: 20,
+            color: '#f1c40f',
+            ephemeral: true
+          };
+          const cageR: Platform = {
+            x: p3.x + 240,
+            y: p3.y - 130,
+            width: 20,
+            height: 130,
+            color: '#f1c40f',
+            ephemeral: true
+          };
+          const plats = [p1, p2, p3, cageL, cageTop, cageR];
+          accelerationChunk = {
+            id: `chunk_arch_cage_${level}`,
+            name: 'Cage de Conservation',
+            archetype: 'speedrun_highway',
+            entry: { x: p1.x + 40, y: p1.y },
+            exit: { x: p3.x + p3.width - 40, y: p3.y },
+            platforms: plats,
+            pathPlatforms: [p1, p2, p3],
+            spikes: [],
+            particles: [bait],
+            bounds: computeChunkBounds(plats, [], [bait])
+          };
+          climaxChunk = buildDenseClimax(
+            accelerationChunk,
+            1 + accelerationChunk.pathPlatforms.length
+          );
+        }
+      } else if (plan.primary === 'clone_fusion') {
+        const p1: Platform = { x: 420, y: baseY - 20, width: 230, height: 20 };
+        const dup1: Particle = { x: p1.x + 90, y: p1.y - 30, type: 'duplicate' };
+        const dup2: Particle = { x: p1.x + 165, y: p1.y - 30, type: 'duplicate' };
+        const p2: Platform = { x: 725, y: baseY - 40, width: 200, height: 20, cracked: true };
+        const p3: Platform = { x: 1005, y: baseY - 60, width: 200, height: 20, cracked: true };
+        const p4: Platform = { x: 1285, y: baseY - 80, width: 210, height: 20 };
+        const plats = [p1, p2, p3, p4];
+        const parts = [dup1, dup2];
+        accelerationChunk = {
+          id: `chunk_fusion_${level}`,
+          name: 'Fusion Super-Quanta',
+          archetype: 'speedrun_highway',
+          entry: { x: p1.x + 40, y: p1.y },
+          exit: { x: p4.x + p4.width - 40, y: p4.y },
+          platforms: plats,
+          pathPlatforms: [...plats],
+          spikes: [],
+          particles: parts,
+          bounds: computeChunkBounds(plats, [], parts)
+        };
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
+      } else if (plan.primary === 'duplicate_gate') {
+        const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
+        const dupPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'duplicate' };
+        const p2: Platform = { x: 715, y: baseY - 40, width: 220, height: 20 };
+        const p3: Platform = { x: 1010, y: baseY - 60, width: 240, height: 20 };
+        const p4: Platform = { x: 1325, y: baseY - 80, width: 200, height: 20 };
+        const plats = [p1, p2, p3, p4];
+        accelerationChunk = {
+          id: `chunk_dupgate_${level}`,
+          name: 'Verrou de Superposition',
+          archetype: 'speedrun_highway',
+          entry: { x: p1.x + 40, y: p1.y },
+          exit: { x: p4.x + p4.width - 40, y: p4.y },
+          platforms: plats,
+          pathPlatforms: [...plats],
+          spikes: [],
+          particles: [dupPart],
+          bounds: computeChunkBounds(plats, [], [dupPart])
+        };
+        gates = [
+          {
+            id: `gate_dup_${level}`,
+            x: p3.x + 80,
+            y: 0,
+            width: 24,
+            height: p3.y
+          }
+        ];
+        pressurePlates = [
+          {
+            id: `plate_dup_${level}`,
+            x: p2.x + 65,
+            y: p2.y - 12,
+            width: 90,
+            height: 12,
+            targetGateId: `gate_dup_${level}`,
+            requireLock: true,
+            autoSwitchOnTrigger: true
+          }
+        ];
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
+      } else if (plan.primary === 'condense') {
+        const p1: Platform = { x: 420, y: baseY - 20, width: 230, height: 20 };
+        const condensePart: Particle = { x: p1.x + 115, y: p1.y - 30, type: 'condense' };
+        const p2: Platform = { x: p1.x + p1.width + 480, y: baseY - 20, width: 220, height: 20 };
+        const p3: Platform = { x: p2.x + p2.width + 480, y: baseY - 40, width: 220, height: 20 };
+        const plats = [p1, p2, p3];
+        accelerationChunk = {
+          id: `chunk_condense_${level}`,
+          name: 'Onde de Broglie',
+          archetype: 'electron_chasm',
+          entry: { x: p1.x + 40, y: p1.y },
+          exit: { x: p3.x + p3.width - 40, y: p3.y },
+          platforms: plats,
+          pathPlatforms: [...plats],
+          spikes: [],
+          particles: [condensePart],
+          bounds: computeChunkBounds(plats, [], [condensePart])
+        };
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
+      } else if (plan.primary === 'tunnel') {
+        const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
+        const tun1: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'tunnel' };
+        const wall1: Platform = { x: p1.x + p1.width + 25, y: 0, width: 32, height };
+        const p2: Platform = { x: wall1.x + wall1.width + 25, y: baseY - 30, width: 220, height: 20 };
+        const tun2: Particle = { x: p2.x + 110, y: p2.y - 30, type: 'tunnel' };
+        const wall2: Platform = { x: p2.x + p2.width + 25, y: 0, width: 34, height };
+        const p3: Platform = { x: wall2.x + wall2.width + 25, y: baseY - 45, width: 220, height: 20 };
+        const plats = [p1, wall1, p2, wall2, p3];
+        const parts = [tun1, tun2];
+        accelerationChunk = {
+          id: `chunk_tunnel_${level}`,
+          name: 'Barrière Tunnel',
+          archetype: 'speedrun_highway',
+          entry: { x: p1.x + 40, y: p1.y },
+          exit: { x: p3.x + p3.width - 40, y: p3.y },
+          platforms: plats,
+          pathPlatforms: [p1, p2, p3],
+          spikes: [],
+          particles: parts,
+          bounds: computeChunkBounds(plats, [], parts)
+        };
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
+      } else if (plan.primary === 'phase') {
+        // Phase platforms starting immediately in the discovery zone (crucial for Milestone L47 quantum_pinning!)
+        const p1: Platform = { x: 420, y: baseY - 20, width: 175, height: 20, phase: 'magenta' };
+        const p2: Platform = { x: 660, y: baseY - 40, width: 175, height: 20, phase: 'cyan' };
+        const p3: Platform = { x: 900, y: baseY - 60, width: 175, height: 20, phase: 'magenta' };
+        const p4: Platform = { x: 1140, y: baseY - 80, width: 175, height: 20, phase: 'cyan' };
+        const plats = [p1, p2, p3, p4];
+        accelerationChunk = {
+          id: `chunk_phase_${level}`,
+          name: 'Chambre de Phase',
+          archetype: 'superposition_chamber',
+          entry: { x: p1.x + 40, y: p1.y },
+          exit: { x: p4.x + p4.width - 40, y: p4.y },
+          platforms: plats,
+          pathPlatforms: [...plats],
+          spikes: [],
+          particles: [],
+          bounds: computeChunkBounds(plats)
+        };
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
+      } else if (plan.primary === 'liquid_basin') {
+        const p1: Platform = {
+          x: 420,
+          y: baseY - 20,
+          width: 240,
+          height: 55,
+          matterState: 'liquid'
+        };
+        const p2: Platform = {
+          x: 735,
+          y: baseY - 45,
+          width: 220,
+          height: 55,
+          matterState: 'liquid'
+        };
+        const p3: Platform = { x: 1030, y: baseY - 65, width: 210, height: 20 };
+        const p4: Platform = {
+          x: 1315,
+          y: baseY - 85,
+          width: 220,
+          height: 55,
+          matterState: 'liquid'
+        };
+        const plats = [p1, p2, p3, p4];
+        accelerationChunk = {
+          id: `chunk_liquid_${level}`,
+          name: 'Bassin Fluide',
+          archetype: 'speedrun_highway',
+          entry: { x: p1.x + 40, y: p1.y },
+          exit: { x: p4.x + p4.width - 40, y: p4.y },
+          platforms: plats,
+          pathPlatforms: [...plats],
+          spikes: [],
+          particles: [],
+          bounds: computeChunkBounds(plats)
+        };
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
+      } else if (plan.primary === 'wormhole') {
+        const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
+        const p2: Platform = { x: 720, y: baseY - 40, width: 240, height: 20 };
+        // Elevated platform reached via momentum-conserving wormhole
+        const p3: Platform = { x: 1120, y: baseY - 220, width: 240, height: 20 };
+        const p4: Platform = { x: 1440, y: baseY - 235, width: 210, height: 20 };
+        const plats = [p1, p2, p3, p4];
+        wormholes = [
+          {
+            id: `wh_main_${level}`,
+            inX: p2.x + p2.width - 12,
+            inY: p2.y - 44,
+            inNormalAngleDeg: 0,
+            outX: p3.x + 70,
+            outY: p3.y - 60,
+            outNormalAngleDeg: 0,
+            color: elementInfo.antiHue
+          }
+        ];
+        accelerationChunk = {
+          id: `chunk_wh_${level}`,
+          name: 'Trou de Ver d’Impulsion',
+          archetype: 'speedrun_highway',
+          entry: { x: p1.x + 40, y: p1.y },
+          exit: { x: p4.x + p4.width - 40, y: p4.y },
+          platforms: plats,
+          pathPlatforms: [...plats],
+          spikes: [],
+          particles: [],
+          bounds: computeChunkBounds(plats)
+        };
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
+      } else if (plan.primary === 'wall') {
+        height = 1300;
+        const rawLead = createDynamicCourseChunk({
+          id: `chunk_wall_lead_${level}`,
+          steps: 3,
+          rng,
+          progress,
+          allowSpikes: false,
+          allowMoving: false
+        });
+        accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawLead, levelAlpha, -15);
+        const rawWell = createGravityWellChunk({
+          wellWidth: 320,
+          height: 440,
+          steps: 2
+        });
+        climaxChunk = connectAndTranslateChunk(accelerationChunk, rawWell, levelAlpha, 15);
       } else {
-        // Standard progressive levels: ONLY pick from mechanics unlocked up to `level`
-        const unlockedPool: Array<
-          'pure' | 'speed' | 'lowGravity' | 'wall' | 'antiGravity' | 'tunnel' | 'phase' | 'decay'
-        > = ['pure', 'speed'];
-        if (level >= 10) unlockedPool.push('lowGravity');
-        if (level >= 19) unlockedPool.push('wall');
-        if (level >= 23) unlockedPool.push('antiGravity');
-        if (level >= 30) unlockedPool.push('tunnel');
-        if (level >= 37) unlockedPool.push('phase');
-        if (level >= 48) unlockedPool.push('decay');
+        // Dense dynamic course fallback
+        const rawD1 = createDynamicCourseChunk({
+          id: `chunk_dyn_a_${level}`,
+          steps: 4,
+          rng,
+          progress,
+          allowSpikes: level > 4,
+          allowMoving: level >= 15
+        });
+        accelerationChunk = connectAndTranslateChunk(awakeningChunk, rawD1, levelAlpha, -15);
+        climaxChunk = buildDenseClimax(
+          accelerationChunk,
+          1 + accelerationChunk.pathPlatforms.length
+        );
+      }
 
-        const picked = unlockedPool[(level + Math.floor(rng.next() * 2)) % unlockedPool.length];
-        height = Math.max(height, 1400);
+      // --- Apply secondary mechanic enrichments from plan ---
 
-        const mergeChunks = (id: string, name: string, a: Chunk, b: Chunk): Chunk => {
-          const platforms = [...a.platforms, ...b.platforms];
-          const pathPlatforms = [...a.pathPlatforms, ...b.pathPlatforms];
-          const spikes = [...a.spikes, ...b.spikes];
-          const particles = [...a.particles, ...b.particles];
-          return {
-            id,
-            name,
-            archetype: b.archetype,
-            entry: a.entry,
-            exit: b.exit,
-            platforms,
-            pathPlatforms,
-            spikes,
-            particles,
-            bounds: computeChunkBounds(platforms, spikes, particles)
-          };
-        };
+      // Optional extra tunnel barrier at end of accelerationChunk (when primary wasn't tunnel/boss)
+      if (
+        plan.addTunnelBarrier &&
+        plan.primary !== 'tunnel' &&
+        !isSpeedTunnelBoss &&
+        !isPauliBoss &&
+        !isAntiGravBoss
+      ) {
+        const anchorPlat = accelerationChunk.pathPlatforms[0];
+        if (anchorPlat) {
+          accelerationChunk.particles.push({
+            x: anchorPlat.x + Math.round(anchorPlat.width * 0.5),
+            y: anchorPlat.y - 30,
+            type: 'tunnel'
+          });
+          // Place a thin vertical barrier on the right side of anchorPlat
+          accelerationChunk.platforms.push({
+            x: anchorPlat.x + anchorPlat.width - 28,
+            y: 0,
+            width: 28,
+            height: anchorPlat.y
+          });
+        }
+      }
 
-        const buildClimax = (anchor: Chunk): Chunk => {
-          const canPhase = level >= 37 && picked !== 'phase';
-          const canDecay = level >= 48 && picked !== 'decay';
-          const roll = rng.next();
-          let primaryClimax: Chunk;
-          if (canPhase && roll < 0.3) {
-            const rawPhase = createSuperpositionChamberChunk({
-              steps: 6 + Math.floor(progress * 4),
-              stepSpacing: 175,
-              platformWidth: 150,
-              verticalStep: -20,
-              initialPhase: level % 2 === 0 ? 'cyan' : 'magenta'
-            });
-            primaryClimax = connectAndTranslateChunk(anchor, rawPhase, levelAlpha, -15);
-          } else if (canDecay && roll >= 0.3 && roll < 0.6) {
-            const rawDecay = createDecayZoneChunk({
-              steps: 6 + Math.floor(progress * 4),
-              decayMs,
-              stepSpacing: 170,
-              platformWidth: 145,
-              verticalDelta: -18,
-              includeStableExit: true
-            });
-            primaryClimax = connectAndTranslateChunk(anchor, rawDecay, levelAlpha, -15);
-          } else {
-            const rawDyn = createDynamicCourseChunk({
-              id: `chunk_climax_dyn_${level}`,
-              steps: 7 + Math.floor(progress * 6),
-              rng,
-              progress,
-              allowSpikes: true,
-              allowMoving: true
-            });
-            primaryClimax = connectAndTranslateChunk(anchor, rawDyn, levelAlpha, -15);
+      // Optional timeDilation particle inside discovery zone (e.g. Milestone L55 & Period 6/7)
+      if (plan.addTimeDilation && !isSpeedTunnelBoss) {
+        const firstPlat = accelerationChunk.pathPlatforms[0] ?? awakeningChunk.pathPlatforms[0];
+        if (firstPlat) {
+          accelerationChunk.particles.push({
+            x: Math.min(firstPlat.x + Math.round(firstPlat.width * 0.35), 560),
+            y: firstPlat.y - 30,
+            type: 'timeDilation'
+          });
+        }
+      }
+
+      // Optional duplicate particle (when not already present)
+      if (
+        plan.addDuplicate &&
+        !accelerationChunk.particles.some((p) => p.type === 'duplicate')
+      ) {
+        const firstPlat = accelerationChunk.pathPlatforms[0];
+        if (firstPlat) {
+          accelerationChunk.particles.push({
+            x: firstPlat.x + Math.round(firstPlat.width * 0.65),
+            y: firstPlat.y - 30,
+            type: 'duplicate'
+          });
+        }
+      }
+
+      // Optional gate + pressure plate (when not already present)
+      if (plan.addGatePlate && !gates && accelerationChunk.pathPlatforms.length >= 3) {
+        const platePlat = accelerationChunk.pathPlatforms[1];
+        const gatePlat = accelerationChunk.pathPlatforms[2];
+        const hasDupBeforeOrOnPlate = accelerationChunk.particles.some(
+          (p) => p.type === 'duplicate' && p.x <= platePlat.x + platePlat.width
+        );
+        gates = [
+          {
+            id: `gate_sec_${level}`,
+            x: gatePlat.x + Math.round(gatePlat.width * 0.5),
+            y: 0,
+            width: 24,
+            height: gatePlat.y
           }
-
-          if (progress >= 0.35) {
-            const rawFollowUp = createDynamicCourseChunk({
-              id: `chunk_climax_ext_${level}`,
-              steps: 5 + Math.floor(progress * 5),
-              rng,
-              progress,
-              allowSpikes: true,
-              allowMoving: true,
-              decayMs: canDecay && roll < 0.3 ? decayMs : undefined
-            });
-            const followUpT = connectAndTranslateChunk(primaryClimax, rawFollowUp, levelAlpha, -15);
-            return mergeChunks(
-              `chunk_climax_full_${level}`,
-              'Épreuve Finale',
-              primaryClimax,
-              followUpT
-            );
+        ];
+        pressurePlates = [
+          {
+            id: `plate_sec_${level}`,
+            x: platePlat.x + Math.round(platePlat.width * 0.3),
+            y: platePlat.y - 12,
+            width: 86,
+            height: 12,
+            targetGateId: `gate_sec_${level}`,
+            requireLock: hasDupBeforeOrOnPlate,
+            autoSwitchOnTrigger: true
           }
-          return primaryClimax;
-        };
+        ];
+      }
 
-        const leadSteps = 4 + Math.floor(progress * 5);
-        if (picked === 'pure') {
-          const rawD1 = createDynamicCourseChunk({
-            id: `chunk_pure_d1_${level}`,
-            steps: 6 + Math.floor(progress * 5),
-            rng,
-            progress,
-            allowSpikes: true,
-            allowMoving: true
-          });
-          const d1T = connectAndTranslateChunk(introChunk, rawD1, levelAlpha, -15);
-          accelerationChunk = mergeChunks(`chunk_pure_a_${level}`, 'Parcours Pur', introChunk, d1T);
-          climaxChunk = buildClimax(accelerationChunk);
-        } else if (picked === 'speed') {
-          const p1: Platform = { x: 890, y: baseY - 60, width: 200, height: 20 };
-          const speedPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'speed' };
-          const p2: Platform = {
-            x: p1.x + p1.width + speedChasm,
-            y: baseY - 60,
-            width: 220,
-            height: 20
-          };
-          accelerationChunk = {
-            id: `chunk_spd_${level}`,
-            name: 'Accélération',
-            archetype: 'speedrun_highway',
-            entry: introChunk.entry,
-            exit: { x: p2.x + p2.width - 40, y: p2.y },
-            platforms: [intro1, intro2, p1, p2],
-            pathPlatforms: [intro1, intro2, p1, p2],
-            spikes: [],
-            particles: [speedPart],
-            bounds: computeChunkBounds([intro1, intro2, p1, p2], [], [speedPart])
-          };
-          climaxChunk = buildClimax(accelerationChunk);
-        } else if (picked === 'lowGravity') {
-          const rawChasm = createElectronChasmChunk({
-            chasmWidth: lowGChasm,
-            powerType: 'lowGravity',
-            startWidth: 180,
-            landingWidth: 200,
-            verticalDrop: 20
-          });
-          const chasmT = connectAndTranslateChunk(introChunk, rawChasm, levelAlpha, -15);
-          accelerationChunk = mergeChunks(`chunk_lg_${level}`, 'Gouffre Léger', introChunk, chasmT);
-          climaxChunk = buildClimax(accelerationChunk);
-        } else if (picked === 'wall') {
-          height = 1450;
-          const rawLead = createDynamicCourseChunk({
-            id: `chunk_wall_lead_${level}`,
-            steps: leadSteps,
-            rng,
-            progress,
-            allowSpikes: true,
-            allowMoving: true
-          });
-          const leadT = connectAndTranslateChunk(introChunk, rawLead, levelAlpha, -15);
-          accelerationChunk = mergeChunks(
-            `chunk_wall_a_${level}`,
-            'Approche Puits',
-            introChunk,
-            leadT
-          );
-          const rawWell = createGravityWellChunk({
-            wellWidth: 320,
-            height: 450,
-            steps: 2 + Math.floor(progress * 2)
-          });
-          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawWell, levelAlpha, 15);
-        } else if (picked === 'tunnel') {
-          const p1: Platform = { x: 890, y: baseY - 60, width: 200, height: 20 };
-          const tunPart: Particle = { x: p1.x + 100, y: p1.y - 30, type: 'tunnel' };
-          const barrier: Platform = { x: p1.x + p1.width + 25, y: 0, width: 30, height: height };
-          const p2: Platform = { x: barrier.x + 55, y: baseY - 60, width: 210, height: 20 };
-          const tunPlats = [intro1, intro2, p1, barrier, p2];
-          accelerationChunk = {
-            id: `chunk_tun_${level}`,
-            name: 'Barrière Quantique',
-            archetype: 'speedrun_highway',
-            entry: introChunk.entry,
-            exit: { x: p2.x + p2.width - 40, y: p2.y },
-            platforms: tunPlats,
-            pathPlatforms: [intro1, intro2, p1, p2],
-            spikes: [],
-            particles: [tunPart],
-            bounds: computeChunkBounds(tunPlats, [], [tunPart])
-          };
-          climaxChunk = buildClimax(accelerationChunk);
-        } else if (picked === 'phase') {
-          const rawLead = createDynamicCourseChunk({
-            id: `chunk_phase_lead_${level}`,
-            steps: leadSteps,
-            rng,
-            progress,
-            allowSpikes: true,
-            allowMoving: true
-          });
-          const leadT = connectAndTranslateChunk(introChunk, rawLead, levelAlpha, -15);
-          accelerationChunk = mergeChunks(
-            `chunk_phase_a_${level}`,
-            'Approche Phase',
-            introChunk,
-            leadT
-          );
-          const rawPhase = createSuperpositionChamberChunk({
-            steps: 6 + Math.floor(progress * 5),
-            stepSpacing: 180,
-            platformWidth: 155,
-            verticalStep: -20,
-            initialPhase: level % 2 === 0 ? 'cyan' : 'magenta'
-          });
-          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawPhase, levelAlpha, -15);
-        } else if (picked === 'decay') {
-          const rawLead = createDynamicCourseChunk({
-            id: `chunk_decay_lead_${level}`,
-            steps: leadSteps,
-            rng,
-            progress,
-            allowSpikes: true,
-            allowMoving: true
-          });
-          const leadT = connectAndTranslateChunk(introChunk, rawLead, levelAlpha, -15);
-          accelerationChunk = mergeChunks(
-            `chunk_decay_a_${level}`,
-            'Approche Demi-Vie',
-            introChunk,
-            leadT
-          );
-          const rawDecay = createDecayZoneChunk({
-            steps: 6 + Math.floor(progress * 5),
-            decayMs,
-            stepSpacing: 175,
-            platformWidth: 150,
-            verticalDelta: -20,
-            includeStableExit: true
-          });
-          climaxChunk = connectAndTranslateChunk(accelerationChunk, rawDecay, levelAlpha, -15);
-          if (level === 55 || (level > 55 && level % 12 === 0)) {
-            const firstClimax = climaxChunk.platforms[0];
-            climaxChunk.particles.push({
-              x: firstClimax.x + Math.round(firstClimax.width / 2),
-              y: firstClimax.y - 30,
-              type: 'timeDilation'
+      // Optional wormhole (when not already created by primary === 'wormhole')
+      if (plan.addWormhole && !wormholes) {
+        const srcPlat = climaxChunk.pathPlatforms[0] ?? accelerationChunk.pathPlatforms[0];
+        const dstPlat =
+          climaxChunk.pathPlatforms[1] ??
+          accelerationChunk.pathPlatforms[accelerationChunk.pathPlatforms.length - 1];
+        if (srcPlat && dstPlat && srcPlat !== dstPlat) {
+          wormholes = [
+            {
+              id: `wh_sec_${level}`,
+              inX: srcPlat.x + Math.round(srcPlat.width * 0.75),
+              inY: srcPlat.y - 80,
+              inNormalAngleDeg: 0,
+              outX: dstPlat.x + Math.round(dstPlat.width * 0.5),
+              outY: dstPlat.y - 70,
+              outNormalAngleDeg: 0,
+              color: elementInfo.antiHue
+            }
+          ];
+        }
+      }
+
+      // Optional matterState enrichment (liquid, cryo, plasma, gas)
+      if (plan.matterState) {
+        const ms = plan.matterState;
+        if (ms === 'gas') {
+          const refPlat = accelerationChunk.pathPlatforms[1] ?? accelerationChunk.pathPlatforms[0];
+          if (refPlat) {
+            accelerationChunk.platforms.push({
+              x: refPlat.x + refPlat.width + 6,
+              y: refPlat.y + 16,
+              width: 72,
+              height: 180,
+              matterState: 'gas'
             });
           }
         } else {
-          // AntiGravity ceiling run + dynamic climax
-          const p1: Platform = { x: 890, y: baseY - 60, width: 200, height: 20 };
-          const ag1: Particle = { x: p1.x + 170, y: p1.y - 120, type: 'antiGravity' };
-          const p2: Platform = { x: 1180, y: 260, width: 230, height: 20 };
-          const p3: Platform = { x: 1490, y: 260, width: 230, height: 20 };
-          const ag2: Particle = { x: 1770, y: 370, type: 'antiGravity' };
-          const p4: Platform = { x: 1810, y: baseY - 80, width: 220, height: 20 };
-          const agPlats = [intro1, intro2, p1, p2, p3, p4];
-          const agParts = [ag1, ag2];
-          accelerationChunk = {
-            id: `chunk_ag_${level}`,
-            name: 'Plafond Inversé',
-            archetype: 'speedrun_highway',
-            entry: introChunk.entry,
-            exit: { x: p4.x + p4.width - 40, y: p4.y },
-            platforms: agPlats,
-            pathPlatforms: agPlats,
-            spikes: [],
-            particles: agParts,
-            bounds: computeChunkBounds(agPlats, [], agParts)
-          };
-          climaxChunk = buildClimax(accelerationChunk);
+          const allParticlesSoFar = [...accelerationChunk.particles, ...climaxChunk.particles];
+          const allPathPlats = [...accelerationChunk.pathPlatforms, ...climaxChunk.pathPlatforms];
+          const candidates = allPathPlats.filter((p, idx) => {
+            if (p.phase || p.kind === 'wall' || p.ephemeral || p.matterState) return false;
+            if (ms === 'plasma') {
+              if (idx === allPathPlats.length - 1) return false;
+              const nextPlat = allPathPlats[idx + 1];
+              if (!nextPlat || nextPlat.phase || (nextPlat.decayMs ?? 0) > 0) return false;
+              const gapToNext = nextPlat.x - (p.x + p.width);
+              if (gapToNext > 190) return false;
+              const hasPickup = allParticlesSoFar.some(
+                (pt) => pt.x >= p.x - 10 && pt.x <= p.x + p.width + 10
+              );
+              const hasPlate = (pressurePlates ?? []).some(
+                (pl) => pl.x >= p.x - 10 && pl.x <= p.x + p.width + 10
+              );
+              if (hasPickup || hasPlate) return false;
+            }
+            return true;
+          });
+          if (candidates.length === 0 && ms === 'plasma') {
+            const refPlat = accelerationChunk.pathPlatforms[0];
+            if (refPlat) {
+              accelerationChunk.platforms.push({
+                x: refPlat.x + 20,
+                y: refPlat.y + 80,
+                width: 120,
+                height: 20,
+                matterState: 'plasma'
+              });
+            }
+          } else {
+            const tagCount = Math.min(2, candidates.length);
+            for (let i = 0; i < tagCount; i++) {
+              const target = candidates[i];
+              target.matterState = ms;
+              if (ms === 'liquid' && target.height < 48) {
+                target.height = 50;
+              }
+            }
+          }
         }
       }
 
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, levelAlpha, -15);
-      width = Math.max(2600, Math.round(resolutionChunk.exit.x + 320));
+      width = Math.max(2200, Math.round(resolutionChunk.exit.x + 280));
+
+      // Wire Entanglement configuration (mirror_x, inverted_gravity, mirror_and_gravity, revealAtX, tetherPhysical + pylons)
+      if (plan.entanglement) {
+        const ent = plan.entanglement;
+        const safeMaxX = Math.floor(width * 0.32);
+        const portalMode = ent.portalMode ?? 'dual';
+        if (ent.mode === 'inverted_gravity') {
+          entanglementConfig = {
+            mode: 'inverted_gravity',
+            ...(ent.allowHeroCollision ? { allowHeroCollision: true } : {}),
+            betaSpawn: {
+              x: Math.round(awakeningChunk.entry.x),
+              y: 160
+            },
+            portalMode,
+            ...(portalMode === 'dual'
+              ? {
+                  betaDoor: {
+                    x: Math.round(resolutionChunk.exit.x),
+                    y: Math.max(120, Math.round(resolutionChunk.exit.y - 140))
+                  }
+                }
+              : {})
+          };
+        } else if (ent.mode === 'mirror_and_gravity') {
+          entanglementConfig = {
+            mode: 'mirror_and_gravity',
+            betaSpawn: {
+              x: Math.max(900, width - 180),
+              y: 180
+            },
+            portalMode,
+            ...(portalMode === 'dual'
+              ? {
+                  betaDoor: {
+                    x: Math.min(600, Math.max(180, width - Math.round(resolutionChunk.exit.x))),
+                    y: 180
+                  }
+                }
+              : {})
+          };
+        } else {
+          entanglementConfig = {
+            mode: 'mirror_x',
+            betaSpawn: {
+              x: Math.max(200, width - 180),
+              y: Math.round(awakeningChunk.entry.y - PHYSICS.HERO_HEIGHT / 2)
+            },
+            portalMode,
+            ...(portalMode === 'dual'
+              ? {
+                  betaDoor: {
+                    x: Math.max(180, width - Math.round(resolutionChunk.exit.x)),
+                    y: Math.round(resolutionChunk.exit.y - 10)
+                  }
+                }
+              : {}),
+            ...(ent.revealInSafeZone ? { revealAtX: safeMaxX } : {}),
+            ...(ent.tetherPhysical ? { tetherPhysical: true, tetherMaxLength: 540 } : {})
+          };
+          if (ent.tetherPhysical) {
+            tetherPylons = [
+              { x: Math.min(640, safeMaxX), y: baseY - 190, radius: 18, maxLength: 540 },
+              { x: Math.round(width * 0.52), y: baseY - 210, radius: 18, maxLength: 540 },
+              { x: Math.round(width * 0.78), y: baseY - 200, radius: 18, maxLength: 540 }
+            ];
+          }
+        }
+      }
       break;
     }
   }
@@ -1621,12 +2111,15 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     id: String(level),
     symbol: elementInfo.symbol,
     atom: elementInfo.name,
+    ...(archetype ? { archetype } : {}),
     uncertainty: level === 14 ? 4 : level,
     width,
     height,
     hue: elementInfo.hue,
     antiHue: elementInfo.antiHue,
     explanations: narrative,
+    ...(screenWrap ? { screenWrap } : {}),
+    ...(allowCloneFusion ? { allowCloneFusion } : {}),
     player,
     spikes: allSpikes,
     particles: allParticles,
@@ -1635,6 +2128,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     pressurePlates,
     entanglement: entanglementConfig,
     tetherPylons,
+    ...(wormholes ? { wormholes } : {}),
     door,
     collapse: collapseConfig,
     meta: {
@@ -1657,6 +2151,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     pressurePlates: directedLevelData.pressurePlates,
     entanglement: directedLevelData.entanglement,
     tetherPylons: directedLevelData.tetherPylons,
+    wormholes: directedLevelData.wormholes,
+    screenWrap: directedLevelData.screenWrap,
     collapse: directedLevelData.collapse
   };
 

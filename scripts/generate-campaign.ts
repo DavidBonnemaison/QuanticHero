@@ -13,7 +13,7 @@ interface CampaignOptions {
 
 function parseArgs(args: string[]): CampaignOptions {
   let from = 1;
-  let to = 10;
+  let to = 118;
   let baseSeed = 42;
   let dryRun = false;
 

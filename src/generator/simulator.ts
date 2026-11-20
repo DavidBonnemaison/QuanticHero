@@ -7,6 +7,13 @@ import {
 } from '../mechanics/quantumMechanics';
 import { PHYSICS } from '../physics/constants';
 import {
+  computeWormholeExit,
+  getPlasmaBounceVelocity,
+  isHeroInWormholeInlet,
+  isHeroOverlappingRect,
+  stepGasUpdraft
+} from '../physics/matterStates';
+import {
   type MovingPlatformSimState,
   applyLowGravity,
   clampFallVelocity,
@@ -75,6 +82,7 @@ export interface SimHeroState {
     height: number;
     expiresAtMs: number;
   }>;
+  wormholeCooldownUntil?: number;
 }
 
 export interface SimInput {
@@ -512,7 +520,7 @@ export function stepSimulation(
   for (let idx = 0; idx < world.platforms.length; idx++) {
     if (idx === tunneledPlatformIdx) continue;
     const p = getEffectivePlatform(world.platforms[idx], idx);
-    if (p.kind === 'wall' || p.height < 60) continue;
+    if (p.kind === 'wall' || p.matterState === 'gas' || p.ephemeral || p.height < 60) continue;
     if (p.phase && next.currentPhase && p.phase !== next.currentPhase) continue;
     if (p.decayMs && p.decayMs > 0 && nextDecayStates[idx]?.collapsed) continue;
     const vOverlap = newY + halfH > p.y + 8 && newY - halfH < p.y + p.height - 8;
@@ -539,7 +547,7 @@ export function stepSimulation(
 
     for (let idx = 0; idx < world.platforms.length; idx++) {
       const p = getEffectivePlatform(world.platforms[idx], idx);
-      if (p.kind === 'wall') continue;
+      if (p.kind === 'wall' || p.matterState === 'gas') continue;
 
       // Phase Shift filter: non-active phase platforms are intangible
       if (p.phase && next.currentPhase && p.phase !== next.currentPhase) {
@@ -566,9 +574,15 @@ export function stepSimulation(
           nextBottom >= p.y - 2 - Math.abs(mpDy)
         ) {
           newY = p.y - halfH;
-          next.vy = 0;
-          landed = true;
           landedPlatformIndex = idx;
+          if (p.matterState === 'plasma') {
+            next.vy = getPlasmaBounceVelocity(next.upsideDown);
+            next.isDiving = false;
+            landed = false;
+          } else {
+            next.vy = 0;
+            landed = true;
+          }
 
           // Trigger decay platform on contact
           if (
@@ -590,7 +604,7 @@ export function stepSimulation(
 
     for (let idx = 0; idx < world.platforms.length; idx++) {
       const p = getEffectivePlatform(world.platforms[idx], idx);
-      if (p.kind === 'wall') continue;
+      if (p.kind === 'wall' || p.matterState === 'gas') continue;
 
       if (p.phase && next.currentPhase && p.phase !== next.currentPhase) {
         continue;
@@ -614,9 +628,15 @@ export function stepSimulation(
           nextTop <= pBottom + 2 + Math.abs(mpDy)
         ) {
           newY = pBottom + halfH;
-          next.vy = 0;
-          landed = true;
           landedPlatformIndex = idx;
+          if (p.matterState === 'plasma') {
+            next.vy = getPlasmaBounceVelocity(next.upsideDown);
+            next.isDiving = false;
+            landed = false;
+          } else {
+            next.vy = 0;
+            landed = true;
+          }
           if (
             p.decayMs &&
             p.decayMs > 0 &&
@@ -687,6 +707,38 @@ export function stepSimulation(
     landed = true;
   }
 
+  // 6d. Noble-gas updraft volumes (matterState === 'gas')
+  for (let idx = 0; idx < world.platforms.length; idx++) {
+    const p = getEffectivePlatform(world.platforms[idx], idx);
+    if (p.matterState !== 'gas') continue;
+    if (isHeroOverlappingRect(newX, newY, p, false)) {
+      next.vy = stepGasUpdraft(next.vy, dt, next.upsideDown);
+      landed = false;
+      break;
+    }
+  }
+
+  // 6e. Momentum-conserving wormholes
+  if (
+    world.wormholes &&
+    world.wormholes.length > 0 &&
+    next.timeMs >= (next.wormholeCooldownUntil ?? 0)
+  ) {
+    for (const wh of world.wormholes) {
+      if (isHeroInWormholeInlet(newX, newY, wh)) {
+        const exit = computeWormholeExit(next.vx, next.vy, wh);
+        newX = exit.x;
+        newY = exit.y;
+        next.vx = exit.vx;
+        next.vy = exit.vy;
+        next.isDiving = false;
+        landed = false;
+        next.wormholeCooldownUntil = next.timeMs + PHYSICS.WORMHOLE_COOLDOWN_MS;
+        break;
+      }
+    }
+  }
+
   next.x = newX;
   next.y = newY;
   next.touchingGround = landed;
@@ -699,7 +751,7 @@ export function stepSimulation(
  * Checks if hero is safely grounded on a specific platform.
  */
 export function isHeroOnPlatform(hero: SimHeroState, platform: Platform): boolean {
-  if (!hero.touchingGround) return false;
+  if (!hero.touchingGround && platform.matterState !== 'plasma') return false;
   let effectivePlatform = platform;
   if (platform.movesTo && hero.movingPlatforms) {
     const mp = Object.values(hero.movingPlatforms).find(
@@ -744,9 +796,37 @@ export function simulatePlatformTransition(
 
   const hasBounceWall = world.platforms.some((p) => p.kind === 'wall');
   const needsWallBounce = hasBounceWall && fromPlatform.y - toPlatform.y > 135;
+  const toPlatIdx = world.platforms.indexOf(toPlatform);
+
+  // Detect wormhole bridging fromPlatform -> toPlatform
+  const bridgeWormhole = (world.wormholes ?? []).find((wh) => {
+    const inNearFrom =
+      wh.inX >= fromPlatform.x - 140 &&
+      wh.inX <= fromPlatform.x + fromPlatform.width + 140 &&
+      Math.abs(wh.inY - fromPlatform.y) <= 140;
+    const outNearTo =
+      wh.outX >= toPlatform.x - 180 &&
+      wh.outX <= toPlatform.x + toPlatform.width + 180 &&
+      Math.abs(wh.outY - toPlatform.y) <= 180;
+    return inNearFrom && outNearTo;
+  });
+
+  // Detect tall gas updraft column vertically bridging fromPlatform and elevated toPlatform
+  const bridgeGas =
+    !needsWallBounce && fromPlatform.y - toPlatform.y > 90
+      ? world.platforms.find((p) => {
+          if (p.matterState !== 'gas' || p.height < 100) return false;
+          const minX = Math.min(fromPlatform.x, toPlatform.x) - 40;
+          const maxX = Math.max(fromPlatform.x + fromPlatform.width, toPlatform.x + toPlatform.width) + 40;
+          const vOverlap = p.y <= fromPlatform.y && p.y + p.height >= toPlatform.y;
+          return vOverlap && p.x + p.width >= minX && p.x <= maxX;
+        })
+      : undefined;
+
   let wallBounced = false;
-  let jumped = false;
+  let jumped = fromPlatform.matterState === 'plasma' && !current.touchingGround;
   let settled = false;
+  let usedWormhole = false;
   let lastCondenseMs = Number.NEGATIVE_INFINITY;
   let condenseCount = 0;
 
@@ -863,6 +943,14 @@ export function simulatePlatformTransition(
       }
     } else {
       // Phase 2: In-flight steering towards target
+      if (current.wormholeCooldownUntil && current.wormholeCooldownUntil > current.timeMs) {
+        usedWormhole = true;
+      }
+
+      if (toPlatform.matterState === 'plasma' && current.groundedPlatformIndex === toPlatIdx) {
+        return { success: true, history, finalState: current };
+      }
+
       if (current.touchingGround && isHeroOnPlatform(current, toPlatform)) {
         // Landed on target platform! Settle towards its center
         const distToCenter = liveTargetCenterX - current.x;
@@ -872,6 +960,20 @@ export function simulatePlatformTransition(
         } else {
           settled = true;
         }
+      } else if (bridgeWormhole && !usedWormhole) {
+        // Steer into bridging wormhole inlet
+        const whDistX = bridgeWormhole.inX - current.x;
+        if (whDistX > 6) input.right = true;
+        else if (whDistX < -6) input.left = true;
+        if (current.touchingGround && bridgeWormhole.inY < current.y - 16) {
+          input.jump = true;
+        }
+      } else if (bridgeGas && current.y + halfH > liveTo.y - 6) {
+        // Ride gas updraft column until above target platform
+        const gasCenterX = bridgeGas.x + bridgeGas.width / 2;
+        const gasDistX = gasCenterX - current.x;
+        if (gasDistX > 8) input.right = true;
+        else if (gasDistX < -8) input.left = true;
       } else if (usedPauliChasm && !current.touchingGround) {
         // Ballistic Pauli arc: do not steer with arrow keys, let momentum carry hero across the chasm
         input.right = false;
@@ -957,6 +1059,10 @@ export function simulatePlatformTransition(
     current = stepSimulation(current, input, world);
     history.push(current);
 
+    if (toPlatform.matterState === 'plasma' && current.groundedPlatformIndex === toPlatIdx) {
+      return { success: true, history, finalState: current };
+    }
+
     if (settled && current.touchingGround && isHeroOnPlatform(current, toPlatform)) {
       return { success: true, history, finalState: current };
     }
@@ -1034,7 +1140,7 @@ export function simulateFullLevel(
   if (success) {
     const doorTargetX = door.x;
     const halfH = PHYSICS.HERO_HEIGHT / 2;
-    for (let step = 0; step < 120; step++) {
+    for (let step = 0; step < 420; step++) {
       const dist = doorTargetX - hero.x;
       if (Math.abs(dist) < 15) {
         break;
@@ -1133,6 +1239,45 @@ export function validateAuthorGhost(levelData: LevelData): GhostValidationResult
 }
 
 /**
+ * Validates that no authorGhost frame strictly penetrates a solid wall or opaque platform
+ * (ignoring pass-through gas/liquid/phase/ephemeral/moving platforms and thin tunnelable walls when tunnel is present).
+ */
+export function validateGhostNoWallPenetration(levelData: LevelData): {
+  valid: boolean;
+  reason?: string;
+} {
+  if (!levelData.authorGhost || !levelData.authorGhost.startsWith('v1|')) {
+    return { valid: false, reason: 'Missing authorGhost' };
+  }
+  const frames = decompressTrajectory(levelData.authorGhost);
+  const hasTunnel = (levelData.particles ?? []).some((p) => p.type === 'tunnel');
+  const solidObstacles = levelData.platforms.filter((p) => {
+    if (p.matterState === 'gas' || p.matterState === 'liquid') return false;
+    if (p.phase || p.ephemeral || p.movesTo || (p.decayMs ?? 0) > 0) return false;
+    if (hasTunnel && p.width <= 80 && p.height >= 100 && p.kind !== 'wall') return false;
+    return p.kind === 'wall' || p.height >= 60;
+  });
+
+  const inset = 4;
+  for (const frame of frames) {
+    for (const obs of solidObstacles) {
+      if (
+        frame.x > obs.x + inset &&
+        frame.x < obs.x + obs.width - inset &&
+        frame.y > obs.y + inset &&
+        frame.y < obs.y + obs.height - inset
+      ) {
+        return {
+          valid: false,
+          reason: `Ghost frame at (${frame.x}, ${frame.y}) penetrates solid obstacle at (${obs.x}, ${obs.y}, ${obs.width}x${obs.height})`
+        };
+      }
+    }
+  }
+  return { valid: true };
+}
+
+/**
  * Simulates an arbitrary LevelData (campaign JSON or secret molecule) from player.position to door.
  */
 export function simulateLevelData(levelData: LevelData): SimulationResult {
@@ -1154,7 +1299,11 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
   };
 
   const walkable = levelData.platforms.filter(
-    (p) => p.kind !== 'wall' && !(p.width <= 80 && p.height >= 100)
+    (p) =>
+      p.kind !== 'wall' &&
+      p.matterState !== 'gas' &&
+      !p.ephemeral &&
+      !(p.width <= 80 && p.height >= 100)
   );
   const startX = levelData.player.position.x;
   const startY = levelData.player.position.y;

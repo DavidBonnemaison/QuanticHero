@@ -21,7 +21,7 @@
     "hue": "#1c1900",
     "antiHue": "#ffd166",
     "explanations": [],
-    "authorTime": 12933,
+    "authorTime": 14533,
     "noblePlayground": true,
     "parJumps": 9
   },
@@ -67,7 +67,7 @@
       "Boron hums with a golden current.",
       "Catch the pulse; the void widens."
     ],
-    "authorTime": 13450,
+    "authorTime": 13050,
     "parJumps": 9
   },
   "level6": {
@@ -78,7 +78,7 @@
     "hue": "#111116",
     "antiHue": "#00f5d4",
     "explanations": [],
-    "authorTime": 22500,
+    "authorTime": 12917,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "clone_fusion",
@@ -88,7 +88,7 @@
       ],
       "safeZoneRatio": 0.35
     },
-    "parJumps": 15
+    "parJumps": 9
   },
   "level7": {
     "id": "7",
@@ -98,8 +98,8 @@
     "hue": "#0b132b",
     "antiHue": "#48cae4",
     "explanations": [],
-    "authorTime": 16583,
-    "parJumps": 12
+    "authorTime": 12917,
+    "parJumps": 9
   },
   "level8": {
     "id": "8",
@@ -132,8 +132,8 @@
       "Weight is only a habit here.",
       "How far does a step reach when gravity forgets?"
     ],
-    "authorTime": 17450,
-    "parJumps": 8
+    "authorTime": 19767,
+    "parJumps": 9
   },
   "level10": {
     "id": "10",
@@ -143,9 +143,9 @@
     "hue": "#2b0b00",
     "antiHue": "#ff5400",
     "explanations": [],
-    "authorTime": 28283,
+    "authorTime": 12917,
     "noblePlayground": true,
-    "parJumps": 12
+    "parJumps": 9
   },
   "level11": {
     "id": "11",
@@ -192,8 +192,8 @@
       "The Stellar Forge awakens.",
       "Denser lattices, higher climbs."
     ],
-    "authorTime": 27467,
-    "parJumps": 12
+    "authorTime": 11533,
+    "parJumps": 8
   },
   "level14": {
     "id": "14",
@@ -226,8 +226,8 @@
     "hue": "#240816",
     "antiHue": "#f43f5e",
     "explanations": [],
-    "authorTime": 16683,
-    "parJumps": 12
+    "authorTime": 13650,
+    "parJumps": 8
   },
   "level16": {
     "id": "16",
@@ -237,8 +237,8 @@
     "hue": "#1e1c05",
     "antiHue": "#facc15",
     "explanations": [],
-    "authorTime": 27483,
-    "parJumps": 10
+    "authorTime": 13650,
+    "parJumps": 8
   },
   "level17": {
     "id": "17",
@@ -248,8 +248,8 @@
     "hue": "#072418",
     "antiHue": "#4ade80",
     "explanations": [],
-    "authorTime": 27450,
-    "parJumps": 11
+    "authorTime": 11533,
+    "parJumps": 8
   },
   "level18": {
     "id": "18",
@@ -283,7 +283,7 @@
     "hue": "#1b0d2e",
     "antiHue": "#e879f9",
     "explanations": [],
-    "authorTime": 14267,
+    "authorTime": 10383,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "entanglement_reveal",
@@ -293,7 +293,7 @@
       ],
       "safeZoneRatio": 0.35
     },
-    "parJumps": 11
+    "parJumps": 8
   },
   "level20": {
     "id": "20",
@@ -303,8 +303,8 @@
     "hue": "#1e1005",
     "antiHue": "#fb923c",
     "explanations": [],
-    "authorTime": 21883,
-    "parJumps": 15
+    "authorTime": 11300,
+    "parJumps": 8
   },
   "level21": {
     "id": "21",
@@ -314,8 +314,8 @@
     "hue": "#0d1824",
     "antiHue": "#67e8f9",
     "explanations": [],
-    "authorTime": 16567,
-    "parJumps": 12
+    "authorTime": 12750,
+    "parJumps": 9
   },
   "level22": {
     "id": "22",
@@ -339,8 +339,8 @@
     "hue": "#081c1c",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 14400,
-    "parJumps": 11
+    "authorTime": 13650,
+    "parJumps": 8
   },
   "level24": {
     "id": "24",
@@ -350,8 +350,8 @@
     "hue": "#1c0915",
     "antiHue": "#fb7185",
     "explanations": [],
-    "authorTime": 18567,
-    "parJumps": 14
+    "authorTime": 12900,
+    "parJumps": 9
   },
   "level25": {
     "id": "25",
@@ -361,8 +361,8 @@
     "hue": "#1c0f2a",
     "antiHue": "#e879f9",
     "explanations": [],
-    "authorTime": 22167,
-    "parJumps": 14
+    "authorTime": 12650,
+    "parJumps": 9
   },
   "level26": {
     "id": "26",
@@ -398,8 +398,8 @@
       "Beyond iron, the star shatters.",
       "Echoes and thin walls drift in the blast."
     ],
-    "authorTime": 27600,
-    "parJumps": 12
+    "authorTime": 13367,
+    "parJumps": 7
   },
   "level28": {
     "id": "28",
@@ -409,8 +409,8 @@
     "hue": "#081c15",
     "antiHue": "#34d399",
     "explanations": [],
-    "authorTime": 20017,
-    "parJumps": 12
+    "authorTime": 11417,
+    "parJumps": 8
   },
   "level29": {
     "id": "29",
@@ -434,8 +434,8 @@
     "hue": "#0c1626",
     "antiHue": "#60a5fa",
     "explanations": [],
-    "authorTime": 23667,
-    "parJumps": 16
+    "authorTime": 12950,
+    "parJumps": 9
   },
   "level31": {
     "id": "31",
@@ -445,8 +445,8 @@
     "hue": "#140d2b",
     "antiHue": "#a78bfa",
     "explanations": [],
-    "authorTime": 17883,
-    "parJumps": 13
+    "authorTime": 11533,
+    "parJumps": 8
   },
   "level32": {
     "id": "32",
@@ -456,8 +456,8 @@
     "hue": "#0a1d28",
     "antiHue": "#22d3ee",
     "explanations": [],
-    "authorTime": 15600,
-    "parJumps": 12
+    "authorTime": 13550,
+    "parJumps": 8
   },
   "level33": {
     "id": "33",
@@ -467,8 +467,8 @@
     "hue": "#1c1f0d",
     "antiHue": "#a3e635",
     "explanations": [],
-    "authorTime": 19767,
-    "parJumps": 15
+    "authorTime": 13083,
+    "parJumps": 9
   },
   "level34": {
     "id": "34",
@@ -478,8 +478,8 @@
     "hue": "#24081c",
     "antiHue": "#f472b6",
     "explanations": [],
-    "authorTime": 19800,
-    "parJumps": 15
+    "authorTime": 12367,
+    "parJumps": 9
   },
   "level35": {
     "id": "35",
@@ -489,7 +489,7 @@
     "hue": "#240909",
     "antiHue": "#f87171",
     "explanations": [],
-    "authorTime": 18133,
+    "authorTime": 12650,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "liquid_platforms",
@@ -499,7 +499,7 @@
       ],
       "safeZoneRatio": 0.35
     },
-    "parJumps": 13
+    "parJumps": 9
   },
   "level36": {
     "id": "36",
@@ -524,8 +524,8 @@
     "hue": "#260618",
     "antiHue": "#e11d48",
     "explanations": [],
-    "authorTime": 15617,
-    "parJumps": 12
+    "authorTime": 13450,
+    "parJumps": 9
   },
   "level38": {
     "id": "38",
@@ -535,8 +535,8 @@
     "hue": "#260505",
     "antiHue": "#ef4444",
     "explanations": [],
-    "authorTime": 15883,
-    "parJumps": 12
+    "authorTime": 12867,
+    "parJumps": 9
   },
   "level39": {
     "id": "39",
@@ -546,8 +546,8 @@
     "hue": "#0d1a29",
     "antiHue": "#38bdf8",
     "explanations": [],
-    "authorTime": 17333,
-    "parJumps": 13
+    "authorTime": 12933,
+    "parJumps": 9
   },
   "level40": {
     "id": "40",
@@ -556,11 +556,8 @@
     "uncertainty": 40,
     "hue": "#12182b",
     "antiHue": "#60a5fa",
-    "explanations": [
-      "Le Plancher Vivant : Alpha (+g) et Beta (-g) se percutent pied contre pied à mi-hauteur.",
-      "Leurs gravités opposées s’annulent : marchez ensemble au-dessus du gouffre ."
-    ],
-    "authorTime": 9500,
+    "explanations": [],
+    "authorTime": 26333,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "living_floor",
@@ -570,7 +567,7 @@
       ],
       "safeZoneRatio": 0.35
     },
-    "parJumps": 3
+    "parJumps": 8
   },
   "level41": {
     "id": "41",
@@ -580,8 +577,8 @@
     "hue": "#0a1d20",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 24783,
-    "parJumps": 16
+    "authorTime": 11450,
+    "parJumps": 8
   },
   "level42": {
     "id": "42",
@@ -590,12 +587,9 @@
     "uncertainty": 42,
     "hue": "#0e1c18",
     "antiHue": "#34d399",
-    "explanations": [
-      "Le Télécommandeur de Phase : sauter dans le tunnel bas est mortel.",
-      "Basculez sur le Clone B en chambre latérale et sautez en rythme pour commuter le pont sous A ."
-    ],
-    "authorTime": 11200,
-    "parJumps": 1
+    "explanations": [],
+    "authorTime": 13450,
+    "parJumps": 9
   },
   "level43": {
     "id": "43",
@@ -605,8 +599,8 @@
     "hue": "#20082b",
     "antiHue": "#c084fc",
     "explanations": [],
-    "authorTime": 30133,
-    "parJumps": 12
+    "authorTime": 13450,
+    "parJumps": 9
   },
   "level44": {
     "id": "44",
@@ -616,8 +610,8 @@
     "hue": "#1d102e",
     "antiHue": "#e879f9",
     "explanations": [],
-    "authorTime": 15500,
-    "parJumps": 12
+    "authorTime": 13767,
+    "parJumps": 7
   },
   "level45": {
     "id": "45",
@@ -627,8 +621,8 @@
     "hue": "#0e1a2c",
     "antiHue": "#93c5fd",
     "explanations": [],
-    "authorTime": 15567,
-    "parJumps": 12
+    "authorTime": 12933,
+    "parJumps": 9
   },
   "level46": {
     "id": "46",
@@ -641,8 +635,8 @@
       "The supernova reaches its crest.",
       "Speed, passage, and shifting ground."
     ],
-    "authorTime": 14150,
-    "parJumps": 10
+    "authorTime": 14950,
+    "parJumps": 8
   },
   "level47": {
     "id": "47",
@@ -655,7 +649,7 @@
       "Two neutron stars collide in silence.",
       "Fragile footholds linger in the afterglow."
     ],
-    "authorTime": 23483,
+    "authorTime": 13967,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "quantum_pinning",
@@ -665,7 +659,7 @@
       ],
       "safeZoneRatio": 0.35
     },
-    "parJumps": 16
+    "parJumps": 10
   },
   "level48": {
     "id": "48",
@@ -678,8 +672,8 @@
       "Light fades beneath a lingering step.",
       "Stand still, and the ground forgets you."
     ],
-    "authorTime": 29917,
-    "parJumps": 20
+    "authorTime": 29617,
+    "parJumps": 8
   },
   "level49": {
     "id": "49",
@@ -689,8 +683,8 @@
     "hue": "#0b0f30",
     "antiHue": "#6366f1",
     "explanations": [],
-    "authorTime": 40750,
-    "parJumps": 15
+    "authorTime": 13450,
+    "parJumps": 9
   },
   "level50": {
     "id": "50",
@@ -700,8 +694,8 @@
     "hue": "#121826",
     "antiHue": "#94a3b8",
     "explanations": [],
-    "authorTime": 48783,
-    "parJumps": 18
+    "authorTime": 13067,
+    "parJumps": 9
   },
   "level51": {
     "id": "51",
@@ -711,8 +705,8 @@
     "hue": "#111b29",
     "antiHue": "#67e8f9",
     "explanations": [],
-    "authorTime": 30200,
-    "parJumps": 20
+    "authorTime": 12933,
+    "parJumps": 9
   },
   "level52": {
     "id": "52",
@@ -736,8 +730,8 @@
     "hue": "#200730",
     "antiHue": "#c084fc",
     "explanations": [],
-    "authorTime": 20400,
-    "parJumps": 15
+    "authorTime": 11450,
+    "parJumps": 8
   },
   "level54": {
     "id": "54",
@@ -747,9 +741,9 @@
     "hue": "#091c30",
     "antiHue": "#60a5fa",
     "explanations": [],
-    "authorTime": 21150,
+    "authorTime": 12867,
     "noblePlayground": true,
-    "parJumps": 15
+    "parJumps": 9
   },
   "level55": {
     "id": "55",
@@ -759,10 +753,10 @@
     "hue": "#03071e",
     "antiHue": "#3a86ff",
     "explanations": [
-      "Le Métronome Perpétuel : la plaque repose sur une plateforme instable (650 ms).",
-      "Lancez un clone entre les deux murs rebondissants pour maintenir la porte ouverte ."
+      "The clock ticks slower for the world than for you.",
+      "Move before the moment catches up."
     ],
-    "authorTime": 10400,
+    "authorTime": 12667,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "time_dilation_wormhole",
@@ -772,7 +766,7 @@
       ],
       "safeZoneRatio": 0.35
     },
-    "parJumps": 2
+    "parJumps": 10
   },
   "level56": {
     "id": "56",
@@ -782,8 +776,8 @@
     "hue": "#062413",
     "antiHue": "#4ade80",
     "explanations": [],
-    "authorTime": 24767,
-    "parJumps": 18
+    "authorTime": 12300,
+    "parJumps": 9
   },
   "level57": {
     "id": "57",
@@ -793,8 +787,8 @@
     "hue": "#10172d",
     "antiHue": "#818cf8",
     "explanations": [],
-    "authorTime": 28383,
-    "parJumps": 20
+    "authorTime": 11850,
+    "parJumps": 9
   },
   "level58": {
     "id": "58",
@@ -804,8 +798,8 @@
     "hue": "#1f1606",
     "antiHue": "#f59e0b",
     "explanations": [],
-    "authorTime": 16800,
-    "parJumps": 13
+    "authorTime": 13400,
+    "parJumps": 10
   },
   "level59": {
     "id": "59",
@@ -815,8 +809,8 @@
     "hue": "#082115",
     "antiHue": "#10b981",
     "explanations": [],
-    "authorTime": 26733,
-    "parJumps": 20
+    "authorTime": 15017,
+    "parJumps": 9
   },
   "level60": {
     "id": "60",
@@ -826,8 +820,8 @@
     "hue": "#240821",
     "antiHue": "#ec4899",
     "explanations": [],
-    "authorTime": 24600,
-    "parJumps": 17
+    "authorTime": 13767,
+    "parJumps": 10
   },
   "level61": {
     "id": "61",
@@ -837,8 +831,8 @@
     "hue": "#1f0d2b",
     "antiHue": "#d946ef",
     "explanations": [],
-    "authorTime": 29833,
-    "parJumps": 20
+    "authorTime": 13200,
+    "parJumps": 10
   },
   "level62": {
     "id": "62",
@@ -848,8 +842,8 @@
     "hue": "#241008",
     "antiHue": "#f97316",
     "explanations": [],
-    "authorTime": 20467,
-    "parJumps": 14
+    "authorTime": 15233,
+    "parJumps": 8
   },
   "level63": {
     "id": "63",
@@ -859,8 +853,8 @@
     "hue": "#26060c",
     "antiHue": "#f43f5e",
     "explanations": [],
-    "authorTime": 37600,
-    "parJumps": 21
+    "authorTime": 12867,
+    "parJumps": 9
   },
   "level64": {
     "id": "64",
@@ -870,8 +864,8 @@
     "hue": "#13182b",
     "antiHue": "#93c5fd",
     "explanations": [],
-    "authorTime": 37700,
-    "parJumps": 22
+    "authorTime": 13400,
+    "parJumps": 10
   },
   "level65": {
     "id": "65",
@@ -881,8 +875,8 @@
     "hue": "#072412",
     "antiHue": "#22c55e",
     "explanations": [],
-    "authorTime": 24717,
-    "parJumps": 17
+    "authorTime": 10783,
+    "parJumps": 8
   },
   "level66": {
     "id": "66",
@@ -892,8 +886,8 @@
     "hue": "#1d1c07",
     "antiHue": "#facc15",
     "explanations": [],
-    "authorTime": 43633,
-    "parJumps": 14
+    "authorTime": 14450,
+    "parJumps": 9
   },
   "level67": {
     "id": "67",
@@ -903,8 +897,8 @@
     "hue": "#241306",
     "antiHue": "#fb923c",
     "explanations": [],
-    "authorTime": 31717,
-    "parJumps": 21
+    "authorTime": 14333,
+    "parJumps": 10
   },
   "level68": {
     "id": "68",
@@ -914,11 +908,11 @@
     "hue": "#24081c",
     "antiHue": "#f472b6",
     "explanations": [
-      "La Passe Décisive en Plein Vol : touchez la plaque suspendue au sommet du saut.",
-      "Le focus et la caméra basculeront automatiquement vers le Clone 2 devant la porte ."
+      "Fleeting steps over the kilonova abyss.",
+      "Repulsion and decay share a narrow path."
     ],
-    "authorTime": 9800,
-    "parJumps": 2
+    "authorTime": 14917,
+    "parJumps": 10
   },
   "level69": {
     "id": "69",
@@ -931,8 +925,8 @@
       "The relativistic crucible begins.",
       "Shorter orbits, sharper turns."
     ],
-    "authorTime": 24533,
-    "parJumps": 18
+    "authorTime": 12867,
+    "parJumps": 9
   },
   "level70": {
     "id": "70",
@@ -942,8 +936,8 @@
     "hue": "#121b2b",
     "antiHue": "#38bdf8",
     "explanations": [],
-    "authorTime": 22017,
-    "parJumps": 16
+    "authorTime": 13400,
+    "parJumps": 10
   },
   "level71": {
     "id": "71",
@@ -953,8 +947,8 @@
     "hue": "#19112e",
     "antiHue": "#a78bfa",
     "explanations": [],
-    "authorTime": 39683,
-    "parJumps": 21
+    "authorTime": 10733,
+    "parJumps": 8
   },
   "level72": {
     "id": "72",
@@ -964,8 +958,8 @@
     "hue": "#0e1c2b",
     "antiHue": "#22d3ee",
     "explanations": [],
-    "authorTime": 35117,
-    "parJumps": 21
+    "authorTime": 14450,
+    "parJumps": 9
   },
   "level73": {
     "id": "73",
@@ -975,8 +969,8 @@
     "hue": "#091f24",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 45700,
-    "parJumps": 14
+    "authorTime": 14333,
+    "parJumps": 10
   },
   "level74": {
     "id": "74",
@@ -986,11 +980,11 @@
     "hue": "#241a05",
     "antiHue": "#fde047",
     "explanations": [
-      "Le Trampoline Humain de Pauli : la cheminée de 280 px dépasse la hauteur de saut.",
-      "Placez un clone au pied, ramassez la particule Pauli et sautez au-dessus de lui ."
+      "The walls are closing in.",
+      "Outrun what never stops."
     ],
-    "authorTime": 10800,
-    "parJumps": 2
+    "authorTime": 8983,
+    "parJumps": 6
   },
   "level75": {
     "id": "75",
@@ -1000,8 +994,8 @@
     "hue": "#1c1329",
     "antiHue": "#c084fc",
     "explanations": [],
-    "authorTime": 27783,
-    "parJumps": 16
+    "authorTime": 12867,
+    "parJumps": 9
   },
   "level76": {
     "id": "76",
@@ -1011,8 +1005,8 @@
     "hue": "#081a29",
     "antiHue": "#38bdf8",
     "explanations": [],
-    "authorTime": 32750,
-    "parJumps": 21
+    "authorTime": 11983,
+    "parJumps": 8
   },
   "level77": {
     "id": "77",
@@ -1022,8 +1016,8 @@
     "hue": "#201809",
     "antiHue": "#facc15",
     "explanations": [],
-    "authorTime": 25950,
-    "parJumps": 17
+    "authorTime": 14333,
+    "parJumps": 10
   },
   "level78": {
     "id": "78",
@@ -1033,8 +1027,8 @@
     "hue": "#111827",
     "antiHue": "#e2e8f0",
     "explanations": [],
-    "authorTime": 22050,
-    "parJumps": 15
+    "authorTime": 14450,
+    "parJumps": 9
   },
   "level79": {
     "id": "79",
@@ -1044,8 +1038,8 @@
     "hue": "#1c1500",
     "antiHue": "#ffb703",
     "explanations": [],
-    "authorTime": 22133,
-    "parJumps": 15
+    "authorTime": 12000,
+    "parJumps": 9
   },
   "level80": {
     "id": "80",
@@ -1055,7 +1049,7 @@
     "hue": "#062024",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 42600,
+    "authorTime": 13767,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "mercury_bath",
@@ -1065,7 +1059,7 @@
       ],
       "safeZoneRatio": 0.35
     },
-    "parJumps": 22
+    "parJumps": 10
   },
   "level81": {
     "id": "81",
@@ -1075,8 +1069,8 @@
     "hue": "#072412",
     "antiHue": "#22c55e",
     "explanations": [],
-    "authorTime": 25667,
-    "parJumps": 18
+    "authorTime": 12867,
+    "parJumps": 9
   },
   "level82": {
     "id": "82",
@@ -1086,8 +1080,8 @@
     "hue": "#111827",
     "antiHue": "#94a3b8",
     "explanations": [],
-    "authorTime": 58417,
-    "parJumps": 14
+    "authorTime": 11833,
+    "parJumps": 8
   },
   "level83": {
     "id": "83",
@@ -1097,8 +1091,8 @@
     "hue": "#170d2b",
     "antiHue": "#d946ef",
     "explanations": [],
-    "authorTime": 28200,
-    "parJumps": 21
+    "authorTime": 14333,
+    "parJumps": 10
   },
   "level84": {
     "id": "84",
@@ -1111,7 +1105,7 @@
       "Three trials, one unstable core.",
       "Swift, light, and unbroken through the wall."
     ],
-    "authorTime": 23417,
+    "authorTime": 21700,
     "parJumps": 11
   },
   "level85": {
@@ -1122,8 +1116,8 @@
     "hue": "#260710",
     "antiHue": "#fb7185",
     "explanations": [],
-    "authorTime": 25850,
-    "parJumps": 17
+    "authorTime": 14333,
+    "parJumps": 10
   },
   "level86": {
     "id": "86",
@@ -1133,9 +1127,9 @@
     "hue": "#170829",
     "antiHue": "#a855f7",
     "explanations": [],
-    "authorTime": 22633,
+    "authorTime": 12483,
     "noblePlayground": true,
-    "parJumps": 16
+    "parJumps": 9
   },
   "level87": {
     "id": "87",
@@ -1145,7 +1139,7 @@
     "hue": "#2b0615",
     "antiHue": "#f43f5e",
     "explanations": [],
-    "authorTime": 42050,
+    "authorTime": 13400,
     "discoveryBox": {
       "enabled": true,
       "mechanic": "ghost_surfing",
@@ -1155,7 +1149,7 @@
       ],
       "safeZoneRatio": 0.35
     },
-    "parJumps": 22
+    "parJumps": 10
   },
   "level88": {
     "id": "88",
@@ -1165,11 +1159,11 @@
     "hue": "#062615",
     "antiHue": "#22c55e",
     "explanations": [
-      "La Cage de Conservation : effleurez les barreaux dorés pour ouvrir le portail.",
-      "Méfiez-vous de la particule bonus devant la sortie : elle restaure la cage ."
+      "The transuranic threshold.",
+      "Inverted skies, shifting phases, hollow stone."
     ],
-    "authorTime": 8900,
-    "parJumps": 2
+    "authorTime": 16167,
+    "parJumps": 12
   },
   "level89": {
     "id": "89",
@@ -1182,8 +1176,8 @@
       "The Island of Stability.",
       "Every law you learned returns at once."
     ],
-    "authorTime": 58517,
-    "parJumps": 14
+    "authorTime": 12783,
+    "parJumps": 9
   },
   "level90": {
     "id": "90",
@@ -1193,8 +1187,8 @@
     "hue": "#121b2b",
     "antiHue": "#60a5fa",
     "explanations": [],
-    "authorTime": 61033,
-    "parJumps": 14
+    "authorTime": 11917,
+    "parJumps": 8
   },
   "level91": {
     "id": "91",
@@ -1204,8 +1198,8 @@
     "hue": "#200e30",
     "antiHue": "#c084fc",
     "explanations": [],
-    "authorTime": 35633,
-    "parJumps": 17
+    "authorTime": 12933,
+    "parJumps": 9
   },
   "level92": {
     "id": "92",
@@ -1215,8 +1209,8 @@
     "hue": "#062412",
     "antiHue": "#39ff14",
     "explanations": [],
-    "authorTime": 29083,
-    "parJumps": 20
+    "authorTime": 10883,
+    "parJumps": 8
   },
   "level93": {
     "id": "93",
@@ -1226,8 +1220,8 @@
     "hue": "#091d29",
     "antiHue": "#06b6d4",
     "explanations": [],
-    "authorTime": 35150,
-    "parJumps": 17
+    "authorTime": 13650,
+    "parJumps": 8
   },
   "level94": {
     "id": "94",
@@ -1237,8 +1231,8 @@
     "hue": "#260a0a",
     "antiHue": "#f97316",
     "explanations": [],
-    "authorTime": 22933,
-    "parJumps": 16
+    "authorTime": 13400,
+    "parJumps": 7
   },
   "level95": {
     "id": "95",
@@ -1248,8 +1242,8 @@
     "hue": "#240822",
     "antiHue": "#ec4899",
     "explanations": [],
-    "authorTime": 45200,
-    "parJumps": 22
+    "authorTime": 12383,
+    "parJumps": 9
   },
   "level96": {
     "id": "96",
@@ -1259,8 +1253,8 @@
     "hue": "#1f0a2e",
     "antiHue": "#a855f7",
     "explanations": [],
-    "authorTime": 37783,
-    "parJumps": 24
+    "authorTime": 12933,
+    "parJumps": 9
   },
   "level97": {
     "id": "97",
@@ -1270,8 +1264,8 @@
     "hue": "#141a29",
     "antiHue": "#38bdf8",
     "explanations": [],
-    "authorTime": 48433,
-    "parJumps": 18
+    "authorTime": 10883,
+    "parJumps": 8
   },
   "level98": {
     "id": "98",
@@ -1281,8 +1275,8 @@
     "hue": "#241208",
     "antiHue": "#fb923c",
     "explanations": [],
-    "authorTime": 63983,
-    "parJumps": 18
+    "authorTime": 13650,
+    "parJumps": 8
   },
   "level99": {
     "id": "99",
@@ -1292,8 +1286,8 @@
     "hue": "#0b2426",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 36917,
-    "parJumps": 17
+    "authorTime": 12917,
+    "parJumps": 9
   },
   "level100": {
     "id": "100",
@@ -1306,8 +1300,8 @@
       "One hundred elements forged.",
       "A twin, a recoil, and a barrier."
     ],
-    "authorTime": 16233,
-    "parJumps": 11
+    "authorTime": 17067,
+    "parJumps": 9
   },
   "level101": {
     "id": "101",
@@ -1317,8 +1311,8 @@
     "hue": "#260718",
     "antiHue": "#f43f5e",
     "explanations": [],
-    "authorTime": 27317,
-    "parJumps": 15
+    "authorTime": 12933,
+    "parJumps": 9
   },
   "level102": {
     "id": "102",
@@ -1328,8 +1322,8 @@
     "hue": "#0e182b",
     "antiHue": "#60a5fa",
     "explanations": [],
-    "authorTime": 23083,
-    "parJumps": 14
+    "authorTime": 11167,
+    "parJumps": 7
   },
   "level103": {
     "id": "103",
@@ -1339,8 +1333,8 @@
     "hue": "#1e112b",
     "antiHue": "#a78bfa",
     "explanations": [],
-    "authorTime": 23300,
-    "parJumps": 14
+    "authorTime": 13650,
+    "parJumps": 8
   },
   "level104": {
     "id": "104",
@@ -1350,8 +1344,8 @@
     "hue": "#091e2b",
     "antiHue": "#22d3ee",
     "explanations": [],
-    "authorTime": 45233,
-    "parJumps": 22
+    "authorTime": 12717,
+    "parJumps": 9
   },
   "level105": {
     "id": "105",
@@ -1361,8 +1355,8 @@
     "hue": "#0a2124",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 48600,
-    "parJumps": 20
+    "authorTime": 13400,
+    "parJumps": 10
   },
   "level106": {
     "id": "106",
@@ -1372,8 +1366,8 @@
     "hue": "#0d241d",
     "antiHue": "#34d399",
     "explanations": [],
-    "authorTime": 48383,
-    "parJumps": 14
+    "authorTime": 13183,
+    "parJumps": 8
   },
   "level107": {
     "id": "107",
@@ -1383,8 +1377,8 @@
     "hue": "#1f0d2b",
     "antiHue": "#d946ef",
     "explanations": [],
-    "authorTime": 29433,
-    "parJumps": 22
+    "authorTime": 10883,
+    "parJumps": 8
   },
   "level108": {
     "id": "108",
@@ -1394,8 +1388,8 @@
     "hue": "#081c2e",
     "antiHue": "#38bdf8",
     "explanations": [],
-    "authorTime": 26917,
-    "parJumps": 15
+    "authorTime": 13650,
+    "parJumps": 8
   },
   "level109": {
     "id": "109",
@@ -1408,78 +1402,78 @@
       "The final crucible before entanglement.",
       "Run, phase through, slow the fall, outlast the tide."
     ],
-    "authorTime": 14700,
-    "parJumps": 10
+    "authorTime": 13117,
+    "parJumps": 9
   },
   "level110": {
     "id": "110",
     "symbol": "Ds",
     "atom": "Darmstadtium",
-    "uncertainty": 1,
-    "hue": "#0d1b2a",
-    "antiHue": "#00f0ff",
+    "uncertainty": 110,
+    "hue": "#111827",
+    "antiHue": "#94a3b8",
     "explanations": [
-      "Quantum Entanglement Mode: You simultaneously control Alpha (Cyan) and Beta (Magenta).",
-      "Horizontal movements are mirrored. Guide both heroes to their respective portals!"
+      "One mind, two wavefunctions.",
+      "Move one, and its twin answers."
     ],
-    "authorTime": 3833,
-    "parJumps": 2
+    "authorTime": 12000,
+    "parJumps": 9
   },
   "level111": {
     "id": "111",
     "symbol": "Rg",
     "atom": "Roentgenium",
-    "uncertainty": 1,
-    "hue": "#1a002c",
-    "antiHue": "#ff007f",
+    "uncertainty": 111,
+    "hue": "#241a06",
+    "antiHue": "#f59e0b",
     "explanations": [
-      "Advanced Mirror Symmetry: Moving platforms and convergence point.",
-      "Alpha and Beta must cross the chasms to reach the single central portal together!"
+      "Twin skies, opposite weights.",
+      "One rises while the other falls."
     ],
-    "authorTime": 3350,
-    "parJumps": 4
+    "authorTime": 10883,
+    "parJumps": 8
   },
   "level112": {
     "id": "112",
     "symbol": "Cn",
     "atom": "Copernicium",
-    "uncertainty": 1,
-    "hue": "#002b36",
-    "antiHue": "#2aa198",
+    "uncertainty": 112,
+    "hue": "#072024",
+    "antiHue": "#2dd4bf",
     "explanations": [
-      "Le Plancher Vivant : Alpha (+g) et Beta (-g) se percutent pied contre pied à mi-hauteur.",
-      "Leurs gravités opposées s’annulent : marchez ensemble au-dessus du gouffre ."
+      "Two states bound across the void.",
+      "Keep both in phase."
     ],
-    "authorTime": 9200,
-    "parJumps": 3
+    "authorTime": 25367,
+    "parJumps": 9
   },
   "level113": {
     "id": "113",
     "symbol": "Nh",
     "atom": "Nihonium",
-    "uncertainty": 1,
-    "hue": "#1f1d36",
-    "antiHue": "#e9a6a6",
+    "uncertainty": 113,
+    "hue": "#160d2b",
+    "antiHue": "#818cf8",
     "explanations": [
-      "Opposite Gravity: The biphasic labyrinth.",
-      "Alpha and Beta must synchronize their jumps to clear asymmetrical hazards!"
+      "Parity inverted across two chambers.",
+      "Mirror paths, single will."
     ],
-    "authorTime": 16000,
-    "parJumps": 1
+    "authorTime": 13650,
+    "parJumps": 8
   },
   "level114": {
     "id": "114",
     "symbol": "Fl",
     "atom": "Flerovium",
-    "uncertainty": 1,
-    "hue": "#0f051d",
-    "antiHue": "#f43f5e",
+    "uncertainty": 114,
+    "hue": "#0a1d2e",
+    "antiHue": "#60a5fa",
     "explanations": [
-      "Total Entanglement: Mirror symmetry AND inverted gravity!",
-      "Alpha runs on the ground, Beta runs on the ceiling in the opposite direction. The ultimate quantum test!"
+      "The heart of the Island of Stability.",
+      "Crossed doors, one synthesis."
     ],
-    "authorTime": 16000,
-    "parJumps": 1
+    "authorTime": 13133,
+    "parJumps": 8
   },
   "level115": {
     "id": "115",
@@ -1489,8 +1483,8 @@
     "hue": "#1e0c2b",
     "antiHue": "#c084fc",
     "explanations": [],
-    "authorTime": 39633,
-    "parJumps": 17
+    "authorTime": 13400,
+    "parJumps": 10
   },
   "level116": {
     "id": "116",
@@ -1500,8 +1494,8 @@
     "hue": "#24081c",
     "antiHue": "#f43f5e",
     "explanations": [],
-    "authorTime": 28483,
-    "parJumps": 18
+    "authorTime": 22950,
+    "parJumps": 8
   },
   "level117": {
     "id": "117",
@@ -1511,8 +1505,8 @@
     "hue": "#240711",
     "antiHue": "#fb7185",
     "explanations": [],
-    "authorTime": 28733,
-    "parJumps": 18
+    "authorTime": 10883,
+    "parJumps": 8
   },
   "level118": {
     "id": "118",
@@ -1525,8 +1519,8 @@
       "Oganesson: the outermost edge of the table.",
       "From primordial spark to pure quantum symmetry."
     ],
-    "authorTime": 25700,
+    "authorTime": 12767,
     "noblePlayground": true,
-    "parJumps": 18
+    "parJumps": 10
   }
 }
