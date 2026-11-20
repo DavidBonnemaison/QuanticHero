@@ -169,4 +169,42 @@ describe('LevelFinished component', () => {
       expect(screen.getByText('Level saved to your custom levels!')).toBeInTheDocument();
     });
   });
+
+  describe('Spec-03: COHERENT RUN badge', () => {
+    it('displays COHERENT RUN badge and style score when level is finished at HYPER tier', () => {
+      useGameStore.setState({
+        currentLevel: 2,
+        scores: {
+          1: {
+            last: 12000,
+            best: 12000,
+            coherentRun: true,
+            bestStyleScore: 340,
+            lastStyleScore: 340
+          }
+        },
+        sharedLevel: null
+      });
+
+      renderWithRouter();
+
+      const badge = screen.getByTestId('coherent-run-badge');
+      expect(badge).toHaveTextContent(/COHERENT RUN/i);
+      expect(badge).toHaveTextContent(/FLOW 340/i);
+    });
+
+    it('does not display COHERENT RUN badge when coherentRun is not set', () => {
+      useGameStore.setState({
+        currentLevel: 2,
+        scores: {
+          1: { last: 12000, best: 12000 }
+        },
+        sharedLevel: null
+      });
+
+      renderWithRouter();
+
+      expect(screen.queryByTestId('coherent-run-badge')).not.toBeInTheDocument();
+    });
+  });
 });

@@ -170,6 +170,30 @@ describe('QuantumEffectsManager', () => {
     qe.destroy();
   });
 
+  it('renders spectral coherence trail behind moving hero and respects FX:LO reduced mode', () => {
+    const qe = new QuantumEffectsManager(mockScene);
+    const movingHero = {
+      active: true,
+      x: 200,
+      y: 120,
+      isFocused: true,
+      body: { velocity: { x: 180, y: 0 } }
+    } as unknown as Hero;
+
+    qe.update(1000, 16.6, [movingHero], undefined, false, 0);
+    expect(mockGraphics.fillCircle).not.toHaveBeenCalled();
+
+    qe.update(1016, 16.6, [movingHero], undefined, false, 0.9);
+    expect(mockGraphics.fillCircle).toHaveBeenCalled();
+
+    mockGraphics.fillCircle.mockClear();
+    useGameStore.getState().setReducedEffects(true);
+    qe.update(1032, 16.6, [movingHero], undefined, false, 0.9);
+    expect(mockGraphics.fillCircle).not.toHaveBeenCalled();
+
+    qe.destroy();
+  });
+
   it('cleans up resources and graphics on destroy', () => {
     const qe = new QuantumEffectsManager(mockScene);
     qe.destroy();

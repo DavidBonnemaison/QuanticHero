@@ -43,10 +43,7 @@ export function showLevelTitle(ctx: GameSceneContext): void {
   });
 }
 
-const activeToastMap = new WeakMap<
-  GameSceneContext,
-  { destroy: () => void }
->();
+const activeToastMap = new WeakMap<GameSceneContext, { destroy: () => void }>();
 
 export function showRetroToast(ctx: GameSceneContext, message: string): void {
   if (!message) return;
@@ -192,6 +189,9 @@ export function showLevelCompleteOverlay(
   statsText.setOrigin(0.5);
   overlay.add(statsText);
 
+  const isCoherentRun = ctx.coherenceSystem?.isCoherentRun?.() ?? false;
+  const styleScore = ctx.coherenceSystem?.getStyleScore?.() ?? 0;
+
   const medalText = ctx.add.text(
     camW / 2,
     camH / 2 - (isCompact ? 64 : 34),
@@ -207,6 +207,20 @@ export function showLevelCompleteOverlay(
   medalText.setOrigin(0.5);
   overlay.add(medalText);
 
+  if (isCoherentRun) {
+    const coherentLabel =
+      styleScore > 0 ? `⚡ COHERENT RUN  •  FLOW ${styleScore}` : '⚡ COHERENT RUN';
+    const coherentBadge = ctx.add.text(camW / 2, camH / 2 - (isCompact ? 42 : 12), coherentLabel, {
+      fontFamily: 'VT323',
+      fontSize: isCompact ? '16px' : '20px',
+      color: '#fbbf24',
+      align: 'center',
+      wordWrap: { width: cardW - 24 }
+    });
+    coherentBadge.setOrigin(0.5);
+    overlay.add(coherentBadge);
+  }
+
   const currentLvl = Number(ctx.levelData.id) || 1;
   const narrativeLines =
     ctx.levelData.explanations && ctx.levelData.explanations.length > 0
@@ -215,7 +229,7 @@ export function showLevelCompleteOverlay(
 
   const narrativeText = ctx.add.text(
     camW / 2,
-    camH / 2 - (isCompact ? 16 : -2),
+    camH / 2 - (isCompact ? (isCoherentRun ? 4 : 16) : isCoherentRun ? -16 : -2),
     narrativeLines.join('\n'),
     {
       fontFamily: 'VT323',

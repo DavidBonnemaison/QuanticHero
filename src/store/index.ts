@@ -41,6 +41,8 @@ export interface RecordScoreMeta {
   jumpCount?: number;
   switchCount?: number;
   medal?: IsotopeMedal;
+  coherentRun?: boolean;
+  styleScore?: number;
 }
 
 export interface GameStoreActions {
@@ -54,6 +56,7 @@ export interface GameStoreActions {
     ghostTrajectory?: string,
     meta?: RecordScoreMeta
   ) => void;
+  recordCoherenceResult: (level: number, styleScore: number, coherentRun: boolean) => void;
   saveGhostTrajectory: (level: number, trajectory: string) => void;
   setLevels: (data: Record<string, LevelData> | null) => void;
   resetCustomLevel: (id: string) => void;
@@ -311,6 +314,14 @@ export const useGameStore = create<GameStore>()(
           const medal =
             meta?.medal !== undefined ? bestMedal(prevItem?.medal, meta.medal) : prevItem?.medal;
 
+          const coherentRun = Boolean(prevItem?.coherentRun || meta?.coherentRun);
+          const bestStyleScore =
+            meta?.styleScore !== undefined
+              ? Math.max(prevItem?.bestStyleScore ?? 0, meta.styleScore)
+              : prevItem?.bestStyleScore;
+          const lastStyleScore =
+            meta?.styleScore !== undefined ? meta.styleScore : prevItem?.lastStyleScore;
+
           const newScores = {
             ...state.scores,
             [level]: {
@@ -321,7 +332,10 @@ export const useGameStore = create<GameStore>()(
               ...(lastJumps !== undefined ? { lastJumps } : {}),
               ...(bestSwitches !== undefined ? { bestSwitches } : {}),
               ...(medal !== undefined ? { medal } : {}),
-              ...(prevItem?.bellSync ? { bellSync: true } : {})
+              ...(prevItem?.bellSync ? { bellSync: true } : {}),
+              ...(coherentRun ? { coherentRun: true } : {}),
+              ...(bestStyleScore !== undefined && bestStyleScore > 0 ? { bestStyleScore } : {}),
+              ...(lastStyleScore !== undefined && lastStyleScore > 0 ? { lastStyleScore } : {})
             }
           };
           const isEntangled = isEntanglementLevelId(level);
@@ -340,6 +354,24 @@ export const useGameStore = create<GameStore>()(
             scores: newScores,
             maxLevel,
             maxEntanglementLevel
+          };
+        }),
+
+      recordCoherenceResult: (level: number, styleScore: number, coherentRun: boolean) =>
+        set((state) => {
+          const prevItem = state.scores[level] ?? { best: 0, last: 0 };
+          const nextCoherentRun = Boolean(prevItem.coherentRun || coherentRun);
+          const nextBestStyleScore = Math.max(prevItem.bestStyleScore ?? 0, styleScore);
+          return {
+            scores: {
+              ...state.scores,
+              [level]: {
+                ...prevItem,
+                ...(nextCoherentRun ? { coherentRun: true } : {}),
+                ...(nextBestStyleScore > 0 ? { bestStyleScore: nextBestStyleScore } : {}),
+                ...(styleScore > 0 ? { lastStyleScore: styleScore } : {})
+              }
+            }
           };
         }),
 

@@ -1,4 +1,4 @@
-import type { ParticleType, PlatformPhase } from '../types';
+import type { CoherenceTier, ParticleType, PlatformPhase } from '../types';
 
 export interface GameEventPayloads {
   'hero:jump': undefined;
@@ -40,6 +40,13 @@ export interface GameEventPayloads {
   'wow:iron_collapse': { level: number };
   'wow:supernova_shockwave': { level: number };
   'wow:oganesson_constellation': { level: number };
+  'coherence:changed': {
+    value: number;
+    tier: CoherenceTier;
+    raw: number;
+    styleScore: number;
+    decoherence?: boolean;
+  };
 }
 
 export type GameEventName = keyof GameEventPayloads;

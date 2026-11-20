@@ -253,6 +253,39 @@ describe('useGameStore', () => {
       useGameStore.getState().updateMaxEntanglementLevel(113);
       expect(useGameStore.getState().maxEntanglementLevel).toBe(113);
     });
+
+    it('persists coherentRun and bestStyleScore via recordScore and recordCoherenceResult', () => {
+      useGameStore.getState().recordScore(1, 14000, undefined, {
+        coherentRun: true,
+        styleScore: 280
+      });
+      expect(useGameStore.getState().scores[1]).toMatchObject({
+        best: 14000,
+        last: 14000,
+        coherentRun: true,
+        bestStyleScore: 280,
+        lastStyleScore: 280
+      });
+
+      // Subsequent non-coherent run preserves coherentRun and higher bestStyleScore
+      useGameStore.getState().recordScore(1, 15000, undefined, {
+        coherentRun: false,
+        styleScore: 120
+      });
+      expect(useGameStore.getState().scores[1]).toMatchObject({
+        coherentRun: true,
+        bestStyleScore: 280,
+        lastStyleScore: 120
+      });
+
+      // recordCoherenceResult updates bestStyleScore when exceeded
+      useGameStore.getState().recordCoherenceResult(1, 410, true);
+      expect(useGameStore.getState().scores[1]).toMatchObject({
+        coherentRun: true,
+        bestStyleScore: 410,
+        lastStyleScore: 410
+      });
+    });
   });
 
   describe('localStorage persistence', () => {

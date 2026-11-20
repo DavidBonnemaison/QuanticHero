@@ -30,8 +30,10 @@ export default function LevelFinished(): React.ReactElement {
   const levelIndex = isShared ? 0 : currentLevel === 115 ? 109 : Math.max(1, currentLevel - 1);
   const nextLevelId = isShared ? null : getNextLevelId(levelIndex);
   const currentLevelScore = scores[levelIndex] || { best: 0, last: 0 };
-  const { last, best, medal, lastJumps } = currentLevelScore;
+  const { last, best, medal, lastJumps, coherentRun, bestStyleScore, lastStyleScore } =
+    currentLevelScore;
   const medalInfo = getMedalDisplayInfo(medal ?? (best > 0 ? 'bronze' : 'none'), locale);
+  const displayStyleScore = lastStyleScore ?? bestStyleScore;
 
   useEffect(() => {
     if (!isShared && levelIndex >= 1) {
@@ -134,6 +136,27 @@ export default function LevelFinished(): React.ReactElement {
         <div style={{ color: medalInfo.color, fontSize: 22, marginBottom: 10 }}>
           {medalInfo.symbol} {medalInfo.label}
           {lastJumps !== undefined ? ` • ${t.levelFinished.jumpsCount(lastJumps)}` : ''}
+        </div>
+      )}
+
+      {coherentRun && (
+        <div
+          data-testid="coherent-run-badge"
+          style={{
+            color: '#fbbf24',
+            fontSize: 20,
+            letterSpacing: '0.08em',
+            marginBottom: 10,
+            padding: '2px 12px',
+            border: '1px solid rgba(251, 191, 36, 0.7)',
+            borderRadius: 6,
+            background: 'rgba(251, 191, 36, 0.12)'
+          }}
+        >
+          ⚡ COHERENT RUN
+          {displayStyleScore !== undefined && displayStyleScore > 0
+            ? ` • FLOW ${displayStyleScore}`
+            : ''}
         </div>
       )}
 
