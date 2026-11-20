@@ -378,6 +378,121 @@ describe('SoundManager', () => {
     });
   });
 
+  describe('Spec-03: Adaptive Coherence Audio', () => {
+    it('subscribes to coherence:changed and ramps bass lowpass filter from 1.0x to 2.2x with linearRampToValueAtTime', () => {
+      soundManager.setAtomicNumber(2); // Noble gas: bassFilterCutoff = 900
+      const bassFilter = mockCtx.createBiquadFilter.mock.results[0]?.value;
+      expect(bassFilter).toBeDefined();
+
+      expect(soundManager.getBassFilterMultiplier()).toBe(1);
+      expect(soundManager.getBassCutoffFrequency()).toBe(900);
+
+      gameEvents.emit('coherence:changed', {
+        value: 0.5,
+        tier: 'x3',
+        raw: 50,
+        styleScore: 100
+      });
+      expect(soundManager.getCoherenceValue()).toBeCloseTo(0.5);
+      expect(soundManager.getCoherenceTier()).toBe('x3');
+      expect(soundManager.getBassFilterMultiplier()).toBeCloseTo(1.6);
+      expect(soundManager.getBassCutoffFrequency()).toBeCloseTo(1440);
+      expect(bassFilter.frequency.linearRampToValueAtTime).toHaveBeenCalledWith(
+        1440,
+        expect.any(Number)
+      );
+
+      soundManager.setCoherence(1, 'HYPER');
+      expect(soundManager.getBassFilterMultiplier()).toBeCloseTo(2.2);
+      expect(soundManager.getBassCutoffFrequency()).toBeCloseTo(1980);
+      expect(bassFilter.frequency.linearRampToValueAtTime).toHaveBeenCalledWith(
+        1980,
+        expect.any(Number)
+      );
+    });
+
+    it('activates hi-hat percussion layer from tier x2 during BGM scheduling', () => {
+      soundManager.setAtomicNumber(2); // Noble gas (no Geiger)
+      soundManager.setCoherence(0.1, 'x1');
+      soundManager.startBgm();
+      const beforeX1 = mockCtx.createBufferSource.mock.calls.length;
+      mockCtx.currentTime += 0.5;
+      vi.advanceTimersByTime(100);
+      const afterX1 = mockCtx.createBufferSource.mock.calls.length;
+      expect(afterX1).toBe(beforeX1);
+      soundManager.stopBgm();
+
+      soundManager.setCoherence(0.4, 'x2');
+      soundManager.startBgm();
+      const beforeX2 = mockCtx.createBufferSource.mock.calls.length;
+      mockCtx.currentTime += 0.5;
+      vi.advanceTimersByTime(100);
+      const afterX2 = mockCtx.createBufferSource.mock.calls.length;
+      expect(afterX2).toBeGreaterThan(beforeX2);
+      soundManager.stopBgm();
+    });
+
+    it('adds +12 semitone upper-octave arpeggio harmony synced to chemical family scale at HYPER tier', () => {
+      soundManager.setAtomicNumber(2); // Noble gas: rootHz=130.81, scaleSemitones=[0,2,4,6,7,9,11]
+      const profile = soundManager.getCurrentProfile();
+      const baseScaleHz = profile.scaleSemitones.map((st) => profile.rootHz * 2 * 2 ** (st / 12));
+      const hyperScaleHz = baseScaleHz.map((f) => f * 2); // +12 semitones
+
+      soundManager.setCoherence(0.95, 'HYPER');
+      mockCtx.createOscillator.mockClear();
+
+      soundManager.startBgm();
+      vi.advanceTimersByTime(300);
+      soundManager.stopBgm();
+
+      const scheduledFreqs: number[] = mockCtx.createOscillator.mock.results
+        .map((r) => r.value?.frequency?.setValueAtTime?.mock?.calls?.[0]?.[0])
+        .filter((f): f is number => typeof f === 'number');
+
+      const hasHyperOctaveNote = scheduledFreqs.some((freq) =>
+        hyperScaleHz.some((target) => Math.abs(freq - target) < 0.5)
+      );
+      expect(hasHyperOctaveNote).toBe(true);
+    });
+
+    it('plays subtle decoherence SFX directly and on coherence:changed with decoherence=true', () => {
+      const decohereSpy = vi.spyOn(soundManager, 'playDecoherence');
+
+      soundManager.playDecoherence();
+      expect(mockCtx.createBufferSource).toHaveBeenCalled();
+      expect(mockCtx.createOscillator).toHaveBeenCalled();
+
+      gameEvents.emit('coherence:changed', {
+        value: 0,
+        tier: 'x1',
+        raw: 0,
+        styleScore: 120,
+        decoherence: true
+      });
+      expect(decohereSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Alchemy SFX (Epic 03 Spec-02)', () => {
+    it('plays harmonic synthesis chord via playAlchemySynthesis()', () => {
+      mockCtx.createOscillator.mockClear();
+      mockCtx.createBiquadFilter.mockClear();
+
+      soundManager.playAlchemySynthesis();
+
+      expect(mockCtx.createBiquadFilter).toHaveBeenCalledTimes(1);
+      expect(mockCtx.createOscillator).toHaveBeenCalledTimes(6);
+    });
+
+    it('plays soft descending bounce via playAlchemyReject()', () => {
+      mockCtx.createOscillator.mockClear();
+
+      soundManager.playAlchemyReject();
+
+      expect(mockCtx.createOscillator).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('destroy', () => {
     it('stops BGM, unhooks listeners, and closes audio context', () => {
       soundManager.startBgm();

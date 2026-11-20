@@ -253,6 +253,39 @@ describe('useGameStore', () => {
       useGameStore.getState().updateMaxEntanglementLevel(113);
       expect(useGameStore.getState().maxEntanglementLevel).toBe(113);
     });
+
+    it('persists coherentRun and bestStyleScore via recordScore and recordCoherenceResult', () => {
+      useGameStore.getState().recordScore(1, 14000, undefined, {
+        coherentRun: true,
+        styleScore: 280
+      });
+      expect(useGameStore.getState().scores[1]).toMatchObject({
+        best: 14000,
+        last: 14000,
+        coherentRun: true,
+        bestStyleScore: 280,
+        lastStyleScore: 280
+      });
+
+      // Subsequent non-coherent run preserves coherentRun and higher bestStyleScore
+      useGameStore.getState().recordScore(1, 15000, undefined, {
+        coherentRun: false,
+        styleScore: 120
+      });
+      expect(useGameStore.getState().scores[1]).toMatchObject({
+        coherentRun: true,
+        bestStyleScore: 280,
+        lastStyleScore: 120
+      });
+
+      // recordCoherenceResult updates bestStyleScore when exceeded
+      useGameStore.getState().recordCoherenceResult(1, 410, true);
+      expect(useGameStore.getState().scores[1]).toMatchObject({
+        coherentRun: true,
+        bestStyleScore: 410,
+        lastStyleScore: 410
+      });
+    });
   });
 
   describe('localStorage persistence', () => {
@@ -460,6 +493,53 @@ describe('useGameStore', () => {
       useGameStore.getState().resetCustomLevel('1');
       expect(useGameStore.getState().customLevels).toBeNull();
       expect(getEffectiveLevel(1)?.width).toBe(originalWidth);
+    });
+  });
+
+  describe('moleculeScores and recordMoleculeScore (Epic 03 Spec-02)', () => {
+    it('records best time, isotope medal upgrades, ghost trajectory, and unlocks molecule', () => {
+      useGameStore.getState().recordMoleculeScore('H2O', 14500, 'v1|0,10,20,0,i', {
+        jumpCount: 6,
+        medal: 'silver'
+      });
+
+      let state = useGameStore.getState();
+      expect(state.unlockedMolecules).toContain('H2O');
+      expect(state.moleculeScores.H2O).toEqual({
+        last: 14500,
+        best: 14500,
+        ghostTrajectory: 'v1|0,10,20,0,i',
+        bestJumps: 6,
+        lastJumps: 6,
+        medal: 'silver'
+      });
+
+      // Faster run with gold medal updates best and upgrades medal
+      useGameStore.getState().recordMoleculeScore('H2O', 11200, 'v1|0,15,25,0,r', {
+        jumpCount: 4,
+        medal: 'gold'
+      });
+      state = useGameStore.getState();
+      expect(state.moleculeScores.H2O.best).toBe(11200);
+      expect(state.moleculeScores.H2O.bestJumps).toBe(4);
+      expect(state.moleculeScores.H2O.medal).toBe('gold');
+      expect(state.moleculeScores.H2O.ghostTrajectory).toBe('v1|0,15,25,0,r');
+
+      // Slower run with bronze medal preserves best time and gold medal
+      useGameStore.getState().recordMoleculeScore('H2O', 16000, 'v1|0,1,1,0,i', {
+        jumpCount: 8,
+        medal: 'bronze'
+      });
+      state = useGameStore.getState();
+      expect(state.moleculeScores.H2O.last).toBe(16000);
+      expect(state.moleculeScores.H2O.best).toBe(11200);
+      expect(state.moleculeScores.H2O.medal).toBe('gold');
+      expect(state.moleculeScores.H2O.ghostTrajectory).toBe('v1|0,15,25,0,r');
+
+      // resetGame clears moleculeScores and unlockedMolecules
+      useGameStore.getState().resetGame();
+      expect(useGameStore.getState().moleculeScores).toEqual({});
+      expect(useGameStore.getState().unlockedMolecules).toEqual([]);
     });
   });
 });

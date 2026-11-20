@@ -35,12 +35,79 @@ export interface Strings {
     chemicalBond: string;
     chemicalBondOn: string;
     chemicalBondHint: string;
+    alchemyDragHint: string;
+    alchemySelectPartner: (symbol: string) => string;
+    noStableBond: string;
+    codexButton: (unlocked: number, total: number) => string;
     classicTab: string;
     entanglementTab: string;
     ghostModeTitle: (mode: GhostMode) => string;
     ghostDisabled: string;
     ghostEnabled: (mode: GhostMode) => string;
     jumpSuffix: string;
+  };
+  codex: {
+    title: string;
+    subtitle: string;
+    unlockedCounter: (unlocked: number, total: number) => string;
+    close: string;
+    undiscovered: string;
+    hintLabel: string;
+    bestTime: string;
+    medal: string;
+    noRecord: string;
+    play: string;
+  };
+  periodicTable: {
+    viewTable: string;
+    viewPeriod: string;
+    zoomIn: string;
+    zoomOut: string;
+    zoomReset: string;
+    periodShort: (p: number) => string;
+    periodFull: (p: number) => string;
+    lanthanides: string;
+    actinides: string;
+    entanglementRift: string;
+    filters: {
+      all: string;
+      incomplete: string;
+      noGold: string;
+      nobleGases: string;
+      entanglementShort: string;
+    };
+    preview: {
+      bestTime: string;
+      bestJumps: string;
+      medal: string;
+      family: string;
+      mechanics: string;
+      position: (group: number, period: number, block: string) => string;
+      locked: string;
+      play: string;
+      nobleGasBadge: string;
+      entanglementBadge: string;
+      noRecord: string;
+    };
+    families: {
+      noble_gas: string;
+      alkali_alkaline_earth: string;
+      transition_metal: string;
+      nonmetal_halogen: string;
+      lanthanide_actinide: string;
+      metalloid: string;
+      post_transition: string;
+    };
+    mechanicsLabels: {
+      noblePlayground: string;
+      entanglement: string;
+      precisionJump: string;
+      tunneling: string;
+      gravityPhase: string;
+      waveSuperposition: string;
+      pauliRepulsion: string;
+      relativisticHorizon: string;
+    };
   };
   levelFinished: {
     customLevelFallback: string;
@@ -141,13 +208,81 @@ export const STRINGS: Record<Locale, Strings> = {
       goldIsotopes: 'Gold Isotopes:',
       chemicalBond: 'Chemical Bond',
       chemicalBondOn: '(ON)',
-      chemicalBondHint: '(Shift+Click)',
+      chemicalBondHint: '(Drag / Tap)',
+      alchemyDragHint: 'Drag an atom onto another or tap Alchemy',
+      alchemySelectPartner: (symbol) => `Select partner for ${symbol}...`,
+      noStableBond: 'No stable bond found',
+      codexButton: (unlocked, total) => `Codex (${unlocked} / ${total})`,
       classicTab: '[ CLASSIC ATOMS ]',
       entanglementTab: '[ ENTANGLEMENT Ψ ⊗ Ψ ]',
       ghostModeTitle: (mode) => `Ghost replay mode: ${mode}`,
       ghostDisabled: 'Ghost disabled',
       ghostEnabled: (mode) => `Ghost enabled (${mode})`,
       jumpSuffix: 'J'
+    },
+    codex: {
+      title: 'Molecular Codex',
+      subtitle:
+        'Combine two unlocked atoms on the Periodic Table via drag-and-drop or Alchemy mode.',
+      unlockedCounter: (unlocked, total) => `Unlocked: ${unlocked} / ${total}`,
+      close: 'Close',
+      undiscovered: 'Undiscovered Molecule',
+      hintLabel: 'Alchemical Hint',
+      bestTime: 'Best Time',
+      medal: 'Isotope',
+      noRecord: '--:--:--',
+      play: 'PLAY ►'
+    },
+    periodicTable: {
+      viewTable: 'Table View',
+      viewPeriod: 'Period View',
+      zoomIn: 'Zoom in',
+      zoomOut: 'Zoom out',
+      zoomReset: 'Reset zoom',
+      periodShort: (p) => `P${p}`,
+      periodFull: (p) => `Period ${p}`,
+      lanthanides: '57–71 La–Lu',
+      actinides: '89–103 Ac–Lr',
+      entanglementRift: 'Ψ 110–114',
+      filters: {
+        all: 'All',
+        incomplete: 'Incomplete',
+        noGold: 'No Gold',
+        nobleGases: 'Noble Gases',
+        entanglementShort: 'Ψ 110–114'
+      },
+      preview: {
+        bestTime: 'Best Time',
+        bestJumps: 'Jumps',
+        medal: 'Isotope',
+        family: 'Family',
+        mechanics: 'Mechanics',
+        position: (group, period, block) => `Group ${group} · Period ${period} · ${block}-block`,
+        locked: 'Locked',
+        play: 'PLAY ►',
+        nobleGasBadge: '✦ Noble Gas',
+        entanglementBadge: 'Ψ Entangled',
+        noRecord: '--:--:--'
+      },
+      families: {
+        noble_gas: 'Noble Gas',
+        alkali_alkaline_earth: 'Alkali / Alkaline Earth',
+        transition_metal: 'Transition Metal',
+        nonmetal_halogen: 'Nonmetal / Halogen',
+        lanthanide_actinide: 'Lanthanide / Actinide',
+        metalloid: 'Metalloid',
+        post_transition: 'Post-Transition Metal'
+      },
+      mechanicsLabels: {
+        noblePlayground: 'Noble Playground',
+        entanglement: 'Quantum Entanglement',
+        precisionJump: 'Quantum Jump',
+        tunneling: 'Tunneling Barrier',
+        gravityPhase: 'Gravity & Phase',
+        waveSuperposition: 'Wave Superposition',
+        pauliRepulsion: 'Pauli Repulsion',
+        relativisticHorizon: 'Relativistic Horizon'
+      }
     },
     levelFinished: {
       customLevelFallback: 'Custom Level',
@@ -255,13 +390,81 @@ export const STRINGS: Record<Locale, Strings> = {
       goldIsotopes: "Isotopes d'Or :",
       chemicalBond: 'Liaison Chimique',
       chemicalBondOn: '(ON)',
-      chemicalBondHint: '(Shift+Clic)',
+      chemicalBondHint: '(Glisser / Tap)',
+      alchemyDragHint: 'Glissez un atome sur un autre ou activez Alchimie',
+      alchemySelectPartner: (symbol) => `Choisissez un partenaire pour ${symbol}...`,
+      noStableBond: 'Aucune liaison stable trouvée',
+      codexButton: (unlocked, total) => `Codex (${unlocked} / ${total})`,
       classicTab: '[ ATOMES CLASSIQUES ]',
       entanglementTab: '[ INTRICATION Ψ ⊗ Ψ ]',
       ghostModeTitle: (mode) => `Mode fantôme : ${mode}`,
       ghostDisabled: 'Fantôme désactivé',
       ghostEnabled: (mode) => `Fantôme activé (${mode})`,
       jumpSuffix: 'S'
+    },
+    codex: {
+      title: 'Codex Moléculaire',
+      subtitle:
+        'Combinez deux atomes débloqués sur le Tableau Périodique par glisser-déposer ou en mode Alchimie.',
+      unlockedCounter: (unlocked, total) => `Débloquées : ${unlocked} / ${total}`,
+      close: 'Fermer',
+      undiscovered: 'Molécule non découverte',
+      hintLabel: 'Indice alchimique',
+      bestTime: 'Meilleur temps',
+      medal: 'Isotope',
+      noRecord: '--:--:--',
+      play: 'JOUER ►'
+    },
+    periodicTable: {
+      viewTable: 'Vue Tableau',
+      viewPeriod: 'Vue Période',
+      zoomIn: 'Zoomer',
+      zoomOut: 'Dézoomer',
+      zoomReset: 'Réinitialiser le zoom',
+      periodShort: (p) => `P${p}`,
+      periodFull: (p) => `Période ${p}`,
+      lanthanides: '57–71 La–Lu',
+      actinides: '89–103 Ac–Lr',
+      entanglementRift: 'Ψ 110–114',
+      filters: {
+        all: 'Tous',
+        incomplete: 'Non complétés',
+        noGold: 'Sans Or',
+        nobleGases: 'Gaz Nobles',
+        entanglementShort: 'Ψ 110–114'
+      },
+      preview: {
+        bestTime: 'Meilleur temps',
+        bestJumps: 'Sauts',
+        medal: 'Isotope',
+        family: 'Famille',
+        mechanics: 'Mécaniques',
+        position: (group, period, block) => `Groupe ${group} · Période ${period} · bloc ${block}`,
+        locked: 'Verrouillé',
+        play: 'JOUER ►',
+        nobleGasBadge: '✦ Gaz Noble',
+        entanglementBadge: 'Ψ Intriqué',
+        noRecord: '--:--:--'
+      },
+      families: {
+        noble_gas: 'Gaz Noble',
+        alkali_alkaline_earth: 'Alcalin / Alcalino-terreux',
+        transition_metal: 'Métal de transition',
+        nonmetal_halogen: 'Non-métal / Halogène',
+        lanthanide_actinide: 'Lanthanide / Actinide',
+        metalloid: 'Métalloïde',
+        post_transition: 'Métal pauvre'
+      },
+      mechanicsLabels: {
+        noblePlayground: 'Sanctuaire Gaz Noble',
+        entanglement: 'Intrication Quantique',
+        precisionJump: 'Saut Quantique',
+        tunneling: 'Effet Tunnel',
+        gravityPhase: 'Gravité & Phase',
+        waveSuperposition: 'Superposition Ondulatoire',
+        pauliRepulsion: 'Répulsion de Pauli',
+        relativisticHorizon: 'Horizon Relativiste'
+      }
     },
     levelFinished: {
       customLevelFallback: 'Niveau Personnalisé',

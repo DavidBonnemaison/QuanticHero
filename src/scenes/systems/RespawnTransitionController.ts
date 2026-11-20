@@ -306,6 +306,8 @@ export class RespawnTransitionController {
     });
 
     const isShared = Boolean(store.sharedLevel);
+    const moleculeMatch = /^molecule-(.+)$/i.exec(String(ctx.levelData.id ?? ''));
+    const moleculeId = moleculeMatch ? moleculeMatch[1] : null;
     const currentLvl = Number(ctx.levelData.id);
     if (!Number.isNaN(currentLvl)) {
       ctx.previousCompletedLevelId = currentLvl;
@@ -315,11 +317,22 @@ export class RespawnTransitionController {
     } else if (currentLvl === 118) {
       ctx.revealPeriodicTableSilhouette();
     }
-    const prevBest = isShared
-      ? (store.scores[0]?.best ?? 0)
-      : (store.scores[currentLvl]?.best ?? 0);
+    const prevBest = moleculeId
+      ? (store.moleculeScores?.[moleculeId]?.best ?? 0)
+      : isShared
+        ? (store.scores[0]?.best ?? 0)
+        : (store.scores[currentLvl]?.best ?? 0);
 
     let nextLevelNumber: number | null = null;
+    if (moleculeId) {
+      store.recordMoleculeScore(moleculeId, elapsedMs, trajectory, {
+        jumpCount: ctx.jumpCount,
+        switchCount: ctx.switchCount,
+        medal,
+        coherentRun: ctx.coherenceSystem?.isCoherentRun?.() ?? false,
+        styleScore: ctx.coherenceSystem?.getStyleScore?.() ?? 0
+      });
+    }
     if (isShared) {
       store.recordScore(0, elapsedMs, trajectory, {
         jumpCount: ctx.jumpCount,
@@ -350,9 +363,11 @@ export class RespawnTransitionController {
     }
     ctx.nextLevelNumberPending = nextLevelNumber;
 
-    const newBest = isShared
-      ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
-      : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
+    const newBest = moleculeId
+      ? (useGameStore.getState().moleculeScores?.[moleculeId]?.best ?? elapsedMs)
+      : isShared
+        ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
+        : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
 
     for (const hero of ctx.heroes) {
       if (!hero.active) continue;

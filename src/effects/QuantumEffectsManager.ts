@@ -100,15 +100,16 @@ export class QuantumEffectsManager {
     delta: number,
     heroes: Hero[],
     portal?: Phaser.GameObjects.Sprite | Phaser.Physics.Arcade.Sprite,
-    isTimeDilationActive = false
+    isTimeDilationActive = false,
+    coherence = 0
   ): void {
     this.checkPerformance();
     this.graphics.clear();
 
     const isReduced = this.getIsReduced();
 
-    // 1. Render de Broglie Probability Waves & Time Dilation Trail around moving heroes
-    this.renderDeBroglieWaves(time, heroes, isReduced, isTimeDilationActive);
+    // 1. Render de Broglie Probability Waves, Spectral Coherence Trail & Time Dilation Trail
+    this.renderDeBroglieWaves(time, heroes, isReduced, isTimeDilationActive, coherence);
 
     // 2. Render Spacetime Distortion and Vortex Particles at portal
     if (portal?.active) {
@@ -117,22 +118,50 @@ export class QuantumEffectsManager {
   }
 
   /**
-   * Render concentric de Broglie matter waves when heroes move,
-   * with constructive/destructive quantum interference patterns when multiple clones interact.
+   * Render concentric de Broglie matter waves and spectral coherence trail when heroes move.
    */
   private renderDeBroglieWaves(
     time: number,
     heroes: Hero[],
     isReduced: boolean,
-    isTimeDilationActive = false
+    isTimeDilationActive = false,
+    coherence = 0
   ): void {
     if (isReduced) return;
+
+    const clampedCoherence = Math.max(0, Math.min(1, coherence));
 
     for (const hero of heroes) {
       if (!hero || !hero.active || !hero.body) continue;
       const vx = hero.body.velocity.x;
       const vy = hero.body.velocity.y;
       const speed = Math.sqrt(vx * vx + vy * vy);
+
+      // Render spectral luminous coherence trail behind moving hero (scales with coherence)
+      if (clampedCoherence > 0.05 && speed >= 15) {
+        const spectralPalette =
+          clampedCoherence >= 0.85
+            ? [0x00e5ff, 0xe879f9, 0xfbbf24, 0x34d399]
+            : clampedCoherence >= 0.55
+              ? [0xc084fc, 0xe879f9, 0x00e5ff]
+              : clampedCoherence >= 0.25
+                ? [0x00ffcc, 0x00e5ff]
+                : [0x38bdf8];
+        const segments = Math.max(2, Math.min(6, Math.round(2 + clampedCoherence * 4)));
+        const baseAlpha = 0.14 + clampedCoherence * 0.24;
+
+        for (let t = 1; t <= segments; t++) {
+          const factor = 0.014 * t * (1 + clampedCoherence * 0.5);
+          const trailX = hero.x - vx * factor;
+          const trailY = hero.y - vy * factor;
+          const color = spectralPalette[(t - 1) % spectralPalette.length];
+          const segAlpha = (baseAlpha * (1 - (t - 1) / (segments + 1))) / (t === 1 ? 1 : 1.15);
+          const radius = Math.max(3, 12 + clampedCoherence * 5 - t * 1.6);
+
+          this.graphics.fillStyle(color, segAlpha);
+          this.graphics.fillCircle(trailX, trailY, radius);
+        }
+      }
 
       // Render cyan afterglow trail under Time Dilation
       if (isTimeDilationActive && speed >= 10) {

@@ -237,6 +237,19 @@ export class HudController {
     ctx.splitDeltaText.setVisible(currentMode !== 'off' && ctx.ghostFrames.length > 0);
     ctx.hudContainer.add(ctx.splitDeltaText);
 
+    ctx.coherenceBarGraphics = ctx.add.graphics();
+    ctx.hudContainer.add(ctx.coherenceBarGraphics);
+
+    const coherenceTierX = camW < 440 ? camW - 76 : camW - 110;
+    ctx.coherenceTierText = ctx.add.text(coherenceTierX, 28, 'x1', {
+      fontFamily: 'VT323',
+      fontSize: camW < 440 ? '16px' : '18px',
+      color: '#38bdf8'
+    });
+    ctx.coherenceTierText.setOrigin(1, 0);
+    ctx.coherenceTierText.setAlpha(0.45);
+    ctx.hudContainer.add(ctx.coherenceTierText);
+
     const thumbRestartBg = ctx.add.rectangle(camW - 36, camH - 36, 48, 48, 0x0b0f19, 0.35);
     thumbRestartBg.setStrokeStyle(1.5, 0xfbbf24, 0.35);
     const thumbRestartLabel = ctx.add.text(camW - 36, camH - 36, '↻', {
@@ -261,6 +274,7 @@ export class HudController {
     ctx.hudContainer.add(thumbRestartLabel);
     ctx.hudContainer.add(thumbRestartZone);
 
+    this.updateCoherenceGauge(true);
     this.updateEdgePips();
     this.syncHudTransform();
   }
@@ -352,6 +366,13 @@ export class HudController {
     if (ctx.splitDeltaText?.active) {
       ctx.splitDeltaText.setPosition(camW - 10, 28);
     }
+    if (ctx.coherenceTierText?.active) {
+      ctx.coherenceTierText.setPosition(camW < 440 ? camW - 76 : camW - 110, 28);
+      if (typeof ctx.coherenceTierText.setFontSize === 'function') {
+        ctx.coherenceTierText.setFontSize(camW < 440 ? '16px' : '18px');
+      }
+    }
+    this.updateCoherenceGauge(true, camW);
 
     const thumbX = camW - 36;
     const thumbY = camH - 36;
@@ -376,6 +397,58 @@ export class HudController {
     this.syncHudTransform();
   }
 
+  public updateCoherenceGauge(force = false, widthOverride?: number): void {
+    const ctx = this.ctx;
+    const value = ctx.coherenceSystem?.getValue?.() ?? 0;
+    const tier = ctx.coherenceSystem?.getTier?.() ?? 'x1';
+
+    if (
+      !force &&
+      Math.abs(value - (ctx.lastCoherenceValue ?? -1)) < 0.005 &&
+      tier === ctx.lastCoherenceTier
+    ) {
+      return;
+    }
+
+    ctx.lastCoherenceValue = value;
+    ctx.lastCoherenceTier = tier;
+
+    const colorHex =
+      tier === 'HYPER'
+        ? '#fbbf24'
+        : tier === 'x3'
+          ? '#c084fc'
+          : tier === 'x2'
+            ? '#00ffcc'
+            : '#38bdf8';
+    const colorNum =
+      tier === 'HYPER' ? 0xfbbf24 : tier === 'x3' ? 0xc084fc : tier === 'x2' ? 0x00ffcc : 0x38bdf8;
+
+    const camW = widthOverride ?? ctx.cameras?.main?.width ?? 800;
+    const gfx = ctx.coherenceBarGraphics;
+    if (gfx?.active) {
+      const trackX = 36;
+      const trackW = Math.max(0, camW - trackX);
+      const barY = 51;
+      const barH = 3;
+
+      gfx.clear();
+      gfx.fillStyle(0x1e293b, 0.75);
+      gfx.fillRect(trackX, barY, trackW, barH);
+      if (value > 0 && trackW > 0) {
+        gfx.fillStyle(colorNum, tier === 'HYPER' ? 0.98 : 0.88);
+        gfx.fillRect(trackX, barY, Math.max(2, Math.round(trackW * value)), barH);
+      }
+    }
+
+    if (ctx.coherenceTierText?.active) {
+      const label = tier === 'HYPER' ? (camW < 440 ? 'HYPER' : '⚡ HYPER') : tier;
+      ctx.coherenceTierText.setText(label);
+      ctx.coherenceTierText.setColor(colorHex);
+      ctx.coherenceTierText.setAlpha(value > 0 ? 1 : 0.45);
+    }
+  }
+
   public updateTimerAndIndicators(): void {
     const ctx = this.ctx;
     if (ctx.timerText) {
@@ -393,6 +466,7 @@ export class HudController {
     if (ctx.dilationIndicatorText?.active) {
       ctx.dilationIndicatorText.setVisible(ctx.isTimeDilationActive);
     }
+    this.updateCoherenceGauge();
   }
 
   public updateThumbRibbon(): void {

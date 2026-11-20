@@ -35,12 +35,15 @@ export interface GameStoreState {
   locale: Locale;
   sharedLevel: LevelData | null;
   unlockedMolecules: string[];
+  moleculeScores: Record<string, ScoreItem>;
 }
 
 export interface RecordScoreMeta {
   jumpCount?: number;
   switchCount?: number;
   medal?: IsotopeMedal;
+  coherentRun?: boolean;
+  styleScore?: number;
 }
 
 export interface GameStoreActions {
@@ -54,6 +57,13 @@ export interface GameStoreActions {
     ghostTrajectory?: string,
     meta?: RecordScoreMeta
   ) => void;
+  recordMoleculeScore: (
+    moleculeId: string,
+    score: number,
+    ghostTrajectory?: string,
+    meta?: RecordScoreMeta
+  ) => void;
+  recordCoherenceResult: (level: number, styleScore: number, coherentRun: boolean) => void;
   saveGhostTrajectory: (level: number, trajectory: string) => void;
   setLevels: (data: Record<string, LevelData> | null) => void;
   resetCustomLevel: (id: string) => void;
@@ -187,6 +197,7 @@ export const useGameStore = create<GameStore>()(
       ghostEnabled: true,
       locale: 'en',
       unlockedMolecules: [],
+      moleculeScores: {},
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
       setMuted: (muted: boolean) => set({ isMuted: muted }),
@@ -274,7 +285,75 @@ export const useGameStore = create<GameStore>()(
           maxEntanglementLevel: 110,
           scores: {},
           sharedLevel: null,
-          unlockedMolecules: []
+          unlockedMolecules: [],
+          moleculeScores: {}
+        }),
+
+      recordMoleculeScore: (
+        moleculeId: string,
+        score: number,
+        ghostTrajectory?: string,
+        meta?: RecordScoreMeta
+      ) =>
+        set((state) => {
+          const currentMap = state.moleculeScores ?? {};
+          const prevItem = currentMap[moleculeId];
+          const currentBest = prevItem?.best ?? 0;
+          const isNewBest = currentBest === 0 || score < currentBest;
+          const best = currentBest === 0 ? score : Math.min(currentBest, score);
+          const trajectoryToSave = isNewBest
+            ? (ghostTrajectory ?? prevItem?.ghostTrajectory)
+            : prevItem?.ghostTrajectory;
+
+          const bestJumps =
+            meta?.jumpCount !== undefined
+              ? prevItem?.bestJumps !== undefined
+                ? Math.min(prevItem.bestJumps, meta.jumpCount)
+                : meta.jumpCount
+              : prevItem?.bestJumps;
+
+          const lastJumps = meta?.jumpCount !== undefined ? meta.jumpCount : prevItem?.lastJumps;
+
+          const bestSwitches =
+            meta?.switchCount !== undefined
+              ? prevItem?.bestSwitches !== undefined
+                ? Math.min(prevItem.bestSwitches, meta.switchCount)
+                : meta.switchCount
+              : prevItem?.bestSwitches;
+
+          const medal =
+            meta?.medal !== undefined ? bestMedal(prevItem?.medal, meta.medal) : prevItem?.medal;
+
+          const coherentRun = Boolean(prevItem?.coherentRun || meta?.coherentRun);
+          const bestStyleScore =
+            meta?.styleScore !== undefined
+              ? Math.max(prevItem?.bestStyleScore ?? 0, meta.styleScore)
+              : prevItem?.bestStyleScore;
+          const lastStyleScore =
+            meta?.styleScore !== undefined ? meta.styleScore : prevItem?.lastStyleScore;
+
+          const unlockedMolecules = state.unlockedMolecules.includes(moleculeId)
+            ? state.unlockedMolecules
+            : [...state.unlockedMolecules, moleculeId];
+
+          return {
+            unlockedMolecules,
+            moleculeScores: {
+              ...currentMap,
+              [moleculeId]: {
+                last: score,
+                best,
+                ...(trajectoryToSave ? { ghostTrajectory: trajectoryToSave } : {}),
+                ...(bestJumps !== undefined ? { bestJumps } : {}),
+                ...(lastJumps !== undefined ? { lastJumps } : {}),
+                ...(bestSwitches !== undefined ? { bestSwitches } : {}),
+                ...(medal !== undefined ? { medal } : {}),
+                ...(coherentRun ? { coherentRun: true } : {}),
+                ...(bestStyleScore !== undefined && bestStyleScore > 0 ? { bestStyleScore } : {}),
+                ...(lastStyleScore !== undefined && lastStyleScore > 0 ? { lastStyleScore } : {})
+              }
+            }
+          };
         }),
 
       recordScore: (
@@ -311,6 +390,14 @@ export const useGameStore = create<GameStore>()(
           const medal =
             meta?.medal !== undefined ? bestMedal(prevItem?.medal, meta.medal) : prevItem?.medal;
 
+          const coherentRun = Boolean(prevItem?.coherentRun || meta?.coherentRun);
+          const bestStyleScore =
+            meta?.styleScore !== undefined
+              ? Math.max(prevItem?.bestStyleScore ?? 0, meta.styleScore)
+              : prevItem?.bestStyleScore;
+          const lastStyleScore =
+            meta?.styleScore !== undefined ? meta.styleScore : prevItem?.lastStyleScore;
+
           const newScores = {
             ...state.scores,
             [level]: {
@@ -321,7 +408,10 @@ export const useGameStore = create<GameStore>()(
               ...(lastJumps !== undefined ? { lastJumps } : {}),
               ...(bestSwitches !== undefined ? { bestSwitches } : {}),
               ...(medal !== undefined ? { medal } : {}),
-              ...(prevItem?.bellSync ? { bellSync: true } : {})
+              ...(prevItem?.bellSync ? { bellSync: true } : {}),
+              ...(coherentRun ? { coherentRun: true } : {}),
+              ...(bestStyleScore !== undefined && bestStyleScore > 0 ? { bestStyleScore } : {}),
+              ...(lastStyleScore !== undefined && lastStyleScore > 0 ? { lastStyleScore } : {})
             }
           };
           const isEntangled = isEntanglementLevelId(level);
@@ -340,6 +430,24 @@ export const useGameStore = create<GameStore>()(
             scores: newScores,
             maxLevel,
             maxEntanglementLevel
+          };
+        }),
+
+      recordCoherenceResult: (level: number, styleScore: number, coherentRun: boolean) =>
+        set((state) => {
+          const prevItem = state.scores[level] ?? { best: 0, last: 0 };
+          const nextCoherentRun = Boolean(prevItem.coherentRun || coherentRun);
+          const nextBestStyleScore = Math.max(prevItem.bestStyleScore ?? 0, styleScore);
+          return {
+            scores: {
+              ...state.scores,
+              [level]: {
+                ...prevItem,
+                ...(nextCoherentRun ? { coherentRun: true } : {}),
+                ...(nextBestStyleScore > 0 ? { bestStyleScore: nextBestStyleScore } : {}),
+                ...(styleScore > 0 ? { lastStyleScore: styleScore } : {})
+              }
+            }
           };
         }),
 
@@ -561,7 +669,8 @@ export const useGameStore = create<GameStore>()(
         ghostMode: state.ghostMode,
         ghostEnabled: state.ghostEnabled,
         locale: state.locale,
-        unlockedMolecules: state.unlockedMolecules
+        unlockedMolecules: state.unlockedMolecules,
+        moleculeScores: state.moleculeScores
       })
     }
   )

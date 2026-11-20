@@ -2,11 +2,13 @@ import type Phaser from 'phaser';
 import type { BohrBackgroundRenderer } from '../../effects/BohrBackgroundRenderer';
 import type { QuantumEffectsManager } from '../../effects/QuantumEffectsManager';
 import type { MobileTouchController } from '../../input/MobileTouchController';
+import type { CoherenceSystem } from '../../mechanics/coherenceSystem';
 import type { DecayPlatformState } from '../../mechanics/quantumMechanics';
 import type { PinnablePlatformRef, QuantumPinningState } from '../../physics/matterStates';
 import type { SessionSwarmBuffer } from '../../services/GhostManager';
 import type { GhostFrame, GhostRecorder } from '../../tools/GhostRecorder';
 import type {
+  CoherenceTier,
   CollapseConfig,
   IsotopeMedal,
   LevelData,
@@ -216,6 +218,11 @@ export interface GameSceneContext {
   lastSplitUpdateMs: number;
   phaseIndicatorText: Phaser.GameObjects.Text | null;
   dilationIndicatorText: Phaser.GameObjects.Text | null;
+  coherenceSystem: CoherenceSystem;
+  coherenceBarGraphics: Phaser.GameObjects.Graphics | null;
+  coherenceTierText: Phaser.GameObjects.Text | null;
+  lastCoherenceValue: number;
+  lastCoherenceTier: CoherenceTier;
 
   // Lifecycle & transition state
   isLevelCompleted: boolean;

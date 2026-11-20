@@ -1,7 +1,7 @@
 import { type ChemicalFamily, getChemicalFamily } from '../data/spectroscopy';
 import { useGameStore } from '../store';
 import { gameEvents } from '../tools/gameEvents';
-import type { ParticleType } from '../types';
+import type { CoherenceTier, ParticleType } from '../types';
 
 export interface FamilyMusicalProfile {
   family: ChemicalFamily;
@@ -161,6 +161,7 @@ export class SoundManager {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private bgmGain: GainNode | null = null;
+  private bgmBassFilter: BiquadFilterNode | null = null;
   private sfxGain: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
 
@@ -176,6 +177,9 @@ export class SoundManager {
   private currentFamily: ChemicalFamily = getChemicalFamily(1);
   private activeChordFrequencies: number[] = [];
   private sfxDegreeCursor = 0;
+
+  private coherenceValue = 0;
+  private coherenceTier: CoherenceTier = 'x1';
 
   private unsubStore: (() => void) | null = null;
   private unsubEvents: Array<() => void> = [];
@@ -247,6 +251,12 @@ export class SoundManager {
       }),
       gameEvents.on('bubble:harvest', () => {
         this.playBubbleChime();
+      }),
+      gameEvents.on('coherence:changed', ({ value, tier, decoherence }) => {
+        this.setCoherence(value, tier);
+        if (decoherence) {
+          this.playDecoherence();
+        }
       })
     );
 
@@ -306,6 +316,16 @@ export class SoundManager {
     this.bgmGain.gain.setValueAtTime(0.2, this.ctx.currentTime);
     this.bgmGain.connect(this.masterGain);
 
+    const profile = FAMILY_MUSICAL_PROFILES[this.currentFamily];
+    this.bgmBassFilter = this.ctx.createBiquadFilter();
+    this.bgmBassFilter.type = 'lowpass';
+    this.bgmBassFilter.Q.setValueAtTime(profile.bassFilterQ, this.ctx.currentTime);
+    this.bgmBassFilter.frequency.setValueAtTime(
+      this.getBassCutoffFrequency(),
+      this.ctx.currentTime
+    );
+    this.bgmBassFilter.connect(this.bgmGain);
+
     this.createNoiseBuffer();
   }
 
@@ -345,11 +365,72 @@ export class SoundManager {
     return this.clonesCount;
   }
 
+  /**
+   * Returns the adaptive bass lowpass filter cutoff multiplier (1.0 -> 2.2)
+   * driven by normalized Quantum Coherence in [0, 1].
+   */
+  public getBassFilterMultiplier(): number {
+    return Number((1.0 + this.coherenceValue * 1.2).toFixed(4));
+  }
+
+  public getBassCutoffFrequency(): number {
+    const profile = FAMILY_MUSICAL_PROFILES[this.currentFamily];
+    return Math.min(
+      18000,
+      Number((profile.bassFilterCutoff * this.getBassFilterMultiplier()).toFixed(2))
+    );
+  }
+
+  public setCoherence(value: number, tier: CoherenceTier): void {
+    const clamped = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+    this.coherenceValue = clamped;
+    this.coherenceTier = tier;
+
+    if (this.bgmBassFilter && this.ctx) {
+      try {
+        const now = this.ctx.currentTime;
+        const targetCutoff = this.getBassCutoffFrequency();
+        this.bgmBassFilter.frequency.cancelScheduledValues(now);
+        this.bgmBassFilter.frequency.setValueAtTime(this.bgmBassFilter.frequency.value, now);
+        this.bgmBassFilter.frequency.linearRampToValueAtTime(targetCutoff, now + 0.08);
+      } catch {
+        // safe fallback
+      }
+    }
+  }
+
+  public getCoherenceValue(): number {
+    return this.coherenceValue;
+  }
+
+  public getCoherenceTier(): CoherenceTier {
+    return this.coherenceTier;
+  }
+
   public setAtomicNumber(z: number): void {
     const clampedZ = Math.max(1, Math.min(118, Math.round(z)));
     this.atomicNumber = clampedZ;
     this.currentFamily = getChemicalFamily(clampedZ);
     this.updateActiveChordFrequencies(Math.floor(this.currentStep / 4) % 4);
+
+    if (this.bgmBassFilter && this.ctx) {
+      try {
+        const now = this.ctx.currentTime;
+        const profile = FAMILY_MUSICAL_PROFILES[this.currentFamily];
+        this.bgmBassFilter.Q.cancelScheduledValues(now);
+        this.bgmBassFilter.Q.setValueAtTime(this.bgmBassFilter.Q.value, now);
+        this.bgmBassFilter.Q.linearRampToValueAtTime(profile.bassFilterQ, now + 0.08);
+
+        this.bgmBassFilter.frequency.cancelScheduledValues(now);
+        this.bgmBassFilter.frequency.setValueAtTime(this.bgmBassFilter.frequency.value, now);
+        this.bgmBassFilter.frequency.linearRampToValueAtTime(
+          this.getBassCutoffFrequency(),
+          now + 0.08
+        );
+      } catch {
+        // safe fallback
+      }
+    }
   }
 
   public getAtomicNumber(): number {
@@ -1155,7 +1236,7 @@ export class SoundManager {
       gameEvents.emit('bgm:beat', { step, bpm });
     }
 
-    // 1. Bassline (with family-specific oscillator & filter)
+    // 1. Bassline (with family-specific oscillator & adaptive coherence lowpass filter)
     const chordOffset = profile.progressionSemitones[chordIndex];
     const bassNote = semitonesToHz(profile.rootHz / 2, chordOffset);
     const shouldPlayBass =
@@ -1166,23 +1247,28 @@ export class SoundManager {
     if (shouldPlayBass) {
       try {
         const bassOsc = this.ctx.createOscillator();
-        const bassFilter = this.ctx.createBiquadFilter();
         const bassGain = this.ctx.createGain();
         bassOsc.type = profile.bassOscType;
         bassOsc.frequency.setValueAtTime(bassNote, time);
-
-        bassFilter.type = 'lowpass';
-        bassFilter.Q.setValueAtTime(profile.bassFilterQ, time);
-        bassFilter.frequency.setValueAtTime(profile.bassFilterCutoff, time);
 
         const bassDur = stepDuration * 1.6;
         bassGain.gain.setValueAtTime(0.001, time);
         bassGain.gain.linearRampToValueAtTime(0.18, time + 0.01);
         bassGain.gain.exponentialRampToValueAtTime(0.001, time + bassDur);
 
-        bassOsc.connect(bassFilter);
-        bassFilter.connect(bassGain);
-        bassGain.connect(this.bgmGain);
+        if (this.bgmBassFilter) {
+          bassOsc.connect(bassGain);
+          bassGain.connect(this.bgmBassFilter);
+        } else {
+          const bassFilter = this.ctx.createBiquadFilter();
+          bassFilter.type = 'lowpass';
+          bassFilter.Q.setValueAtTime(profile.bassFilterQ, time);
+          bassFilter.frequency.setValueAtTime(profile.bassFilterCutoff, time);
+          bassFilter.frequency.linearRampToValueAtTime(this.getBassCutoffFrequency(), time + 0.02);
+          bassOsc.connect(bassFilter);
+          bassFilter.connect(bassGain);
+          bassGain.connect(this.bgmGain);
+        }
 
         bassOsc.start(time);
         bassOsc.stop(time + bassDur + 0.01);
@@ -1245,12 +1331,69 @@ export class SoundManager {
         }
         arpOsc.start(time);
         arpOsc.stop(time + arpDur + 0.01);
+
+        // 2b. HYPER tier: upper-octave (+12 semitones) harmonic arpeggio synced to family scale
+        if (this.coherenceTier === 'HYPER') {
+          const hyperFreq = semitonesToHz(freq, 12);
+          const hyperOsc = this.ctx.createOscillator();
+          const hyperGain = this.ctx.createGain();
+          hyperOsc.type = 'triangle';
+          hyperOsc.frequency.setValueAtTime(hyperFreq, time);
+
+          hyperGain.gain.setValueAtTime(0.001, time);
+          hyperGain.gain.linearRampToValueAtTime(0.04, time + 0.008);
+          hyperGain.gain.exponentialRampToValueAtTime(0.001, time + arpDur);
+
+          hyperOsc.connect(hyperGain);
+          hyperGain.connect(this.bgmGain);
+
+          hyperOsc.start(time);
+          hyperOsc.stop(time + arpDur + 0.01);
+        }
       } catch {
         // safe
       }
     }
 
-    // 3. Rhythmic Geiger micro-pulsations for radioactive Lanthanides & Actinides (Z >= 57)
+    // 3. Adaptive Coherence Hi-Hat / synthetic percussion layer (tier x2 and above)
+    if (
+      (this.coherenceTier === 'x2' ||
+        this.coherenceTier === 'x3' ||
+        this.coherenceTier === 'HYPER') &&
+      step % 2 === 1 &&
+      this.noiseBuffer
+    ) {
+      try {
+        const hiHatSource = this.ctx.createBufferSource();
+        hiHatSource.buffer = this.noiseBuffer;
+
+        const hiHatFilter = this.ctx.createBiquadFilter();
+        hiHatFilter.type = 'highpass';
+        hiHatFilter.frequency.setValueAtTime(7500, time);
+
+        const hiHatGain = this.ctx.createGain();
+        const isAccent = step % 4 === 3;
+        const basePeak =
+          this.coherenceTier === 'HYPER' ? 0.055 : this.coherenceTier === 'x3' ? 0.045 : 0.032;
+        const peak = isAccent ? basePeak * 1.25 : basePeak;
+        const hatDur = isAccent ? 0.045 : 0.03;
+
+        hiHatGain.gain.setValueAtTime(0.001, time);
+        hiHatGain.gain.linearRampToValueAtTime(peak, time + 0.003);
+        hiHatGain.gain.exponentialRampToValueAtTime(0.001, time + hatDur);
+
+        hiHatSource.connect(hiHatFilter);
+        hiHatFilter.connect(hiHatGain);
+        hiHatGain.connect(this.bgmGain);
+
+        hiHatSource.start(time);
+        hiHatSource.stop(time + hatDur + 0.005);
+      } catch {
+        // safe
+      }
+    }
+
+    // 4. Rhythmic Geiger micro-pulsations for radioactive Lanthanides & Actinides (Z >= 57)
     if (profile.geigerPulse && (step % 4 === 1 || step % 7 === 0)) {
       try {
         const geigerOsc = this.ctx.createOscillator();
@@ -1271,6 +1414,64 @@ export class SoundManager {
       } catch {
         // safe
       }
+    }
+  }
+
+  /**
+   * SFX: Quantum Decoherence
+   * Subtle downward filtered shimmer & soft noise release when coherence drops to 0 on death.
+   */
+  public playDecoherence(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.22;
+
+      if (this.noiseBuffer) {
+        const noiseSource = ctx.createBufferSource();
+        noiseSource.buffer = this.noiseBuffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.Q.setValueAtTime(4, now);
+        filter.frequency.setValueAtTime(1800, now);
+        filter.frequency.linearRampToValueAtTime(260, now + duration);
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.001, now);
+        noiseGain.gain.linearRampToValueAtTime(0.11, now + 0.015);
+        noiseGain.gain.linearRampToValueAtTime(0.001, now + duration);
+
+        noiseSource.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.sfxGain);
+
+        noiseSource.start(now);
+        noiseSource.stop(now + duration + 0.01);
+      }
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.linearRampToValueAtTime(110, now + duration);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.1, now + 0.012);
+      gain.gain.linearRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(now);
+      osc.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
     }
   }
 
@@ -1382,6 +1583,89 @@ export class SoundManager {
     }
   }
 
+  /**
+   * SFX: Alchemy Covalent Synthesis (Harmonic crystalline chord + resonant sweep)
+   */
+  public playAlchemySynthesis(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.5;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(3.5, now);
+      filter.frequency.setValueAtTime(420, now);
+      filter.frequency.exponentialRampToValueAtTime(5200, now + duration);
+      filter.connect(this.sfxGain);
+
+      // Luminous Lydian/Maj9 arpeggio chord
+      const freqs = [392.0, 493.88, 587.33, 739.99, 880.0, 1174.66];
+      freqs.forEach((freq, idx) => {
+        const start = now + idx * 0.04;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = idx % 2 === 0 ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.19, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.38);
+
+        osc.connect(gain);
+        gain.connect(filter);
+        osc.start(start);
+        osc.stop(start + 0.4);
+      });
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Alchemy Reject (Soft elastic descending bounce when no stable bond exists)
+   */
+  public playAlchemyReject(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const notes: ReadonlyArray<{ start: number; from: number; to: number; dur: number }> = [
+        { start: 0, from: 280, to: 210, dur: 0.085 },
+        { start: 0.075, from: 215, to: 155, dur: 0.11 }
+      ];
+
+      for (const note of notes) {
+        const t = now + note.start;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(note.from, t);
+        osc.frequency.exponentialRampToValueAtTime(note.to, t + note.dur);
+
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.linearRampToValueAtTime(0.16, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + note.dur);
+
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(t);
+        osc.stop(t + note.dur + 0.01);
+      }
+    } catch {
+      // safe fallback
+    }
+  }
+
   public destroy(): void {
     this.stopBgm();
     if (this.unsubStore) {
@@ -1401,6 +1685,9 @@ export class SoundManager {
     this.masterGain = null;
     this.sfxGain = null;
     this.bgmGain = null;
+    this.bgmBassFilter = null;
+    this.coherenceValue = 0;
+    this.coherenceTier = 'x1';
     this.isInitialized = false;
   }
 }

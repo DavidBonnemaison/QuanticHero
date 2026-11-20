@@ -1,0 +1,726 @@
+.wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Controls Row: Filters + Mobile View Toggle + Zoom */
+.controlsBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.filterGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filterButton {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #3f3f46;
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.filterButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.filterButtonActive {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
+}
+
+.filterButtonEntanglement {
+  border-color: rgba(236, 72, 153, 0.55);
+  color: #f9a8d4;
+}
+
+.filterButtonEntanglement:hover {
+  background: rgba(236, 72, 153, 0.2);
+  color: #ffffff;
+}
+
+.viewAndZoomGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.viewToggleGroup {
+  display: inline-flex;
+  border: 1px solid #444;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.viewToggleButton {
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 15px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.viewToggleButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.viewToggleButtonActive {
+  background: rgba(56, 189, 248, 0.25);
+  color: #ffffff;
+}
+
+.zoomControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zoomButton {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid #444;
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 15px;
+  min-width: 30px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.zoomButton:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #64748b;
+}
+
+/* Period Progress Strip */
+.periodProgressStrip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.periodChip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #cbd5e1;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.periodChip:hover {
+  border-color: #64748b;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.periodChipActive {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  color: #ffffff;
+}
+
+.periodChipHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 15px;
+}
+
+.periodChipCounts {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.periodProgressTrack {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.periodProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  transition: width 0.25s ease;
+}
+
+.periodProgressGold {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: #fbbf24;
+  transition: width 0.25s ease;
+}
+
+/* Pan/Zoom Viewport for 18x7 Periodic Table */
+.tableViewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.96));
+  padding: 12px;
+  box-sizing: border-box;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tableZoomSurface {
+  transform-origin: top left;
+  transition: transform 0.15s ease-out;
+  min-width: 900px;
+}
+
+.periodicGrid {
+  display: grid;
+  grid-template-columns: repeat(18, minmax(0, 1fr));
+  grid-template-rows: repeat(7, minmax(58px, auto)) 12px repeat(2, minmax(58px, auto));
+  gap: 4px;
+  width: 100%;
+}
+
+/* Individual Element Tile */
+.elementTile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 2px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  user-select: none;
+  overflow: hidden;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, opacity 0.15s ease, border-color 0.15s
+    ease;
+  box-sizing: border-box;
+  min-height: 58px;
+}
+
+.elementTile:hover,
+.elementTile:focus-visible {
+  transform: scale(1.08);
+  z-index: 10;
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+}
+
+.elementTilePreviewed {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75);
+  z-index: 5;
+}
+
+.elementTilePeriodHighlight {
+  box-shadow: 0 0 0 1px #38bdf8, 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+.elementTileFilteredOut {
+  opacity: 0.16;
+  filter: saturate(0.25);
+}
+
+.menuItemDisabled {
+  cursor: not-allowed;
+  opacity: 0.28;
+  filter: grayscale(0.75);
+}
+
+.menuItemDisabled:hover {
+  transform: none;
+}
+
+.menuItemSelectedAlchemy {
+  border-color: #c084fc !important;
+  box-shadow: 0 0 16px rgba(192, 132, 252, 0.85) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  z-index: 12;
+}
+
+.alchemyPartnerCandidate {
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.85), 0 0 12px rgba(192, 132, 252, 0.45);
+  animation: alchemyCandidatePulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes alchemyCandidatePulse {
+  from {
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55), 0 0 8px rgba(192, 132, 252, 0.3);
+  }
+  to {
+    box-shadow: 0 0 0 2px rgba(232, 121, 249, 0.9), 0 0 16px rgba(56, 189, 248, 0.65);
+  }
+}
+
+.elementTileDragTarget {
+  transform: scale(1.12);
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 2px #38bdf8, 0 0 22px rgba(56, 189, 248, 0.85) !important;
+  z-index: 15;
+}
+
+.elementTileRejectBounce {
+  animation: alchemyRejectBounce 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  border-color: #f87171 !important;
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.65) !important;
+}
+
+@keyframes alchemyRejectBounce {
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  20% {
+    transform: translateX(-6px) scale(0.95);
+  }
+  45% {
+    transform: translateX(6px) scale(1.04);
+  }
+  70% {
+    transform: translateX(-4px) scale(0.98);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+.covalentArcOverlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 900;
+  overflow: visible;
+}
+
+.covalentArcGlow {
+  fill: none;
+  stroke: url(#covalent-arc-gradient);
+  stroke-width: 8;
+  stroke-linecap: round;
+  opacity: 0.35;
+}
+
+.covalentArcCore {
+  fill: none;
+  stroke: url(#covalent-arc-gradient);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 10 6;
+  animation: covalentArcFlow 0.45s linear infinite;
+}
+
+@keyframes covalentArcFlow {
+  from {
+    stroke-dashoffset: 32;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.medalGold {
+  border-color: #fbbf24 !important;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.55), inset 0 0 8px rgba(251, 191, 36, 0.25);
+}
+
+.medalSilver {
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 0 8px rgba(226, 232, 240, 0.45), inset 0 0 6px rgba(226, 232, 240, 0.18);
+}
+
+.medalBronze {
+  border-color: #d97706 !important;
+  box-shadow: 0 0 6px rgba(217, 119, 6, 0.4);
+}
+
+.nobleGasTile {
+  box-shadow: inset 0 0 10px rgba(168, 85, 247, 0.22);
+}
+
+.tileZ {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.tileNobleBadge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 10px;
+  line-height: 1;
+  color: #f0abfc;
+  text-shadow: 0 0 4px rgba(240, 171, 252, 0.9);
+}
+
+.tileSymbol {
+  font-size: 22px;
+  line-height: 1.05;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+  margin-top: 6px;
+}
+
+.tileName {
+  font-size: 9px;
+  line-height: 1.1;
+  color: rgba(248, 250, 252, 0.82);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
+}
+
+.tileMedalStar {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 12px;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* Placeholders & Series Labels */
+.seriesPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  border-radius: 5px;
+  background: rgba(30, 41, 59, 0.45);
+  color: #94a3b8;
+  font-size: 11px;
+  text-align: center;
+  padding: 2px;
+  user-select: none;
+}
+
+.seriesRowLabel {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.entanglementRiftCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed rgba(236, 72, 153, 0.65);
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(236, 72, 153, 0.12), rgba(168, 85, 247, 0.18));
+  color: #f9a8d4;
+  font-family: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.entanglementRiftCell:hover:not(:disabled) {
+  background: linear-gradient(90deg, rgba(236, 72, 153, 0.24), rgba(168, 85, 247, 0.3));
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.4);
+  color: #ffffff;
+}
+
+.entanglementRiftCell:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Period Focused View (Mobile-friendly list/grid) & Entanglement Strip */
+.periodFocusedContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.periodFocusedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e2e8f0;
+  font-size: 20px;
+  padding: 4px 2px;
+}
+
+.periodCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 10px;
+}
+
+.periodCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(15, 23, 42, 0.85);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.12s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.periodCard:hover:not(.menuItemDisabled),
+.periodCard:focus-visible {
+  transform: translateY(-2px);
+  border-color: #38bdf8;
+  outline: none;
+}
+
+.periodCardSwatch {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.periodCardInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.periodCardName {
+  font-size: 20px;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.periodCardMeta {
+  font-size: 15px;
+  color: #94a3b8;
+}
+
+/* Preview Panel */
+.previewPanel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.88));
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.previewIdentity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 240px;
+}
+
+.previewSwatch {
+  width: 68px;
+  height: 68px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+.previewSwatchZ {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.previewSwatchSymbol {
+  font-size: 34px;
+  font-weight: bold;
+  line-height: 1;
+  margin-top: 8px;
+}
+
+.previewTitleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.previewTitle {
+  margin: 0;
+  font-size: 26px;
+  font-weight: normal;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.previewSubtitle {
+  font-size: 16px;
+  color: #94a3b8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.previewBadge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.previewBadgeNoble {
+  border-color: rgba(240, 171, 252, 0.65);
+  color: #f0abfc;
+  background: rgba(168, 85, 247, 0.18);
+}
+
+.previewBadgeEntangled {
+  border-color: rgba(236, 72, 153, 0.65);
+  color: #f9a8d4;
+  background: rgba(236, 72, 153, 0.18);
+}
+
+.previewStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.previewStatBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.previewStatLabel {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.previewStatValue {
+  font-size: 20px;
+  color: #f8fafc;
+}
+
+.previewMechanics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.mechanicPill {
+  font-size: 14px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #bae6fd;
+}
+
+.previewActionButton {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  border: 1px solid #38bdf8;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 20px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s, filter 0.15s;
+}
+
+.previewActionButton:hover:not(:disabled) {
+  filter: brightness(1.15);
+  transform: scale(1.03);
+}
+
+.previewActionButton:disabled {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.emptyFilterState {
+  text-align: center;
+  padding: 24px;
+  color: #94a3b8;
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .periodProgressStrip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .previewPanel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .previewActionButton {
+    width: 100%;
+  }
+}

@@ -6,6 +6,7 @@ import type { BohrBackgroundRenderer } from '../effects/BohrBackgroundRenderer';
 import type { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
 import { assembleCampaignLevel, assemblePacedLevel } from '../generator/chunkAssembler';
 import { MobileTouchController } from '../input/MobileTouchController';
+import { CoherenceSystem } from '../mechanics/coherenceSystem';
 import { getScreenWrapAxes } from '../physics/entanglementTether';
 import {
   type QuantumPinningState,
@@ -18,7 +19,14 @@ import { type GhostFrame, GhostRecorder } from '../tools/GhostRecorder';
 import { hapticFeedback } from '../tools/HapticFeedback';
 import { gameEvents } from '../tools/gameEvents';
 import { decodeLevelFromUrl } from '../tools/levelCodec';
-import type { CollapseConfig, IsotopeMedal, LevelData, PlatformPhase, TetherPylon } from '../types';
+import type {
+  CoherenceTier,
+  CollapseConfig,
+  IsotopeMedal,
+  LevelData,
+  PlatformPhase,
+  TetherPylon
+} from '../types';
 import type { GhostHero } from './GhostHero';
 import type Hero from './Hero';
 import { CameraDirector } from './systems/CameraDirector';
@@ -128,6 +136,11 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public lastSplitUpdateMs = 0;
   public phaseIndicatorText: Phaser.GameObjects.Text | null = null;
   public dilationIndicatorText: Phaser.GameObjects.Text | null = null;
+  public readonly coherenceSystem: CoherenceSystem = new CoherenceSystem();
+  public coherenceBarGraphics: Phaser.GameObjects.Graphics | null = null;
+  public coherenceTierText: Phaser.GameObjects.Text | null = null;
+  public lastCoherenceValue = -1;
+  public lastCoherenceTier: CoherenceTier = 'x1';
   public isLevelCompleted = false;
   public isRespawning = false;
   public isTransitioningLevel = false;
@@ -189,6 +202,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     this.nextLevelNumberPending = null;
     this.ephemeralPlatforms = [];
     this.entanglementRevealed = false;
+    this.coherenceSystem.reset(false);
+    this.lastCoherenceValue = -1;
+    this.lastCoherenceTier = 'x1';
     this.touchController.reset();
     this.uiPointerConsumed = false;
     this.ghostRecorder.reset();
@@ -348,11 +364,13 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
 
     soundManager.init();
     hapticFeedback.init();
+    this.coherenceSystem.attach();
 
     this.scale?.on?.('resize', this.handleResize, this);
 
     const cleanupScene = () => {
       this.scale?.off?.('resize', this.handleResize, this);
+      this.coherenceSystem.detach();
       soundManager.stopBgm();
       this.clearLevelObjects();
     };
@@ -478,6 +496,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
 
   // --- LevelBuilder delegations ---
   public buildLevel(): void {
+    this.coherenceSystem.reset(true);
     this.levelBuilder.buildLevel();
   }
   public spawnHeroes(): void {
@@ -558,13 +577,24 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
 
   // --- RespawnTransitionController delegations ---
   public quickRespawn(deathPosition?: { x: number; y: number }): void {
+    this.coherenceSystem.reset(true);
     this.respawnTransitionController.quickRespawn(deathPosition);
   }
   public killHero(hero: Hero): void {
     this.respawnTransitionController.killHero(hero);
   }
   public completeLevel(): void {
+    if (this.isLevelCompleted || this.isTransitioningLevel) return;
+    const store = useGameStore.getState();
+    const completedLevelId = store.sharedLevel ? 0 : Number(this.levelData.id);
+    const coherentRun = this.coherenceSystem.isCoherentRun();
+    const styleScore = this.coherenceSystem.getStyleScore();
+
     this.respawnTransitionController.completeLevel();
+
+    if (!Number.isNaN(completedLevelId) && (coherentRun || styleScore > 0)) {
+      useGameStore.getState().recordCoherenceResult(completedLevelId, styleScore, coherentRun);
+    }
   }
   public advanceToNextLevel(): void {
     this.respawnTransitionController.advanceToNextLevel();
@@ -657,7 +687,8 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
         delta,
         this.heroes,
         this.portalSprite,
-        this.isTimeDilationActive
+        this.isTimeDilationActive,
+        this.coherenceSystem.getValue()
       );
       return;
     }
@@ -682,6 +713,15 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     this.dilatedElapsedMs += delta * timeDilationFactor;
     const elapsedMs = Math.max(0, time - this.startTime);
 
+    const focusedHero = this.heroes.find((h) => h.isFocused && h.active) || this.heroes[0];
+    if (focusedHero?.body) {
+      const isGrounded =
+        focusedHero.upsideDown === 1
+          ? Boolean(focusedHero.body.touching.down || focusedHero.body.blocked.down)
+          : Boolean(focusedHero.body.touching.up || focusedHero.body.blocked.up);
+      this.coherenceSystem.update(delta, focusedHero.body.velocity.x, isGrounded);
+    }
+
     this.hudController.updateTimerAndIndicators();
     this.cameraDirector.updateFraming(delta);
 
@@ -696,7 +736,8 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       delta,
       this.heroes,
       this.portalSprite,
-      this.isTimeDilationActive
+      this.isTimeDilationActive,
+      this.coherenceSystem.getValue()
     );
     this.hudController.updateThumbRibbon();
 

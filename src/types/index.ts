@@ -169,6 +169,7 @@ export interface GameState {
 }
 
 export type IsotopeMedal = 'none' | 'bronze' | 'silver' | 'gold';
+export type CoherenceTier = 'x1' | 'x2' | 'x3' | 'HYPER';
 
 export interface ScoreItem {
   best: number;
@@ -179,6 +180,9 @@ export interface ScoreItem {
   bestSwitches?: number;
   medal?: IsotopeMedal;
   bellSync?: boolean;
+  coherentRun?: boolean;
+  bestStyleScore?: number;
+  lastStyleScore?: number;
 }
 
 export type ScoreState = Record<number, ScoreItem>;

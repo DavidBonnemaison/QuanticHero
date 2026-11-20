@@ -189,4 +189,34 @@ describe('HudController', () => {
     hud.showLevelCompleteOverlay(2500, 2500, 0, 2, 'gold');
     expect(ctx.levelCompleteOverlay).not.toBeNull();
   });
+
+  it('renders slim coherence gauge, updates tier indicator, and displays COHERENT RUN badge at HYPER tier', async () => {
+    const { CoherenceSystem } = await import('../../mechanics/coherenceSystem');
+    const ctx = makeHudContext();
+    const coherenceSystem = new CoherenceSystem();
+    ctx.coherenceSystem = coherenceSystem;
+    ctx.lastCoherenceValue = -1;
+    ctx.lastCoherenceTier = 'x1';
+
+    const hud = new HudController(ctx);
+    hud.createHUD();
+
+    expect(ctx.coherenceBarGraphics).not.toBeNull();
+    expect(ctx.coherenceTierText).not.toBeNull();
+    expect(ctx.coherenceTierText?.text).toBe('x1');
+
+    coherenceSystem.addCoherence(90);
+    hud.updateTimerAndIndicators();
+    expect(ctx.coherenceTierText?.text).toBe('⚡ HYPER');
+    expect(ctx.coherenceTierText?.setColor).toHaveBeenCalledWith('#fbbf24');
+
+    hud.repositionOnResize(1280, 800);
+    expect(ctx.coherenceTierText?.x).toBe(1170);
+
+    hud.showLevelCompleteOverlay(2500, 2500, 0, 2, 'gold');
+    const createdTexts = (ctx.add.text as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[2]);
+    expect(
+      createdTexts.some((txt) => typeof txt === 'string' && txt.includes('COHERENT RUN'))
+    ).toBe(true);
+  });
 });

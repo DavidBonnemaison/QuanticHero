@@ -1,21 +1,20 @@
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { soundManager } from '../audio/SoundManager';
 import { getAllLevelMetadata, getLevelMetadata } from '../data/levels';
-import { findMoleculeByElements, getMoleculeById } from '../data/molecules';
-import { getElementSpectroscopy } from '../data/spectroscopy';
+import { SECRET_MOLECULES, findMoleculeByElements, getMoleculeById } from '../data/molecules';
+import { getElementSpectroscopy, isNobleGas } from '../data/spectroscopy';
 import { getStrings } from '../i18n/strings';
-import {
-  TOTAL_PERIODIC_ELEMENTS,
-  countGoldMedals,
-  getMedalDisplayInfo
-} from '../services/MedalService';
+import { TOTAL_PERIODIC_ELEMENTS, countGoldMedals } from '../services/MedalService';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
 import { isGodMode } from '../tools/godMode';
 import { isEntanglementLevelId } from '../tools/levelProgression';
 import type { IsotopeMedal } from '../types';
 import styles from './LevelSelection.module.css';
+import { MoleculeCodex } from './MoleculeCodex';
+import { PeriodicTable, type PeriodicTableElementItem } from './PeriodicTable';
 
 export const LevelSelection: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +24,7 @@ export const LevelSelection: React.FC = () => {
   const maxEntanglementLevel = useGameStore((state) => state.maxEntanglementLevel ?? 110);
   const scores = useGameStore((state) => state.scores);
   const unlockedMolecules = useGameStore((state) => state.unlockedMolecules ?? []);
+  const moleculeScores = useGameStore((state) => state.moleculeScores ?? {});
   const unlockMolecule = useGameStore((state) => state.unlockMolecule);
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
   const setSharedLevel = useGameStore((state) => state.setSharedLevel);
@@ -37,6 +37,10 @@ export const LevelSelection: React.FC = () => {
 
   const [alchemyMode, setAlchemyMode] = useState(false);
   const [selectedAtomZ, setSelectedAtomZ] = useState<number | null>(null);
+  const [isCodexOpen, setIsCodexOpen] = useState(false);
+  const [noBondToast, setNoBondToast] = useState(false);
+  const [rejectedAtomZs, setRejectedAtomZs] = useState<number[]>([]);
+  const [spectralFlash, setSpectralFlash] = useState(false);
   const [synthesisBanner, setSynthesisBanner] = useState<{
     formula: string;
     name: string;
@@ -47,11 +51,17 @@ export const LevelSelection: React.FC = () => {
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heldAtomZRef = useRef<number | null>(null);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rejectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      if (rejectTimerRef.current) clearTimeout(rejectTimerRef.current);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     };
   }, []);
 
@@ -70,28 +80,6 @@ export const LevelSelection: React.FC = () => {
       : 'classic'
   );
 
-  const raw = getAllLevelMetadata()
-    .filter((meta) => {
-      const idNum = Number(meta.id);
-      if (activeTab === 'entanglement') {
-        return isEntanglementLevelId(idNum);
-      }
-      return !isEntanglementLevelId(idNum);
-    })
-    .map(({ id, hue, antiHue, symbol, atom }) => ({ id, hue, antiHue, symbol, atom }));
-
-  const enriched = raw.map((r) => {
-    const scoreEntry = scores[Number(r.id)];
-    const medal: IsotopeMedal =
-      scoreEntry?.medal ?? (scoreEntry?.best && scoreEntry.best > 0 ? 'bronze' : 'none');
-    return {
-      ...r,
-      score: scoreEntry ? formatScore(scoreEntry.best) : '00:00:00',
-      bestJumps: scoreEntry?.bestJumps,
-      medal
-    };
-  });
-
   const isDisabled = (id: string | number) => {
     if (godMode) return false;
     const num = Number(id);
@@ -101,11 +89,72 @@ export const LevelSelection: React.FC = () => {
     return num > maxLevel;
   };
 
+  const enriched = useMemo<PeriodicTableElementItem[]>(() => {
+    return getAllLevelMetadata()
+      .filter((meta) => {
+        const idNum = Number(meta.id);
+        if (activeTab === 'entanglement') {
+          return isEntanglementLevelId(idNum);
+        }
+        return !isEntanglementLevelId(idNum);
+      })
+      .map((meta) => {
+        const idNum = Number(meta.id);
+        const scoreEntry = scores[idNum];
+        const medal: IsotopeMedal =
+          scoreEntry?.medal ?? (scoreEntry?.best && scoreEntry.best > 0 ? 'bronze' : 'none');
+        return {
+          id: idNum,
+          symbol: meta.symbol,
+          atom: meta.atom,
+          hue: meta.hue,
+          antiHue: meta.antiHue,
+          score: scoreEntry ? formatScore(scoreEntry.best) : '00:00:00',
+          bestMs: scoreEntry?.best,
+          bestJumps: scoreEntry?.bestJumps,
+          medal,
+          disabled: godMode
+            ? false
+            : isEntanglementLevelId(idNum)
+              ? idNum > maxEntanglementLevel
+              : idNum > maxLevel,
+          isNobleGas: isNobleGas(idNum),
+          isEntanglement: isEntanglementLevelId(idNum),
+          noblePlayground: meta.noblePlayground,
+          parJumps: meta.parJumps,
+          authorTime: meta.authorTime
+        };
+      });
+  }, [activeTab, godMode, maxEntanglementLevel, maxLevel, scores]);
+
   const tryCombineElements = (z1: number, z2: number) => {
     const recipe = findMoleculeByElements(z1, z2);
     setSelectedAtomZ(null);
     heldAtomZRef.current = null;
-    if (!recipe) return;
+
+    if (!recipe) {
+      soundManager.playAlchemyReject();
+      setRejectedAtomZs([z1, z2]);
+      setNoBondToast(true);
+      if (rejectTimerRef.current) clearTimeout(rejectTimerRef.current);
+      rejectTimerRef.current = setTimeout(() => {
+        setRejectedAtomZs([]);
+      }, 550);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => {
+        setNoBondToast(false);
+      }, 2200);
+      return;
+    }
+
+    setNoBondToast(false);
+    setRejectedAtomZs([]);
+    soundManager.playAlchemySynthesis();
+    setSpectralFlash(true);
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = setTimeout(() => {
+      setSpectralFlash(false);
+    }, 620);
 
     unlockMolecule(recipe.id);
     const aSpec = getElementSpectroscopy(z1);
@@ -140,34 +189,32 @@ export const LevelSelection: React.FC = () => {
     }
   };
 
-  const handleAtomClick = (id: string | number, e: React.MouseEvent) => {
-    const z = Number(id);
+  const handleAtomClick = (id: number, e: React.MouseEvent) => {
     if (e.shiftKey || alchemyMode) {
       e.preventDefault();
       if (selectedAtomZ === null) {
-        setSelectedAtomZ(z);
-      } else if (selectedAtomZ === z) {
+        setSelectedAtomZ(id);
+      } else if (selectedAtomZ === id) {
         setSelectedAtomZ(null);
       } else {
-        tryCombineElements(selectedAtomZ, z);
+        tryCombineElements(selectedAtomZ, id);
       }
       return;
     }
     handleSelect(id);
   };
 
-  const handleAtomTouchStart = (id: string | number, e: React.TouchEvent) => {
-    const z = Number(id);
-    if (e.touches.length >= 2 && heldAtomZRef.current !== null && heldAtomZRef.current !== z) {
+  const handleAtomTouchStart = (id: number, e: React.TouchEvent) => {
+    if (e.touches.length >= 2 && heldAtomZRef.current !== null && heldAtomZRef.current !== id) {
       e.preventDefault();
-      tryCombineElements(heldAtomZRef.current, z);
+      tryCombineElements(heldAtomZRef.current, id);
       return;
     }
     if (e.touches.length === 1) {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       holdTimerRef.current = setTimeout(() => {
-        heldAtomZRef.current = z;
-        setSelectedAtomZ(z);
+        heldAtomZRef.current = id;
+        setSelectedAtomZ(id);
       }, 260);
     }
   };
@@ -182,15 +229,19 @@ export const LevelSelection: React.FC = () => {
     }
   };
 
-  const getMedalClass = (medal: IsotopeMedal): string => {
-    if (medal === 'gold') return styles.medalGold;
-    if (medal === 'silver') return styles.medalSilver;
-    if (medal === 'bronze') return styles.medalBronze;
-    return '';
-  };
+  const selectedAtomSymbol =
+    selectedAtomZ !== null ? getElementSpectroscopy(selectedAtomZ).symbol : null;
 
   return (
     <div className={styles.selectionContainer}>
+      {spectralFlash && (
+        <div
+          className={styles.spectralFlash}
+          data-testid="alchemy-spectral-flash"
+          aria-hidden="true"
+        />
+      )}
+
       <div className={styles.header}>
         <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
           {t.levelSelection.backToMenu}
@@ -234,7 +285,35 @@ export const LevelSelection: React.FC = () => {
           ⚗️ {t.levelSelection.chemicalBond}{' '}
           {alchemyMode ? t.levelSelection.chemicalBondOn : t.levelSelection.chemicalBondHint}
         </button>
+
+        <button
+          type="button"
+          className={styles.codexButton}
+          data-testid="open-codex-button"
+          onClick={() => setIsCodexOpen(true)}
+        >
+          📖 {t.levelSelection.codexButton(unlockedMolecules.length, SECRET_MOLECULES.length)}
+        </button>
       </div>
+
+      {alchemyMode && (
+        <div className={styles.alchemyStatusHint} data-testid="alchemy-status-hint">
+          {selectedAtomSymbol
+            ? t.levelSelection.alchemySelectPartner(selectedAtomSymbol)
+            : t.levelSelection.alchemyDragHint}
+        </div>
+      )}
+
+      {noBondToast && (
+        <div
+          className={styles.noBondToast}
+          data-testid="alchemy-no-bond-toast"
+          role="status"
+          aria-live="polite"
+        >
+          ⚡ {t.levelSelection.noStableBond}
+        </div>
+      )}
 
       {synthesisBanner && (
         <div className={styles.covalentBanner} data-testid="covalent-bond-banner">
@@ -259,7 +338,7 @@ export const LevelSelection: React.FC = () => {
                 type="button"
                 className={styles.moleculeChip}
                 onClick={() => navigate(`/game/molecule/${mol.id}`)}
-                title={mol.mechanicSummary}
+                title={locale === 'fr' ? mol.mechanicSummaryFr : mol.mechanicSummary}
               >
                 ⚗️ {mol.formula} ({mol.name})
               </button>
@@ -289,55 +368,34 @@ export const LevelSelection: React.FC = () => {
           </button>
         </div>
       )}
-      {enriched.map(({ id, hue, antiHue, symbol, atom, score: levelScore, bestJumps, medal }) => {
-        const disabled = isDisabled(id);
-        const medalInfo = getMedalDisplayInfo(medal, locale);
-        const isSelectedAlchemy = selectedAtomZ === Number(id);
-        return (
-          <div
-            key={`${id}-${symbol}`}
-            className={`${styles.menuItem} ${getMedalClass(medal)} ${
-              disabled ? styles.menuItemDisabled : ''
-            } ${isSelectedAlchemy ? styles.menuItemSelectedAlchemy : ''}`}
-            onClick={(e) => handleAtomClick(id, e)}
-            onTouchStart={(e) => handleAtomTouchStart(id, e)}
-            onTouchEnd={handleAtomTouchEnd}
-            role="button"
-            tabIndex={disabled ? -1 : 0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') handleSelect(id);
-            }}
-          >
-            <div className={styles.atom} style={{ backgroundColor: hue, color: antiHue }}>
-              {symbol}
-              <div className={styles.atomicNumber}>{id}</div>
-              {medal !== 'none' && (
-                <span
-                  className={styles.medalStar}
-                  style={{ color: medalInfo.color }}
-                  title={medalInfo.label}
-                  aria-label={medalInfo.label}
-                >
-                  {medalInfo.symbol}
-                </span>
-              )}
-            </div>
-            <div className={styles.atomDescription}>
-              <h2 className={styles.atomTitle}>{atom}</h2>
-              <div className={styles.atomScore}>
-                <span>{levelScore}</span>
-                {bestJumps !== undefined && (
-                  <span className={styles.jumpBadge}>
-                    {' '}
-                    • {bestJumps}
-                    {t.levelSelection.jumpSuffix}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+
+      <PeriodicTable
+        elements={enriched}
+        locale={locale}
+        activeTab={activeTab}
+        isEntanglementUnlocked={isEntanglementUnlocked}
+        onOpenEntanglement={() => setActiveTab('entanglement')}
+        alchemyMode={alchemyMode}
+        selectedAtomZ={selectedAtomZ}
+        rejectedAtomZs={rejectedAtomZs}
+        onAtomClick={handleAtomClick}
+        onAtomSelect={handleSelect}
+        onAtomCombine={tryCombineElements}
+        onAtomTouchStart={handleAtomTouchStart}
+        onAtomTouchEnd={handleAtomTouchEnd}
+      />
+
+      <MoleculeCodex
+        isOpen={isCodexOpen}
+        onClose={() => setIsCodexOpen(false)}
+        unlockedMolecules={unlockedMolecules}
+        moleculeScores={moleculeScores}
+        locale={locale}
+        onPlayMolecule={(molId) => {
+          setIsCodexOpen(false);
+          navigate(`/game/molecule/${molId}`);
+        }}
+      />
     </div>
   );
 };
