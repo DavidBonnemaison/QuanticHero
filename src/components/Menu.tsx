@@ -88,10 +88,6 @@ export default function Menu(): React.ReactElement {
     navigate('/levels');
   };
 
-  const handleGoToEditor = () => {
-    navigate('/editor');
-  };
-
   const handleInstallClick = async () => {
     if (!installPrompt) return;
     await installPrompt.prompt();
@@ -183,9 +179,6 @@ export default function Menu(): React.ReactElement {
       )}
       <button type="button" className={styles.button} onClick={handleGoToLevels}>
         {t.menu.periodicTable}
-      </button>
-      <button type="button" className={styles.button} onClick={handleGoToEditor}>
-        {t.menu.levelLab}
       </button>
       {hasProgress && (
         <button

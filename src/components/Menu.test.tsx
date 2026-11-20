@@ -41,7 +41,7 @@ describe('Menu component', () => {
     expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /new game/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /periodic table/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /level lab/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /level lab/i })).not.toBeInTheDocument();
   });
 
   it('navigates directly to explanation and sets current level to 1 on "New Game" click without progress', () => {
@@ -112,15 +112,11 @@ describe('Menu component', () => {
     expect(screen.getByText('Explanation Page')).toBeInTheDocument();
   });
 
-  it('navigates to /levels on "Periodic Table" click and /editor on "Level Lab" click', () => {
-    const { unmount } = renderWithRouter();
+  it('navigates to /levels on "Periodic Table" click and keeps Level Lab hidden', () => {
+    renderWithRouter();
+    expect(screen.queryByRole('button', { name: /level lab/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /periodic table/i }));
     expect(screen.getByText('Levels Page')).toBeInTheDocument();
-    unmount();
-
-    renderWithRouter();
-    fireEvent.click(screen.getByRole('button', { name: /level lab/i }));
-    expect(screen.getByText('Editor Page')).toBeInTheDocument();
   });
 
   it('toggles EN / FR locale and renders fully localized French labels', () => {
@@ -137,7 +133,7 @@ describe('Menu component', () => {
       screen.getByRole('button', { name: /continuer — atome #2 \(He\)/i })
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /tableau périodique/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /labo de niveaux/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /labo de niveaux/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /nouvelle partie/i })).toBeInTheDocument();
   });
 
