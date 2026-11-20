@@ -20,13 +20,32 @@ function buildSimWorld(levelData: LevelData): SimWorld {
 }
 
 describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
-  it('Levels 1-4 (H to Be): pure platforming with 0 power-up particles', () => {
-    const seeds = [42, 50, 56, 63];
-    for (let lvl = 1; lvl <= 4; lvl++) {
+  it('Levels 1-3 (H to Li): pure platforming with 0 power-up particles', () => {
+    const seeds = [42, 50, 56];
+    for (let lvl = 1; lvl <= 3; lvl++) {
       const assembly = assembleCampaignLevel(lvl, seeds[lvl - 1]);
       expect(assembly.simulation.success).toBe(true);
       expect(assembly.levelData.particles.length).toBe(0);
     }
+  });
+
+  it('Level 4 (Be): passes with duplicate + requireLock plate, FAILS without duplicate', () => {
+    const assembly = assembleCampaignLevel(4, 63);
+    expect(assembly.simulation.success).toBe(true);
+    expect(assembly.levelData.particles.some((p) => p.type === 'duplicate')).toBe(true);
+    expect(assembly.levelData.pressurePlates?.some((pl) => pl.requireLock)).toBe(true);
+
+    const worldWithoutDuplicate: SimWorld = {
+      ...buildSimWorld(assembly.levelData),
+      particles: assembly.levelData.particles.filter((p) => p.type !== 'duplicate')
+    };
+    const res = simulateFullLevel(
+      worldWithoutDuplicate,
+      assembly.levelData.player.position,
+      assembly.levelData.door,
+      assembly.fullPlatformPath
+    );
+    expect(res.success).toBe(false);
   });
 
   it('Level 5 (B): passes with speed, FAILS without speed particle', () => {
@@ -63,17 +82,17 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     expect(res.success).toBe(false);
   });
 
-  it('Level 14 (Si): passes with duplicate + requireLock plate, FAILS without duplicate', () => {
+  it('Level 14 (Si): passes with condense (de Broglie wave), FAILS without condense', () => {
     const assembly = assembleCampaignLevel(14, 133);
     expect(assembly.simulation.success).toBe(true);
-    expect(assembly.levelData.pressurePlates?.some((pl) => pl.requireLock)).toBe(true);
+    expect(assembly.levelData.particles.some((p) => p.type === 'condense')).toBe(true);
 
-    const worldWithoutDuplicate: SimWorld = {
+    const worldWithoutCondense: SimWorld = {
       ...buildSimWorld(assembly.levelData),
-      particles: assembly.levelData.particles.filter((p) => p.type !== 'duplicate')
+      particles: assembly.levelData.particles.filter((p) => p.type !== 'condense')
     };
     const res = simulateFullLevel(
-      worldWithoutDuplicate,
+      worldWithoutCondense,
       assembly.levelData.player.position,
       assembly.levelData.door,
       assembly.fullPlatformPath

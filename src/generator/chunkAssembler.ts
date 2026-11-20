@@ -4,12 +4,14 @@ import { PHYSICS } from '../physics/constants';
 import type {
   CollapseConfig,
   Door,
+  EntanglementConfig,
   Gate,
   LevelData,
   Particle,
   Platform,
   PressurePlate,
-  Spike
+  Spike,
+  TetherPylon
 } from '../types';
 import { applyCampaignDirectives } from './campaignDirector';
 import {
@@ -478,6 +480,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
   let collapseConfig: CollapseConfig | undefined;
   let gates: Gate[] | undefined;
   let pressurePlates: PressurePlate[] | undefined;
+  let entanglementConfig: EntanglementConfig | undefined;
+  let tetherPylons: TetherPylon[] | undefined;
 
   const makeIntro = (id: string, baseY: number) => {
     const intro1: Platform = { x: 420, y: baseY - 25, width: 170, height: 20 };
@@ -500,9 +504,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
   switch (level) {
     case 1:
     case 2:
-    case 3:
-    case 4: {
-      // Univers 1 (Niv 1-4): Plateforme pure progressive (montées, descentes, pics dès N2, mobiles dès N3)
+    case 3: {
+      // Univers 1 (Niv 1-3): Plateforme pure progressive (montées, descentes, pics dès N2, mobiles dès N3)
       const rng = new SeededRandom(seed + level * 19);
       height = 1200;
       const baseY = 760;
@@ -528,13 +531,76 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         rng,
         progress: level * 0.08,
         allowSpikes: level >= 3,
-        allowMoving: level >= 4
+        allowMoving: false
       });
       climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -15);
 
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
       width = Math.max(2400, Math.round(resolutionChunk.exit.x + 300));
+      break;
+    }
+
+    case 4: {
+      // Niv 4 (Be - Milestone superposition_orbital): Zone safe avec duplicate + dalle requireLock + porte + switch orbital
+      width = 2700;
+      height = 1100;
+      const baseY = 720;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 240 });
+      const p1: Platform = { x: 430, y: baseY - 25, width: 220, height: 20 };
+      const dupPart: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'duplicate' };
+      const p2: Platform = { x: 720, y: baseY - 45, width: 220, height: 20 };
+      const p3: Platform = { x: 1010, y: baseY - 65, width: 240, height: 20 };
+      const p4: Platform = { x: 1320, y: baseY - 85, width: 210, height: 20 };
+      const accelPlats = [p1, p2, p3, p4];
+
+      accelerationChunk = {
+        id: 'chunk_be_superposition_orbital',
+        name: 'Superposition & Switch Orbital',
+        archetype: 'speedrun_highway',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p4.x + p4.width - 40, y: p4.y },
+        platforms: accelPlats,
+        pathPlatforms: accelPlats,
+        spikes: [],
+        particles: [dupPart],
+        bounds: computeChunkBounds(accelPlats, [], [dupPart])
+      };
+
+      const rawClimax = createSpeedrunHighwayChunk({
+        id: 'chunk_be_climax',
+        steps: 3,
+        horizontalSpacing: 185,
+        verticalDrop: 22,
+        platformWidth: 180,
+        speedBoostParticle: false
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -15);
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      width = Math.max(2600, Math.round(resolutionChunk.exit.x + 300));
+
+      gates = [
+        {
+          id: 'gate_be_4',
+          x: Math.round(p3.x + 60),
+          y: 0,
+          width: 24,
+          height: Math.round(p3.y)
+        }
+      ];
+      pressurePlates = [
+        {
+          id: 'plate_be_4',
+          x: p2.x + 65,
+          y: p2.y - 12,
+          width: 90,
+          height: 12,
+          targetGateId: 'gate_be_4',
+          requireLock: true,
+          autoSwitchOnTrigger: true
+        }
+      ];
       break;
     }
 
@@ -574,6 +640,48 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
       width = Math.max(width, Math.round(resolutionChunk.exit.x + 300));
+      break;
+    }
+
+    case 8: {
+      // Niv 8 (O - Milestone phase_shift_hud): Alternance obligatoire cyan/magenta dès la zone de découverte
+      width = 2700;
+      height = 1100;
+      const baseY = 720;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 240 });
+
+      // Initial phase is 'cyan'; jumping from spawn toggles phase to 'magenta', then 'cyan', 'magenta', 'cyan'
+      const p1: Platform = { x: 430, y: baseY - 20, width: 170, height: 20, phase: 'magenta' };
+      const p2: Platform = { x: 660, y: baseY - 40, width: 170, height: 20, phase: 'cyan' };
+      const p3: Platform = { x: 890, y: baseY - 60, width: 170, height: 20, phase: 'magenta' };
+      const p4: Platform = { x: 1120, y: baseY - 80, width: 170, height: 20, phase: 'cyan' };
+      const accelPlats = [p1, p2, p3, p4];
+
+      accelerationChunk = {
+        id: 'chunk_o_phase_discovery',
+        name: 'Phases Cyan/Magenta',
+        archetype: 'superposition_chamber',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p4.x + p4.width - 40, y: p4.y },
+        platforms: accelPlats,
+        pathPlatforms: accelPlats,
+        spikes: [],
+        particles: [],
+        bounds: computeChunkBounds(accelPlats)
+      };
+
+      const rawSuperpos = createSuperpositionChamberChunk({
+        id: 'chunk_o_phase_climax',
+        steps: 4,
+        stepSpacing: 175,
+        platformWidth: 155,
+        verticalStep: -20,
+        initialPhase: 'magenta'
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawSuperpos, alpha, -15);
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      width = Math.max(2600, Math.round(resolutionChunk.exit.x + 300));
       break;
     }
 
@@ -621,6 +729,57 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       break;
     }
 
+    case 11: {
+      // Niv 11 (Na - Milestone quantum_tunneling): tunnel face à un mur mince (<= 80px) infranchissable par le haut + séquence de 3 murs
+      width = 2900;
+      height = 1100;
+      const baseY = 720;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 240 });
+
+      const p1: Platform = { x: 420, y: baseY - 20, width: 220, height: 20 };
+      const tun1: Particle = { x: p1.x + 110, y: p1.y - 30, type: 'tunnel' };
+      const wall1: Platform = { x: p1.x + p1.width + 25, y: 0, width: 32, height };
+
+      const p2: Platform = { x: wall1.x + wall1.width + 25, y: baseY - 20, width: 230, height: 20 };
+      const tun2: Particle = { x: p2.x + 115, y: p2.y - 30, type: 'tunnel' };
+      const wall2: Platform = { x: p2.x + p2.width + 25, y: 0, width: 36, height };
+
+      const p3: Platform = { x: wall2.x + wall2.width + 25, y: baseY - 35, width: 230, height: 20 };
+      const tun3: Particle = { x: p3.x + 115, y: p3.y - 30, type: 'tunnel' };
+      const wall3: Platform = { x: p3.x + p3.width + 25, y: 0, width: 40, height };
+
+      const p4: Platform = { x: wall3.x + wall3.width + 25, y: baseY - 50, width: 220, height: 20 };
+      const tunnelPlats = [p1, wall1, p2, wall2, p3, wall3, p4];
+      const tunnelParts = [tun1, tun2, tun3];
+
+      accelerationChunk = {
+        id: 'chunk_na_quantum_tunneling',
+        name: 'Effet Tunnel',
+        archetype: 'speedrun_highway',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p4.x + p4.width - 40, y: p4.y },
+        platforms: tunnelPlats,
+        pathPlatforms: [p1, p2, p3, p4],
+        spikes: [],
+        particles: tunnelParts,
+        bounds: computeChunkBounds(tunnelPlats, [], tunnelParts)
+      };
+
+      const rawClimax = createSpeedrunHighwayChunk({
+        id: 'chunk_na_climax',
+        steps: 3,
+        horizontalSpacing: 185,
+        verticalDrop: 22,
+        platformWidth: 180,
+        speedBoostParticle: false
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -15);
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      width = Math.max(2800, Math.round(resolutionChunk.exit.x + 300));
+      break;
+    }
+
     case 12: {
       // Niv 12 (Mg - Boss Univers 1): Combinaison Speed + LowGravity
       height = 1150;
@@ -657,61 +816,45 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     }
 
     case 14: {
-      // Niv 14 (Si): Introduction du Clonage (duplicate) + dalle requireLock + porte pleine hauteur
-      width = 2700;
+      // Niv 14 (Si - Milestone de_broglie_wave): particule condense + gouffre franchissable en solidifiant son onde de Broglie
+      width = 2900;
       height = 1100;
-      awakeningChunk = createSpawnChunk({ originX: 120, originY: 700, width: 240 });
-      const { intro1, intro2 } = makeIntro('chunk_si_intro', 700);
-      const p1: Platform = { x: 900, y: 640, width: 190, height: 20 };
-      const p2: Platform = { x: 1150, y: 620, width: 190, height: 20 };
-      const p3: Platform = { x: 1400, y: 600, width: 210, height: 20 };
-      const dupPart: Particle = { x: p2.x + 95, y: p2.y - 30, type: 'duplicate' };
-      const accelPlats = [intro1, intro2, p1, p2, p3];
+      const baseY = 700;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 240 });
+
+      const p1: Platform = { x: 420, y: baseY - 20, width: 240, height: 20 };
+      const condensePart: Particle = { x: p1.x + 120, y: p1.y - 30, type: 'condense' };
+      // 540px chasm strictly requiring de Broglie wave crystallization mid-jump
+      const p2: Platform = { x: p1.x + p1.width + 540, y: baseY - 20, width: 240, height: 20 };
+      // Second 560px chasm to consolidate mastery
+      const p3: Platform = { x: p2.x + p2.width + 560, y: baseY - 40, width: 240, height: 20 };
+      const accelPlats = [p1, p2, p3];
 
       accelerationChunk = {
-        id: 'chunk_cloning_accel',
-        name: 'Clonage Quantique',
-        archetype: 'speedrun_highway',
-        entry: { x: intro1.x + 40, y: intro1.y },
+        id: 'chunk_si_de_broglie',
+        name: 'Onde de Broglie Solidifiée',
+        archetype: 'electron_chasm',
+        entry: { x: p1.x + 40, y: p1.y },
         exit: { x: p3.x + p3.width - 40, y: p3.y },
         platforms: accelPlats,
         pathPlatforms: accelPlats,
         spikes: [],
-        particles: [dupPart],
-        bounds: computeChunkBounds(accelPlats, [], [dupPart])
+        particles: [condensePart],
+        bounds: computeChunkBounds(accelPlats, [], [condensePart])
       };
+
       const rawClimax = createSpeedrunHighwayChunk({
-        id: 'chunk_cloning_climax',
+        id: 'chunk_si_climax',
         steps: 3,
-        horizontalSpacing: 190,
+        horizontalSpacing: 185,
         verticalDrop: 22,
         platformWidth: 180,
         speedBoostParticle: false
       });
-      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -10);
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawClimax, alpha, -15);
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
-      const resPlat = resolutionChunk.platforms[0];
-      gates = [
-        {
-          id: 'gate_si_14',
-          x: Math.round(resPlat.x + 60),
-          y: 0,
-          width: 24,
-          height: Math.round(resPlat.y)
-        }
-      ];
-      pressurePlates = [
-        {
-          id: 'plate_si_14',
-          x: p3.x + 60,
-          y: p3.y - 12,
-          width: 90,
-          height: 12,
-          targetGateId: 'gate_si_14',
-          requireLock: true
-        }
-      ];
+      width = Math.max(2800, Math.round(resolutionChunk.exit.x + 300));
       break;
     }
 
@@ -766,6 +909,71 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       climaxChunk = accelerationChunk;
       const rawRes = createResolutionChunk({ width: 260 });
       resolutionChunk = connectAndTranslateChunk(accelerationChunk, rawRes, alpha, -15);
+      break;
+    }
+
+    case 26: {
+      // Niv 26 (Fe - Milestone entanglement_tether & Supernova Boss):
+      // Config entanglement avec tetherPhysical: true, tetherPylons pendulaires et climax Supernova (speed + decay) vers Niv. 27
+      height = 1150;
+      const baseY = 740;
+      awakeningChunk = createSpawnChunk({ originX: 120, originY: baseY, width: 240 });
+
+      const p1: Platform = { x: 430, y: baseY - 20, width: 200, height: 20 };
+      const p2: Platform = { x: 700, y: baseY - 45, width: 210, height: 20 };
+      const p3: Platform = { x: 980, y: baseY - 65, width: 220, height: 20 };
+      const speedPart: Particle = { x: p3.x + 110, y: p3.y - 30, type: 'speed' };
+      // 520px Supernova chasm launched via speed + tether pendulum swing
+      const p4: Platform = { x: p3.x + p3.width + 520, y: baseY - 65, width: 230, height: 20 };
+      const accelPlats = [p1, p2, p3, p4];
+
+      accelerationChunk = {
+        id: 'chunk_fe_entanglement_tether',
+        name: 'Corde d’Intrication & Supernova',
+        archetype: 'speedrun_highway',
+        entry: { x: p1.x + 40, y: p1.y },
+        exit: { x: p4.x + p4.width - 40, y: p4.y },
+        platforms: accelPlats,
+        pathPlatforms: accelPlats,
+        spikes: [],
+        particles: [speedPart],
+        bounds: computeChunkBounds(accelPlats, [], [speedPart])
+      };
+
+      const rawDecay = createDecayZoneChunk({
+        id: 'chunk_fe_supernova_climax',
+        steps: 4,
+        decayMs: 760,
+        stepSpacing: 175,
+        platformWidth: 155,
+        verticalDelta: -20,
+        includeStableExit: true
+      });
+      climaxChunk = connectAndTranslateChunk(accelerationChunk, rawDecay, alpha, -15);
+      const rawRes = createResolutionChunk({ width: 260 });
+      resolutionChunk = connectAndTranslateChunk(climaxChunk, rawRes, alpha, -15);
+      width = Math.max(3000, Math.round(resolutionChunk.exit.x + 300));
+
+      entanglementConfig = {
+        mode: 'mirror_x',
+        betaSpawn: {
+          x: width - 180,
+          y: baseY - Math.round(PHYSICS.HERO_HEIGHT / 2)
+        },
+        portalMode: 'dual',
+        betaDoor: {
+          x: Math.max(180, width - Math.round(resolutionChunk.exit.x)),
+          y: Math.round(resolutionChunk.exit.y - 10)
+        },
+        tetherPhysical: true,
+        tetherMaxLength: 540
+      };
+
+      tetherPylons = [
+        { x: 640, y: baseY - 180, radius: 18, maxLength: 540 },
+        { x: 1460, y: baseY - 200, radius: 18, maxLength: 540 },
+        { x: 2240, y: baseY - 220, radius: 18, maxLength: 540 }
+      ];
       break;
     }
 
@@ -1425,6 +1633,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     platforms: allPlatforms,
     gates,
     pressurePlates,
+    entanglement: entanglementConfig,
+    tetherPylons,
     door,
     collapse: collapseConfig,
     meta: {
@@ -1445,6 +1655,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     bounceWalls: true,
     gates: directedLevelData.gates,
     pressurePlates: directedLevelData.pressurePlates,
+    entanglement: directedLevelData.entanglement,
+    tetherPylons: directedLevelData.tetherPylons,
     collapse: directedLevelData.collapse
   };
 

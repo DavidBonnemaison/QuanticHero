@@ -2,6 +2,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { assembleCampaignLevel } from '../src/generator/chunkAssembler';
+import { countJumpsInTrajectory } from '../src/services/MedalService';
 
 interface CampaignOptions {
   from: number;
@@ -39,6 +40,11 @@ export function generateCampaign(options: CampaignOptions): void {
   console.log(` QuanticHero - Campaign Generation Pipeline (Levels ${from} to ${to})`);
   console.log('===============================================================');
 
+  const metadataPath = path.resolve(process.cwd(), 'src/data', 'levelMetadata.json');
+  const metadata: Record<string, Record<string, unknown>> = fs.existsSync(metadataPath)
+    ? (JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) as Record<string, Record<string, unknown>>)
+    : {};
+
   const generatedLevels: Array<{
     level: number;
     symbol: string;
@@ -67,12 +73,39 @@ export function generateCampaign(options: CampaignOptions): void {
       );
     }
 
-    const { levelData, simulation } = assembly;
+    const { levelData: rawLevelData, simulation } = assembly;
+    const parJumps = Math.max(1, countJumpsInTrajectory(simulation.frames));
+    const cleanMeta = rawLevelData.meta
+      ? {
+          seed: rawLevelData.meta.seed,
+          generatorVersion: rawLevelData.meta.generatorVersion
+        }
+      : undefined;
+    const levelData = {
+      ...rawLevelData,
+      parJumps,
+      ...(cleanMeta ? { meta: cleanMeta } : {})
+    };
     const outFileName = `level${lvl}.json`;
     const outFilePath = path.resolve(process.cwd(), 'src/data', outFileName);
 
     if (!dryRun) {
       fs.writeFileSync(outFilePath, JSON.stringify(levelData, null, 2), 'utf-8');
+      const existingMeta = metadata[`level${lvl}`] ?? {};
+      metadata[`level${lvl}`] = {
+        ...existingMeta,
+        id: levelData.id,
+        symbol: levelData.symbol,
+        atom: levelData.atom,
+        uncertainty: levelData.uncertainty,
+        hue: levelData.hue,
+        antiHue: levelData.antiHue,
+        explanations: levelData.explanations ?? [],
+        authorTime: levelData.authorTime,
+        ...(levelData.discoveryBox ? { discoveryBox: levelData.discoveryBox } : {}),
+        ...(levelData.noblePlayground ? { noblePlayground: true } : {}),
+        parJumps
+      };
     }
 
     generatedLevels.push({
@@ -93,6 +126,10 @@ export function generateCampaign(options: CampaignOptions): void {
         `Ghost: ${(levelData.authorGhost?.length ?? 0).toString().padStart(4, ' ')} chars ` +
         `-> ${outFileName}`
     );
+  }
+
+  if (!dryRun) {
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
   }
 
   console.log('---------------------------------------------------------------');
