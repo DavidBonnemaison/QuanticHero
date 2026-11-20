@@ -328,7 +328,9 @@ export class RespawnTransitionController {
       store.recordMoleculeScore(moleculeId, elapsedMs, trajectory, {
         jumpCount: ctx.jumpCount,
         switchCount: ctx.switchCount,
-        medal
+        medal,
+        coherentRun: ctx.coherenceSystem?.isCoherentRun?.() ?? false,
+        styleScore: ctx.coherenceSystem?.getStyleScore?.() ?? 0
       });
     }
     if (isShared) {

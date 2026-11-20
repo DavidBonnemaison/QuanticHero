@@ -240,9 +240,10 @@ export class HudController {
     ctx.coherenceBarGraphics = ctx.add.graphics();
     ctx.hudContainer.add(ctx.coherenceBarGraphics);
 
-    ctx.coherenceTierText = ctx.add.text(camW - 110, 28, 'x1', {
+    const coherenceTierX = camW < 440 ? camW - 76 : camW - 110;
+    ctx.coherenceTierText = ctx.add.text(coherenceTierX, 28, 'x1', {
       fontFamily: 'VT323',
-      fontSize: '18px',
+      fontSize: camW < 440 ? '16px' : '18px',
       color: '#38bdf8'
     });
     ctx.coherenceTierText.setOrigin(1, 0);
@@ -366,7 +367,10 @@ export class HudController {
       ctx.splitDeltaText.setPosition(camW - 10, 28);
     }
     if (ctx.coherenceTierText?.active) {
-      ctx.coherenceTierText.setPosition(camW - 110, 28);
+      ctx.coherenceTierText.setPosition(camW < 440 ? camW - 76 : camW - 110, 28);
+      if (typeof ctx.coherenceTierText.setFontSize === 'function') {
+        ctx.coherenceTierText.setFontSize(camW < 440 ? '16px' : '18px');
+      }
     }
     this.updateCoherenceGauge(true, camW);
 
@@ -420,9 +424,9 @@ export class HudController {
     const colorNum =
       tier === 'HYPER' ? 0xfbbf24 : tier === 'x3' ? 0xc084fc : tier === 'x2' ? 0x00ffcc : 0x38bdf8;
 
+    const camW = widthOverride ?? ctx.cameras?.main?.width ?? 800;
     const gfx = ctx.coherenceBarGraphics;
     if (gfx?.active) {
-      const camW = widthOverride ?? ctx.cameras?.main?.width ?? 800;
       const trackX = 36;
       const trackW = Math.max(0, camW - trackX);
       const barY = 51;
@@ -438,7 +442,7 @@ export class HudController {
     }
 
     if (ctx.coherenceTierText?.active) {
-      const label = tier === 'HYPER' ? '⚡ HYPER' : tier;
+      const label = tier === 'HYPER' ? (camW < 440 ? 'HYPER' : '⚡ HYPER') : tier;
       ctx.coherenceTierText.setText(label);
       ctx.coherenceTierText.setColor(colorHex);
       ctx.coherenceTierText.setAlpha(value > 0 ? 1 : 0.45);

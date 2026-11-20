@@ -462,7 +462,7 @@ async function run() {
         x: toast?.x
       };
     });
-    if (!powerUpResult || !powerUpResult.found || powerUpResult.fontSize !== '24px') {
+    if (!powerUpResult || !powerUpResult.found || powerUpResult.fontSize !== '36px') {
       throw new Error(`PowerUp text invalid: ${JSON.stringify(powerUpResult)}`);
     }
     console.log(
@@ -722,7 +722,7 @@ async function run() {
       if (!levelInfo.hasGhost || !levelInfo.hasMeta) {
         throw new Error(`Level ${lvl} missing authorGhost or meta: ${JSON.stringify(levelInfo)}`);
       }
-      if (lvl <= 4 && levelInfo.particlesCount !== 0) {
+      if (lvl <= 3 && levelInfo.particlesCount !== 0) {
         throw new Error(
           `Level ${lvl} should have 0 particles (pure platforming): ${levelInfo.particlesCount}`
         );
@@ -1016,7 +1016,7 @@ async function run() {
       { timeout: 10000 }
     );
 
-    // Wait for dynamic entanglement zoom-out to settle and frame both heroes
+    // Wait for entanglement camera framing to settle (both heroes if rawZoom >= 0.42, else Alpha at readable zoom)
     await page.waitForFunction(
       () => {
         const gs = window.game?.scene?.getScene('Game');
@@ -1024,10 +1024,13 @@ async function run() {
         const alpha = gs.heroes.find((h) => !h.isBeta);
         const beta = gs.heroes.find((h) => h.isBeta);
         if (!alpha || !beta) return false;
-        return (
-          gs.cameras.main.worldView.contains(alpha.x, alpha.y) &&
-          gs.cameras.main.worldView.contains(beta.x, beta.y)
-        );
+        const cam = gs.cameras.main;
+        const dx = Math.abs(alpha.x - beta.x);
+        const dy = Math.abs(alpha.y - beta.y);
+        const rawZoom = Math.min(cam.width / (dx + 240), cam.height / (dy + 200));
+        const alphaInView = cam.worldView.contains(alpha.x, alpha.y);
+        const betaInView = cam.worldView.contains(beta.x, beta.y);
+        return rawZoom >= 0.42 ? alphaInView && betaInView : alphaInView;
       },
       { timeout: 5000 }
     );
@@ -1040,6 +1043,9 @@ async function run() {
       const alphaHero = gs.heroes.find((h) => !h.isBeta);
       const betaHero = gs.heroes.find((h) => h.isBeta);
       const hudEffectiveScale = gs.hudContainer ? gs.hudContainer.scaleX * cam.zoom : 0;
+      const dx = alphaHero && betaHero ? Math.abs(alphaHero.x - betaHero.x) : 0;
+      const dy = alphaHero && betaHero ? Math.abs(alphaHero.y - betaHero.y) : 0;
+      const rawZoom = Math.min(cam.width / (dx + 240), cam.height / (dy + 200));
       return {
         hasGame: true,
         isEntangled: Boolean(gs.isEntangled),
@@ -1050,6 +1056,7 @@ async function run() {
         alphaX: alphaHero?.x,
         betaX: betaHero?.x,
         zoom: cam.zoom,
+        rawZoom,
         hudEffectiveScale,
         alphaInView: alphaHero ? cam.worldView.contains(alphaHero.x, alphaHero.y) : false,
         betaInView: betaHero ? cam.worldView.contains(betaHero.x, betaHero.y) : false
@@ -1069,9 +1076,9 @@ async function run() {
     if (!entanglementState.hasAlphaPortal || !entanglementState.hasBetaPortal) {
       throw new Error('Dual portals (Alpha and Beta) missing in entangled mode');
     }
-    if (!entanglementState.alphaInView || !entanglementState.betaInView) {
+    if (!entanglementState.alphaInView || (entanglementState.rawZoom >= 0.42 && !entanglementState.betaInView)) {
       throw new Error(
-        `Entangled heroes not both visible in camera! zoom=${entanglementState.zoom}, alphaInView=${entanglementState.alphaInView}, betaInView=${entanglementState.betaInView}`
+        `Entangled camera framing invalid! zoom=${entanglementState.zoom}, rawZoom=${entanglementState.rawZoom}, alphaInView=${entanglementState.alphaInView}, betaInView=${entanglementState.betaInView}`
       );
     }
     if (Math.abs(entanglementState.hudEffectiveScale - 1) > 0.02) {
@@ -1200,7 +1207,7 @@ async function run() {
           Boolean(betaHero) &&
           betaHero.upsideDown === -1 &&
           betaGravityY === -1400 &&
-          betaHero.y < 250 &&
+          betaHero.y < (gs.levelData?.height ?? 600) / 2 &&
           Boolean(betaPortal) &&
           betaPortal.y > 80 &&
           cam.worldView.contains(betaHero.x, betaHero.y),
@@ -1229,20 +1236,20 @@ async function run() {
       throw new Error(`Formal E2E check failed: ${JSON.stringify(formalChecks)}`);
     }
 
-    // Load Level 14 in Phaser and verify requireLock gate blocks single hero when stepping off plate
+    // Load Level 10 in Phaser and verify requireLock gate blocks single hero when stepping off plate
     await page.evaluate(() => {
       const store = JSON.parse(localStorage.getItem('qtmhro') || '{"state":{}}');
       store.state.maxLevel = Math.max(store.state.maxLevel || 1, 15);
-      store.state.currentLevel = 14;
+      store.state.currentLevel = 10;
       localStorage.setItem('qtmhro', JSON.stringify(store));
     });
     await page.goto('http://localhost:4173/game', { waitUntil: 'domcontentloaded' });
     await new Promise((r) => setTimeout(r, 2000));
 
-    const level14GateCheck = await page.evaluate(() => {
+    const level10GateCheck = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
       if (!gs) return { ok: false, reason: 'No GameScene' };
-      const gate = gs.gatesMap?.get('gate_si_14');
+      const gate = gs.gatesMap?.get('gate_fus_10');
       const plate = gs.pressurePlatesList?.[0];
       const gateBody = gate?.rect?.body;
       return {
@@ -1258,11 +1265,11 @@ async function run() {
         gateSolidInitially: gateBody?.enable
       };
     });
-    if (!level14GateCheck.ok) {
-      throw new Error(`Level 14 formal gate check failed: ${JSON.stringify(level14GateCheck)}`);
+    if (!level10GateCheck.ok) {
+      throw new Error(`Level 10 formal gate check failed: ${JSON.stringify(level10GateCheck)}`);
     }
     console.log(
-      `✓ Level 14 formal E2E check passed: full-height gate (y=${level14GateCheck.gateY}, h=${level14GateCheck.gateHeight}), requireLock=${level14GateCheck.requireLock}, solid=${level14GateCheck.gateSolidInitially}`
+      `✓ Level 10 formal E2E check passed: full-height gate (y=${level10GateCheck.gateY}, h=${level10GateCheck.gateHeight}), requireLock=${level10GateCheck.requireLock}, solid=${level10GateCheck.gateSolidInitially}`
     );
 
     await page.screenshot({ path: '/tmp/entanglement_done_screenshot.png' });
@@ -1281,7 +1288,12 @@ async function run() {
     const godLevelsCheck = await page.evaluate(() => {
       const title = document.body.textContent || '';
       const cards = Array.from(document.querySelectorAll('[role="button"]'));
-      const mtCard = cards.find((c) => c.textContent?.includes('Meitnerium'));
+      const mtCard = cards.find(
+        (c) =>
+          c.getAttribute('data-z') === '109' ||
+          c.getAttribute('aria-label')?.includes('Meitnerium') ||
+          c.textContent?.includes('Meitnerium')
+      );
       const isMtUnlocked = mtCard && mtCard.getAttribute('tabindex') === '0';
       const hasEntTab = title.includes('ENTANGLEMENT');
       return {

@@ -147,7 +147,9 @@ export const MoleculeCodex: React.FC<MoleculeCodexProps> = ({
                   </div>
                 </div>
 
-                <p className={styles.mechanicSummary}>{mol.mechanicSummary}</p>
+                <p className={styles.mechanicSummary}>
+                  {locale === 'fr' ? mol.mechanicSummaryFr : mol.mechanicSummary}
+                </p>
 
                 <div className={styles.statsRow}>
                   <div className={styles.statItem}>

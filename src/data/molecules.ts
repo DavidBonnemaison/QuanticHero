@@ -7,6 +7,7 @@ export interface MoleculeRecipe {
   name: string;
   elements: readonly [number, number];
   mechanicSummary: string;
+  mechanicSummaryFr: string;
   hint: string;
   hintFr: string;
   levelData: LevelData;
@@ -33,7 +34,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'H₂O',
     name: 'The Water Anomaly',
     elements: [1, 8],
-    mechanicSummary: 'Plateformes d’eau liquide (liquid) et rebonds cryo-glace (cryo).',
+    mechanicSummary: 'Liquid water platforms and cryo-ice bounce surfaces.',
+    mechanicSummaryFr: 'Plateformes d’eau liquide (liquid) et rebonds cryo-glace (cryo).',
     hint: 'Period 1 + Oxygen — The liquid anomaly',
     hintFr: 'Période 1 + Oxygène — L’anomalie liquide',
     levelData: {
@@ -71,7 +73,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'NaCl',
     name: 'Ionic Crystal Lattice',
     elements: [11, 17],
-    mechanicSummary: 'Réseau cubique de plateformes de phase cyan/magenta commutables au HUD.',
+    mechanicSummary: 'Cubic lattice of HUD-switchable cyan and magenta phase platforms.',
+    mechanicSummaryFr: 'Réseau cubique de plateformes de phase cyan/magenta commutables au HUD.',
     hint: 'Period 3 Alkali + Halogen — Cubic phase crystal',
     hintFr: 'Alcalin de période 3 + Halogène — Cristal de phase cubique',
     levelData: {
@@ -104,7 +107,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'CO₂',
     name: 'Sublimation Dry Ice',
     elements: [6, 8],
-    mechanicSummary: 'Puits d’ascendance gazeuse (gas) et pistes cryo sans friction.',
+    mechanicSummary: 'Gaseous updraft shafts and frictionless cryo-ice tracks.',
+    mechanicSummaryFr: 'Puits d’ascendance gazeuse (gas) et pistes cryo sans friction.',
     hint: 'Organic backbone + Breath of life — Cold sublimation',
     hintFr: 'Colonne du vivant + Souffle vital — Sublimation glacée',
     levelData: {
@@ -136,7 +140,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'FeC',
     name: 'Damascus Steel Forge',
     elements: [26, 6],
-    mechanicSummary: 'Murs rebondissants haute vitesse et fusion de clones Super-Quanta.',
+    mechanicSummary: 'High-speed bouncing walls and Super-Quanta clone fusion.',
+    mechanicSummaryFr: 'Murs rebondissants haute vitesse et fusion de clones Super-Quanta.',
     hint: 'Heart of the forge + Diamond’s ancestor — Damascus alloy',
     hintFr: 'Cœur de la forge + Ancêtre du diamant — Alliage de Damas',
     levelData: {
@@ -174,7 +179,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'AuAg',
     name: 'Electrum Relic',
     elements: [79, 47],
-    mechanicSummary: 'Trous de ver d’impulsion (wormholes) et Quantum Pinning au doigt.',
+    mechanicSummary: 'Momentum-preserving wormholes and touch-activated Quantum Pinning.',
+    mechanicSummaryFr: 'Trous de ver d’impulsion (wormholes) et Quantum Pinning au doigt.',
     hint: 'Two royal coinage metals — Ancient solar relic',
     hintFr: 'Deux métaux précieux monétaires — Relique solaire antique',
     levelData: {
@@ -217,7 +223,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'SiO₂',
     name: 'Quartz Piezo Resonator',
     elements: [14, 8],
-    mechanicSummary: 'Échafaudage d’ondes de Broglie cristallisées (Wave-Trail Solidification).',
+    mechanicSummary: 'Crystallized de Broglie wave scaffolding (Wave-Trail Solidification).',
+    mechanicSummaryFr: 'Échafaudage d’ondes de Broglie cristallisées (Wave-Trail Solidification).',
     hint: 'Semiconductor sand + Vital gas — Piezo crystal',
     hintFr: 'Sable semi-conducteur + Gaz vital — Cristal piézo',
     levelData: {
@@ -249,7 +256,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'HgS',
     name: 'Cinnabar Alchemical Bath',
     elements: [80, 16],
-    mechanicSummary:
+    mechanicSummary: 'High-buoyancy liquid mercury pools with toroidal screen wrap.',
+    mechanicSummaryFr:
       'Bassins de mercure liquide à haute poussée d’Archimède et téléportation torique.',
     hint: 'Liquid quicksilver + Volcanic brimstone — Crimson bath',
     hintFr: 'Vif-argent liquide + Soufre volcanique — Bain vermillon',
@@ -282,7 +290,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'NH₃',
     name: 'Haber-Bosch Pressure Chamber',
     elements: [7, 1],
-    mechanicSummary: 'Effet tunnel en chaîne sous mâchoires de compression collapse.',
+    mechanicSummary: 'Chained quantum tunneling beneath collapsing compression jaws.',
+    mechanicSummaryFr: 'Effet tunnel en chaîne sous mâchoires de compression collapse.',
     hint: 'Air’s silent majority + Lightest atom — High-pressure chamber',
     hintFr: 'Majorité silencieuse de l’air + Atome le plus léger — Chambre haute pression',
     levelData: {
@@ -317,7 +326,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'UF₆',
     name: 'Centrifuge Cascade',
     elements: [92, 9],
-    mechanicSummary: 'Cylindre spatial screenWrap à haute vitesse et demi-vie radioactive.',
+    mechanicSummary: 'High-speed cylindrical screen-wrap with decaying radioactive ledges.',
+    mechanicSummaryFr: 'Cylindre spatial screenWrap à haute vitesse et demi-vie radioactive.',
     hint: 'Fissile actinide + Most reactive halogen — Isotope cascade',
     hintFr: 'Actinide fissile + Halogène le plus réactif — Cascade isotopique',
     levelData: {
@@ -349,7 +359,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'HeNe',
     name: 'Laser Cavity Interferometer',
     elements: [2, 10],
-    mechanicSummary:
+    mechanicSummary: 'Spike-free musical playground with entanglement tethers and plasma bounces.',
+    mechanicSummaryFr:
       'Niveau-jouet musical sans piques avec cordes d’intrication et rebonds plasma.',
     hint: 'First two Noble Gases — Coherent crimson beam',
     hintFr: 'Les deux premiers Gaz Nobles — Faisceau cramoisi cohérent',
@@ -391,7 +402,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'CuSn',
     name: 'Bronze Bell Resonance',
     elements: [29, 50],
-    mechanicSummary: 'Synchronisation de clones et trampolines de répulsion de Pauli.',
+    mechanicSummary: 'Clone synchronization paired with Pauli repulsion trampolines.',
+    mechanicSummaryFr: 'Synchronisation de clones et trampolines de répulsion de Pauli.',
     hint: 'Red conductor + Ancient soft metal — Bell resonance',
     hintFr: 'Conducteur rouge + Métal antique tendre — Résonance de cloche',
     levelData: {
@@ -431,7 +443,8 @@ const RAW_SECRET_MOLECULES: readonly MoleculeRecipe[] = [
     formula: 'OgH',
     name: 'Alpha & Omega Singularity',
     elements: [118, 1],
-    mechanicSummary: 'Synthèse ultime combinant le premier et le dernier élément du tableau.',
+    mechanicSummary: 'Ultimate synthesis uniting the first and final elements of the table.',
+    mechanicSummaryFr: 'Synthèse ultime combinant le premier et le dernier élément du tableau.',
     hint: 'First and last of the Periodic Table — Omega singularity',
     hintFr: 'Premier et dernier du Tableau Périodique — Singularité Oméga',
     levelData: {

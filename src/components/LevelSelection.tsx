@@ -338,7 +338,7 @@ export const LevelSelection: React.FC = () => {
                 type="button"
                 className={styles.moleculeChip}
                 onClick={() => navigate(`/game/molecule/${mol.id}`)}
-                title={mol.mechanicSummary}
+                title={locale === 'fr' ? mol.mechanicSummaryFr : mol.mechanicSummary}
               >
                 ⚗️ {mol.formula} ({mol.name})
               </button>
