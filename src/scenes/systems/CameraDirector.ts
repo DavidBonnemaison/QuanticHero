@@ -18,6 +18,12 @@ export class CameraDirector {
     private readonly hudController: HudController
   ) {}
 
+  private static readonly MIN_DUAL_READABLE_ZOOM = 0.42;
+
+  private getSingleHeroZoom(viewW: number): number {
+    return Phaser.Math.Clamp(viewW / 620, 0.65, 1.0);
+  }
+
   public setupInitialFraming(initialHero: Hero): void {
     const ctx = this.ctx;
     const entanglement = ctx.levelData.entanglement;
@@ -30,15 +36,25 @@ export class CameraDirector {
         ctx.cameras.main.centerOn(initialHero.x, initialHero.y);
         ctx.cameras.main.startFollow(initialHero, true, 0.1, 0.1);
       } else {
-        const cx = (initialHero.x + ctx.betaHero.x) / 2;
-        const cy = (initialHero.y + ctx.betaHero.y) / 2;
         const dx = Math.abs(initialHero.x - ctx.betaHero.x);
         const dy = Math.abs(initialHero.y - ctx.betaHero.y);
         const initZoomX = ctx.cameras.main.width / (dx + 240);
         const initZoomY = ctx.cameras.main.height / (dy + 200);
-        const initZoom = Phaser.Math.Clamp(Math.min(initZoomX, initZoomY), 0.28, 1.0);
-        ctx.cameras.main.setZoom(initZoom);
-        ctx.cameras.main.centerOn(cx, cy);
+        const rawZoom = Math.min(initZoomX, initZoomY);
+
+        if (rawZoom >= CameraDirector.MIN_DUAL_READABLE_ZOOM) {
+          const cx = (initialHero.x + ctx.betaHero.x) / 2;
+          const cy = (initialHero.y + ctx.betaHero.y) / 2;
+          const initZoom = Phaser.Math.Clamp(rawZoom, CameraDirector.MIN_DUAL_READABLE_ZOOM, 1.0);
+          ctx.cameras.main.setZoom(initZoom);
+          ctx.cameras.main.centerOn(cx, cy);
+        } else {
+          // On narrow viewports (e.g. mobile portrait) when Alpha and Beta start far apart,
+          // frame Alpha at a readable zoom instead of clamping both heroes off-screen.
+          const singleZoom = this.getSingleHeroZoom(ctx.cameras.main.width);
+          ctx.cameras.main.setZoom(singleZoom);
+          ctx.cameras.main.centerOn(initialHero.x, initialHero.y);
+        }
       }
     } else {
       ctx.cameras.main.setZoom(1);
@@ -54,25 +70,66 @@ export class CameraDirector {
       const alpha = ctx.heroes.find((h) => !h.isBeta);
       const beta = ctx.heroes.find((h) => h.isBeta);
       if (alpha && beta && alpha.active && beta.active) {
-        const cx = (alpha.x + beta.x) / 2;
-        const cy = (alpha.y + beta.y) / 2;
-        const dx = Math.abs(alpha.x - beta.x);
-        const dy = Math.abs(alpha.y - beta.y);
+        const hasPendingReveal =
+          ctx.levelData.entanglement?.revealAtX !== undefined && !ctx.entanglementRevealed;
+        if (hasPendingReveal) {
+          return;
+        }
 
         const viewW = ctx.cameras.main.width;
         const viewH = ctx.cameras.main.height;
+        const currentZoom = ctx.cameras.main.zoom;
+        const currentMid = ctx.cameras.main.midPoint;
+
+        // If one hero has already docked in their portal, focus cleanly on the remaining hero
+        if (alpha.enteredPortal && !beta.enteredPortal) {
+          const targetZoom = this.getSingleHeroZoom(viewW);
+          ctx.cameras.main.setZoom(Phaser.Math.Linear(currentZoom, targetZoom, 0.08));
+          ctx.syncHudTransform();
+          ctx.cameras.main.centerOn(
+            Phaser.Math.Linear(currentMid.x, beta.x, 0.12),
+            Phaser.Math.Linear(currentMid.y, beta.y, 0.12)
+          );
+          return;
+        }
+        if (beta.enteredPortal && !alpha.enteredPortal) {
+          const targetZoom = this.getSingleHeroZoom(viewW);
+          ctx.cameras.main.setZoom(Phaser.Math.Linear(currentZoom, targetZoom, 0.08));
+          ctx.syncHudTransform();
+          ctx.cameras.main.centerOn(
+            Phaser.Math.Linear(currentMid.x, alpha.x, 0.12),
+            Phaser.Math.Linear(currentMid.y, alpha.y, 0.12)
+          );
+          return;
+        }
+
+        const dx = Math.abs(alpha.x - beta.x);
+        const dy = Math.abs(alpha.y - beta.y);
         const requiredZoomX = viewW / (dx + 240);
         const requiredZoomY = viewH / (dy + 200);
-        const targetZoom = Phaser.Math.Clamp(Math.min(requiredZoomX, requiredZoomY), 0.28, 1.0);
+        const rawZoom = Math.min(requiredZoomX, requiredZoomY);
 
-        const currentZoom = ctx.cameras.main.zoom;
+        let targetZoom: number;
+        let targetX: number;
+        let targetY: number;
+
+        if (rawZoom >= CameraDirector.MIN_DUAL_READABLE_ZOOM) {
+          targetZoom = Phaser.Math.Clamp(rawZoom, CameraDirector.MIN_DUAL_READABLE_ZOOM, 1.0);
+          targetX = (alpha.x + beta.x) / 2;
+          targetY = (alpha.y + beta.y) / 2;
+        } else {
+          // Keep Alpha clearly visible when both heroes cannot fit on a narrow screen
+          targetZoom = this.getSingleHeroZoom(viewW);
+          targetX = alpha.x;
+          targetY = alpha.y;
+        }
+
         const newZoom = Phaser.Math.Linear(currentZoom, targetZoom, 0.08);
         ctx.cameras.main.setZoom(newZoom);
         ctx.syncHudTransform();
 
-        const currentMid = ctx.cameras.main.midPoint;
-        const newCamX = Phaser.Math.Linear(currentMid.x, cx, 0.1);
-        const newCamY = Phaser.Math.Linear(currentMid.y, cy, 0.1);
+        const newCamX = Phaser.Math.Linear(currentMid.x, targetX, 0.12);
+        const newCamY = Phaser.Math.Linear(currentMid.y, targetY, 0.12);
         ctx.cameras.main.centerOn(newCamX, newCamY);
       }
     } else {
@@ -150,15 +207,31 @@ export class CameraDirector {
       const alpha = ctx.heroes.find((h) => !h.isBeta);
       const beta = ctx.heroes.find((h) => h.isBeta);
       if (alpha?.active && beta?.active) {
-        const cx = (alpha.x + beta.x) / 2;
-        const cy = (alpha.y + beta.y) / 2;
-        const dx = Math.abs(alpha.x - beta.x);
-        const dy = Math.abs(alpha.y - beta.y);
-        const zoomX = camW / (dx + 240);
-        const zoomY = camH / (dy + 200);
-        const targetZoom = Phaser.Math.Clamp(Math.min(zoomX, zoomY), 0.28, 1.0);
-        ctx.cameras.main.setZoom(targetZoom);
-        ctx.cameras.main.centerOn(cx, cy);
+        if (alpha.enteredPortal && !beta.enteredPortal) {
+          ctx.cameras.main.setZoom(this.getSingleHeroZoom(camW));
+          ctx.cameras.main.centerOn(beta.x, beta.y);
+        } else if (beta.enteredPortal && !alpha.enteredPortal) {
+          ctx.cameras.main.setZoom(this.getSingleHeroZoom(camW));
+          ctx.cameras.main.centerOn(alpha.x, alpha.y);
+        } else {
+          const dx = Math.abs(alpha.x - beta.x);
+          const dy = Math.abs(alpha.y - beta.y);
+          const zoomX = camW / (dx + 240);
+          const zoomY = camH / (dy + 200);
+          const rawZoom = Math.min(zoomX, zoomY);
+          if (rawZoom >= CameraDirector.MIN_DUAL_READABLE_ZOOM) {
+            const targetZoom = Phaser.Math.Clamp(
+              rawZoom,
+              CameraDirector.MIN_DUAL_READABLE_ZOOM,
+              1.0
+            );
+            ctx.cameras.main.setZoom(targetZoom);
+            ctx.cameras.main.centerOn((alpha.x + beta.x) / 2, (alpha.y + beta.y) / 2);
+          } else {
+            ctx.cameras.main.setZoom(this.getSingleHeroZoom(camW));
+            ctx.cameras.main.centerOn(alpha.x, alpha.y);
+          }
+        }
       }
     }
 
