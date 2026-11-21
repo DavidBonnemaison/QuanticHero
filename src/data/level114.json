@@ -252,6 +252,8 @@
   "entanglement": {
     "mode": "mirror_and_gravity",
     "portalMode": "dual",
+    "tetherPhysical": true,
+    "tetherMaxLength": 540,
     "betaSpawn": {
       "x": 3397,
       "y": 440
@@ -261,6 +263,26 @@
       "y": 422
     }
   },
+  "tetherPylons": [
+    {
+      "x": 640,
+      "y": 650,
+      "radius": 18,
+      "maxLength": 540
+    },
+    {
+      "x": 1858,
+      "y": 650,
+      "radius": 18,
+      "maxLength": 540
+    },
+    {
+      "x": 2788,
+      "y": 650,
+      "radius": 18,
+      "maxLength": 540
+    }
+  ],
   "wormholes": [
     {
       "id": "wh_sec_114",

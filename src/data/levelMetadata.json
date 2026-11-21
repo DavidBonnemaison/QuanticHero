@@ -226,7 +226,7 @@
     "hue": "#240816",
     "antiHue": "#f43f5e",
     "explanations": [],
-    "authorTime": 13917,
+    "authorTime": 13617,
     "parJumps": 8
   },
   "level16": {
@@ -314,8 +314,8 @@
     "hue": "#0d1824",
     "antiHue": "#67e8f9",
     "explanations": [],
-    "authorTime": 11967,
-    "parJumps": 8
+    "authorTime": 15867,
+    "parJumps": 10
   },
   "level22": {
     "id": "22",
@@ -328,7 +328,7 @@
       "Up and down have traded places.",
       "Fall toward the sky."
     ],
-    "authorTime": 10800,
+    "authorTime": 10867,
     "parJumps": 8
   },
   "level23": {
@@ -339,8 +339,8 @@
     "hue": "#081c1c",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 15800,
-    "parJumps": 8
+    "authorTime": 16500,
+    "parJumps": 9
   },
   "level24": {
     "id": "24",
@@ -361,8 +361,8 @@
     "hue": "#1c0f2a",
     "antiHue": "#e879f9",
     "explanations": [],
-    "authorTime": 13317,
-    "parJumps": 9
+    "authorTime": 15767,
+    "parJumps": 10
   },
   "level26": {
     "id": "26",
@@ -398,8 +398,8 @@
       "Beyond iron, the star shatters.",
       "Echoes and thin walls drift in the blast."
     ],
-    "authorTime": 13767,
-    "parJumps": 7
+    "authorTime": 16183,
+    "parJumps": 9
   },
   "level28": {
     "id": "28",
@@ -467,8 +467,8 @@
     "hue": "#1c1f0d",
     "antiHue": "#a3e635",
     "explanations": [],
-    "authorTime": 14650,
-    "parJumps": 10
+    "authorTime": 18333,
+    "parJumps": 14
   },
   "level34": {
     "id": "34",
@@ -478,8 +478,8 @@
     "hue": "#24081c",
     "antiHue": "#f472b6",
     "explanations": [],
-    "authorTime": 12967,
-    "parJumps": 9
+    "authorTime": 22517,
+    "parJumps": 14
   },
   "level35": {
     "id": "35",
@@ -488,7 +488,10 @@
     "uncertainty": 35,
     "hue": "#240909",
     "antiHue": "#f87171",
-    "explanations": [],
+    "explanations": [
+      "Bromine pools shimmer beneath your feet.",
+      "Walk across the liquid surface, or dive (↓) to bounce high."
+    ],
     "authorTime": 13067,
     "discoveryBox": {
       "enabled": true,
@@ -719,7 +722,7 @@
       "Two identical fermions refuse the same place.",
       "Bring them close and measure the recoil."
     ],
-    "authorTime": 13550,
+    "authorTime": 13500,
     "parJumps": 9
   },
   "level53": {
@@ -741,7 +744,7 @@
     "hue": "#091c30",
     "antiHue": "#60a5fa",
     "explanations": [],
-    "authorTime": 13017,
+    "authorTime": 13067,
     "noblePlayground": true,
     "parJumps": 9
   },
@@ -787,7 +790,7 @@
     "hue": "#10172d",
     "antiHue": "#818cf8",
     "explanations": [],
-    "authorTime": 13533,
+    "authorTime": 13517,
     "parJumps": 10
   },
   "level58": {
@@ -798,7 +801,7 @@
     "hue": "#1f1606",
     "antiHue": "#f59e0b",
     "explanations": [],
-    "authorTime": 14033,
+    "authorTime": 14817,
     "parJumps": 10
   },
   "level59": {
@@ -809,8 +812,8 @@
     "hue": "#082115",
     "antiHue": "#10b981",
     "explanations": [],
-    "authorTime": 16917,
-    "parJumps": 10
+    "authorTime": 19467,
+    "parJumps": 14
   },
   "level60": {
     "id": "60",
@@ -820,8 +823,8 @@
     "hue": "#240821",
     "antiHue": "#ec4899",
     "explanations": [],
-    "authorTime": 15783,
-    "parJumps": 11
+    "authorTime": 17517,
+    "parJumps": 14
   },
   "level61": {
     "id": "61",
@@ -842,8 +845,8 @@
     "hue": "#241008",
     "antiHue": "#f97316",
     "explanations": [],
-    "authorTime": 15300,
-    "parJumps": 8
+    "authorTime": 21717,
+    "parJumps": 13
   },
   "level63": {
     "id": "63",
@@ -897,8 +900,8 @@
     "hue": "#241306",
     "antiHue": "#fb923c",
     "explanations": [],
-    "authorTime": 13667,
-    "parJumps": 9
+    "authorTime": 15833,
+    "parJumps": 10
   },
   "level68": {
     "id": "68",
@@ -936,8 +939,8 @@
     "hue": "#121b2b",
     "antiHue": "#38bdf8",
     "explanations": [],
-    "authorTime": 14050,
-    "parJumps": 10
+    "authorTime": 21667,
+    "parJumps": 14
   },
   "level71": {
     "id": "71",
@@ -958,8 +961,8 @@
     "hue": "#0e1c2b",
     "antiHue": "#22d3ee",
     "explanations": [],
-    "authorTime": 14483,
-    "parJumps": 9
+    "authorTime": 15650,
+    "parJumps": 10
   },
   "level73": {
     "id": "73",
@@ -969,8 +972,8 @@
     "hue": "#091f24",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 13967,
-    "parJumps": 9
+    "authorTime": 22450,
+    "parJumps": 14
   },
   "level74": {
     "id": "74",
@@ -1016,8 +1019,8 @@
     "hue": "#201809",
     "antiHue": "#facc15",
     "explanations": [],
-    "authorTime": 13983,
-    "parJumps": 9
+    "authorTime": 16000,
+    "parJumps": 10
   },
   "level78": {
     "id": "78",
@@ -1027,8 +1030,8 @@
     "hue": "#111827",
     "antiHue": "#e2e8f0",
     "explanations": [],
-    "authorTime": 14767,
-    "parJumps": 9
+    "authorTime": 19100,
+    "parJumps": 13
   },
   "level79": {
     "id": "79",
@@ -1038,8 +1041,8 @@
     "hue": "#1c1500",
     "antiHue": "#ffb703",
     "explanations": [],
-    "authorTime": 12800,
-    "parJumps": 9
+    "authorTime": 21617,
+    "parJumps": 14
   },
   "level80": {
     "id": "80",
@@ -1048,7 +1051,10 @@
     "uncertainty": 80,
     "hue": "#062024",
     "antiHue": "#2dd4bf",
-    "explanations": [],
+    "explanations": [
+      "Dense liquid mercury carries a spring-loaded tide.",
+      "Step lightly on the surface, or dive (↓) for a buoyant super-bounce."
+    ],
     "authorTime": 12783,
     "discoveryBox": {
       "enabled": true,
@@ -1091,8 +1097,8 @@
     "hue": "#170d2b",
     "antiHue": "#d946ef",
     "explanations": [],
-    "authorTime": 13833,
-    "parJumps": 9
+    "authorTime": 22583,
+    "parJumps": 14
   },
   "level84": {
     "id": "84",
@@ -1116,8 +1122,8 @@
     "hue": "#260710",
     "antiHue": "#fb7185",
     "explanations": [],
-    "authorTime": 13650,
-    "parJumps": 9
+    "authorTime": 18450,
+    "parJumps": 14
   },
   "level86": {
     "id": "86",
@@ -1127,9 +1133,9 @@
     "hue": "#170829",
     "antiHue": "#a855f7",
     "explanations": [],
-    "authorTime": 10933,
+    "authorTime": 17617,
     "noblePlayground": true,
-    "parJumps": 8
+    "parJumps": 14
   },
   "level87": {
     "id": "87",
@@ -1187,8 +1193,8 @@
     "hue": "#121b2b",
     "antiHue": "#60a5fa",
     "explanations": [],
-    "authorTime": 10067,
-    "parJumps": 6
+    "authorTime": 10700,
+    "parJumps": 7
   },
   "level91": {
     "id": "91",
@@ -1231,8 +1237,8 @@
     "hue": "#260a0a",
     "antiHue": "#f97316",
     "explanations": [],
-    "authorTime": 12100,
-    "parJumps": 6
+    "authorTime": 18717,
+    "parJumps": 13
   },
   "level95": {
     "id": "95",
@@ -1286,7 +1292,7 @@
     "hue": "#0b2426",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 14233,
+    "authorTime": 15750,
     "parJumps": 10
   },
   "level100": {
@@ -1333,8 +1339,8 @@
     "hue": "#1e112b",
     "antiHue": "#a78bfa",
     "explanations": [],
-    "authorTime": 13917,
-    "parJumps": 8
+    "authorTime": 14867,
+    "parJumps": 9
   },
   "level104": {
     "id": "104",
@@ -1344,8 +1350,8 @@
     "hue": "#091e2b",
     "antiHue": "#22d3ee",
     "explanations": [],
-    "authorTime": 14067,
-    "parJumps": 10
+    "authorTime": 18367,
+    "parJumps": 14
   },
   "level105": {
     "id": "105",
@@ -1355,8 +1361,8 @@
     "hue": "#0a2124",
     "antiHue": "#2dd4bf",
     "explanations": [],
-    "authorTime": 15433,
-    "parJumps": 11
+    "authorTime": 21650,
+    "parJumps": 14
   },
   "level106": {
     "id": "106",
@@ -1388,7 +1394,7 @@
     "hue": "#081c2e",
     "antiHue": "#38bdf8",
     "explanations": [],
-    "authorTime": 13850,
+    "authorTime": 13650,
     "parJumps": 8
   },
   "level109": {
@@ -1483,8 +1489,8 @@
     "hue": "#1e0c2b",
     "antiHue": "#c084fc",
     "explanations": [],
-    "authorTime": 15567,
-    "parJumps": 11
+    "authorTime": 21483,
+    "parJumps": 14
   },
   "level116": {
     "id": "116",

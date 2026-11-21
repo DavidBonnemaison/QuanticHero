@@ -185,11 +185,13 @@ export async function generateDailyIsotope(dateKey?: string): Promise<LevelData>
 
   const [
     { generateQuantumLevel },
+    { ALL_LEVEL_TOPOLOGIES },
     { simulateLevelData },
     { countJumpsInTrajectory },
     { decompressTrajectory }
   ] = await Promise.all([
     import('../generator/dagGenerator'),
+    import('../generator/chunkAssembler'),
     import('../generator/simulator'),
     import('./MedalService'),
     import('../tools/GhostRecorder')
@@ -197,14 +199,21 @@ export async function generateDailyIsotope(dateKey?: string): Promise<LevelData>
 
   let chosenLevel: LevelData | null = null;
   let fallbackLevel: LevelData | null = null;
+  const preferredTopologyIndex = preview.seed % ALL_LEVEL_TOPOLOGIES.length;
 
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
     const attemptSeed = attempt === 0 ? preview.seed : (preview.seed + attempt * 10007) >>> 0;
+    // Try deterministic topology first; on later retries fall back toward 'right'
+    const topology =
+      attempt < 3
+        ? ALL_LEVEL_TOPOLOGIES[(preferredTopologyIndex + attempt) % ALL_LEVEL_TOPOLOGIES.length]
+        : 'right';
     const result = generateQuantumLevel({
       atom: preview.z,
       difficulty: preview.difficulty,
       seed: attemptSeed,
-      mode: 'paced'
+      mode: 'paced',
+      topology
     });
 
     if (!fallbackLevel) {

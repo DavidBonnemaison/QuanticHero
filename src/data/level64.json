@@ -103,108 +103,108 @@
       "height": 20
     },
     {
-      "x": 2777,
-      "y": 332,
+      "x": 112,
+      "y": 428,
       "width": 253,
       "height": 20
     },
     {
-      "x": 2502,
-      "y": 314,
+      "x": 432,
+      "y": 416,
       "width": 208,
       "height": 50,
       "matterState": "liquid"
     },
     {
-      "x": 2192,
-      "y": 342,
+      "x": 713,
+      "y": 388,
       "width": 237,
       "height": 50,
       "matterState": "liquid"
     },
     {
-      "x": 1814,
-      "y": 200,
+      "x": 1103,
+      "y": 560,
       "width": 225,
       "height": 20
     },
     {
-      "x": 1527,
-      "y": 217,
+      "x": 1421,
+      "y": 543,
       "width": 194,
       "height": 20
     },
     {
-      "x": 1265,
-      "y": 232,
+      "x": 1725,
+      "y": 528,
       "width": 152,
       "height": 20,
       "decayMs": 702
     },
     {
-      "x": 1097,
-      "y": 258,
+      "x": 1893,
+      "y": 502,
       "width": 152,
       "height": 20,
       "decayMs": 702
     },
     {
-      "x": 929,
-      "y": 284,
+      "x": 2061,
+      "y": 476,
       "width": 152,
       "height": 20,
       "decayMs": 702
     },
     {
-      "x": 761,
-      "y": 310,
+      "x": 2229,
+      "y": 450,
       "width": 152,
       "height": 20,
       "decayMs": 702
     },
     {
-      "x": 565,
-      "y": 336,
+      "x": 2397,
+      "y": 424,
       "width": 180,
       "height": 20
     },
     {
-      "x": 150,
-      "y": 321,
+      "x": 2732,
+      "y": 439,
       "width": 260,
       "height": 20
     }
   ],
   "entanglement": {
-    "mode": "mirror_x",
+    "mode": "inverted_gravity",
     "portalMode": "dual",
     "tetherPhysical": true,
     "tetherMaxLength": 540,
     "betaSpawn": {
-      "x": 2970,
-      "y": 300
+      "x": 172,
+      "y": 480
     },
     "betaDoor": {
-      "x": 280,
-      "y": 311
+      "x": 2862,
+      "y": 469
     }
   },
   "tetherPylons": [
     {
       "x": 640,
-      "y": 556,
+      "y": 650,
       "radius": 18,
       "maxLength": 540
     },
     {
       "x": 1634,
-      "y": 556,
+      "y": 650,
       "radius": 18,
       "maxLength": 540
     },
     {
       "x": 2451,
-      "y": 556,
+      "y": 650,
       "radius": 18,
       "maxLength": 540
     }
@@ -222,12 +222,12 @@
     },
     {
       "id": "wh_main_64_beta",
-      "inX": 2204,
-      "inY": 298,
-      "inNormalAngleDeg": 180,
-      "outX": 1969,
-      "outY": 140,
-      "outNormalAngleDeg": 180,
+      "inX": 938,
+      "inY": 482,
+      "inNormalAngleDeg": 0,
+      "outX": 1173,
+      "outY": 640,
+      "outNormalAngleDeg": 0,
       "color": "#93c5fd"
     }
   ],

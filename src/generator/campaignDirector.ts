@@ -569,7 +569,7 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
     }
   }
 
-  // --- Period 4 (Z 19-36): entanglement (with/without tether), matterState, gates/pressurePlates ---
+  // --- Period 4 (Z 19-36): entanglement (mobile-friendly inverted_gravity), matterState, gates/pressurePlates ---
   if (period === 4) {
     if (z === 19) {
       return {
@@ -577,7 +577,7 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
         period,
         primary: 'wall',
         matterState: 'cryo',
-        entanglement: { mode: 'mirror_x', revealInSafeZone: true }
+        entanglement: { mode: 'inverted_gravity', revealInSafeZone: true }
       };
     }
     if (z === 22) {
@@ -589,7 +589,7 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
         period,
         primary: 'speed',
         addDecayClimax: true,
-        entanglement: { mode: 'mirror_x', tetherPhysical: true }
+        entanglement: { mode: 'inverted_gravity', tetherPhysical: true }
       };
     }
     if (z === 29) {
@@ -612,14 +612,12 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
         period,
         primary: 'phase',
         matterState: 'liquid',
-        entanglement: { mode: 'mirror_x', tetherPhysical: true }
+        entanglement: { mode: 'inverted_gravity', tetherPhysical: true }
       };
     }
 
     const idx = z - 20;
     const matter = MATTER_CYCLE[idx % MATTER_CYCLE.length];
-    const hasEnt = idx % 2 === 0;
-    const hasTether = hasEnt && idx % 4 === 0;
     const isGate = idx % 3 === 1;
     const isCondense = z === 23 || z === 32;
     const isTunnel = z === 20 || z === 28 || z === 31;
@@ -637,7 +635,6 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
               ? 'liquid_basin'
               : 'phase',
       matterState: matter,
-      ...(hasEnt ? { entanglement: { mode: 'mirror_x' as const, tetherPhysical: hasTether } } : {}),
       ...(isGate ? { addDuplicate: true, addGatePlate: true } : {}),
       addPhaseClimax: !isGate && idx % 2 === 1
     };
@@ -804,8 +801,8 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
     const isCondense = z === 59 || z === 66 || z === 72 || z === 78;
     const isTunnel = z === 56 || z === 63 || z === 69 || z === 75 || z === 81;
     const isGate = z === 60 || z === 67 || z === 76 || z === 85;
-    const hasEnt = z === 58 || z === 64 || z === 73 || z === 83;
-    const hasTether = z === 64 || z === 83;
+    const hasEnt = z === 64;
+    const hasTether = z === 64;
     const hasWormhole = idx % 2 === 1 || z === 58 || z === 64;
 
     return {
@@ -824,7 +821,9 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       addWormhole: hasWormhole,
       addTimeDilation: idx % 2 === 0,
       addDecayClimax: true,
-      ...(hasEnt ? { entanglement: { mode: 'mirror_x' as const, tetherPhysical: hasTether } } : {}),
+      ...(hasEnt
+        ? { entanglement: { mode: 'inverted_gravity' as const, tetherPhysical: hasTether } }
+        : {}),
       ...(isGate ? { addDuplicate: true, addGatePlate: true } : {})
     };
   }
@@ -878,7 +877,12 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       addWormhole: true,
       addPhaseClimax: true,
       matterState: 'liquid',
-      entanglement: { mode: 'mirror_x', portalMode: 'dual', revealInSafeZone: true }
+      entanglement: {
+        mode: 'mirror_x',
+        portalMode: 'dual',
+        revealInSafeZone: true,
+        tetherPhysical: true
+      }
     };
   }
   if (z === 111) {
@@ -911,7 +915,7 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       addPhaseClimax: true,
       addDecayClimax: true,
       matterState: 'liquid',
-      entanglement: { mode: 'inverted_gravity', portalMode: 'dual' }
+      entanglement: { mode: 'inverted_gravity', portalMode: 'dual', tetherPhysical: true }
     };
   }
   if (z === 114) {
@@ -923,7 +927,7 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       addWormhole: true,
       addTimeDilation: true,
       matterState: 'plasma',
-      entanglement: { mode: 'mirror_and_gravity', portalMode: 'dual' }
+      entanglement: { mode: 'mirror_and_gravity', portalMode: 'dual', tetherPhysical: true }
     };
   }
   if (z === 118) {
@@ -941,7 +945,8 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
   const idx = z - 87;
   // 6 Expert Smart Archetype syntheses in Period 7
   if (idx === 3 || idx === 8 || idx === 15 || idx === 19 || idx === 27 || idx === 29) {
-    const archetypeId = ARCHETYPE_CYCLE[idx % ARCHETYPE_CYCLE.length];
+    const rawArchetypeId = ARCHETYPE_CYCLE[idx % ARCHETYPE_CYCLE.length];
+    const archetypeId = rawArchetypeId === 'living_floor' ? 'pauli_trampoline' : rawArchetypeId;
     return {
       level: z,
       period,
@@ -950,14 +955,11 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       matterState: MATTER_CYCLE[idx % MATTER_CYCLE.length],
       addWormhole: true,
       addTimeDilation: true,
-      addPhaseClimax: idx % 2 === 0,
-      ...(archetypeId === 'living_floor'
-        ? { entanglement: { mode: 'inverted_gravity' as const, allowHeroCollision: true } }
-        : {})
+      addPhaseClimax: idx % 2 === 0
     };
   }
 
-  // Remaining 25 expert levels: every level combines 3-4 mechanics!
+  // Remaining expert levels: every level combines 3-4 mechanics!
   const recipe = idx % 5;
   const matter = MATTER_CYCLE[idx % MATTER_CYCLE.length];
   if (recipe === 0) {
@@ -985,7 +987,7 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
     };
   }
   if (recipe === 2) {
-    // Duplicate + Gate/Plate + Entanglement (with tetherPhysical) + MatterState
+    // Duplicate + Gate/Plate + TimeDilation + MatterState
     return {
       level: z,
       period,
@@ -993,12 +995,11 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       matterState: matter,
       addDuplicate: true,
       addGatePlate: true,
-      addTimeDilation: true,
-      entanglement: { mode: 'mirror_x', tetherPhysical: idx % 4 === 2 }
+      addTimeDilation: true
     };
   }
   if (recipe === 3) {
-    // Wormhole + TimeDilation + Decay + Entanglement
+    // Wormhole + TimeDilation + Decay + MatterState (entanglement only on chosen L95)
     return {
       level: z,
       period,
@@ -1007,7 +1008,9 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       addWormhole: true,
       addTimeDilation: true,
       addDecayClimax: true,
-      entanglement: { mode: 'mirror_x', tetherPhysical: idx % 6 === 3 }
+      ...(z === 95
+        ? { entanglement: { mode: 'inverted_gravity' as const, tetherPhysical: true } }
+        : {})
     };
   }
   // recipe === 4: Clone Fusion + Tunnel + Phase + MatterState

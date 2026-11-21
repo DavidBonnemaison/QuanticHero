@@ -1,6 +1,6 @@
 import { PHYSICS } from '../physics/constants';
 import type { Door, LevelData, Particle, Platform, Spike } from '../types';
-import { assemblePacedLevel } from './chunkAssembler';
+import { type LevelTopology, assemblePacedLevel } from './chunkAssembler';
 import { delta_y_max, isReachable, t_apex, t_land, x_reach } from './kinematics';
 import { type SimulationResult, simulateFullLevel } from './simulator';
 
@@ -11,6 +11,7 @@ export interface GeneratorOptions {
   width?: number;
   height?: number;
   mode?: 'dag' | 'paced';
+  topology?: LevelTopology;
 }
 
 export class SeededRandom {

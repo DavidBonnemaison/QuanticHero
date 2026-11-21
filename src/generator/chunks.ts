@@ -224,6 +224,7 @@ export function createGravityWellChunk(options: GravityWellOptions = {}): Chunk 
   const wellWidth = Math.max(320, Math.min(420, options.wellWidth ?? 360));
   const height = options.height ?? 460;
   const steps = options.steps ?? 4;
+  const exitDirection = options.exitDirection ?? 'right';
   const wallThickness = 24;
 
   const platforms: Platform[] = [];
@@ -231,23 +232,43 @@ export function createGravityWellChunk(options: GravityWellOptions = {}): Chunk 
   const particles: Particle[] = [];
   const pathPlatforms: Platform[] = [];
 
-  // Left neon vertical wall (leaves entrance opening at bottom)
-  platforms.push({
-    x: originX,
-    y: originY,
-    width: wallThickness,
-    height: Math.max(120, height - 290),
-    kind: 'wall'
-  });
+  if (exitDirection === 'left') {
+    // Left neon vertical wall: opening at top-left for leftward exit AND at bottom-left for entry
+    platforms.push({
+      x: originX,
+      y: originY + 115,
+      width: wallThickness,
+      height: Math.max(90, height - 265),
+      kind: 'wall'
+    });
 
-  // Right neon vertical wall (leaves exit opening at top)
-  platforms.push({
-    x: originX + wellWidth - wallThickness,
-    y: originY + 70,
-    width: wallThickness,
-    height: Math.max(120, height - 70),
-    kind: 'wall'
-  });
+    // Right neon vertical wall: full height backstop for leftward rebound
+    platforms.push({
+      x: originX + wellWidth - wallThickness,
+      y: originY,
+      width: wallThickness,
+      height: Math.max(160, height),
+      kind: 'wall'
+    });
+  } else {
+    // Left neon vertical wall (leaves entrance opening at bottom)
+    platforms.push({
+      x: originX,
+      y: originY,
+      width: wallThickness,
+      height: Math.max(120, height - 290),
+      kind: 'wall'
+    });
+
+    // Right neon vertical wall (leaves exit opening at top)
+    platforms.push({
+      x: originX + wellWidth - wallThickness,
+      y: originY + 70,
+      width: wallThickness,
+      height: Math.max(120, height - 70),
+      kind: 'wall'
+    });
+  }
 
   // Hazard spikes at the bottom pit
   spikes.push({
@@ -274,7 +295,7 @@ export function createGravityWellChunk(options: GravityWellOptions = {}): Chunk 
 
   for (let i = 1; i <= steps; i++) {
     const ledgeY = Math.round(bottomY - i * stepYGap);
-    const isRight = i % 2 === 1;
+    const isRight = exitDirection === 'left' ? (steps - i) % 2 === 0 : i % 2 === 1;
     const ledgeWidth = 120;
     const ledgeClearance = 12;
     const ledgeX = isRight
@@ -291,10 +312,14 @@ export function createGravityWellChunk(options: GravityWellOptions = {}): Chunk 
     pathPlatforms.push(ledge);
   }
 
-  // Exit platform at the top of the well
+  // Exit platform at the top of the well (top-right or top-left depending on exitDirection)
   const exitLedgeWidth = 110;
+  const exitLedgeX =
+    exitDirection === 'left'
+      ? originX + wallThickness + 10
+      : originX + wellWidth - wallThickness - exitLedgeWidth - 10;
   const exitLedge: Platform = {
-    x: originX + wellWidth - wallThickness - exitLedgeWidth - 10,
+    x: exitLedgeX,
     y: topY,
     width: exitLedgeWidth,
     height: 20

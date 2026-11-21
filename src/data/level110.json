@@ -184,6 +184,8 @@
     "mode": "mirror_x",
     "portalMode": "dual",
     "revealAtX": 1043,
+    "tetherPhysical": true,
+    "tetherMaxLength": 540,
     "betaSpawn": {
       "x": 3081,
       "y": 305
@@ -193,6 +195,26 @@
       "y": 303
     }
   },
+  "tetherPylons": [
+    {
+      "x": 640,
+      "y": 569,
+      "radius": 18,
+      "maxLength": 540
+    },
+    {
+      "x": 1696,
+      "y": 569,
+      "radius": 18,
+      "maxLength": 540
+    },
+    {
+      "x": 2544,
+      "y": 569,
+      "radius": 18,
+      "maxLength": 540
+    }
+  ],
   "wormholes": [
     {
       "id": "wh_main_110",
