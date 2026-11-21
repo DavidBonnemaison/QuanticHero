@@ -131,6 +131,41 @@ const EditorComponent: React.FC<EditorComponentProps> = ({
             i={i}
           />
         ))}
+        {platforms.map((p, i) =>
+          p.superposition ? (
+            <div
+              key={`superAlt-${i}`}
+              style={{
+                position: 'absolute',
+                left: `${p.superposition.altX * scale}px`,
+                top: `${p.superposition.altY * scale}px`,
+                width: `${p.width * scale}px`,
+                height: `${p.height * scale}px`,
+                border: `${Math.max(1, 2 * scale)}px dashed #c084fc`,
+                backgroundColor: 'rgba(168, 85, 247, 0.22)',
+                pointerEvents: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+          ) : null
+        )}
+        {(level.observerBeams ?? []).map((beam, i) => (
+          <div
+            key={`observerBeam-${i}`}
+            style={{
+              position: 'absolute',
+              left: `${(beam.x - 10) * scale}px`,
+              top: `${(beam.y - 10) * scale}px`,
+              width: `${20 * scale}px`,
+              height: `${20 * scale}px`,
+              borderRadius: '50%',
+              border: `${Math.max(1, 2 * scale)}px solid #fbbf24`,
+              backgroundColor: 'rgba(0, 229, 255, 0.45)',
+              pointerEvents: 'none',
+              boxSizing: 'border-box'
+            }}
+          />
+        ))}
         {particles.map((p, i) => (
           <DrawParticle key={`particleDrawing${p.x}-${p.y}-${i}`} {...p} scale={scale} i={i} />
         ))}
@@ -174,6 +209,8 @@ export const EditorView: React.FC = () => {
   const deletePlatform = useGameStore((state) => state.deletePlatform);
   const addParticle = useGameStore((state) => state.addParticle);
   const deleteParticle = useGameStore((state) => state.deleteParticle);
+  const addObserverBeam = useGameStore((state) => state.addObserverBeam);
+  const deleteObserverBeam = useGameStore((state) => state.deleteObserverBeam);
 
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(currentLevel || 1);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
@@ -346,6 +383,16 @@ export const EditorView: React.FC = () => {
             {...p}
             key={`platform${i}`}
             onChange={(e) => handleFieldChange(e, 'platform')}
+            onToggleSuperposition={(idx, enabled) =>
+              updateLevelField({
+                level: currentLevelNumber,
+                type: 'platformSuperposition',
+                n: idx,
+                prop: 'enabled',
+                value: enabled
+              })
+            }
+            onChangeSuperposition={(e) => handleFieldChange(e, 'platformSuperposition')}
             deletePlatform={handleDeletePlatform}
             i={i}
           />
@@ -421,6 +468,138 @@ export const EditorView: React.FC = () => {
             />
           </div>
         </div>
+        <h3>Time Loop</h3>
+        <div className={styles.fieldEditor}>
+          <div>
+            <label>Enabled:</label>
+            <input
+              type="checkbox"
+              checked={Boolean(level.timeLoop)}
+              onChange={(e) =>
+                updateLevelField({
+                  level: currentLevelNumber,
+                  type: 'timeLoop',
+                  prop: 'enabled',
+                  value: e.target.checked
+                })
+              }
+            />
+          </div>
+          {level.timeLoop && (
+            <>
+              <div>
+                <label>Cycle (ms):</label>
+                <input
+                  type="number"
+                  value={level.timeLoop.cycleMs}
+                  min={3000}
+                  max={15000}
+                  step={500}
+                  onChange={(e) => handleFieldChange(e, 'timeLoop')}
+                  data-n={0}
+                  data-prop="cycleMs"
+                />
+              </div>
+              <div>
+                <label>Max Echoes:</label>
+                <input
+                  type="number"
+                  value={level.timeLoop.maxEchoes}
+                  min={1}
+                  max={3}
+                  step={1}
+                  onChange={(e) => handleFieldChange(e, 'timeLoop')}
+                  data-n={0}
+                  data-prop="maxEchoes"
+                />
+              </div>
+            </>
+          )}
+        </div>
+        <h3>
+          Observer Beams
+          <div
+            className={styles.addButton}
+            onClick={() => addObserverBeam({ level: currentLevelNumber })}
+            role="button"
+            tabIndex={0}
+          >
+            +
+          </div>
+        </h3>
+        {(level.observerBeams ?? []).map((beam, i) => (
+          <div className={styles.fieldEditor} key={`beam-${i}`}>
+            <div className={styles.itemNumber}>{i}</div>
+            <div
+              className={styles.deleteItem}
+              data-n={i}
+              onClick={() => deleteObserverBeam({ level: currentLevelNumber, n: i })}
+              role="button"
+              tabIndex={0}
+            >
+              ✕
+            </div>
+            <div>
+              <label>x:</label>
+              <input
+                type="number"
+                value={beam.x}
+                onChange={(e) => handleFieldChange(e, 'observerBeam')}
+                step="10"
+                data-n={i}
+                data-prop="x"
+              />
+            </div>
+            <div>
+              <label>y:</label>
+              <input
+                type="number"
+                value={beam.y}
+                onChange={(e) => handleFieldChange(e, 'observerBeam')}
+                step="10"
+                data-n={i}
+                data-prop="y"
+              />
+            </div>
+            <div>
+              <label>sweep (°):</label>
+              <input
+                type="number"
+                value={beam.sweepAngleDeg}
+                onChange={(e) => handleFieldChange(e, 'observerBeam')}
+                step="5"
+                min="10"
+                max="360"
+                data-n={i}
+                data-prop="sweepAngleDeg"
+              />
+            </div>
+            <div>
+              <label>speed (°/s):</label>
+              <input
+                type="number"
+                value={beam.speedDegPerSec}
+                onChange={(e) => handleFieldChange(e, 'observerBeam')}
+                step="5"
+                data-n={i}
+                data-prop="speedDegPerSec"
+              />
+            </div>
+            <div>
+              <label>range:</label>
+              <input
+                type="number"
+                value={beam.range}
+                onChange={(e) => handleFieldChange(e, 'observerBeam')}
+                step="20"
+                min="80"
+                max="1200"
+                data-n={i}
+                data-prop="range"
+              />
+            </div>
+          </div>
+        ))}
       </div>
       <EditorComponent
         scale={scale}

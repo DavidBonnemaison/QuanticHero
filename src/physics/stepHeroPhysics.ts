@@ -23,6 +23,10 @@ export interface HeroControlState {
   waveDashUntilMs?: number;
   jumpMultiplier?: number;
   onCryo?: boolean;
+  coyoteBonusMs?: number;
+  jumpBufferBonusMs?: number;
+  airControlMultiplier?: number;
+  waveDashSpeedMultiplier?: number;
 }
 
 export interface HeroControlInput {
@@ -61,20 +65,22 @@ export function applyFramerateIndependentDrag(
 
 /**
  * Returns the Spec-04 asymmetric gravity multiplier:
- * - Apex Hang-Time: |vy| < 45 px/s -> 0.6 (40% reduced gravity)
- * - Fast Fall: vy * upsideDown > 45 px/s -> 1.35
+ * - Apex Hang-Time: |vy| < 45 * apexHangTimeMultiplier px/s -> 0.6 (40% reduced gravity)
+ * - Fast Fall: vy * upsideDown > 45 * apexHangTimeMultiplier px/s -> 1.35
  * - Normal ascent / grounded -> 1.0
  */
 export function getAsymmetricGravityMultiplier(
   vy: number,
   upsideDown: number,
-  touchingGround: boolean
+  touchingGround: boolean,
+  apexHangTimeMultiplier = 1
 ): number {
   if (touchingGround) return 1;
-  if (Math.abs(vy) < PHYSICS.APEX_VY_THRESHOLD) {
+  const apexThreshold = PHYSICS.APEX_VY_THRESHOLD * Math.max(1, apexHangTimeMultiplier);
+  if (Math.abs(vy) < apexThreshold) {
     return PHYSICS.APEX_GRAVITY_MULT;
   }
-  if (vy * upsideDown > PHYSICS.APEX_VY_THRESHOLD) {
+  if (vy * upsideDown > apexThreshold) {
     return PHYSICS.FALL_GRAVITY_MULT;
   }
   return 1;
@@ -118,16 +124,19 @@ export function stepHeroControl(
   const jumpJustPressed = hasTime ? input.jump && !(state.prevJumpPressed ?? false) : input.jump;
   const jumpReleased = hasTime ? !input.jump && (state.prevJumpPressed ?? false) : false;
 
+  const coyoteWindowMs = PHYSICS.COYOTE_TIME_MS + (state.coyoteBonusMs ?? 0);
+  const jumpBufferWindowMs = PHYSICS.JUMP_BUFFER_MS + (state.jumpBufferBonusMs ?? 0);
+
   const canCoyoteJump =
     hasTime &&
     !state.touchingGround &&
     !(state.hasJumpedSinceGrounded ?? false) &&
-    nowMs - (state.lastGroundedTimeMs ?? Number.NEGATIVE_INFINITY) <= PHYSICS.COYOTE_TIME_MS;
+    nowMs - (state.lastGroundedTimeMs ?? Number.NEGATIVE_INFINITY) <= coyoteWindowMs;
 
   const hasBufferedJump =
     hasTime &&
     state.touchingGround &&
-    nowMs - (state.lastJumpPressedTimeMs ?? Number.NEGATIVE_INFINITY) <= PHYSICS.JUMP_BUFFER_MS;
+    nowMs - (state.lastJumpPressedTimeMs ?? Number.NEGATIVE_INFINITY) <= jumpBufferWindowMs;
 
   const willJump =
     isActive &&
@@ -143,7 +152,10 @@ export function stepHeroControl(
   const isWaveDashActive =
     waveDashTriggered || (hasTime && nowMs < (state.waveDashUntilMs ?? Number.NEGATIVE_INFINITY));
 
-  const mult = state.velocityMultiplier * (isWaveDashActive ? PHYSICS.WAVE_DASH_MULTIPLIER : 1);
+  const waveDashMult = isWaveDashActive
+    ? PHYSICS.WAVE_DASH_MULTIPLIER * (state.waveDashSpeedMultiplier ?? 1)
+    : 1;
+  const mult = state.velocityMultiplier * waveDashMult;
 
   let vx = state.vx;
   let vy = state.vy;
@@ -213,7 +225,10 @@ export function stepHeroControl(
           animState = 'idle';
         }
       } else {
-        const baseDrag = isHighSpeed ? PHYSICS.HIGH_SPEED_AIR_DRAG_X : PHYSICS.AIR_DRAG_X;
+        const rawDrag = isHighSpeed ? PHYSICS.HIGH_SPEED_AIR_DRAG_X : PHYSICS.AIR_DRAG_X;
+        const airControl = state.airControlMultiplier ?? 1;
+        const baseDrag =
+          airControl < 1 ? Math.max(0.84, rawDrag - (1 - airControl) * 0.14) : rawDrag;
         vx = applyFramerateIndependentDrag(vx, baseDrag, deltaMs);
       }
     }

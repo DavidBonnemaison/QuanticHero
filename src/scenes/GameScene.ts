@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
+import { getChronoLoopLevelById } from '../data/chronoLoopLevels';
 import { getCachedLevel, preloadLevel } from '../data/levels';
 import { getMoleculeById } from '../data/molecules';
+import { getSchrodingerLevelById } from '../data/schrodingerLevels';
 import type { BohrBackgroundRenderer } from '../effects/BohrBackgroundRenderer';
 import type { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
 import { assembleCampaignLevel, assemblePacedLevel } from '../generator/chunkAssembler';
@@ -13,6 +15,10 @@ import {
   createQuantumPinningState,
   findPinnablePlatformAtPoint
 } from '../physics/matterStates';
+import {
+  type AggregatedMutationModifiers,
+  DEFAULT_MUTATION_MODIFIERS
+} from '../roguelite/mutations';
 import { SessionSwarmBuffer } from '../services/GhostManager';
 import { useGameStore } from '../store';
 import { type GhostFrame, GhostRecorder } from '../tools/GhostRecorder';
@@ -35,10 +41,10 @@ import { HudController } from './systems/HudController';
 import { LevelBuilder } from './systems/LevelBuilder';
 import { QuantumSystems } from './systems/QuantumSystems';
 import { RespawnTransitionController } from './systems/RespawnTransitionController';
+import { TimeLoopSystem } from './systems/TimeLoopSystem';
 import type {
-  AntigravityBubble,
+  ActiveObserverFlash,
   BroglieCrystal,
-  BubbleHarvestHit,
   DecayPlatformEntry,
   EdgePip,
   GameSceneContext,
@@ -48,7 +54,9 @@ import type {
   MovingPlatform,
   PhasePlatformEntry,
   PinnablePlatformEntry,
-  PressurePlateEntry
+  PressurePlateEntry,
+  SuperposedPlatformEntry,
+  SuperposedSpikeEntry
 } from './systems/types';
 
 export type { Gate, PressurePlate } from './systems/types';
@@ -133,6 +141,18 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public condenseButtonBg: Phaser.GameObjects.Rectangle | null = null;
   public condenseButtonLabel: Phaser.GameObjects.Text | null = null;
   public condenseButtonZone: Phaser.GameObjects.Zone | null = null;
+  public loopButtonBg: Phaser.GameObjects.Rectangle | null = null;
+  public loopButtonLabel: Phaser.GameObjects.Text | null = null;
+  public loopButtonZone: Phaser.GameObjects.Zone | null = null;
+  public observeButtonBg: Phaser.GameObjects.Rectangle | null = null;
+  public observeButtonLabel: Phaser.GameObjects.Text | null = null;
+  public observeButtonZone: Phaser.GameObjects.Zone | null = null;
+  public timeLoopIndicatorText: Phaser.GameObjects.Text | null = null;
+  public superposedPlatforms: SuperposedPlatformEntry[] = [];
+  public superposedSpikes: SuperposedSpikeEntry[] = [];
+  public wavefunctionGraphics: Phaser.GameObjects.Graphics | null = null;
+  public observerBeamGraphics: Phaser.GameObjects.Graphics | null = null;
+  public activeObserverFlash: ActiveObserverFlash | null = null;
   public betaPipCamera: Phaser.Cameras.Scene2D.Camera | null = null;
   public betaPipFrame: Phaser.GameObjects.Rectangle | null = null;
   public betaPipLabel: Phaser.GameObjects.Text | null = null;
@@ -176,13 +196,17 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public activePinPointerId: number | null = null;
   public alphaArrivalTimeMs: number | null = null;
   public betaArrivalTimeMs: number | null = null;
-  public bubbleHarvestHits: BubbleHarvestHit[] = [];
-  public antigravityBubbles: AntigravityBubble[] = [];
   public ephemeralPlatforms: Phaser.GameObjects.Rectangle[] = [];
   public entanglementRevealed = false;
   public constellationGraphics: Phaser.GameObjects.Graphics | null = null;
   public periodicTableGraphics: Phaser.GameObjects.Graphics | null = null;
   public previousCompletedLevelId: number | null = null;
+  public acceleratorMode = false;
+  public acceleratorModifiers: AggregatedMutationModifiers = DEFAULT_MUTATION_MODIFIERS;
+  public acceleratorShieldCharges = 0;
+  public acceleratorTunnelTimerMs = 0;
+  public acceleratorReflexCooldownUntil = 0;
+  public acceleratorReflexDilationUntil = 0;
 
   public readonly levelBuilder: LevelBuilder;
   public readonly hudController: HudController;
@@ -190,6 +214,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public readonly quantumSystems: QuantumSystems;
   public readonly cameraDirector: CameraDirector;
   public readonly respawnTransitionController: RespawnTransitionController;
+  public readonly timeLoopSystem: TimeLoopSystem;
 
   constructor() {
     super('Game');
@@ -199,6 +224,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     this.quantumSystems = new QuantumSystems(this);
     this.cameraDirector = new CameraDirector(this, this.hudController);
     this.respawnTransitionController = new RespawnTransitionController(this);
+    this.timeLoopSystem = new TimeLoopSystem(this);
   }
 
   init(): void {
@@ -254,6 +280,20 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     }
 
     if (!store.sharedLevel && typeof window !== 'undefined') {
+      const chronoMatch = /\/game\/chrono\/([^/?#]+)/i.exec(window.location.pathname);
+      if (chronoMatch) {
+        const entry = getChronoLoopLevelById(chronoMatch[1]);
+        if (entry) {
+          store.setSharedLevel(entry.levelData);
+        }
+      }
+      const schrodingerMatch = /\/game\/schrodinger\/([^/?#]+)/i.exec(window.location.pathname);
+      if (schrodingerMatch) {
+        const entry = getSchrodingerLevelById(schrodingerMatch[1]);
+        if (entry) {
+          store.setSharedLevel(entry.levelData);
+        }
+      }
       const molMatch = /\/game\/molecule\/([^/?#]+)/i.exec(window.location.pathname);
       if (molMatch) {
         const recipe = getMoleculeById(molMatch[1]);
@@ -279,8 +319,15 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
 
     if (store.sharedLevel) {
       this.levelData = store.sharedLevel;
+      this.acceleratorMode = /^accelerator-/i.test(String(this.levelData.id ?? ''));
+      if (!this.acceleratorMode) {
+        this.acceleratorModifiers = DEFAULT_MUTATION_MODIFIERS;
+      }
       return;
     }
+
+    this.acceleratorMode = false;
+    this.acceleratorModifiers = DEFAULT_MUTATION_MODIFIERS;
 
     const currentLevel = store.currentLevel || 1;
     const selected = this.resolveLevelData(currentLevel);
@@ -318,9 +365,26 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       this.input.keyboard
         .addKey(Phaser.Input.Keyboard.KeyCodes.X)
         .on('down', () => this.tryInFlightFission());
-      this.input.keyboard
-        .addKey(Phaser.Input.Keyboard.KeyCodes.E)
-        .on('down', () => this.cycleFocusNext());
+      this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E).on('down', () => {
+        if (
+          !this.isLevelCompleted &&
+          !this.isTransitioningLevel &&
+          this.quantumSystems.hasWavefunctionMechanics()
+        ) {
+          this.triggerActiveObservation();
+        } else {
+          this.cycleFocusNext();
+        }
+      });
+      this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT).on('down', () => {
+        if (
+          !this.isLevelCompleted &&
+          !this.isTransitioningLevel &&
+          this.quantumSystems.hasWavefunctionMechanics()
+        ) {
+          this.triggerActiveObservation();
+        }
+      });
       this.input.keyboard
         .addKey(Phaser.Input.Keyboard.KeyCodes.ONE)
         .on('down', () => this.switchFocusByIndex(0));
@@ -331,11 +395,17 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
         .addKey(Phaser.Input.Keyboard.KeyCodes.THREE)
         .on('down', () => this.switchFocusByIndex(2));
 
-      this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R).on('down', () => {
-        if (!this.isLevelCompleted && !this.isTransitioningLevel) {
-          this.quickRespawn();
-        }
-      });
+      this.input.keyboard
+        .addKey(Phaser.Input.Keyboard.KeyCodes.R)
+        .on('down', (_key: Phaser.Input.Keyboard.Key, event?: KeyboardEvent) => {
+          if (!this.isLevelCompleted && !this.isTransitioningLevel) {
+            if (this.timeLoopSystem.isActive() && !event?.shiftKey) {
+              this.triggerTimeLoopRewind();
+            } else {
+              this.quickRespawn();
+            }
+          }
+        });
 
       this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on('down', () => {
         if (this.isLevelCompleted && this.canAdvanceLevel) {
@@ -416,6 +486,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       if (pointer.y <= 54) return;
 
       const worldPt = this.getPointerWorldCoords(pointer);
+      if (this.quantumSystems.hasSuperposedObjectAtPoint(worldPt.x, worldPt.y)) {
+        this.triggerActiveObservation(worldPt);
+      }
       const touchedPinnable = Boolean(
         findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)
       );
@@ -456,9 +529,6 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       const worldPt = this.getPointerWorldCoords(pointer);
-      if (!this.isLevelCompleted && !this.isTransitioningLevel) {
-        this.trackBubblePointerMove(worldPt.x, worldPt.y, this.time?.now ?? Date.now());
-      }
       if (
         pointer.isDown &&
         (this.activePinPointerId === null || this.activePinPointerId === pointer.id)
@@ -646,17 +716,27 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public applyPhase(phase: PlatformPhase): void {
     this.quantumSystems.applyPhase(phase);
   }
-  public trackBubblePointerMove(worldX: number, worldY: number, nowMs: number): boolean {
-    return this.quantumSystems.matterAndFields.trackBubblePointerMove(worldX, worldY, nowMs);
+  public triggerTimeLoopRewind(): void {
+    this.timeLoopSystem.triggerLoopRewind(true);
   }
-  public spawnAntigravityBubble(x: number, y: number, nowMs: number): void {
-    this.quantumSystems.matterAndFields.spawnAntigravityBubble(x, y, nowMs);
+  public triggerActiveObservation(targetWorldPoint?: { x: number; y: number }): number {
+    return this.quantumSystems.triggerActiveObservation(targetWorldPoint);
   }
-  public updateAntigravityBubbles(nowMs: number): void {
-    this.quantumSystems.matterAndFields.updateAntigravityBubbles(nowMs);
-  }
+
   public tryCrystallizeBroglieTrail(): boolean {
     return this.quantumSystems.matterAndFields.tryCrystallizeBroglieTrail();
+  }
+  public spawnBroglieWallWake(x: number, y: number, durationMs = 2000): void {
+    this.quantumSystems.matterAndFields.spawnBroglieWallWake(x, y, durationMs);
+  }
+  public loadAcceleratorChamber(
+    nextLevelData: LevelData,
+    modifiers: AggregatedMutationModifiers
+  ): void {
+    this.acceleratorMode = true;
+    this.acceleratorModifiers = modifiers;
+    useGameStore.getState().setSharedLevel(nextLevelData);
+    this.rebuildForLevel(nextLevelData);
   }
   public tryCloneFusion(nowMs = this.time?.now ?? 0): boolean {
     return this.quantumSystems.tryCloneFusion(nowMs);
@@ -722,9 +802,23 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       gameEvents.emit('time:dilation', { active: false, durationMs: 0 });
     }
     const isFocusBulletTime = time < this.focusBulletTimeUntil;
-    const timeDilationFactor = isFocusBulletTime ? 0.2 : this.isTimeDilationActive ? 0.25 : 1.0;
+    const isReflexDilation = time < this.acceleratorReflexDilationUntil;
+    const reflexScale = isReflexDilation
+      ? Math.max(0.2, this.acceleratorModifiers?.reflexDilationScale ?? 0.35)
+      : 1.0;
+    const timeDilationFactor = isFocusBulletTime
+      ? 0.2
+      : isReflexDilation
+        ? reflexScale
+        : this.isTimeDilationActive
+          ? 0.25
+          : 1.0;
     if (this.physics?.world) {
-      this.physics.world.timeScale = isFocusBulletTime ? 5.0 : 1.0;
+      this.physics.world.timeScale = isFocusBulletTime
+        ? 5.0
+        : isReflexDilation
+          ? 1 / reflexScale
+          : 1.0;
     }
 
     this.dilatedElapsedMs += delta * timeDilationFactor;
@@ -736,7 +830,8 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
         focusedHero.upsideDown === 1
           ? Boolean(focusedHero.body.touching.down || focusedHero.body.blocked.down)
           : Boolean(focusedHero.body.touching.up || focusedHero.body.blocked.up);
-      this.coherenceSystem.update(delta, focusedHero.body.velocity.x, isGrounded);
+      const coherenceMult = this.acceleratorModifiers?.coherenceGainMultiplier ?? 1;
+      this.coherenceSystem.update(delta * coherenceMult, focusedHero.body.velocity.x, isGrounded);
     }
 
     this.hudController.updateTimerAndIndicators();
@@ -753,7 +848,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       delta,
       this.heroes,
       this.portalSprite,
-      this.isTimeDilationActive,
+      this.isTimeDilationActive || isReflexDilation,
       this.coherenceSystem.getValue()
     );
     this.hudController.updateThumbRibbon();
@@ -777,6 +872,10 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
           !wrapAxes.vertical &&
           (hero.y > this.levelData.height + 20 || (hero.upsideDown === -1 && hero.y < -10))
         ) {
+          if (this.acceleratorMode) {
+            this.killHero(hero);
+            return;
+          }
           if (hero.isFocused || this.heroes.length <= 1) {
             gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: this.isEntangled });
             this.quickRespawn({ x: hero.x, y: hero.y });
@@ -789,6 +888,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     this.touchController.consumeFrameFlags();
 
     this.ghostController.updateGhostSurfing(isGhostActive);
+    this.timeLoopSystem.update(time, delta);
     this.quantumSystems.updateWorldMechanics(time, delta, elapsedMs, timeDilationFactor);
     this.cameraDirector.checkEntanglementReveal();
   }

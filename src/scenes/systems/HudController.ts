@@ -60,7 +60,9 @@ export class HudController {
         // safe
       }
       window.game = null;
-      push('/');
+      const rawId = String(ctx.levelData?.id ?? '');
+      const isQuantumModeLevel = /^(?:chrono|schrodinger|accelerator)-/i.test(rawId);
+      push(isQuantumModeLevel ? '/modes' : '/');
     });
     ctx.hudContainer.add(backButton);
 
@@ -205,6 +207,23 @@ export class HudController {
     ctx.dilationIndicatorText.setVisible(false);
     ctx.hudContainer.add(ctx.dilationIndicatorText);
 
+    if (ctx.levelData?.timeLoop) {
+      const loopIndicatorX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 44;
+      const initSec = (ctx.levelData.timeLoop.cycleMs / 1000).toFixed(1);
+      ctx.timeLoopIndicatorText = ctx.add.text(
+        loopIndicatorX,
+        29,
+        initialStrings.hud.timeLoopStatus(0, ctx.levelData.timeLoop.maxEchoes, initSec),
+        {
+          fontFamily: 'VT323',
+          fontSize: '18px',
+          color: '#00e5ff'
+        }
+      );
+      ctx.timeLoopIndicatorText.setScrollFactor(0);
+      ctx.hudContainer.add(ctx.timeLoopIndicatorText);
+    }
+
     if (isGodMode()) {
       const godBadge = ctx.add.text(274, 5, '[GOD]', {
         fontFamily: 'VT323',
@@ -242,10 +261,18 @@ export class HudController {
       if (ctx.condenseButtonLabel?.active) {
         ctx.condenseButtonLabel.setText(s.hud.condenseButton);
       }
+      if (ctx.loopButtonLabel?.active) {
+        ctx.loopButtonLabel.setText(s.hud.loopButton);
+      }
+      if (ctx.observeButtonLabel?.active) {
+        ctx.observeButtonLabel.setText(s.hud.observeButton);
+      }
       if (ctx.ghostButton?.active) {
         ctx.applyGhostMode();
       }
     });
+
+    const hideTopHud = Boolean(ctx.acceleratorMode);
 
     ctx.timerText = ctx.add.text(camW - 10, 3, '00:00:00', {
       fontFamily: 'VT323',
@@ -253,6 +280,7 @@ export class HudController {
       color: '#ffffff'
     });
     ctx.timerText.setOrigin(1, 0);
+    ctx.timerText.setVisible(!hideTopHud);
     ctx.hudContainer.add(ctx.timerText);
 
     ctx.splitDeltaText = ctx.add.text(camW - 10, 28, '--', {
@@ -262,12 +290,14 @@ export class HudController {
     });
     ctx.splitDeltaText.setOrigin(1, 0);
     ctx.splitDeltaText.setVisible(
-      (Boolean(initialActiveDuel?.ghostTrajectory) || currentMode !== 'off') &&
+      !hideTopHud &&
+        (Boolean(initialActiveDuel?.ghostTrajectory) || currentMode !== 'off') &&
         ctx.ghostFrames.length > 0
     );
     ctx.hudContainer.add(ctx.splitDeltaText);
 
     ctx.coherenceBarGraphics = ctx.add.graphics();
+    ctx.coherenceBarGraphics.setVisible(!hideTopHud);
     ctx.hudContainer.add(ctx.coherenceBarGraphics);
 
     const coherenceTierX = camW < 440 ? camW - 76 : camW - 110;
@@ -278,7 +308,21 @@ export class HudController {
     });
     ctx.coherenceTierText.setOrigin(1, 0);
     ctx.coherenceTierText.setAlpha(0.45);
+    ctx.coherenceTierText.setVisible(!hideTopHud);
     ctx.hudContainer.add(ctx.coherenceTierText);
+
+    if (hideTopHud) {
+      backButton.setVisible(false);
+      restartButton.setVisible(false);
+      soundButton.setVisible(false);
+      hapticButton.setVisible(false);
+      fxButton.setVisible(false);
+      ctx.ghostButton.setVisible(false);
+      ctx.duelBadgeText.setVisible(false);
+      ctx.phaseIndicatorText?.setVisible(false);
+      ctx.dilationIndicatorText?.setVisible(false);
+      ctx.timeLoopIndicatorText?.setVisible(false);
+    }
 
     const thumbRestartBg = ctx.add.rectangle(camW - 36, camH - 36, 48, 48, 0x0b0f19, 0.35);
     thumbRestartBg.setStrokeStyle(1.5, 0xfbbf24, 0.35);
@@ -332,6 +376,79 @@ export class HudController {
     ctx.hudContainer.add(condenseBg);
     ctx.hudContainer.add(condenseLabel);
     ctx.hudContainer.add(condenseZone);
+
+    if (ctx.levelData?.timeLoop) {
+      const loopX = camW - 58;
+      const loopY = camH - 96;
+      const loopBg = ctx.add.rectangle(loopX, loopY, 96, 44, 0x1e1035, 0.88);
+      loopBg.setStrokeStyle(2, 0xa855f7, 0.95);
+      loopBg.setScrollFactor?.(0);
+      const loopLabel = ctx.add.text(loopX, loopY, initialStrings.hud.loopButton, {
+        fontFamily: 'VT323',
+        fontSize: '20px',
+        color: '#00e5ff'
+      });
+      loopLabel.setOrigin(0.5);
+      loopLabel.setScrollFactor?.(0);
+      const loopZone = ctx.add.zone(loopX, loopY, 96, 44);
+      loopZone.setScrollFactor?.(0);
+      loopZone.setInteractive({ useHandCursor: true });
+      loopZone.on(
+        'pointerdown',
+        (_p: unknown, _lx: unknown, _ly: unknown, ev?: { stopPropagation?: () => void }) => {
+          ctx.uiPointerConsumed = true;
+          ev?.stopPropagation?.();
+          if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
+            ctx.triggerTimeLoopRewind?.();
+          }
+        }
+      );
+      ctx.loopButtonBg = loopBg;
+      ctx.loopButtonLabel = loopLabel;
+      ctx.loopButtonZone = loopZone;
+      ctx.hudContainer.add(loopBg);
+      ctx.hudContainer.add(loopLabel);
+      ctx.hudContainer.add(loopZone);
+    }
+
+    const hasWavefunctionMechanics = Boolean(
+      (ctx.superposedPlatforms && ctx.superposedPlatforms.length > 0) ||
+        (ctx.superposedSpikes && ctx.superposedSpikes.length > 0) ||
+        (ctx.levelData?.observerBeams && ctx.levelData.observerBeams.length > 0)
+    );
+    if (hasWavefunctionMechanics) {
+      const observeX = camW - 58;
+      const observeY = ctx.levelData?.timeLoop ? camH - 148 : camH - 96;
+      const observeBg = ctx.add.rectangle(observeX, observeY, 108, 44, 0x1e1035, 0.88);
+      observeBg.setStrokeStyle(2, 0xfbbf24, 0.95);
+      observeBg.setScrollFactor?.(0);
+      const observeLabel = ctx.add.text(observeX, observeY, initialStrings.hud.observeButton, {
+        fontFamily: 'VT323',
+        fontSize: '20px',
+        color: '#fbbf24'
+      });
+      observeLabel.setOrigin(0.5);
+      observeLabel.setScrollFactor?.(0);
+      const observeZone = ctx.add.zone(observeX, observeY, 108, 44);
+      observeZone.setScrollFactor?.(0);
+      observeZone.setInteractive({ useHandCursor: true });
+      observeZone.on(
+        'pointerdown',
+        (_p: unknown, _lx: unknown, _ly: unknown, ev?: { stopPropagation?: () => void }) => {
+          ctx.uiPointerConsumed = true;
+          ev?.stopPropagation?.();
+          if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
+            ctx.triggerActiveObservation?.();
+          }
+        }
+      );
+      ctx.observeButtonBg = observeBg;
+      ctx.observeButtonLabel = observeLabel;
+      ctx.observeButtonZone = observeZone;
+      ctx.hudContainer.add(observeBg);
+      ctx.hudContainer.add(observeLabel);
+      ctx.hudContainer.add(observeZone);
+    }
 
     if (ctx.betaPipCamera) {
       ctx.betaPipCamera.ignore?.(ctx.hudContainer);
@@ -402,8 +519,9 @@ export class HudController {
   public drawHudBar(camW: number): void {
     const hudBar = this.ctx.hudBarGraphics;
     if (!hudBar || !hudBar.active) return;
-    const hudHeight = 54;
     hudBar.clear();
+    if (this.ctx.acceleratorMode) return;
+    const hudHeight = 54;
     hudBar.fillStyle(0x0b0f19, 0.85);
     hudBar.fillRect(36, 0, Math.max(0, camW - 36), hudHeight);
     hudBar.fillStyle(0xe74c3c, 0.85);
@@ -472,6 +590,36 @@ export class HudController {
       ctx.condenseButtonZone.setPosition(condenseX, condenseY);
     }
 
+    const loopX = camW - 58;
+    const loopY = ctx.hasCondenseAbility ? camH - 148 : camH - 96;
+    if (ctx.loopButtonBg?.active) {
+      ctx.loopButtonBg.setPosition(loopX, loopY);
+    }
+    if (ctx.loopButtonLabel?.active) {
+      ctx.loopButtonLabel.setPosition(loopX, loopY);
+    }
+    if (ctx.loopButtonZone?.active) {
+      ctx.loopButtonZone.setPosition(loopX, loopY);
+    }
+
+    const observeX = camW - 58;
+    const observeY = ctx.levelData?.timeLoop
+      ? ctx.hasCondenseAbility
+        ? camH - 200
+        : camH - 148
+      : ctx.hasCondenseAbility
+        ? camH - 148
+        : camH - 96;
+    if (ctx.observeButtonBg?.active) {
+      ctx.observeButtonBg.setPosition(observeX, observeY);
+    }
+    if (ctx.observeButtonLabel?.active) {
+      ctx.observeButtonLabel.setPosition(observeX, observeY);
+    }
+    if (ctx.observeButtonZone?.active) {
+      ctx.observeButtonZone.setPosition(observeX, observeY);
+    }
+
     const pipY = camH - 70;
     ctx.edgePips.forEach((pip, index) => {
       const pipX = 40 + index * 70;
@@ -485,6 +633,12 @@ export class HudController {
 
   public updateCoherenceGauge(force = false, widthOverride?: number): void {
     const ctx = this.ctx;
+    if (ctx.acceleratorMode) {
+      if (ctx.coherenceBarGraphics?.active) {
+        ctx.coherenceBarGraphics.clear();
+      }
+      return;
+    }
     const value = ctx.coherenceSystem?.getValue?.() ?? 0;
     const tier = ctx.coherenceSystem?.getTier?.() ?? 'x1';
 
@@ -569,6 +723,19 @@ export class HudController {
     }
     if (ctx.condenseButtonZone?.active) {
       ctx.condenseButtonZone.setVisible(showCondense);
+    }
+    if (ctx.timeLoopIndicatorText?.active && ctx.timeLoopSystem?.isActive()) {
+      const s = getStrings(useGameStore.getState().locale ?? 'en');
+      const remMs = ctx.timeLoopSystem.getRemainingMs();
+      const remSec = (remMs / 1000).toFixed(1);
+      ctx.timeLoopIndicatorText.setText(
+        s.hud.timeLoopStatus(
+          ctx.timeLoopSystem.getEchoCount(),
+          ctx.timeLoopSystem.getMaxEchoes(),
+          remSec
+        )
+      );
+      ctx.timeLoopIndicatorText.setColor(remMs <= 1000 ? '#f43f5e' : '#00e5ff');
     }
     this.updateCoherenceGauge();
     if (ctx.coherenceTierText?.active && ctx.lastCoherenceTier === 'HYPER') {

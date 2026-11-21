@@ -7,6 +7,7 @@ export interface Strings {
     title: string;
     continueAtom: (z: number, symbol: string) => string;
     periodicTable: string;
+    quantumModes: string;
     levelLab: string;
     newGame: string;
     installApp: string;
@@ -150,12 +151,16 @@ export interface Strings {
     phase: (phase: string) => string;
     timeDilation: string;
     condenseButton: string;
+    loopButton: string;
+    observeButton: string;
+    timeLoopStatus: (echoes: number, maxEchoes: number, remainingSec: string) => string;
     elementSynthesized: (symbol: string, atomUpper: string) => string;
     newRecord: string;
     rec: string;
     jumps: (count: number) => string;
     nextLevel: (symbol: string, atom: string) => string;
     levelsButton: string;
+    modesButton: string;
     shareCardButton: string;
     toasts: {
       bellSync: string;
@@ -178,6 +183,59 @@ export interface Strings {
         condense: string;
       };
     };
+  };
+  modes: {
+    backToMenu: string;
+    title: string;
+    subtitle: string;
+    chronoLoopTitle: string;
+    chronoLoopTag: string;
+    chronoLoopDesc: string;
+    chronoCompletedCount: (done: number, total: number) => string;
+    cycleLabel: (sec: string, maxEchoes: number) => string;
+    playLevel: string;
+    bestLabel: (formatted: string) => string;
+    notCleared: string;
+    schrodingerTitle: string;
+    schrodingerTag: string;
+    schrodingerDesc: string;
+    schrodingerStatus: string;
+    schrodingerCompletedCount: (done: number, total: number) => string;
+    observerSpecLabel: (superposedCount: number, beamCount: number) => string;
+    acceleratorTitle: string;
+    acceleratorTag: string;
+    acceleratorDesc: string;
+    acceleratorStatus: string;
+    acceleratorAction: string;
+    acceleratorBestRecord: (maxZ: number, symbol: string, rooms: number) => string;
+  };
+  accelerator: {
+    backToModes: string;
+    hudTitle: string;
+    roomsLabel: (count: number) => string;
+    livesLabel: string;
+    mutationsLabel: (count: number) => string;
+    synergiesLabel: (count: number) => string;
+    fusionHeader: (z: number, symbol: string, name: string) => string;
+    fusionSurgeBadge: string;
+    chooseMutationTitle: string;
+    chooseMutationHint: string;
+    keyHint: (idx: number) => string;
+    synergyDetected: (name: string) => string;
+    runOverTitle: string;
+    newRecordBadge: string;
+    reachedZLabel: string;
+    roomsClearedLabel: string;
+    totalTimeLabel: string;
+    mutationsSection: string;
+    synergiesSection: string;
+    noMutations: string;
+    downloadCard: string;
+    copySummary: string;
+    summaryCopied: string;
+    newRun: string;
+    modesHub: string;
+    rarityLabel: (rarity: 'Common' | 'Rare' | 'Exotic') => string;
   };
   ghost: Record<GhostMode, string>;
   medals: {
@@ -213,6 +271,7 @@ export const STRINGS: Record<Locale, Strings> = {
       title: 'Quantum Hero',
       continueAtom: (z, symbol) => `Continue — Atom #${z} (${symbol})`,
       periodicTable: 'Periodic Table',
+      quantumModes: 'Quantum Modes',
       levelLab: 'Level Lab',
       newGame: 'New Game',
       installApp: 'Install App',
@@ -360,12 +419,17 @@ export const STRINGS: Record<Locale, Strings> = {
       phase: (phase) => `[PHASE: ${phase.toUpperCase()}]`,
       timeDilation: '[TIME: 0.25x]',
       condenseButton: '[CONDENSE]',
+      loopButton: '[LOOP]',
+      observeButton: '[OBSERVE]',
+      timeLoopStatus: (echoes, maxEchoes, remainingSec) =>
+        `[LOOP ${echoes}/${maxEchoes} • ${remainingSec}s]`,
       elementSynthesized: (symbol, atomUpper) => `ELEMENT SYNTHESIZED — ${symbol} ${atomUpper}`,
       newRecord: 'NEW RECORD',
       rec: 'REC',
       jumps: (count) => `JUMPS: ${count}`,
       nextLevel: (symbol, atom) => `[SPACE / TAP] NEXT: ${symbol} ${atom}`,
       levelsButton: '[LEVELS]',
+      modesButton: '[QUANTUM MODES]',
       shareCardButton: 'SHARE CARD',
       toasts: {
         bellSync: 'BELL SYNC ! (GOLD ISOTOPE)',
@@ -388,6 +452,67 @@ export const STRINGS: Record<Locale, Strings> = {
           condense: 'BROGLIE CONDENSE ! ([CONDENSE] / [C] / SPACE)'
         }
       }
+    },
+    modes: {
+      backToMenu: '◄ MENU',
+      title: 'QUANTUM MODES',
+      subtitle: 'EXPERIMENTAL PHYSICS ARENAS — CO-OP ECHOES, WAVE COLLAPSE & ENDLESS FUSION',
+      chronoLoopTitle: 'CHRONO-LOOP',
+      chronoLoopTag: 'CO-OP WITH YOUR PAST',
+      chronoLoopDesc:
+        'Rewind time with [R] or [LOOP] to leave up to 3 physical echoes. Hold pressure plates, Ghost Surf on your past self, or trigger Temporal Pauli Blasts.',
+      chronoCompletedCount: (done, total) => `${done} / ${total} CLEARED`,
+      cycleLabel: (sec, maxEchoes) =>
+        `${sec}s • ${maxEchoes} ${maxEchoes === 1 ? 'ECHO' : 'ECHOES'}`,
+      playLevel: 'PLAY',
+      bestLabel: (formatted) => `BEST ${formatted}`,
+      notCleared: 'UNSOLVED',
+      schrodingerTitle: 'SCHRODINGER LABS',
+      schrodingerTag: 'WAVEFUNCTION OBSERVER',
+      schrodingerDesc:
+        'Superposed platforms and hazards collapse under direct observation ([E] / [SHIFT] / TAP) or sweeping observer beams.',
+      schrodingerStatus: 'SECTOR 02 ONLINE — 6 EIGENSTATE CHAMBERS',
+      schrodingerCompletedCount: (done, total) => `${done} / ${total} CLEARED`,
+      observerSpecLabel: (superposedCount, beamCount) =>
+        beamCount > 0
+          ? `${superposedCount} Ψ • ${beamCount} ${beamCount === 1 ? 'BEAM' : 'BEAMS'}`
+          : `${superposedCount} Ψ ACTIVE`,
+      acceleratorTitle: 'PARTICLE ACCELERATOR',
+      acceleratorTag: 'ENDLESS FUSION ROGUELITE',
+      acceleratorDesc:
+        'Chain rapid-fire micro-chambers from Z = 1 to 118+ with quantum mutations between rooms.',
+      acceleratorStatus: 'SECTOR 03 ONLINE — ENDLESS FUSION SYNCHROTRON',
+      acceleratorAction: 'LAUNCH /ACCELERATOR',
+      acceleratorBestRecord: (maxZ, symbol, rooms) =>
+        `BEST Z = ${maxZ} (${symbol}) • ${rooms} ${rooms === 1 ? 'ROOM' : 'ROOMS'}`
+    },
+    accelerator: {
+      backToModes: '◄ MODES',
+      hudTitle: 'ACCELERATOR',
+      roomsLabel: (count) => `ROOMS ${count}`,
+      livesLabel: 'QUANTA',
+      mutationsLabel: (count) => `MUT ${count}`,
+      synergiesLabel: (count) => `SYN ${count}`,
+      fusionHeader: (z, symbol, name) => `FUSION COMPLETE -> Z = ${z} (${symbol} · ${name})`,
+      fusionSurgeBadge: 'PERIOD SURGE +2 Z',
+      chooseMutationTitle: 'SELECT 1 QUANTUM MUTATION',
+      chooseMutationHint: 'PRESS [1] OR [2] / TAP A CARD FOR ZERO-CUT LAUNCH',
+      keyHint: (idx) => `[${idx}]`,
+      synergyDetected: (name) => `SYNERGY: ${name}`,
+      runOverTitle: 'BEAM COLLAPSED — RUN SUMMARY',
+      newRecordBadge: '★ NEW RECORD ★',
+      reachedZLabel: 'MAX ATOMIC NUMBER',
+      roomsClearedLabel: 'CHAMBERS CLEARED',
+      totalTimeLabel: 'TOTAL RUN TIME',
+      mutationsSection: 'ACTIVE MUTATIONS',
+      synergiesSection: 'UNLOCKED SYNERGIES',
+      noMutations: 'NO MUTATIONS ACQUIRED',
+      downloadCard: 'DOWNLOAD CARD',
+      copySummary: 'COPY SUMMARY',
+      summaryCopied: 'SUMMARY COPIED!',
+      newRun: 'NEW RUN',
+      modesHub: 'MODES',
+      rarityLabel: (rarity) => rarity.toUpperCase()
     },
     ghost: {
       off: '[GHOST: OFF]',
@@ -426,6 +551,7 @@ export const STRINGS: Record<Locale, Strings> = {
       title: 'Quantum Hero',
       continueAtom: (z, symbol) => `Continuer — Atome #${z} (${symbol})`,
       periodicTable: 'Tableau Périodique',
+      quantumModes: 'Modes Quantiques',
       levelLab: 'Labo de Niveaux',
       newGame: 'Nouvelle Partie',
       installApp: "Installer l'app",
@@ -574,12 +700,17 @@ export const STRINGS: Record<Locale, Strings> = {
       phase: (phase) => `[PHASE : ${phase.toUpperCase()}]`,
       timeDilation: '[TEMPS : 0.25x]',
       condenseButton: '[CONDENSE]',
+      loopButton: '[BOUCLE]',
+      observeButton: '[OBSERVER]',
+      timeLoopStatus: (echoes, maxEchoes, remainingSec) =>
+        `[BOUCLE ${echoes}/${maxEchoes} • ${remainingSec}s]`,
       elementSynthesized: (symbol, atomUpper) => `ÉLÉMENT SYNTHÉTISÉ — ${symbol} ${atomUpper}`,
       newRecord: 'NOUVEAU RECORD',
       rec: 'REC',
       jumps: (count) => `SAUTS : ${count}`,
       nextLevel: (symbol, atom) => `[ESPACE / TAP] SUIVANT : ${symbol} ${atom}`,
       levelsButton: '[NIVEAUX]',
+      modesButton: '[MODES QUANTIQUES]',
       shareCardButton: 'CARTE PNG',
       toasts: {
         bellSync: "SYNCHRO BELL ! (ISOTOPE D'OR)",
@@ -602,6 +733,68 @@ export const STRINGS: Record<Locale, Strings> = {
           condense: 'CONDENSATION BROGLIE ! ([CONDENSE] / [C] / ESPACE)'
         }
       }
+    },
+    modes: {
+      backToMenu: '◄ MENU',
+      title: 'MODES QUANTIQUES',
+      subtitle: 'ARÈNES EXPÉRIMENTALES — ÉCHOS TEMPOREELS, OBSERVATEUR & ACCÉLÉRATEUR INFINI',
+      chronoLoopTitle: 'CHRONO-LOOP',
+      chronoLoopTag: 'CO-OP AVEC TON PASSÉ',
+      chronoLoopDesc:
+        'Rembobine avec [R] ou [BOUCLE] pour laisser jusqu’à 3 échos physiques. Maintiens les plaques, surfe sur ton passé ou déclenche la répulsion de Pauli temporelle.',
+      chronoCompletedCount: (done, total) => `${done} / ${total} RÉSOLUS`,
+      cycleLabel: (sec, maxEchoes) =>
+        `${sec}s • ${maxEchoes} ${maxEchoes === 1 ? 'ÉCHO' : 'ÉCHOS'}`,
+      playLevel: 'JOUER',
+      bestLabel: (formatted) => `RECORD ${formatted}`,
+      notCleared: 'NON RÉSOLU',
+      schrodingerTitle: 'LABOS SCHRODINGER',
+      schrodingerTag: 'OBSERVATEUR QUANTIQUE',
+      schrodingerDesc:
+        'Plateformes et piques en superposition : observer ([E] / [SHIFT] / TAP) ou un faisceau effondre la fonction d’onde dans l’état dominant.',
+      schrodingerStatus: 'SECTEUR 02 ACTIF — 6 CHAMBRES D’ÉTATS PROPRES',
+      schrodingerCompletedCount: (done, total) => `${done} / ${total} RÉSOLUS`,
+      observerSpecLabel: (superposedCount, beamCount) =>
+        beamCount > 0
+          ? `${superposedCount} Ψ • ${beamCount} ${beamCount === 1 ? 'FAISCEAU' : 'FAISCEAUX'}`
+          : `${superposedCount} Ψ ACTIF`,
+      acceleratorTitle: 'ACCÉLÉRATEUR DE PARTICULES',
+      acceleratorTag: 'ROGUELITE FUSION INFINI',
+      acceleratorDesc:
+        'Enchaîne des micro-salles nerveuses de Z = 1 à 118+ avec mutations quantiques entre chaque salle.',
+      acceleratorStatus: 'SECTEUR 03 ACTIF — SYNCHROTRON DE FUSION INFINI',
+      acceleratorAction: 'OUVRIR /ACCELERATOR',
+      acceleratorBestRecord: (maxZ, symbol, rooms) =>
+        `RECORD Z = ${maxZ} (${symbol}) • ${rooms} ${rooms === 1 ? 'SALLE' : 'SALLES'}`
+    },
+    accelerator: {
+      backToModes: '◄ MODES',
+      hudTitle: 'ACCÉLÉRATEUR',
+      roomsLabel: (count) => `SALLES ${count}`,
+      livesLabel: 'QUANTA',
+      mutationsLabel: (count) => `MUT ${count}`,
+      synergiesLabel: (count) => `SYN ${count}`,
+      fusionHeader: (z, symbol, name) => `FUSION RÉUSSIE -> Z = ${z} (${symbol} · ${name})`,
+      fusionSurgeBadge: 'SAUT DE PÉRIODE +2 Z',
+      chooseMutationTitle: 'CHOISIS 1 MUTATION QUANTIQUE',
+      chooseMutationHint: 'TOUCHE [1] OU [2] / TAP CARTE POUR ENCHAÎNER ZERO-CUT',
+      keyHint: (idx) => `[${idx}]`,
+      synergyDetected: (name) => `SYNERGIE : ${name}`,
+      runOverTitle: 'FAISCEAU EFFONDRÉ — RÉSUMÉ DU RUN',
+      newRecordBadge: '★ NOUVEAU RECORD ★',
+      reachedZLabel: 'NUMÉRO ATOMIQUE ATTEINT',
+      roomsClearedLabel: 'SALLES FRANCHIES',
+      totalTimeLabel: 'TEMPS TOTAL',
+      mutationsSection: 'MUTATIONS ACTIVES',
+      synergiesSection: 'SYNERGIES DÉBLOQUÉES',
+      noMutations: 'AUCUNE MUTATION ACQUISE',
+      downloadCard: 'TÉLÉCHARGER CARTE',
+      copySummary: 'COPIER RÉSUMÉ',
+      summaryCopied: 'RÉSUMÉ COPIÉ !',
+      newRun: 'NOUVEAU RUN',
+      modesHub: 'MODES',
+      rarityLabel: (rarity) =>
+        rarity === 'Common' ? 'COMMUNE' : rarity === 'Rare' ? 'RARE' : 'EXOTIQUE'
     },
     ghost: {
       off: '[FANTÔME : OFF]',

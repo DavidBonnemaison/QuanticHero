@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
+import { getNextChronoLoopLevel } from '../../data/chronoLoopLevels';
 import { getLevelMetadata, loadLevel, preloadLevel } from '../../data/levels';
+import { getNextSchrodingerLevel } from '../../data/schrodingerLevels';
 import { getStrings } from '../../i18n/strings';
+import { createSuperpositionState } from '../../mechanics/wavefunctionCollapse';
 import { PHYSICS } from '../../physics/constants';
 import { createQuantumPinningState } from '../../physics/matterStates';
 import { calculateIsotopeMedal } from '../../services/MedalService';
@@ -42,6 +45,9 @@ export class RespawnTransitionController {
       this.spawnDeathEcho(deathPosition.x, deathPosition.y);
     }
 
+    // 0. Full reset clears all Chrono-Loop echoes and resets cycle timer
+    ctx.timeLoopSystem?.resetAllLoops();
+
     // 1. Reset physics world & active power-up states
     if (ctx.physics?.world) {
       ctx.physics.world.gravity.y = PHYSICS.GRAVITY_Y;
@@ -56,6 +62,25 @@ export class RespawnTransitionController {
     ctx.focusArcGraphics?.clear();
     ctx.fusionHaloGraphics?.clear();
     ctx.quantumPinGraphics?.clear();
+    ctx.wavefunctionGraphics?.clear();
+    ctx.observerBeamGraphics?.clear();
+    ctx.activeObserverFlash = null;
+    for (const sp of ctx.superposedPlatforms ?? []) {
+      sp.runtime = createSuperpositionState(sp.config.lockDurationMs);
+      const body = sp.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.enable = false;
+        if (body.checkCollision) body.checkCollision.none = true;
+      }
+    }
+    for (const ss of ctx.superposedSpikes ?? []) {
+      ss.runtime = createSuperpositionState(ss.config.lockDurationMs);
+      const body = ss.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.enable = false;
+        if (body.checkCollision) body.checkCollision.none = true;
+      }
+    }
     ctx.quantumPinningState = createQuantumPinningState();
     ctx.activePinPointerWorld = null;
     ctx.activePinPointerId = null;
@@ -251,6 +276,10 @@ export class RespawnTransitionController {
 
     if (ctx.isEntangled) {
       gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: true });
+      if (ctx.acceleratorMode) {
+        gameEvents.emit('accelerator:life_lost', { deathPos });
+        return;
+      }
       this.quickRespawn(deathPos);
       return;
     }
@@ -260,6 +289,10 @@ export class RespawnTransitionController {
     gameEvents.emit('hero:death', { remaining: ctx.heroes.length });
 
     if (ctx.heroes.length === 0) {
+      if (ctx.acceleratorMode) {
+        gameEvents.emit('accelerator:life_lost', { deathPos });
+        return;
+      }
       this.quickRespawn(deathPos);
     } else {
       const anyFocused = ctx.heroes.some((h) => h.isFocused);
@@ -279,6 +312,23 @@ export class RespawnTransitionController {
 
     const elapsedMs =
       ctx.dilatedElapsedMs > 0 ? ctx.dilatedElapsedMs : Math.max(0, ctx.time.now - ctx.startTime);
+
+    if (ctx.acceleratorMode) {
+      for (const hero of ctx.heroes) {
+        if (!hero.active) continue;
+        if (hero.body) {
+          (hero.body as Phaser.Physics.Arcade.Body).enable = false;
+          hero.setVelocity(0, 0);
+        }
+      }
+      gameEvents.emit('accelerator:room_cleared', {
+        elapsedMs,
+        jumps: ctx.jumpCount,
+        levelId: String(ctx.levelData?.id ?? 'accelerator-1')
+      });
+      return;
+    }
+
     const store = useGameStore.getState();
 
     const focusedHero = ctx.heroes.find((h) => h.isFocused) || ctx.heroes[0];
@@ -311,6 +361,8 @@ export class RespawnTransitionController {
     const dailyDateKey = dailyMatch ? dailyMatch[1] : null;
     const moleculeMatch = /^molecule-(.+)$/i.exec(rawLevelId);
     const moleculeId = moleculeMatch ? moleculeMatch[1] : null;
+    const isCustomModeLevel = /^(?:chrono|schrodinger)-\d+$/i.test(rawLevelId);
+    const customModeId = isCustomModeLevel ? rawLevelId.toLowerCase() : null;
     const currentLvl = Number(ctx.levelData.id);
     if (!Number.isNaN(currentLvl)) {
       ctx.previousCompletedLevelId = currentLvl;
@@ -324,9 +376,11 @@ export class RespawnTransitionController {
       ? (store.dailyHistory?.[dailyDateKey]?.bestMs ?? 0)
       : moleculeId
         ? (store.moleculeScores?.[moleculeId]?.best ?? 0)
-        : isShared
-          ? (store.scores[0]?.best ?? 0)
-          : (store.scores[currentLvl]?.best ?? 0);
+        : customModeId
+          ? (store.customModeScores?.[customModeId]?.best ?? 0)
+          : isShared
+            ? (store.scores[0]?.best ?? 0)
+            : (store.scores[currentLvl]?.best ?? 0);
 
     let nextLevelNumber: number | null = null;
     if (dailyDateKey) {
@@ -334,6 +388,15 @@ export class RespawnTransitionController {
     } else {
       if (moleculeId) {
         store.recordMoleculeScore(moleculeId, elapsedMs, trajectory, {
+          jumpCount: ctx.jumpCount,
+          switchCount: ctx.switchCount,
+          medal,
+          coherentRun: ctx.coherenceSystem?.isCoherentRun?.() ?? false,
+          styleScore: ctx.coherenceSystem?.getStyleScore?.() ?? 0
+        });
+      }
+      if (customModeId) {
+        store.recordCustomModeScore(customModeId, elapsedMs, trajectory, {
           jumpCount: ctx.jumpCount,
           switchCount: ctx.switchCount,
           medal,
@@ -376,9 +439,11 @@ export class RespawnTransitionController {
       ? (useGameStore.getState().dailyHistory?.[dailyDateKey]?.bestMs ?? elapsedMs)
       : moleculeId
         ? (useGameStore.getState().moleculeScores?.[moleculeId]?.best ?? elapsedMs)
-        : isShared
-          ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
-          : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
+        : customModeId
+          ? (useGameStore.getState().customModeScores?.[customModeId]?.best ?? elapsedMs)
+          : isShared
+            ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
+            : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
 
     store.setLastRun(
       dailyDateKey
@@ -447,6 +512,31 @@ export class RespawnTransitionController {
   public advanceToNextLevel(): void {
     const ctx = this.ctx;
     if (!ctx.isLevelCompleted || ctx.isTransitioningLevel) return;
+
+    const rawLevelId = String(ctx.levelData.id ?? '');
+    if (/^chrono-\d+$/i.test(rawLevelId)) {
+      const nextChrono = getNextChronoLoopLevel(rawLevelId.toLowerCase());
+      if (nextChrono) {
+        const store = useGameStore.getState();
+        store.setActiveDuel(null);
+        store.setPendingDuelShare(null);
+        store.setSharedLevel(nextChrono.levelData);
+        this.performLevelTransition(nextChrono.levelData, nextChrono.index);
+        return;
+      }
+    }
+    if (/^schrodinger-\d+$/i.test(rawLevelId)) {
+      const nextSchrodinger = getNextSchrodingerLevel(rawLevelId.toLowerCase());
+      if (nextSchrodinger) {
+        const store = useGameStore.getState();
+        store.setActiveDuel(null);
+        store.setPendingDuelShare(null);
+        store.setSharedLevel(nextSchrodinger.levelData);
+        this.performLevelTransition(nextSchrodinger.levelData, nextSchrodinger.index);
+        return;
+      }
+    }
+
     if (ctx.nextLevelNumberPending === null) return;
 
     const store = useGameStore.getState();

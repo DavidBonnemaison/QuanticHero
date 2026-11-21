@@ -4,7 +4,9 @@ import type { QuantumEffectsManager } from '../../effects/QuantumEffectsManager'
 import type { MobileTouchController } from '../../input/MobileTouchController';
 import type { CoherenceSystem } from '../../mechanics/coherenceSystem';
 import type { DecayPlatformState } from '../../mechanics/quantumMechanics';
+import type { SuperpositionRuntimeState } from '../../mechanics/wavefunctionCollapse';
 import type { PinnablePlatformRef, QuantumPinningState } from '../../physics/matterStates';
+import type { AggregatedMutationModifiers } from '../../roguelite/mutations';
 import type { SessionSwarmBuffer } from '../../services/GhostManager';
 import type { GhostFrame, GhostRecorder } from '../../tools/GhostRecorder';
 import type {
@@ -13,10 +15,12 @@ import type {
   IsotopeMedal,
   LevelData,
   PlatformPhase,
+  SuperpositionConfig,
   TetherPylon
 } from '../../types';
 import type { GhostHero } from '../GhostHero';
 import type Hero from '../Hero';
+import type { TimeLoopSystem } from './TimeLoopSystem';
 
 export interface Gate {
   id: string;
@@ -102,19 +106,32 @@ export interface BroglieCrystal {
   expiresAtMs: number;
 }
 
-export interface BubbleHarvestHit {
-  molIndex: number;
-  x: number;
-  y: number;
-  timeMs: number;
+export interface SuperposedPlatformEntry {
+  id: string;
+  rect: Phaser.GameObjects.Rectangle;
+  base: { x: number; y: number; width: number; height: number };
+  config: SuperpositionConfig;
+  runtime: SuperpositionRuntimeState;
+  phaseOffsetMs: number;
 }
 
-export interface AntigravityBubble {
-  x: number;
-  y: number;
-  radius: number;
+export interface SuperposedSpikeEntry {
+  id: string;
+  rect: Phaser.GameObjects.Rectangle;
+  base: { x: number; y: number; width: number; height: number };
+  config: SuperpositionConfig;
+  runtime: SuperpositionRuntimeState;
+  phaseOffsetMs: number;
+}
+
+export interface ActiveObserverFlash {
+  originX: number;
+  originY: number;
+  angleDeg: number;
+  halfAngleDeg: number;
+  range: number;
   expiresAtMs: number;
-  graphic: Phaser.GameObjects.Arc;
+  durationMs: number;
 }
 
 /**
@@ -216,6 +233,19 @@ export interface GameSceneContext {
   condenseButtonBg: Phaser.GameObjects.Rectangle | null;
   condenseButtonLabel: Phaser.GameObjects.Text | null;
   condenseButtonZone: Phaser.GameObjects.Zone | null;
+  loopButtonBg?: Phaser.GameObjects.Rectangle | null;
+  loopButtonLabel?: Phaser.GameObjects.Text | null;
+  loopButtonZone?: Phaser.GameObjects.Zone | null;
+  observeButtonBg?: Phaser.GameObjects.Rectangle | null;
+  observeButtonLabel?: Phaser.GameObjects.Text | null;
+  observeButtonZone?: Phaser.GameObjects.Zone | null;
+  timeLoopIndicatorText?: Phaser.GameObjects.Text | null;
+  timeLoopSystem?: TimeLoopSystem;
+  superposedPlatforms?: SuperposedPlatformEntry[];
+  superposedSpikes?: SuperposedSpikeEntry[];
+  wavefunctionGraphics?: Phaser.GameObjects.Graphics | null;
+  observerBeamGraphics?: Phaser.GameObjects.Graphics | null;
+  activeObserverFlash?: ActiveObserverFlash | null;
   betaPipCamera: Phaser.Cameras.Scene2D.Camera | null;
   betaPipFrame: Phaser.GameObjects.Rectangle | null;
   betaPipLabel: Phaser.GameObjects.Text | null;
@@ -263,13 +293,19 @@ export interface GameSceneContext {
   activePinPointerId: number | null;
   alphaArrivalTimeMs: number | null;
   betaArrivalTimeMs: number | null;
-  bubbleHarvestHits: BubbleHarvestHit[];
-  antigravityBubbles: AntigravityBubble[];
   ephemeralPlatforms: Phaser.GameObjects.Rectangle[];
   entanglementRevealed: boolean;
   constellationGraphics: Phaser.GameObjects.Graphics | null;
   periodicTableGraphics: Phaser.GameObjects.Graphics | null;
   previousCompletedLevelId: number | null;
+
+  // Spec-03 Particle Accelerator Roguelite state
+  acceleratorMode: boolean;
+  acceleratorModifiers: AggregatedMutationModifiers;
+  acceleratorShieldCharges: number;
+  acceleratorTunnelTimerMs: number;
+  acceleratorReflexCooldownUntil: number;
+  acceleratorReflexDilationUntil: number;
 
   // Cross-system scene methods
   resolveLevelData(levelNumber: number): LevelData | undefined;
@@ -301,6 +337,10 @@ export interface GameSceneContext {
   handleResize(gameSize?: { width: number; height: number }): void;
   destroyBetaPipCamera(): void;
   tryCrystallizeBroglieTrail(): boolean;
+  spawnBroglieWallWake?(x: number, y: number, durationMs: number): void;
+  loadAcceleratorChamber?(nextLevelData: LevelData, modifiers: AggregatedMutationModifiers): void;
+  triggerTimeLoopRewind?(): void;
+  triggerActiveObservation?(targetWorldPoint?: { x: number; y: number }): number;
   quickRespawn(deathPosition?: { x: number; y: number }): void;
   killHero(hero: Hero): void;
   completeLevel(): void;

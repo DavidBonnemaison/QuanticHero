@@ -2,6 +2,35 @@ export type PlatformKind = 'standard' | 'wall';
 export type PlatformPhase = 'cyan' | 'magenta';
 export type MatterState = 'solid' | 'liquid' | 'gas' | 'cryo' | 'plasma';
 
+export interface SuperpositionConfig {
+  altX: number;
+  altY: number;
+  periodMs: number;
+  lockDurationMs?: number;
+}
+
+export interface TimeLoopConfig {
+  cycleMs: number;
+  maxEchoes: number;
+}
+
+export interface ObserverBeam {
+  x: number;
+  y: number;
+  sweepAngleDeg: number;
+  speedDegPerSec: number;
+  range: number;
+}
+
+export interface AcceleratorBestRecord {
+  maxZ: number;
+  bestScore: number;
+  bestRooms?: number;
+  bestTimeMs: number;
+  mutations: string[];
+  dateIso: string;
+}
+
 export interface Platform {
   x: number;
   y: number;
@@ -14,6 +43,7 @@ export interface Platform {
   matterState?: MatterState;
   color?: string;
   ephemeral?: boolean;
+  superposition?: SuperpositionConfig;
   movesTo?: {
     x?: number;
     y?: number;
@@ -54,6 +84,7 @@ export interface Spike {
   y: number;
   width?: number;
   height?: number;
+  superposition?: SuperpositionConfig;
 }
 
 export interface Door {
@@ -154,6 +185,8 @@ export interface LevelData {
   collapse?: CollapseConfig;
   screenWrap?: boolean | 'horizontal' | 'vertical' | 'both';
   wormholes?: Wormhole[];
+  timeLoop?: TimeLoopConfig;
+  observerBeams?: ObserverBeam[];
   authorGhost?: string;
   authorTime?: number;
   parTimeMs?: number;

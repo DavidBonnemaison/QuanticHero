@@ -96,6 +96,18 @@ export class LevelBuilder {
     ctx.condenseButtonBg = null;
     ctx.condenseButtonLabel = null;
     ctx.condenseButtonZone = null;
+    ctx.loopButtonBg = null;
+    ctx.loopButtonLabel = null;
+    ctx.loopButtonZone = null;
+    ctx.observeButtonBg = null;
+    ctx.observeButtonLabel = null;
+    ctx.observeButtonZone = null;
+    ctx.timeLoopIndicatorText = null;
+    ctx.superposedPlatforms = [];
+    ctx.superposedSpikes = [];
+    ctx.wavefunctionGraphics = null;
+    ctx.observerBeamGraphics = null;
+    ctx.activeObserverFlash = null;
     ctx.destroyBetaPipCamera?.();
     ctx.levelCompleteOverlay = null;
     ctx.phaseIndicatorText = null;
@@ -107,8 +119,6 @@ export class LevelBuilder {
     ctx.betaEnteredPortal = false;
     ctx.alphaArrivalTimeMs = null;
     ctx.betaArrivalTimeMs = null;
-    ctx.bubbleHarvestHits = [];
-    ctx.antigravityBubbles = [];
     ctx.isPauliActive = false;
     ctx.isTimeDilationActive = false;
     ctx.timeDilationUntil = 0;
@@ -149,6 +159,9 @@ export class LevelBuilder {
     this.spawnHeroes();
     setupLevelCollisions(ctx);
 
+    // 4b. Spec-01 Chrono-Loop System
+    ctx.timeLoopSystem?.initForLevel();
+
     // 5. Ghost Hero Replay
     ctx.initGhostForLevel();
 
@@ -172,6 +185,16 @@ export class LevelBuilder {
     ctx.quantumPinGraphics.setDepth(24);
     ctx.wormholeGraphics = ctx.add.graphics();
     ctx.wormholeGraphics.setDepth(17);
+    const hasWavefunctionElements =
+      (ctx.superposedPlatforms && ctx.superposedPlatforms.length > 0) ||
+      (ctx.superposedSpikes && ctx.superposedSpikes.length > 0) ||
+      Boolean(ctx.levelData.observerBeams && ctx.levelData.observerBeams.length > 0);
+    if (hasWavefunctionElements && typeof ctx.add.graphics === 'function') {
+      ctx.wavefunctionGraphics = ctx.add.graphics();
+      ctx.wavefunctionGraphics.setDepth(15);
+      ctx.observerBeamGraphics = ctx.add.graphics();
+      ctx.observerBeamGraphics.setDepth(23);
+    }
     if (ctx.levelData.tetherPylons && ctx.levelData.tetherPylons.length > 0) {
       ctx.tetherPylonGraphics = ctx.add.graphics();
       ctx.tetherPylonGraphics.setDepth(16);
@@ -202,17 +225,19 @@ export class LevelBuilder {
     ctx.betaEnteredPortal = false;
     ctx.alphaArrivalTimeMs = null;
     ctx.betaArrivalTimeMs = null;
-    ctx.bubbleHarvestHits = [];
-    for (const b of ctx.antigravityBubbles) {
-      b.graphic.destroy();
-    }
-    ctx.antigravityBubbles = [];
 
     const startX = ctx.levelData.player.position.x;
     const startY = ctx.levelData.player.position.y;
     const initialHero = new Hero(ctx as unknown as Phaser.Scene, startX, startY, true);
+    initialHero.mutationModifiers = ctx.acceleratorModifiers;
     ctx.heroes.push(initialHero);
     ctx.heroGroup.add(initialHero);
+
+    // Reset per-room Accelerator mutation runtime counters
+    ctx.acceleratorShieldCharges = ctx.acceleratorModifiers?.shieldChargesPerRoom ?? 0;
+    ctx.acceleratorTunnelTimerMs = 0;
+    ctx.acceleratorReflexCooldownUntil = 0;
+    ctx.acceleratorReflexDilationUntil = 0;
 
     const entanglement = ctx.levelData.entanglement;
     ctx.isEntangled = Boolean(entanglement);
@@ -226,12 +251,24 @@ export class LevelBuilder {
       const betaY = entanglement.betaSpawn ? entanglement.betaSpawn.y : startY;
 
       ctx.betaHero = new Hero(ctx as unknown as Phaser.Scene, betaX, betaY, true);
+      ctx.betaHero.mutationModifiers = ctx.acceleratorModifiers;
       ctx.betaHero.setEntangled(true, entanglement.mode);
       ctx.heroes.push(ctx.betaHero);
       ctx.heroGroup.add(ctx.betaHero);
       if (entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity') {
         const bBody = ctx.betaHero.body as Phaser.Physics.Arcade.Body;
         bBody?.setGravityY?.(-2 * PHYSICS.GRAVITY_Y);
+      }
+    } else if ((ctx.acceleratorModifiers?.startingClones ?? 0) > 0) {
+      // Double Quantum mutation: start each chamber with active clone(s)
+      const clonesToSpawn = ctx.acceleratorModifiers.startingClones;
+      for (let i = 0; i < clonesToSpawn; i++) {
+        const cloneX = Phaser.Math.Clamp(startX - 42 * (i + 1), 32, ctx.levelData.width - 32);
+        const clone = new Hero(ctx as unknown as Phaser.Scene, cloneX, startY, false);
+        clone.mutationModifiers = ctx.acceleratorModifiers;
+        clone.setTint(0x38bdf8);
+        ctx.heroes.push(clone);
+        ctx.heroGroup.add(clone);
       }
     }
 
@@ -278,6 +315,11 @@ export class LevelBuilder {
     ctx.fusionHaloGraphics = destroyGraphic(ctx.fusionHaloGraphics);
     ctx.quantumPinGraphics = destroyGraphic(ctx.quantumPinGraphics);
     ctx.wormholeGraphics = destroyGraphic(ctx.wormholeGraphics);
+    ctx.wavefunctionGraphics = destroyGraphic(ctx.wavefunctionGraphics ?? null);
+    ctx.observerBeamGraphics = destroyGraphic(ctx.observerBeamGraphics ?? null);
+    ctx.activeObserverFlash = null;
+    ctx.superposedPlatforms = [];
+    ctx.superposedSpikes = [];
     ctx.constellationGraphics = destroyGraphic(ctx.constellationGraphics);
     ctx.periodicTableGraphics = destroyGraphic(ctx.periodicTableGraphics);
 
@@ -330,6 +372,14 @@ export class LevelBuilder {
     ctx.condenseButtonBg = null;
     ctx.condenseButtonLabel = null;
     ctx.condenseButtonZone = null;
+    ctx.loopButtonBg = null;
+    ctx.loopButtonLabel = null;
+    ctx.loopButtonZone = null;
+    ctx.observeButtonBg = null;
+    ctx.observeButtonLabel = null;
+    ctx.observeButtonZone = null;
+    ctx.timeLoopIndicatorText = null;
+    ctx.timeLoopSystem?.destroy();
     if (ctx.levelCompleteOverlay) {
       ctx.levelCompleteOverlay.destroy(true);
       ctx.levelCompleteOverlay = null;
@@ -362,11 +412,6 @@ export class LevelBuilder {
       mol.circle.destroy();
     }
     ctx.molecules = [];
-    ctx.bubbleHarvestHits = [];
-    for (const b of ctx.antigravityBubbles) {
-      b.graphic.destroy();
-    }
-    ctx.antigravityBubbles = [];
 
     ctx.heroGroup?.clear?.(true, true);
     ctx.platforms?.clear?.(true, true);

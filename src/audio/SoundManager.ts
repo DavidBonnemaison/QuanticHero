@@ -249,9 +249,6 @@ export class SoundManager {
       gameEvents.on('bell:violation', () => {
         this.playBellViolationChord();
       }),
-      gameEvents.on('bubble:harvest', () => {
-        this.playBubbleChime();
-      }),
       gameEvents.on('hero:dive', () => {
         this.playDiveSound();
       }),
@@ -263,6 +260,15 @@ export class SoundManager {
         if (decoherence) {
           this.playDecoherence();
         }
+      }),
+      gameEvents.on('timeloop:tick', ({ remainingMs }) => {
+        this.playTimeLoopTick(remainingMs);
+      }),
+      gameEvents.on('timeloop:rewind', () => {
+        this.playTimeLoopRewind();
+      }),
+      gameEvents.on('wavefunction:collapse', () => {
+        this.playCollapseSnap();
       })
     );
 
@@ -1917,6 +1923,148 @@ export class SoundManager {
         osc.start(t);
         osc.stop(t + note.dur + 0.01);
       }
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Chrono-Loop subtle clockwork tick in the final second of a cycle
+   */
+  public playTimeLoopTick(remainingMs = 500): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const urgency = Math.max(0, Math.min(1, 1 - remainingMs / 1000));
+      const freq = 980 + urgency * 420;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.72, now + 0.045);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.11 + urgency * 0.06, now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.055);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Chrono-Loop temporal rewind sweep when freezing a run into an EchoHero
+   */
+  public playTimeLoopRewind(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const sweep = ctx.createOscillator();
+      const sweepGain = ctx.createGain();
+      sweep.type = 'sawtooth';
+      sweep.frequency.setValueAtTime(220, now);
+      sweep.frequency.exponentialRampToValueAtTime(880, now + 0.14);
+      sweep.frequency.exponentialRampToValueAtTime(440, now + 0.22);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.Q.setValueAtTime(3.0, now);
+      filter.frequency.setValueAtTime(600, now);
+      filter.frequency.exponentialRampToValueAtTime(2200, now + 0.16);
+
+      sweepGain.gain.setValueAtTime(0.001, now);
+      sweepGain.gain.linearRampToValueAtTime(0.14, now + 0.02);
+      sweepGain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
+
+      sweep.connect(filter);
+      filter.connect(sweepGain);
+      sweepGain.connect(this.sfxGain);
+      sweep.start(now);
+      sweep.stop(now + 0.24);
+
+      // Subtle harmonic lock-in chime
+      const chime = ctx.createOscillator();
+      const chimeGain = ctx.createGain();
+      chime.type = 'sine';
+      chime.frequency.setValueAtTime(1046.5, now + 0.09);
+      chimeGain.gain.setValueAtTime(0.001, now + 0.09);
+      chimeGain.gain.linearRampToValueAtTime(0.1, now + 0.11);
+      chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+      chime.connect(chimeGain);
+      chimeGain.connect(this.sfxGain);
+      chime.start(now + 0.09);
+      chime.stop(now + 0.27);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Wavefunction Collapse Snap (Spec-02 Observer)
+   * Crisp high-Q resonant snap + rapid crystalline eigenstate lock-in ping
+   */
+  public playCollapseSnap(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+
+      // 1. Sharp crystalline collapse snap (rapid downward pitch lock)
+      const snapOsc = ctx.createOscillator();
+      const snapGain = ctx.createGain();
+      const bandpass = ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.Q.setValueAtTime(6.0, now);
+      bandpass.frequency.setValueAtTime(2400, now);
+      bandpass.frequency.exponentialRampToValueAtTime(780, now + 0.085);
+
+      snapOsc.type = 'triangle';
+      snapOsc.frequency.setValueAtTime(1680, now);
+      snapOsc.frequency.exponentialRampToValueAtTime(520, now + 0.085);
+
+      snapGain.gain.setValueAtTime(0.001, now);
+      snapGain.gain.linearRampToValueAtTime(0.24, now + 0.004);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+      snapOsc.connect(bandpass);
+      bandpass.connect(snapGain);
+      snapGain.connect(this.sfxGain);
+      snapOsc.start(now);
+      snapOsc.stop(now + 0.095);
+
+      // 2. Eigenstate harmonic lock ping
+      const lockOsc = ctx.createOscillator();
+      const lockGain = ctx.createGain();
+      lockOsc.type = 'sine';
+      lockOsc.frequency.setValueAtTime(1046.5, now + 0.025);
+      lockOsc.frequency.exponentialRampToValueAtTime(1318.5, now + 0.14);
+
+      lockGain.gain.setValueAtTime(0.001, now + 0.025);
+      lockGain.gain.linearRampToValueAtTime(0.12, now + 0.035);
+      lockGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+      lockOsc.connect(lockGain);
+      lockGain.connect(this.sfxGain);
+      lockOsc.start(now + 0.025);
+      lockOsc.stop(now + 0.17);
     } catch {
       // safe fallback
     }

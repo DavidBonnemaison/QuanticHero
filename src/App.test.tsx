@@ -7,6 +7,10 @@ vi.mock('./Game', () => ({
   default: () => <div data-testid="mock-game">Game Screen</div>
 }));
 
+vi.mock('./components/AcceleratorMode', () => ({
+  default: () => <div data-testid="mock-accelerator">Accelerator Screen</div>
+}));
+
 vi.mock('./data/levels', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./data/levels')>();
   return {

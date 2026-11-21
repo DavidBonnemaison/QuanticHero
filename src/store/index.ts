@@ -10,6 +10,7 @@ import {
   isEntanglementLevelId
 } from '../tools/levelProgression';
 import type {
+  AcceleratorBestRecord,
   DailyScoreEntry,
   DailyStreakState,
   DuelChallenge,
@@ -21,7 +22,15 @@ import type {
 } from '../types';
 
 export { getNextLevelId, isEntanglementLevelId };
-export type { DailyScoreEntry, DailyStreakState, DuelChallenge, GhostMode, LastRunSummary, Locale };
+export type {
+  AcceleratorBestRecord,
+  DailyScoreEntry,
+  DailyStreakState,
+  DuelChallenge,
+  GhostMode,
+  LastRunSummary,
+  Locale
+};
 
 export interface PendingDuelShare {
   duel: DuelChallenge;
@@ -54,8 +63,10 @@ export interface GameStoreState {
   pendingDuelShare: PendingDuelShare | null;
   unlockedMolecules: string[];
   moleculeScores: Record<string, ScoreItem>;
+  customModeScores: Record<string, ScoreItem>;
   dailyHistory: Record<string, DailyScoreEntry>;
   dailyStreak: DailyStreakState;
+  acceleratorBest: AcceleratorBestRecord | null;
 }
 
 export interface RecordScoreMeta {
@@ -83,6 +94,12 @@ export interface GameStoreActions {
     ghostTrajectory?: string,
     meta?: RecordScoreMeta
   ) => void;
+  recordCustomModeScore: (
+    modeLevelId: string,
+    score: number,
+    ghostTrajectory?: string,
+    meta?: RecordScoreMeta
+  ) => void;
   recordDailyScore: (
     dateKey: string,
     timeMs: number,
@@ -104,6 +121,8 @@ export interface GameStoreActions {
   deletePlatform: (params: { level: number; n: number | string }) => void;
   addParticle: (params: { level: number }) => void;
   deleteParticle: (params: { level: number; n: number | string }) => void;
+  addObserverBeam: (params: { level: number }) => void;
+  deleteObserverBeam: (params: { level: number; n: number | string }) => void;
   toggleMute: () => void;
   setMuted: (muted: boolean) => void;
   toggleHaptics: () => void;
@@ -117,6 +136,13 @@ export interface GameStoreActions {
   toggleLocale: () => void;
   unlockMolecule: (moleculeId: string) => void;
   unlockBellSync: (level: number) => void;
+  recordAcceleratorRun: (run: {
+    maxZ: number;
+    roomsCleared: number;
+    totalTimeMs: number;
+    mutations: string[];
+    dateIso?: string;
+  }) => boolean;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -132,6 +158,14 @@ const defaultParticle = {
   x: 100,
   y: 100,
   type: 'duplicate' as const
+};
+
+const defaultObserverBeam = {
+  x: 480,
+  y: 70,
+  sweepAngleDeg: 120,
+  speedDegPerSec: 40,
+  range: 520
 };
 
 export function getEffectiveLevel(
@@ -231,12 +265,14 @@ export const useGameStore = create<GameStore>()(
       locale: 'en',
       unlockedMolecules: [],
       moleculeScores: {},
+      customModeScores: {},
       dailyHistory: {},
       dailyStreak: {
         current: 0,
         longest: 0,
         lastCompletedDate: null
       },
+      acceleratorBest: null,
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
       setMuted: (muted: boolean) => set({ isMuted: muted }),
@@ -329,13 +365,61 @@ export const useGameStore = create<GameStore>()(
           pendingDuelShare: null,
           unlockedMolecules: [],
           moleculeScores: {},
+          customModeScores: {},
           dailyHistory: {},
           dailyStreak: {
             current: 0,
             longest: 0,
             lastCompletedDate: null
-          }
+          },
+          acceleratorBest: null
         }),
+
+      recordAcceleratorRun: ({ maxZ, roomsCleared, totalTimeMs, mutations, dateIso }) => {
+        let isNewRecord = false;
+        set((state) => {
+          const prev = state.acceleratorBest;
+          const sanitizedZ = Math.max(1, Math.floor(maxZ));
+          const sanitizedRooms = Math.max(0, Math.floor(roomsCleared));
+          const sanitizedTime = Math.max(0, Math.round(totalTimeMs));
+
+          const prevRooms = prev?.bestRooms ?? prev?.bestScore ?? 0;
+          const beatsPrev =
+            !prev ||
+            sanitizedZ > prev.maxZ ||
+            (sanitizedZ === prev.maxZ && sanitizedRooms > prevRooms) ||
+            (sanitizedZ === prev.maxZ &&
+              sanitizedRooms === prevRooms &&
+              sanitizedTime > 0 &&
+              (prev.bestTimeMs <= 0 || sanitizedTime < prev.bestTimeMs));
+
+          const sameRunWithMoreMutations =
+            Boolean(prev) &&
+            sanitizedZ === prev?.maxZ &&
+            sanitizedRooms === prevRooms &&
+            sanitizedTime === prev?.bestTimeMs &&
+            mutations.length > (prev?.mutations?.length ?? 0);
+
+          if (!beatsPrev && !sameRunWithMoreMutations) {
+            return state;
+          }
+
+          if (beatsPrev) {
+            isNewRecord = true;
+          }
+          return {
+            acceleratorBest: {
+              maxZ: sanitizedZ,
+              bestScore: sanitizedRooms,
+              bestRooms: sanitizedRooms,
+              bestTimeMs: sanitizedTime,
+              mutations: [...mutations],
+              dateIso: dateIso ?? prev?.dateIso ?? new Date().toISOString()
+            }
+          };
+        });
+        return isNewRecord;
+      },
 
       recordDailyScore: (
         dateKey: string,
@@ -450,6 +534,68 @@ export const useGameStore = create<GameStore>()(
             moleculeScores: {
               ...currentMap,
               [moleculeId]: {
+                last: score,
+                best,
+                ...(trajectoryToSave ? { ghostTrajectory: trajectoryToSave } : {}),
+                ...(bestJumps !== undefined ? { bestJumps } : {}),
+                ...(lastJumps !== undefined ? { lastJumps } : {}),
+                ...(bestSwitches !== undefined ? { bestSwitches } : {}),
+                ...(medal !== undefined ? { medal } : {}),
+                ...(coherentRun ? { coherentRun: true } : {}),
+                ...(bestStyleScore !== undefined && bestStyleScore > 0 ? { bestStyleScore } : {}),
+                ...(lastStyleScore !== undefined && lastStyleScore > 0 ? { lastStyleScore } : {})
+              }
+            }
+          };
+        }),
+
+      recordCustomModeScore: (
+        modeLevelId: string,
+        score: number,
+        ghostTrajectory?: string,
+        meta?: RecordScoreMeta
+      ) =>
+        set((state) => {
+          const currentMap = state.customModeScores ?? {};
+          const prevItem = currentMap[modeLevelId];
+          const currentBest = prevItem?.best ?? 0;
+          const isNewBest = currentBest === 0 || score < currentBest;
+          const best = currentBest === 0 ? score : Math.min(currentBest, score);
+          const trajectoryToSave = isNewBest
+            ? (ghostTrajectory ?? prevItem?.ghostTrajectory)
+            : prevItem?.ghostTrajectory;
+
+          const bestJumps =
+            meta?.jumpCount !== undefined
+              ? prevItem?.bestJumps !== undefined
+                ? Math.min(prevItem.bestJumps, meta.jumpCount)
+                : meta.jumpCount
+              : prevItem?.bestJumps;
+
+          const lastJumps = meta?.jumpCount !== undefined ? meta.jumpCount : prevItem?.lastJumps;
+
+          const bestSwitches =
+            meta?.switchCount !== undefined
+              ? prevItem?.bestSwitches !== undefined
+                ? Math.min(prevItem.bestSwitches, meta.switchCount)
+                : meta.switchCount
+              : prevItem?.bestSwitches;
+
+          const medal =
+            meta?.medal !== undefined ? bestMedal(prevItem?.medal, meta.medal) : prevItem?.medal;
+
+          const coherentRun = Boolean(prevItem?.coherentRun || meta?.coherentRun);
+          const bestStyleScore =
+            meta?.styleScore !== undefined
+              ? Math.max(prevItem?.bestStyleScore ?? 0, meta.styleScore)
+              : prevItem?.bestStyleScore;
+          const lastStyleScore =
+            meta?.styleScore !== undefined ? meta.styleScore : prevItem?.lastStyleScore;
+
+          return {
+            customModeScores: {
+              ...currentMap,
+              [modeLevelId]: {
                 last: score,
                 best,
                 ...(trajectoryToSave ? { ghostTrajectory: trajectoryToSave } : {}),
@@ -673,6 +819,79 @@ export const useGameStore = create<GameStore>()(
               updatedLevel.antiHue = value;
               break;
             }
+            case 'timeLoop': {
+              if (prop === 'enabled') {
+                if (value) {
+                  updatedLevel.timeLoop = targetLevel.timeLoop ?? {
+                    cycleMs: 7000,
+                    maxEchoes: 2
+                  };
+                } else {
+                  updatedLevel.timeLoop = undefined;
+                }
+              } else if (prop === 'cycleMs') {
+                const cycleMs = Math.max(3000, Math.min(15000, Number(value) || 7000));
+                updatedLevel.timeLoop = {
+                  cycleMs,
+                  maxEchoes: targetLevel.timeLoop?.maxEchoes ?? 2
+                };
+              } else if (prop === 'maxEchoes') {
+                const maxEchoes = Math.max(1, Math.min(3, Math.round(Number(value) || 2)));
+                updatedLevel.timeLoop = {
+                  cycleMs: targetLevel.timeLoop?.cycleMs ?? 7000,
+                  maxEchoes
+                };
+              }
+              break;
+            }
+            case 'platformSuperposition': {
+              const targetIdx = Number(n);
+              updatedLevel.platforms = targetLevel.platforms.map((p, i) => {
+                if (i !== targetIdx) return p;
+                if (prop === 'enabled') {
+                  if (value) {
+                    return {
+                      ...p,
+                      superposition: p.superposition ?? {
+                        altX: p.x,
+                        altY: Math.max(40, p.y - 120),
+                        periodMs: 3000,
+                        lockDurationMs: 3000
+                      }
+                    };
+                  }
+                  const { superposition: _removed, ...rest } = p;
+                  return rest;
+                }
+                const current = p.superposition ?? {
+                  altX: p.x,
+                  altY: Math.max(40, p.y - 120),
+                  periodMs: 3000,
+                  lockDurationMs: 3000
+                };
+                return {
+                  ...p,
+                  superposition: {
+                    ...current,
+                    [prop as string]: Number(value)
+                  }
+                };
+              });
+              break;
+            }
+            case 'observerBeam': {
+              const targetIdx = Number(n);
+              const existing = targetLevel.observerBeams ?? [];
+              updatedLevel.observerBeams = existing.map((beam, i) =>
+                i === targetIdx
+                  ? {
+                      ...beam,
+                      [prop as string]: Number(value)
+                    }
+                  : beam
+              );
+              break;
+            }
             default:
               return state;
           }
@@ -751,6 +970,43 @@ export const useGameStore = create<GameStore>()(
             particles: targetLevel.particles.filter((_, i) => i !== Number(n))
           };
           return { customLevels };
+        }),
+
+      addObserverBeam: ({ level }: { level: number }) =>
+        set((state) => {
+          const levelKey = `level${level}`;
+          const sourceLevel = state.customLevels?.[levelKey] ?? getCachedLevel(levelKey);
+          if (!sourceLevel) return state;
+
+          const targetLevel = state.customLevels?.[levelKey]
+            ? sourceLevel
+            : structuredClone(sourceLevel);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
+
+          customLevels[levelKey] = {
+            ...targetLevel,
+            observerBeams: [...(targetLevel.observerBeams ?? []), { ...defaultObserverBeam }]
+          };
+          return { customLevels };
+        }),
+
+      deleteObserverBeam: ({ level, n }: { level: number; n: number | string }) =>
+        set((state) => {
+          const levelKey = `level${level}`;
+          const sourceLevel = state.customLevels?.[levelKey] ?? getCachedLevel(levelKey);
+          if (!sourceLevel) return state;
+
+          const targetLevel = state.customLevels?.[levelKey]
+            ? sourceLevel
+            : structuredClone(sourceLevel);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
+          const nextBeams = (targetLevel.observerBeams ?? []).filter((_, i) => i !== Number(n));
+
+          customLevels[levelKey] = {
+            ...targetLevel,
+            observerBeams: nextBeams.length > 0 ? nextBeams : undefined
+          };
+          return { customLevels };
         })
     }),
     {
@@ -786,8 +1042,10 @@ export const useGameStore = create<GameStore>()(
         locale: state.locale,
         unlockedMolecules: state.unlockedMolecules,
         moleculeScores: state.moleculeScores,
+        customModeScores: state.customModeScores,
         dailyHistory: state.dailyHistory,
-        dailyStreak: state.dailyStreak
+        dailyStreak: state.dailyStreak,
+        acceleratorBest: state.acceleratorBest
       })
     }
   )

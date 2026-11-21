@@ -2,10 +2,12 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import styles from './App.module.css';
 import Game from './Game';
+import AcceleratorMode from './components/AcceleratorMode';
 import Explanation from './components/Explanation';
 import LevelFinished from './components/LevelFinished';
 import Levels from './components/LevelSelection';
 import Menu from './components/Menu';
+import QuantumModesHub from './components/QuantumModesHub';
 import { loadLevel } from './data/levels';
 import { generateDailyIsotope } from './services/DailyIsotopeService';
 import { setNavigator } from './shims/navigation';
@@ -85,8 +87,12 @@ export const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<Menu />} />
           <Route path="/levels" element={<Levels />} />
+          <Route path="/modes" element={<QuantumModesHub />} />
+          <Route path="/accelerator" element={<AcceleratorMode />} />
           <Route path="/game" element={<Game />} />
           <Route path="/game/molecule/:moleculeId" element={<Game />} />
+          <Route path="/game/chrono/:chronoId" element={<Game />} />
+          <Route path="/game/schrodinger/:schrodingerId" element={<Game />} />
           <Route path="/daily" element={<Game isDaily />} />
           <Route path="/done" element={<LevelFinished />} />
           <Route path="/explanation" element={<Explanation />} />

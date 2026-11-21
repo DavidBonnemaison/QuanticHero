@@ -33,7 +33,6 @@ export interface GameEventPayloads {
   'hero:broglie_crystallize': { count: number; durationMs: number };
   'hero:ghost_surf': { x: number; y: number };
   'bell:violation': { level: number; deltaMs: number };
-  'bubble:harvest': { x: number; y: number };
   'platform:ephemeral_vanish': { x: number; y: number };
   'platform:ephemeral_restore': { count: number };
   'entanglement:reveal': { revealAtX: number };
@@ -46,6 +45,30 @@ export interface GameEventPayloads {
     raw: number;
     styleScore: number;
     decoherence?: boolean;
+  };
+  'timeloop:rewind': { echoCount: number; cycleMs: number; manual: boolean };
+  'timeloop:tick': { remainingMs: number };
+  'wavefunction:collapse': {
+    id: string;
+    kind: 'platform' | 'spike';
+    collapsedTo: 'A' | 'B';
+    source: 'player' | 'beam' | 'pointer';
+    x: number;
+    y: number;
+  };
+  'accelerator:room_cleared': {
+    elapsedMs: number;
+    jumps: number;
+    levelId: string;
+  };
+  'accelerator:life_lost': {
+    deathPos: { x: number; y: number };
+  };
+  'accelerator:shield_block': {
+    remainingCharges: number;
+  };
+  'accelerator:reflex_dilation': {
+    durationMs: number;
   };
 }
 

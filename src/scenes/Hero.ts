@@ -6,6 +6,10 @@ import {
   getAsymmetricGravityMultiplier,
   stepHeroControl
 } from '../physics/stepHeroPhysics';
+import {
+  type AggregatedMutationModifiers,
+  DEFAULT_MUTATION_MODIFIERS
+} from '../roguelite/mutations';
 import { gameEvents } from '../tools/gameEvents';
 import type { EntanglementMode } from '../types';
 
@@ -32,6 +36,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public jumpCutApplied = false;
   public lastDiveEndTimeMs = Number.NEGATIVE_INFINITY;
   public waveDashUntilMs = Number.NEGATIVE_INFINITY;
+  public phaseDashInvulnUntilMs = Number.NEGATIVE_INFINITY;
+  public mutationModifiers: AggregatedMutationModifiers = DEFAULT_MUTATION_MODIFIERS;
   public wasTouchingGround = false;
   public lastLandedPlatform: Phaser.GameObjects.GameObject | null = null;
   public fusionStack = 1;
@@ -43,7 +49,6 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public coherenceSpeedMultiplier = 1;
   public wormholeCooldownUntil = 0;
   public hasSurfedThisJump = false;
-  public levitateUntilMs = 0;
   public trailPoints: Array<{ x: number; y: number }> = [];
   private lastTrailSampleMs = Number.NEGATIVE_INFINITY;
   private elapsedTimeMs = 0;
@@ -219,6 +224,17 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  public isPhaseDashInvulnerable(): boolean {
+    return this.elapsedTimeMs < this.phaseDashInvulnUntilMs;
+  }
+
+  public grantTemporaryInvulnerability(durationMs: number): void {
+    this.phaseDashInvulnUntilMs = Math.max(
+      this.phaseDashInvulnUntilMs,
+      this.elapsedTimeMs + durationMs
+    );
+  }
+
   public bounceOffLeftWall(isNeonWall = false): void {
     const isAirborne =
       !this.body?.touching.down &&
@@ -234,15 +250,17 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (this.recoilVx <= 0) {
-      this.recoilVx = PHYSICS.WALL_RECOIL_VX * this.velocityMultiplier;
+      const boost = this.mutationModifiers?.wallBounceBoostMultiplier ?? 1;
+      const speedMult = this.velocityMultiplier * (this.mutationModifiers?.speedMultiplier ?? 1);
+      this.recoilVx = PHYSICS.WALL_RECOIL_VX * speedMult * boost;
       this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
       if (isNeonWall) {
-        this.setVelocityY(-400 * this.upsideDown);
+        this.setVelocityY(-400 * boost * this.upsideDown);
         this.triggerNeonWallHitStop(1);
         return;
       }
       if (this.body && this.body.velocity.y * this.upsideDown > -50) {
-        this.setVelocityY(PHYSICS.WALL_RECOIL_VY * this.upsideDown);
+        this.setVelocityY(PHYSICS.WALL_RECOIL_VY * boost * this.upsideDown);
       }
     }
   }
@@ -262,15 +280,17 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (this.recoilVx >= 0) {
-      this.recoilVx = -PHYSICS.WALL_RECOIL_VX * this.velocityMultiplier;
+      const boost = this.mutationModifiers?.wallBounceBoostMultiplier ?? 1;
+      const speedMult = this.velocityMultiplier * (this.mutationModifiers?.speedMultiplier ?? 1);
+      this.recoilVx = -PHYSICS.WALL_RECOIL_VX * speedMult * boost;
       this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
       if (isNeonWall) {
-        this.setVelocityY(-400 * this.upsideDown);
+        this.setVelocityY(-400 * boost * this.upsideDown);
         this.triggerNeonWallHitStop(-1);
         return;
       }
       if (this.body && this.body.velocity.y * this.upsideDown > -50) {
-        this.setVelocityY(PHYSICS.WALL_RECOIL_VY * this.upsideDown);
+        this.setVelocityY(PHYSICS.WALL_RECOIL_VY * boost * this.upsideDown);
       }
     }
   }
@@ -381,6 +401,12 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       gameEvents.emit('platform:liquid_plunge', { x: this.x, y: this.y });
     }
 
+    const mods = this.mutationModifiers ?? DEFAULT_MUTATION_MODIFIERS;
+    const effectiveVelocityMult =
+      this.velocityMultiplier * this.coherenceSpeedMultiplier * mods.speedMultiplier;
+    const effectiveJumpMult =
+      (this.fusionStack >= 2 ? PHYSICS.SUPER_QUANTA_JUMP_MULT : 1) * mods.jumpMultiplier;
+
     const res = stepHeroControl(
       {
         vx: this.body.velocity.x,
@@ -388,7 +414,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         touchingGround: touchingGround && !this.inLiquid,
         recoilTimer: this.recoilTimer,
         recoilVx: this.recoilVx,
-        velocityMultiplier: this.velocityMultiplier * this.coherenceSpeedMultiplier,
+        velocityMultiplier: effectiveVelocityMult,
         upsideDown: this.upsideDown,
         flipX: this.flipX,
         animState: this.getAnimState(),
@@ -402,8 +428,12 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         isDiving: this.isDiving,
         lastDiveEndTimeMs: this.lastDiveEndTimeMs,
         waveDashUntilMs: this.waveDashUntilMs,
-        jumpMultiplier: this.fusionStack >= 2 ? PHYSICS.SUPER_QUANTA_JUMP_MULT : 1,
-        onCryo: this.onPressurePlate ? false : this.onCryo
+        jumpMultiplier: effectiveJumpMult,
+        onCryo: this.onPressurePlate ? false : this.onCryo,
+        coyoteBonusMs: mods.coyoteBonusMs,
+        jumpBufferBonusMs: mods.jumpBufferBonusMs,
+        airControlMultiplier: mods.airControlMultiplier,
+        waveDashSpeedMultiplier: mods.waveDashSpeedMultiplier
       },
       { left: goLeft, right: goRight, jump, dive },
       delta
@@ -418,12 +448,14 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       this.jumpCutApplied = false;
       this.lastJumpPressedTimeMs = Number.NEGATIVE_INFINITY;
       this.lastGroundedTimeMs = Number.NEGATIVE_INFINITY;
-      this.levitateUntilMs = 0;
       this.setVelocityY(res.vy);
       this.tweenSquashStretch(0.78, 1.25, 140, 'Back.easeOut');
       if (res.waveDashed) {
         this.waveDashUntilMs = nowMs + PHYSICS.WAVE_DASH_DURATION_MS;
         this.lastDiveEndTimeMs = Number.NEGATIVE_INFINITY;
+        if (mods.phaseDashInvulnMs > 0) {
+          this.phaseDashInvulnUntilMs = nowMs + mods.phaseDashInvulnMs;
+        }
         gameEvents.emit('hero:wavedash', { x: this.x, y: this.y });
       }
       gameEvents.emit('hero:jump');
@@ -452,10 +484,11 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       : getAsymmetricGravityMultiplier(
           this.body.velocity.y,
           this.upsideDown,
-          touchingGround && !res.jumped
+          touchingGround && !res.jumped,
+          mods.apexHangTimeMultiplier
         );
     const worldGravityY = this.scene?.physics?.world?.gravity?.y ?? PHYSICS.GRAVITY_Y;
-    const effectiveBaseGravity = Math.abs(worldGravityY) * this.upsideDown;
+    const effectiveBaseGravity = Math.abs(worldGravityY) * mods.gravityMultiplier * this.upsideDown;
     const arcadeBody = this.body as Phaser.Physics.Arcade.Body;
     if (typeof arcadeBody.setGravityY === 'function') {
       arcadeBody.setGravityY(effectiveBaseGravity * asymFactor - worldGravityY);
