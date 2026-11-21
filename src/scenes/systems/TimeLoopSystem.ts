@@ -760,6 +760,11 @@ export class TimeLoopSystem {
           ctx.showRetroToast(
             getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.pauliBlast
           );
+          if (ctx.shakeCamera) {
+            ctx.shakeCamera(130, 0.007);
+          } else if (!useGameStore.getState().reducedEffects) {
+            ctx.cameras?.main?.shake?.(130, 0.007);
+          }
           break;
         }
       }

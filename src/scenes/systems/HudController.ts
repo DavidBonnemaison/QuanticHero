@@ -43,7 +43,7 @@ export class HudController {
     ctx.hudContainer.add(hudBar);
 
     const backButton = ctx.add.text(18, hudHeight / 2, '◄', {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '26px',
       color: '#ffffff'
     });
@@ -67,7 +67,7 @@ export class HudController {
     ctx.hudContainer.add(backButton);
 
     const restartButton = ctx.add.text(44, 5, initialStrings.hud.restart, {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#fbbf24'
     });
@@ -86,7 +86,7 @@ export class HudController {
       return useGameStore.getState().isMuted ? s.soundOff : s.soundOn;
     };
     const soundButton = ctx.add.text(92, 5, getSoundLabel(), {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#00ffcc'
     });
@@ -104,7 +104,7 @@ export class HudController {
       return useGameStore.getState().hapticsEnabled ? s.hapticsOn : s.hapticsOff;
     };
     const hapticButton = ctx.add.text(154, 5, getHapticLabel(), {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#00ffcc'
     });
@@ -122,7 +122,7 @@ export class HudController {
       return useGameStore.getState().reducedEffects ? s.fxLo : s.fxHi;
     };
     const fxButton = ctx.add.text(216, 5, getFxLabel(), {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#00ffcc'
     });
@@ -141,7 +141,7 @@ export class HudController {
       (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
     const ghostLabel = initialStrings.ghost[currentMode];
     ctx.ghostButton = ctx.add.text(44, 29, ghostLabel, {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#38bdf8'
     });
@@ -166,7 +166,7 @@ export class HudController {
       );
     };
     ctx.duelBadgeText = ctx.add.text(44, 29, getDuelBadgeLabel(), {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#fbbf24'
     });
@@ -181,7 +181,7 @@ export class HudController {
         29,
         initialStrings.hud.phase(ctx.currentPhase),
         {
-          fontFamily: 'VT323',
+          fontFamily: "'JetBrains Mono', monospace",
           fontSize: '18px',
           color: ctx.currentPhase === 'cyan' ? '#00ffff' : '#ec4899'
         }
@@ -200,7 +200,7 @@ export class HudController {
 
     const dilationX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 44;
     ctx.dilationIndicatorText = ctx.add.text(dilationX, 29, initialStrings.hud.timeDilation, {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#22d3ee'
     });
@@ -215,7 +215,7 @@ export class HudController {
         29,
         initialStrings.hud.timeLoopStatus(0, ctx.levelData.timeLoop.maxEchoes, initSec),
         {
-          fontFamily: 'VT323',
+          fontFamily: "'JetBrains Mono', monospace",
           fontSize: '18px',
           color: '#00e5ff'
         }
@@ -226,7 +226,7 @@ export class HudController {
 
     if (isGodMode()) {
       const godBadge = ctx.add.text(274, 5, '[GOD]', {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '18px',
         color: '#fbbf24'
       });
@@ -275,7 +275,7 @@ export class HudController {
     const hideTopHud = Boolean(ctx.acceleratorMode);
 
     ctx.timerText = ctx.add.text(camW - 10, 3, '00:00:00', {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '22px',
       color: '#ffffff'
     });
@@ -284,7 +284,7 @@ export class HudController {
     ctx.hudContainer.add(ctx.timerText);
 
     ctx.splitDeltaText = ctx.add.text(camW - 10, 28, '--', {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#94a3b8'
     });
@@ -302,7 +302,7 @@ export class HudController {
 
     const coherenceTierX = camW < 440 ? camW - 76 : camW - 110;
     ctx.coherenceTierText = ctx.add.text(coherenceTierX, 28, 'x1', {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: camW < 440 ? '16px' : '18px',
       color: '#38bdf8'
     });
@@ -327,7 +327,7 @@ export class HudController {
     const thumbRestartBg = ctx.add.rectangle(camW - 36, camH - 36, 48, 48, 0x0b0f19, 0.35);
     thumbRestartBg.setStrokeStyle(1.5, 0xfbbf24, 0.35);
     const thumbRestartLabel = ctx.add.text(camW - 36, camH - 36, '↻', {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '28px',
       color: '#fbbf24'
     });
@@ -353,7 +353,7 @@ export class HudController {
     const condenseBg = ctx.add.rectangle(condenseX, condenseY, 96, 44, 0x083344, 0.88);
     condenseBg.setStrokeStyle(2, 0x00e5ff, 0.95);
     const condenseLabel = ctx.add.text(condenseX, condenseY, initialStrings.hud.condenseButton, {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '20px',
       color: '#00e5ff'
     });
@@ -384,7 +384,7 @@ export class HudController {
       loopBg.setStrokeStyle(2, 0xa855f7, 0.95);
       loopBg.setScrollFactor?.(0);
       const loopLabel = ctx.add.text(loopX, loopY, initialStrings.hud.loopButton, {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '20px',
         color: '#00e5ff'
       });
@@ -423,7 +423,7 @@ export class HudController {
       observeBg.setStrokeStyle(2, 0xfbbf24, 0.95);
       observeBg.setScrollFactor?.(0);
       const observeLabel = ctx.add.text(observeX, observeY, initialStrings.hud.observeButton, {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '20px',
         color: '#fbbf24'
       });
@@ -496,7 +496,7 @@ export class HudController {
       bg.setStrokeStyle(2, isFocused ? 0x00e5ff : 0x64748b, isFocused ? 0.95 : 0.5);
 
       const label = ctx.add.text(pipX, pipY, subscripts[index] ?? `ψ${index + 1}`, {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '24px',
         color: isFocused ? '#00e5ff' : '#94a3b8'
       });

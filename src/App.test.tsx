@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGameStore } from './store';
 import { encodeDuelToUrl } from './tools/levelCodec';
@@ -67,5 +67,31 @@ describe('App root #duel= routing', () => {
       ghostTrajectory: 'v1|0,80,700,0,i;7650,900,300,0,r'
     });
     expect(useGameStore.getState().currentLevel).toBe(4);
+  });
+
+  it('syncs --atom-hue and --atom-anti-hue CSS variables and renders screen-transition wrapper', async () => {
+    useGameStore.setState({
+      currentLevel: 2,
+      reducedEffects: false
+    });
+
+    const { getByTestId, rerender } = render(<App />);
+
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--atom-hue')).toBe('#1c1900');
+      expect(document.documentElement.style.getPropertyValue('--atom-anti-hue')).toBe('#ffd166');
+    });
+
+    const wrapper = getByTestId('screen-transition');
+    expect(wrapper.className).toContain('screenTransition');
+
+    act(() => {
+      useGameStore.setState({ reducedEffects: true });
+    });
+    rerender(<App />);
+
+    await waitFor(() => {
+      expect(getByTestId('screen-transition').className).toContain('screenStatic');
+    });
   });
 });

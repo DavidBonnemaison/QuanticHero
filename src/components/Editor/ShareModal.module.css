@@ -4,8 +4,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(5, 5, 20, 0.9);
-  backdrop-filter: blur(4px);
+  background-color: rgba(5, 8, 20, 0.84);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,15 +15,17 @@
 }
 
 .modal {
-  background: #05051a;
-  border: 3px solid #00ffcc;
-  box-shadow: 0 0 25px rgba(0, 255, 204, 0.4), inset 0 0 15px rgba(0, 255, 204, 0.15);
-  border-radius: 0;
+  background: var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1.5px solid var(--accent-cyan);
+  box-shadow: 0 0 30px rgba(0, 229, 255, 0.24), var(--shadow-glass);
+  border-radius: var(--radius-lg);
   width: 92%;
   max-width: 480px;
   padding: 24px;
-  color: #00ffcc;
-  font-family: "VT323", monospace;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
   position: relative;
   max-height: 90vh;
   overflow-y: auto;
@@ -32,23 +35,26 @@
 
 .closeButton {
   position: absolute;
-  top: 10px;
+  top: 12px;
   right: 14px;
-  background: transparent;
-  border: 1px solid #ff007f;
-  color: #ff007f;
-  font-family: "VT323", monospace;
-  font-size: 22px;
+  background: var(--surface-glass);
+  border: 1px solid rgba(236, 72, 153, 0.65);
+  border-radius: var(--radius-sm);
+  color: #f9a8d4;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
   line-height: 1;
-  padding: 4px 8px;
-  transition: all 0.15s ease;
+  padding: 6px 9px;
+  transition: all var(--transition-fast);
 }
 
 .closeButton:hover {
-  background: #ff007f;
-  color: #000;
-  box-shadow: 0 0 10px rgba(255, 0, 127, 0.6);
+  background: var(--accent-magenta);
+  border-color: var(--accent-magenta);
+  color: var(--bg-deep);
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.5);
 }
 
 .header {
@@ -59,21 +65,21 @@
 
 .title {
   margin: 0;
-  font-size: clamp(22px, 5.5vw, 26px);
-  font-weight: normal;
-  color: #00ffcc;
-  letter-spacing: 1px;
-  line-height: 1.15;
-  text-shadow: 0 0 8px rgba(0, 255, 204, 0.6);
+  font-size: clamp(20px, 5vw, 24px);
+  font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
   overflow-wrap: break-word;
   text-wrap: balance;
 }
 
 .subtitle {
   margin: 6px 0 0;
-  font-size: 18px;
-  color: #94a3b8;
-  letter-spacing: 1px;
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
 }
 
 .levelInfo {
@@ -81,29 +87,35 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  background: rgba(0, 255, 204, 0.06);
-  border: 1px dashed #00ffcc;
-  padding: 10px 14px;
+  background: var(--surface-glass);
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
   margin: 12px 0 16px;
 }
 
 .atomBadge {
-  font-size: 26px;
-  color: #fff;
-  letter-spacing: 1px;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
 }
 
 .authorRecord {
-  font-size: 22px;
-  color: #ffeb3b;
-  letter-spacing: 1px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-amber);
+  letter-spacing: 0.03em;
 }
 
 .ghostBadge {
-  font-size: 16px;
-  line-height: 1.25;
+  font-size: 13px;
+  line-height: 1.35;
   color: #38bdf8;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.02em;
   text-align: center;
   text-wrap: balance;
 }
@@ -119,8 +131,9 @@
 .qrCard {
   background: #ffffff;
   padding: 10px;
-  border: 2px solid #00ffcc;
-  box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--accent-cyan);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.28);
   display: inline-block;
   line-height: 0;
 }
@@ -138,15 +151,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #05051a;
-  font-size: 20px;
+  color: var(--bg-deep);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .qrHint {
   margin-top: 10px;
-  font-size: 18px;
-  color: #94a3b8;
-  letter-spacing: 1px;
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
 }
 
 .urlSection {
@@ -161,101 +175,106 @@
 
 .urlInput {
   flex: 1;
-  background: #000;
-  border: 1px solid #334155;
+  background: rgba(5, 8, 20, 0.85);
+  border: var(--border-strong);
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
-  color: #00ffcc;
-  font-size: 16px;
-  font-family: "VT323", monospace;
+  color: var(--accent-cyan);
+  font-size: 13px;
+  font-family: var(--font-mono);
   outline: none;
 }
 
 .urlInput:focus {
-  border-color: #00ffcc;
-  box-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
 }
 
 .copyButton {
-  background: #000;
-  color: #00ffcc;
-  border: 2px solid #00ffcc;
-  padding: 4px 14px;
-  font-size: 20px;
-  font-family: "VT323", monospace;
+  background: rgba(0, 229, 255, 0.12);
+  color: var(--accent-cyan);
+  border: 1.5px solid var(--accent-cyan);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-ui);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
-  box-shadow: 3px 3px 0 #000;
+  transition: all var(--transition-fast);
 }
 
 .copyButton:hover {
-  background: #00ffcc;
-  color: #000;
-  box-shadow: 0 0 10px rgba(0, 255, 204, 0.6);
+  background: var(--accent-cyan);
+  color: var(--bg-deep);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.45);
 }
 
 .toast {
-  background: #00ffcc;
-  color: #000;
-  font-size: 20px;
-  font-family: "VT323", monospace;
-  padding: 6px 10px;
+  background: var(--accent-cyan);
+  color: var(--bg-deep);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
   text-align: center;
   margin-top: 8px;
   animation: fadeIn 0.15s ease-out;
-  box-shadow: 0 0 10px rgba(0, 255, 204, 0.6);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.45);
 }
 
 .actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   margin-top: 20px;
 }
 
 .actionButton {
   flex: 1;
   padding: 10px 14px;
-  font-size: 22px;
-  font-family: "VT323", monospace;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-ui);
   cursor: pointer;
-  border: 2px solid #666;
-  background: #000;
-  color: #fff;
-  transition: all 0.15s ease;
+  border: 1.5px solid var(--border-color-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-glass);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
   text-align: center;
-  box-shadow: 3px 3px 0 #000;
 }
 
 .playButton {
-  border-color: #38ef7d;
-  color: #38ef7d;
+  border-color: var(--accent-emerald);
+  color: var(--accent-emerald);
 }
 
 .playButton:hover {
-  background: #38ef7d;
-  color: #000;
-  box-shadow: 0 0 12px rgba(56, 239, 125, 0.6);
+  background: var(--accent-emerald);
+  color: var(--bg-deep);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.5);
 }
 
 .cancelButton {
-  border-color: #ff007f;
-  color: #ff007f;
+  border-color: var(--accent-magenta);
+  color: #f9a8d4;
 }
 
 .cancelButton:hover {
-  background: #ff007f;
-  color: #000;
-  box-shadow: 0 0 12px rgba(255, 0, 127, 0.6);
+  background: var(--accent-magenta);
+  color: var(--bg-deep);
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.5);
 }
 
 .duelModal {
-  border-color: #fbbf24;
-  box-shadow: 0 0 28px rgba(251, 191, 36, 0.45), inset 0 0 15px rgba(251, 191, 36, 0.14);
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 28px rgba(251, 191, 36, 0.35), var(--shadow-glass);
 }
 
 .duelTitle {
-  color: #fbbf24;
-  text-shadow: 0 0 10px rgba(251, 191, 36, 0.65);
+  color: var(--accent-amber);
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
 }
 
 .duelTagRow {
@@ -267,35 +286,38 @@
 }
 
 .duelTagLabel {
-  font-size: 20px;
-  color: #fbbf24;
-  letter-spacing: 1px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-amber);
+  letter-spacing: 0.04em;
 }
 
 .duelTagInput {
   width: 150px;
-  background: #000;
-  border: 2px solid #fbbf24;
-  padding: 4px 10px;
-  color: #fbbf24;
-  font-size: 22px;
-  font-family: "VT323", monospace;
+  background: rgba(5, 8, 20, 0.85);
+  border: 1.5px solid var(--accent-amber);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  color: var(--accent-amber);
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 0.1em;
   outline: none;
   text-align: center;
 }
 
 .nativeShareButton {
-  border-color: #fbbf24;
-  color: #05051a;
-  background: #fbbf24;
+  border-color: var(--accent-amber);
+  color: var(--bg-deep);
+  background: var(--accent-amber);
 }
 
 .nativeShareButton:hover {
   background: #fde047;
-  color: #05051a;
-  box-shadow: 0 0 14px rgba(251, 191, 36, 0.7);
+  color: var(--bg-deep);
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.65);
 }
 
 @keyframes fadeIn {

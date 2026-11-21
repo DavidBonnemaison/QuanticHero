@@ -274,6 +274,12 @@ export class RespawnTransitionController {
 
     const deathPos = { x: hero.x, y: hero.y };
 
+    if (ctx.shakeCamera) {
+      ctx.shakeCamera(140, 0.008);
+    } else if (!useGameStore.getState().reducedEffects) {
+      ctx.cameras?.main?.shake?.(140, 0.008);
+    }
+
     if (ctx.isEntangled) {
       gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: true });
       if (ctx.acceleratorMode) {

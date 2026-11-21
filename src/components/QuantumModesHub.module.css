@@ -1,12 +1,13 @@
 .wrapper {
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
-  background: radial-gradient(circle at 20% 0%, #101935 0%, #050814 65%);
-  color: #f8fafc;
+  background: radial-gradient(circle at 20% 0%, #101935 0%, var(--bg-deep) 65%);
+  color: var(--text-primary);
   padding: 20px 18px 48px;
   box-sizing: border-box;
   overflow-y: auto;
-  font-family: "VT323", monospace;
+  font-family: var(--font-ui);
 }
 
 .inner {
@@ -23,24 +24,28 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  border-bottom: 1px solid rgba(0, 229, 255, 0.35);
+  border-bottom: var(--border-subtle);
   padding-bottom: 14px;
 }
 
 .backButton {
-  background: rgba(11, 15, 25, 0.9);
-  border: 1.5px solid #00e5ff;
-  color: #00e5ff;
-  font-family: "VT323", monospace;
-  font-size: 20px;
-  padding: 6px 14px;
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1.5px solid var(--accent-cyan);
+  border-radius: var(--radius-sm);
+  color: var(--accent-cyan);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 7px 14px;
   cursor: pointer;
-  letter-spacing: 1px;
-  transition: background-color 0.15s ease, transform 0.12s ease;
+  letter-spacing: 0.04em;
+  transition: background-color var(--transition-fast), transform 0.12s ease;
 }
 
 .backButton:hover {
-  background: rgba(0, 229, 255, 0.18);
+  background: rgba(0, 229, 255, 0.16);
   transform: translateY(-1px);
 }
 
@@ -51,28 +56,32 @@
 
 .title {
   margin: 0;
-  font-family: "Orbitron", sans-serif;
+  font-family: var(--font-ui);
+  font-weight: 700;
   font-size: clamp(22px, 3.6vw, 34px);
-  letter-spacing: 3px;
-  color: #00e5ff;
-  text-shadow: 0 0 14px rgba(0, 229, 255, 0.45);
+  letter-spacing: 0.08em;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 18px rgba(0, 229, 255, 0.35);
 }
 
 .subtitle {
   margin: 6px 0 0;
-  font-size: 18px;
-  letter-spacing: 1.5px;
-  color: #94a3b8;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
 }
 
 .modeSection {
-  background: rgba(11, 15, 25, 0.88);
-  border: 1.5px solid rgba(0, 229, 255, 0.4);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--border-subtle);
+  border-radius: var(--radius-lg);
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 0 24px rgba(0, 229, 255, 0.08);
+  box-shadow: var(--shadow-glass);
 }
 
 .modeSectionHeader {
@@ -92,48 +101,55 @@
 
 .modeTitle {
   margin: 0;
-  font-family: "Orbitron", sans-serif;
-  font-size: 22px;
-  letter-spacing: 2px;
-  color: #f8fafc;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
 }
 
 .modeTag {
-  font-size: 16px;
-  letter-spacing: 1px;
-  padding: 2px 10px;
-  border: 1px solid #00e5ff;
-  color: #00e5ff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
   background: rgba(0, 229, 255, 0.1);
 }
 
 .modeTagViolet {
-  border-color: #a855f7;
-  color: #c084fc;
-  background: rgba(168, 85, 247, 0.12);
+  border-color: var(--accent-violet);
+  color: #e9d5ff;
+  background: rgba(168, 85, 247, 0.16);
 }
 
 .modeTagGold {
-  border-color: #fbbf24;
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.12);
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+  background: rgba(251, 191, 36, 0.14);
 }
 
 .counterBadge {
-  font-family: "Orbitron", sans-serif;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
-  letter-spacing: 1.5px;
-  color: #34d399;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--accent-emerald);
   border: 1px solid rgba(52, 211, 153, 0.5);
+  border-radius: var(--radius-sm);
   padding: 4px 10px;
   background: rgba(5, 150, 105, 0.15);
 }
 
 .modeDesc {
   margin: 0;
-  font-size: 20px;
-  line-height: 1.35;
-  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 
 .chronoGrid {
@@ -143,23 +159,25 @@
 }
 
 .levelCard {
-  background: rgba(15, 23, 42, 0.9);
-  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  background: var(--surface-glass-strong);
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 14px;
   text-align: left;
-  color: #f8fafc;
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-family: "VT323", monospace;
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: var(--font-ui);
+  transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow
+    var(--transition-fast);
 }
 
 .levelCard:hover {
-  border-color: #00e5ff;
+  border-color: var(--accent-cyan);
   transform: translateY(-2px);
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.22);
 }
 
 .levelCardCleared {
@@ -174,29 +192,34 @@
 }
 
 .levelCode {
-  font-family: "Orbitron", sans-serif;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
-  color: #00e5ff;
-  letter-spacing: 1px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.06em;
 }
 
 .levelDifficulty {
-  font-size: 14px;
-  padding: 1px 6px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  color: #cbd5e1;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: var(--border-subtle);
+  color: var(--text-secondary);
 }
 
 .levelName {
-  font-family: "Orbitron", sans-serif;
-  font-size: 15px;
-  color: #f8fafc;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
 }
 
 .levelSummary {
-  font-size: 17px;
-  line-height: 1.25;
-  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-muted);
   flex: 1;
 }
 
@@ -204,22 +227,24 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid rgba(51, 65, 85, 0.7);
+  border-top: var(--border-subtle);
   padding-top: 8px;
   margin-top: 4px;
-  font-size: 16px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
 }
 
 .cycleSpec {
-  color: #c084fc;
+  color: var(--accent-violet);
 }
 
 .bestScore {
-  color: #34d399;
+  color: var(--accent-emerald);
 }
 
 .unsolved {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .secondaryGrid {
@@ -229,8 +254,11 @@
 }
 
 .placeholderCard {
-  background: rgba(11, 15, 25, 0.85);
-  border: 1.5px solid rgba(168, 85, 247, 0.4);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: var(--radius-lg);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -242,25 +270,28 @@
 }
 
 .statusLine {
-  font-family: "Orbitron", sans-serif;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
-  letter-spacing: 1.2px;
-  color: #94a3b8;
-  padding-top: 6px;
-  border-top: 1px solid rgba(51, 65, 85, 0.6);
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-top: 8px;
+  border-top: var(--border-subtle);
 }
 
 .actionButton {
   align-self: flex-start;
   background: rgba(251, 191, 36, 0.14);
-  border: 1.5px solid #fbbf24;
-  color: #fbbf24;
-  font-family: "Orbitron", sans-serif;
-  font-size: 13px;
-  letter-spacing: 1.5px;
-  padding: 8px 16px;
+  border: 1.5px solid var(--accent-amber);
+  border-radius: var(--radius-sm);
+  color: var(--accent-amber);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  padding: 9px 16px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--transition-fast);
 }
 
 .actionButton:hover {
@@ -268,19 +299,19 @@
 }
 
 .schrodingerSection {
-  border-color: rgba(168, 85, 247, 0.48);
+  border-color: rgba(168, 85, 247, 0.42);
   box-shadow: 0 0 24px rgba(168, 85, 247, 0.1);
 }
 
 .schrodingerCard {
-  border-color: rgba(168, 85, 247, 0.4);
+  border-color: rgba(168, 85, 247, 0.35);
 }
 
 .schrodingerCard:hover {
-  border-color: #c084fc;
-  box-shadow: 0 0 16px rgba(168, 85, 247, 0.3);
+  border-color: var(--accent-violet);
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.28);
 }
 
 .levelCodeViolet {
-  color: #c084fc;
+  color: var(--accent-violet);
 }

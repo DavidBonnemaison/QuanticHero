@@ -35,7 +35,7 @@ export function showLevelTitle(ctx: GameSceneContext): void {
     : `${ctx.levelData.id} - ${ctx.levelData.atom}`;
 
   const title = ctx.add.text(camW / 2, ctx.cameras.main.height / 2, titleText, {
-    fontFamily: 'VT323',
+    fontFamily: "'Space Grotesk', sans-serif",
     fontSize: camW < 480 ? '30px' : '46px',
     color: ctx.levelData.antiHue,
     align: 'center',
@@ -76,7 +76,7 @@ export function showRetroToast(ctx: GameSceneContext, message: string): void {
   const accentColor = Number.parseInt(accentHex.replace('#', ''), 16) || 0x38bdf8;
 
   const toast = ctx.add.text(startX, startY, message, {
-    fontFamily: 'VT323',
+    fontFamily: "'Space Grotesk', sans-serif",
     fontSize: '36px',
     fontStyle: 'bold',
     color: '#ffffff',
@@ -251,7 +251,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 182 : 148),
       isVictory ? t.duel.victoryBadge(deltaStr) : t.duel.defeatBadge(deltaStr),
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '30px' : '38px',
         color: isVictory ? '#34d399' : '#f87171',
         align: 'center',
@@ -272,7 +272,7 @@ export function showLevelCompleteOverlay(
             formatDuelSeconds(activeDuel.challengerTimeMs)
           ),
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '18px' : '24px',
         color: '#fbbf24',
         align: 'center',
@@ -289,7 +289,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 102 : 70),
       `${formatScore(elapsedMs)}  •  ${t.hud.jumps(ctx.jumpCount)}  •  ${medalInfo.symbol} ${medalInfo.shortLabel}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: isCompact ? '16px' : '21px',
         color: '#f8fafc',
         align: 'center',
@@ -305,7 +305,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 22 : 8),
       isVictory ? `⚔ ${t.duel.sendRevengeLink}` : `⚔ ${t.duel.challengeFriend.toUpperCase()}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '22px' : '28px',
         color: '#050814',
         backgroundColor: '#fbbf24',
@@ -331,7 +331,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 54 : 58),
       `🖼 ${t.hud.shareCardButton}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '19px' : '21px',
         color: '#00e5ff',
         backgroundColor: '#0c233c',
@@ -357,7 +357,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 132 : 124),
       `↻ ${t.duel.rematch.toUpperCase()}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '20px' : '22px',
         color: '#00ffcc',
         backgroundColor: '#083344',
@@ -389,7 +389,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 132 : 124),
       t.hud.levelsButton,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '20px' : '22px',
         color: '#cbd5e1',
         backgroundColor: '#1e293b',
@@ -427,7 +427,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 174 : 138),
       t.hud.elementSynthesized(symbol, atom.toUpperCase()),
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '20px' : '28px',
         color: '#00e5ff',
         align: 'center',
@@ -451,7 +451,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 134 : 102),
       `${formatScore(elapsedMs)}  •  ${t.hud.rec} ${formatScore(bestMs)}  •  ${deltaLabel}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: isCompact ? '16px' : '22px',
         color: prevBestMs === 0 || elapsedMs <= prevBestMs ? '#34d399' : '#f8fafc',
         align: 'center',
@@ -470,7 +470,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 102 : 74),
       `${medalInfo.symbol} ${medalInfo.label.toUpperCase()}  •  ${t.hud.jumps(ctx.jumpCount)}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '15px' : '19px',
         color: medalInfo.color,
         align: 'center',
@@ -489,7 +489,7 @@ export function showLevelCompleteOverlay(
         camH / 2 - (isCompact ? 76 : 48),
         coherentLabel,
         {
-          fontFamily: 'VT323',
+          fontFamily: "'Space Grotesk', sans-serif",
           fontSize: isCompact ? '16px' : '20px',
           color: '#fbbf24',
           align: 'center',
@@ -512,7 +512,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? (isCoherentRun ? 32 : 44) : isCoherentRun ? 12 : 24),
       narrativeLines.join('\n'),
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '16px' : '18px',
         color: '#cbd5e1',
         align: 'center',
@@ -545,7 +545,7 @@ export function showLevelCompleteOverlay(
         : t.hud.levelsButton;
 
     const nextBtn = ctx.add.text(camW / 2, camH / 2 + (isCompact ? 56 : 48), primaryLabel, {
-      fontFamily: 'VT323',
+      fontFamily: "'Space Grotesk', sans-serif",
       fontSize: isCompact ? '20px' : '22px',
       color: '#00ffcc',
       backgroundColor: '#083344',
@@ -585,7 +585,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 112 : 98),
       `⚔ ${t.duel.challengeFriend.toUpperCase()}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '19px' : '21px',
         color: '#fbbf24',
         backgroundColor: '#422006',
@@ -611,7 +611,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 166 : 146),
       `🖼 ${t.hud.shareCardButton}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize: isCompact ? '19px' : '21px',
         color: '#00e5ff',
         backgroundColor: '#0c233c',
@@ -631,6 +631,45 @@ export function showLevelCompleteOverlay(
       }
     );
     overlay.add(shareCardBtn);
+  }
+
+  const isNewPb = prevBestMs === 0 || elapsedMs <= prevBestMs;
+  const isGold = medal === 'gold';
+  if ((isNewPb || isGold) && !store.reducedEffects) {
+    if (isGold) {
+      ctx.cameras.main.flash?.(260, 251, 191, 36, false);
+    } else {
+      ctx.cameras.main.flash?.(220, 0, 229, 255, false);
+    }
+    if (ctx.add?.circle && ctx.tweens?.add) {
+      const palette = isGold
+        ? [0xfbbf24, 0xfde047, 0x00e5ff, 0xec4899]
+        : [0x00e5ff, 0x34d399, 0xc084fc, 0xfbbf24];
+      for (let i = 0; i < 10; i++) {
+        const angle = (Math.PI * 2 * i) / 10;
+        const dist = 110 + (i % 3) * 45;
+        const p = ctx.add.circle(
+          camW / 2,
+          camH / 2,
+          4 + (i % 2) * 2,
+          palette[i % palette.length],
+          0.9
+        );
+        p.setScrollFactor?.(0);
+        p.setDepth?.(205);
+        overlay.add(p);
+        ctx.tweens.add({
+          targets: p,
+          x: camW / 2 + Math.cos(angle) * dist,
+          y: camH / 2 + Math.sin(angle) * dist,
+          alpha: 0,
+          scale: 0.25,
+          duration: 620,
+          ease: 'Cubic.easeOut',
+          onComplete: () => p.destroy()
+        });
+      }
+    }
   }
 
   if (ctx.tweens?.add) {

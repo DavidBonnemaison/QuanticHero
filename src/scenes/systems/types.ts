@@ -336,6 +336,7 @@ export interface GameSceneContext {
   switchFocusByIndex(index: number): void;
   handleResize(gameSize?: { width: number; height: number }): void;
   destroyBetaPipCamera(): void;
+  shakeCamera?(duration: number, intensity?: number): void;
   tryCrystallizeBroglieTrail(): boolean;
   spawnBroglieWallWake?(x: number, y: number, durationMs: number): void;
   loadAcceleratorChamber?(nextLevelData: LevelData, modifiers: AggregatedMutationModifiers): void;

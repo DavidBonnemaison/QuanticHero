@@ -10,6 +10,7 @@ import {
   type AggregatedMutationModifiers,
   DEFAULT_MUTATION_MODIFIERS
 } from '../roguelite/mutations';
+import { useGameStore } from '../store';
 import { gameEvents } from '../tools/gameEvents';
 import type { EntanglementMode } from '../types';
 
@@ -213,6 +214,9 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   private triggerNeonWallHitStop(normalDir: 1 | -1): void {
     this.tweenSquashStretch(0.65, 1.32, 140, 'Back.easeOut');
     this.spawnWallSparks(normalDir);
+    if (!useGameStore.getState().reducedEffects) {
+      this.scene?.cameras?.main?.shake?.(75, 0.004);
+    }
     if (this.body && 'moves' in this.body && this.scene?.time?.delayedCall) {
       const arcadeBody = this.body as Phaser.Physics.Arcade.Body;
       arcadeBody.moves = false;

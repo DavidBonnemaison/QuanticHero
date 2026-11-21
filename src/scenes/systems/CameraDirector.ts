@@ -95,7 +95,7 @@ export class CameraDirector {
 
     if (!ctx.betaPipLabel && typeof ctx.add?.text === 'function') {
       const label = ctx.add.text(pipX + 6, pipY + 4, 'β', {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '20px',
         color: '#ec4899',
         backgroundColor: '#0b0f19'

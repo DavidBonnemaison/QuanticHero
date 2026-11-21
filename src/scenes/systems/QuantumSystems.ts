@@ -706,6 +706,11 @@ export class QuantumSystems {
           getStrings(useGameStore.getState().locale ?? 'en').hud.toasts.pauliBlast
         );
         this.setPieces.drawPauliFlash(hA.x, hA.y, hB.x, hB.y);
+        if (ctx.shakeCamera) {
+          ctx.shakeCamera(130, 0.007);
+        } else if (!useGameStore.getState().reducedEffects) {
+          ctx.cameras?.main?.shake?.(130, 0.007);
+        }
       }
     }
   }

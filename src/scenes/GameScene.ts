@@ -661,6 +661,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public destroyBetaPipCamera(): void {
     this.cameraDirector.destroyBetaPipCamera();
   }
+  public shakeCamera(duration: number, intensity = 0.01): void {
+    this.cameraDirector.shake(duration, intensity);
+  }
 
   // --- RespawnTransitionController delegations ---
   public quickRespawn(deathPosition?: { x: number; y: number }): void {

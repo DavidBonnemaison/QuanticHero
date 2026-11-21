@@ -251,7 +251,7 @@ function drawElementAndMetrics(
     ctx.stroke();
 
     ctx.fillStyle = style.color;
-    ctx.font = 'bold 20px "VT323", "Courier New", monospace';
+    ctx.font = 'bold 20px "JetBrains Mono", monospace';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     ctx.fillText(`★ ${badgeText}`, leftX + 16, currentY + pillH / 2 + 1);
@@ -270,14 +270,14 @@ function drawElementAndMetrics(
   // Atomic number Z
   const zLabel = resolveAtomicZLabel(input.level);
   ctx.fillStyle = rgba(antiRgb, 0.95);
-  ctx.font = 'bold 22px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 22px "JetBrains Mono", monospace';
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   ctx.fillText(zLabel, leftX + 14, currentY + 12);
 
   // Element symbol
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 74px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 74px "JetBrains Mono", monospace';
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
   ctx.fillText(input.level.symbol || '?', leftX + tileSize / 2, currentY + tileSize / 2 + 10);
@@ -287,7 +287,7 @@ function drawElementAndMetrics(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillStyle = rgba(antiRgb, 0.9);
-  ctx.font = 'bold 18px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 18px "JetBrains Mono", monospace';
   ctx.fillText(
     locale === 'fr' ? 'ISOTOPE SYNTHÉTISÉ' : 'ELEMENT SYNTHESIZED',
     nameX,
@@ -298,14 +298,14 @@ function drawElementAndMetrics(
   const atomName = (input.level.atom || 'Unknown').toUpperCase();
   ctx.font =
     atomName.length > 12
-      ? 'bold 40px "VT323", "Courier New", monospace'
-      : 'bold 50px "VT323", "Courier New", monospace';
+      ? 'bold 40px "JetBrains Mono", monospace'
+      : 'bold 50px "JetBrains Mono", monospace';
   ctx.fillText(atomName, nameX, currentY + 46);
 
   // Medal line under atom name
   if (medalInfo.medal !== 'none') {
     ctx.fillStyle = medalInfo.color;
-    ctx.font = 'bold 24px "VT323", "Courier New", monospace';
+    ctx.font = 'bold 24px "JetBrains Mono", monospace';
     ctx.fillText(`${medalInfo.symbol} ${medalInfo.label}`, nameX, currentY + 108);
   }
 
@@ -326,13 +326,13 @@ function drawElementAndMetrics(
   ctx.stroke();
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = 'bold 16px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 16px "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(locale === 'fr' ? 'TEMPS' : 'TIME', leftX + 16, currentY + 12);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 46px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 46px "JetBrains Mono", monospace';
   ctx.fillText(formatCardTime(input.timeMs), leftX + 16, currentY + 34);
 
   // Jumps box
@@ -345,11 +345,11 @@ function drawElementAndMetrics(
   ctx.stroke();
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = 'bold 16px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 16px "JetBrains Mono", monospace';
   ctx.fillText(locale === 'fr' ? 'SAUTS' : 'JUMPS', jumpsX + 14, currentY + 12);
 
   ctx.fillStyle = '#38bdf8';
-  ctx.font = 'bold 44px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 44px "JetBrains Mono", monospace';
   ctx.fillText(`${Math.max(0, Math.round(input.jumps))}J`, jumpsX + 14, currentY + 34);
 
   // Coherence Tier box (optional)
@@ -366,11 +366,11 @@ function drawElementAndMetrics(
     ctx.stroke();
 
     ctx.fillStyle = '#cbd5e1';
-    ctx.font = 'bold 15px "VT323", "Courier New", monospace';
+    ctx.font = 'bold 15px "JetBrains Mono", monospace';
     ctx.fillText(locale === 'fr' ? 'FLUX' : 'FLOW', cohX + 12, currentY + 12);
 
     ctx.fillStyle = cohStyle.color;
-    ctx.font = 'bold 28px "VT323", "Courier New", monospace';
+    ctx.font = 'bold 28px "JetBrains Mono", monospace';
     ctx.fillText(cohStyle.label, cohX + 12, currentY + 42);
   }
 }
@@ -396,7 +396,7 @@ function drawMinimapAndTrajectory(
 
   // Header label
   ctx.fillStyle = rgba(antiRgb, 0.85);
-  ctx.font = 'bold 18px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 18px "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(
@@ -600,7 +600,7 @@ function drawFooter(
 
   // Branding
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 34px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 34px "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText('QUANTIC HERO', 56, 562);
@@ -609,7 +609,7 @@ function drawFooter(
   const subtitleX = Math.max(260, Math.ceil(56 + measuredBrandWidth + 24));
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '20px "VT323", "Courier New", monospace';
+  ctx.font = '20px "JetBrains Mono", monospace';
   ctx.fillText('ISOTOPE RECORD CARD', subtitleX, 564);
 
   // Optional miniature QR code

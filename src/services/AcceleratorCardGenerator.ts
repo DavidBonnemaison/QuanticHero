@@ -115,7 +115,7 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
 
   // Header
   ctx.fillStyle = '#fbbf24';
-  ctx.font = 'bold 26px Orbitron, monospace';
+  ctx.font = 'bold 26px "JetBrains Mono", monospace';
   ctx.fillText(
     locale === 'fr'
       ? 'ACCELERATEUR DE PARTICULES // RUN FUSION'
@@ -132,7 +132,7 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 20px Orbitron, monospace';
+    ctx.font = 'bold 20px "JetBrains Mono", monospace';
     ctx.fillText(locale === 'fr' ? 'NOUVEAU RECORD' : 'NEW RECORD', REPLAY_CARD_WIDTH - 255, 77);
   }
 
@@ -145,36 +145,36 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
   ctx.stroke();
 
   ctx.fillStyle = accent;
-  ctx.font = 'bold 24px Orbitron, monospace';
+  ctx.font = 'bold 24px "JetBrains Mono", monospace';
   ctx.fillText(`Z = ${el.z}`, 82, 160);
 
   ctx.fillStyle = '#f8fafc';
-  ctx.font = 'bold 94px Orbitron, monospace';
+  ctx.font = 'bold 94px "JetBrains Mono", monospace';
   ctx.fillText(el.symbol, 82, 268);
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = 'bold 22px VT323, monospace';
+  ctx.font = 'bold 22px "Space Grotesk", sans-serif';
   ctx.fillText(el.name.toUpperCase(), 82, 326);
 
   // Core stats
   const statsX = 356;
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '24px VT323, monospace';
+  ctx.font = '24px "Space Grotesk", sans-serif';
   ctx.fillText(locale === 'fr' ? 'SALLES FRANCHIES' : 'ROOMS CLEARED', statsX, 156);
   ctx.fillStyle = '#00e5ff';
-  ctx.font = 'bold 54px Orbitron, monospace';
+  ctx.font = 'bold 54px "JetBrains Mono", monospace';
   ctx.fillText(String(input.roomsCleared), statsX, 214);
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '24px VT323, monospace';
+  ctx.font = '24px "Space Grotesk", sans-serif';
   ctx.fillText(locale === 'fr' ? 'TEMPS TOTAL' : 'TOTAL TIME', statsX + 340, 156);
   ctx.fillStyle = '#f8fafc';
-  ctx.font = 'bold 50px Orbitron, monospace';
+  ctx.font = 'bold 50px "JetBrains Mono", monospace';
   ctx.fillText(formatCardTime(input.totalTimeMs), statsX + 340, 214);
 
   // Mutations list
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '24px VT323, monospace';
+  ctx.font = '24px "Space Grotesk", sans-serif';
   ctx.fillText(
     locale === 'fr'
       ? `MUTATIONS ACTIVES (${input.mutations.length})`
@@ -189,7 +189,7 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
   for (const id of uniqueMutIds) {
     const def = getMutationById(id);
     const label = def ? `${def.icon} ${locale === 'fr' ? def.nameFr : def.nameEn}` : id;
-    ctx.font = '22px VT323, monospace';
+    ctx.font = '22px "Space Grotesk", sans-serif';
     const textW = ctx.measureText(label).width;
     const chipW = Math.min(360, textW + 24);
     if (chipX + chipW > REPLAY_CARD_WIDTH - 56) {
@@ -212,7 +212,7 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
   const synergies = detectActiveSynergies(input.mutations);
   if (synergies.length > 0) {
     ctx.fillStyle = '#fbbf24';
-    ctx.font = '24px VT323, monospace';
+    ctx.font = '24px "Space Grotesk", sans-serif';
     const synText = synergies
       .map((s) => `[SYN] ${locale === 'fr' ? s.nameFr : s.nameEn}`)
       .join('   ');
@@ -221,7 +221,7 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
 
   // Footer
   ctx.fillStyle = '#64748b';
-  ctx.font = '22px Orbitron, monospace';
+  ctx.font = '22px "JetBrains Mono", monospace';
   ctx.fillText('QUANTUM HERO', 56, REPLAY_CARD_HEIGHT - 54);
 
   return new Promise((resolve) => {

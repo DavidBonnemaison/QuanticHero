@@ -38,7 +38,7 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
 
     if (options?.label && typeof scene.add?.text === 'function') {
       this.labelText = scene.add.text(initialFrame.x, initialFrame.y - 24, options.label, {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '15px',
         color: '#fbbf24',
         stroke: '#050814',
