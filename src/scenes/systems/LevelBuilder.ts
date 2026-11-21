@@ -156,8 +156,9 @@ export class LevelBuilder {
     ctx.createHUD();
     ctx.showLevelTitle();
 
-    // 7. Audio clone modulation
+    // 7. Audio clone modulation & adaptive BGM start
     soundManager.setClonesCount(ctx.heroes.length);
+    soundManager.startBgm();
 
     // 8. Quantum Visual Effects & Graphics Layers
     ctx.quantumEffects = new QuantumEffectsManager(ctx as unknown as Phaser.Scene);

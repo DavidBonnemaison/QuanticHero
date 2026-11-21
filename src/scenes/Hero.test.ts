@@ -239,4 +239,62 @@ describe('Hero Quantum Entanglement Mechanics', () => {
     expect(hero2.recoilVx).toBe(-300);
     expect(hero2.recoilTimer).toBe(220);
   });
+
+  it('stops horizontal velocity at world boundaries when grounded without involuntary recoil or jump', () => {
+    const hero = new Hero(mockScene, 10, 400, true);
+    hero.body.touching.down = true;
+    hero.body.velocity.x = -350;
+    hero.bounceOffLeftWall();
+    expect(hero.recoilTimer).toBe(0);
+    expect(hero.recoilVx).toBe(0);
+    expect(hero.body.velocity.x).toBe(0);
+    expect(hero.body.velocity.y).toBe(0);
+
+    const heroRight = new Hero(mockScene, 790, 400, true);
+    heroRight.body.blocked.down = true;
+    heroRight.body.velocity.x = 350;
+    heroRight.bounceOffRightWall();
+    expect(heroRight.recoilTimer).toBe(0);
+    expect(heroRight.recoilVx).toBe(0);
+    expect(heroRight.body.velocity.x).toBe(0);
+    expect(heroRight.body.velocity.y).toBe(0);
+  });
+
+  it('prevents sliding on cryo platforms when standing on a pressure plate', () => {
+    const hero = new Hero(mockScene, 200, 400, true);
+    hero.body.touching.down = true;
+    hero.body.velocity.x = 300;
+    hero.onCryo = true;
+    hero.onPressurePlate = true;
+
+    hero.updateControl(null, null, { left: false, right: false, jump: false });
+    expect(hero.body.velocity.x).toBe(0);
+  });
+
+  it('plunges into liquid when pressing down/dive while standing on a liquid surface', () => {
+    const hero = new Hero(mockScene, 200, 400, true);
+    hero.body.touching.down = true;
+    hero.onLiquidSurface = true;
+
+    hero.updateControl({ down: { isDown: true } } as any, null, {
+      left: false,
+      right: false,
+      jump: false
+    });
+    expect(hero.inLiquid).toBe(true);
+    expect(hero.body.velocity.y).toBeGreaterThanOrEqual(320);
+  });
+
+  it('applies coherenceSpeedMultiplier (Flow Momentum Boost) to horizontal speed', () => {
+    const hero = new Hero(mockScene, 200, 400, true);
+    hero.body.touching.down = true;
+    hero.coherenceSpeedMultiplier = 1.15;
+
+    hero.updateControl({ right: { isDown: true } } as any, null, {
+      left: false,
+      right: false,
+      jump: false
+    });
+    expect(hero.body.velocity.x).toBeCloseTo(350 * 1.15, 2);
+  });
 });

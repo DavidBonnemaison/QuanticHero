@@ -112,11 +112,11 @@ describe('Spec-03 MobileTouchController', () => {
       expect(ctrl.state.diveRequested).toBe(false);
     });
 
-    it('does not trigger diveRequested if slow (>= 120 ms) or touching ground', () => {
+    it('triggers diveRequested on fast downward flick even while grounded (e.g. liquid surface), but not if slow (>= 120 ms)', () => {
       const ctrl = new MobileTouchController();
       ctrl.onPointerDown(200, 500, 1000);
 
-      // Too slow
+      // Too slow -> does not trigger
       ctrl.onPointerMove(
         200,
         500 + FLICK_DOWN_THRESHOLD_Y + 10,
@@ -125,10 +125,45 @@ describe('Spec-03 MobileTouchController', () => {
       );
       expect(ctrl.state.diveRequested).toBe(false);
 
-      // On ground
+      // Fast flick-down while grounded -> triggers diveRequested (allows plunging from liquid surface)
       ctrl.onPointerDown(200, 500, 2000);
       ctrl.onPointerMove(200, 500 + FLICK_DOWN_THRESHOLD_Y + 10, 2050, true);
+      expect(ctrl.state.diveRequested).toBe(true);
+    });
+
+    it('inverts vertical swipe controls under antigravity (upsideDown = -1): swipe DOWN = jump, swipe UP = dive', () => {
+      const ctrl = new MobileTouchController();
+
+      // Normal gravity (upsideDown = 1): swipe UP -> jump
+      ctrl.onPointerDown(200, 500, 100);
+      ctrl.onPointerMove(200, 500 - FLICK_JUMP_THRESHOLD_Y - 2, 120, true, 0, 1);
+      expect(ctrl.state.jump).toBe(true);
       expect(ctrl.state.diveRequested).toBe(false);
+      ctrl.onPointerUp(0);
+
+      // Antigravity (upsideDown = -1): swipe DOWN -> jump
+      ctrl.onPointerDown(200, 500, 300);
+      ctrl.onPointerMove(200, 500 + FLICK_JUMP_THRESHOLD_Y + 2, 320, true, 0, -1);
+      expect(ctrl.state.jump).toBe(true);
+      expect(ctrl.state.jumpJustPressed).toBe(true);
+      expect(ctrl.state.diveRequested).toBe(false);
+
+      // Move further down -> minPointerY tracks furthest downward point
+      ctrl.onPointerMove(200, 540, 340, false, 0, -1);
+      expect(ctrl.minPointerY).toBe(540);
+      expect(ctrl.state.jumpHeld).toBe(true);
+
+      // Move back UP by JUMP_REARM_DROP_Y -> releases jump and re-arms
+      ctrl.onPointerMove(200, 540 - JUMP_REARM_DROP_Y, 360, false, 0, -1);
+      expect(ctrl.state.jump).toBe(false);
+      expect(ctrl.state.jumpHeld).toBe(false);
+      ctrl.onPointerUp(0);
+
+      // Antigravity (upsideDown = -1): fast swipe UP -> diveRequested
+      ctrl.onPointerDown(200, 500, 500);
+      ctrl.onPointerMove(200, 500 - FLICK_DOWN_THRESHOLD_Y - 4, 540, false, 0, -1);
+      expect(ctrl.state.diveRequested).toBe(true);
+      expect(ctrl.state.jump).toBe(false);
     });
 
     it('halves horizontal velocity and applies 720 * upsideDown vertical velocity in stepHeroControl', () => {

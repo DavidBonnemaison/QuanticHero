@@ -257,4 +257,81 @@ describe('CameraDirector', () => {
     expect(frameRef?.destroy).toHaveBeenCalledTimes(1);
     expect(labelRef?.destroy).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps Alpha centered inside central third when PiP is active even during Dual->PiP transition and fast movement, with hysteresis', () => {
+    const pipCam = {
+      setZoom: vi.fn(),
+      setBackgroundColor: vi.fn(),
+      setBounds: vi.fn(),
+      setViewport: vi.fn(),
+      ignore: vi.fn(),
+      centerOn: vi.fn()
+    };
+    const makeHudObj = () => ({
+      active: true,
+      setStrokeStyle: vi.fn(),
+      setScrollFactor: vi.fn(),
+      setDepth: vi.fn(),
+      setPosition: vi.fn(),
+      destroy: vi.fn()
+    });
+    const ctx = makeCameraContext();
+    if (ctx.levelData.entanglement) {
+      ctx.levelData.entanglement.revealAtX = undefined;
+    }
+    ctx.cameras.main.width = 400;
+    ctx.cameras.main.height = 800;
+    ctx.cameras.main.midPoint.x = 1000;
+    ctx.cameras.main.midPoint.y = 400;
+    (ctx.cameras.main.centerOn as ReturnType<typeof vi.fn>).mockImplementation(
+      (cx: number, cy: number) => {
+        ctx.cameras.main.midPoint.x = cx;
+        ctx.cameras.main.midPoint.y = cy;
+        return ctx.cameras.main;
+      }
+    );
+    const camMgr = ctx.cameras as unknown as {
+      add: ReturnType<typeof vi.fn>;
+      remove: ReturnType<typeof vi.fn>;
+    };
+    camMgr.add = vi.fn(() => pipCam);
+    camMgr.remove = vi.fn();
+    (ctx as unknown as { add: Record<string, ReturnType<typeof vi.fn>> }).add = {
+      rectangle: vi.fn(() => makeHudObj()),
+      text: vi.fn(() => makeHudObj())
+    };
+
+    // Start far apart -> rawZoom = 400 / (1200 + 240) = 0.277 < 0.42 -> enters PiP
+    ctx.heroes[0].x = 200;
+    ctx.heroes[0].y = 400;
+    ctx.heroes[1].x = 1400;
+    ctx.heroes[1].y = 400;
+
+    const hud = { repositionOnResize: vi.fn() } as unknown as HudController;
+    const director = new CameraDirector(ctx, hud);
+
+    // Transition Dual -> PiP: snaps directly to Alpha even though midPoint was at 1000
+    director.updateFraming(16);
+    expect(ctx.betaPipCamera).toBe(pipCam);
+    expect(ctx.cameras.main.midPoint.x).toBeCloseTo(200, 1);
+
+    // Simulate rapid speed-boost movement of Alpha (120px in a single step)
+    ctx.heroes[0].x = 320;
+    director.updateFraming(16);
+    const maxThirdOffset = ctx.cameras.main.width / ctx.cameras.main.zoom / 6;
+    expect(Math.abs(ctx.cameras.main.midPoint.x - ctx.heroes[0].x)).toBeLessThanOrEqual(
+      maxThirdOffset + 0.01
+    );
+
+    // Hysteresis: move Beta closer so rawZoom = 400 / (650 + 240) = 0.449 (between 0.42 and 0.48)
+    // PiP must remain active (no oscillation)
+    ctx.heroes[1].x = ctx.heroes[0].x + 650;
+    director.updateFraming(16);
+    expect(ctx.betaPipCamera).toBe(pipCam);
+
+    // Move Beta even closer so rawZoom = 400 / (500 + 240) = 0.54 >= 0.48 -> exits PiP cleanly
+    ctx.heroes[1].x = ctx.heroes[0].x + 500;
+    director.updateFraming(16);
+    expect(ctx.betaPipCamera).toBeNull();
+  });
 });

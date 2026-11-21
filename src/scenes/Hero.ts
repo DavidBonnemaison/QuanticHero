@@ -37,7 +37,10 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   public fusionStack = 1;
   public createdAtMs = 0;
   public onCryo = false;
+  public onPressurePlate = false;
+  public onLiquidSurface = false;
   public inLiquid = false;
+  public coherenceSpeedMultiplier = 1;
   public wormholeCooldownUntil = 0;
   public hasSurfedThisJump = false;
   public levitateUntilMs = 0;
@@ -217,6 +220,19 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
   }
 
   public bounceOffLeftWall(isNeonWall = false): void {
+    const isAirborne =
+      !this.body?.touching.down &&
+      !this.body?.blocked.down &&
+      !this.body?.touching.up &&
+      !this.body?.blocked.up;
+
+    if (!isNeonWall && !isAirborne) {
+      if (this.body && this.body.velocity.x < 0) {
+        this.setVelocityX(0);
+      }
+      return;
+    }
+
     if (this.recoilVx <= 0) {
       this.recoilVx = PHYSICS.WALL_RECOIL_VX * this.velocityMultiplier;
       this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
@@ -225,19 +241,26 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         this.triggerNeonWallHitStop(1);
         return;
       }
-      const touchingGround =
-        this.upsideDown === 1
-          ? this.body?.touching.down || this.body?.blocked.down
-          : this.body?.touching.up || this.body?.blocked.up;
-      if (touchingGround) {
-        this.setVelocityY(PHYSICS.WALL_RECOIL_VY_JUMP * this.upsideDown);
-      } else if (this.body && this.body.velocity.y * this.upsideDown > -50) {
+      if (this.body && this.body.velocity.y * this.upsideDown > -50) {
         this.setVelocityY(PHYSICS.WALL_RECOIL_VY * this.upsideDown);
       }
     }
   }
 
   public bounceOffRightWall(isNeonWall = false): void {
+    const isAirborne =
+      !this.body?.touching.down &&
+      !this.body?.blocked.down &&
+      !this.body?.touching.up &&
+      !this.body?.blocked.up;
+
+    if (!isNeonWall && !isAirborne) {
+      if (this.body && this.body.velocity.x > 0) {
+        this.setVelocityX(0);
+      }
+      return;
+    }
+
     if (this.recoilVx >= 0) {
       this.recoilVx = -PHYSICS.WALL_RECOIL_VX * this.velocityMultiplier;
       this.recoilTimer = PHYSICS.WALL_RECOIL_TIMER_MS;
@@ -246,13 +269,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         this.triggerNeonWallHitStop(-1);
         return;
       }
-      const touchingGround =
-        this.upsideDown === 1
-          ? this.body?.touching.down || this.body?.blocked.down
-          : this.body?.touching.up || this.body?.blocked.up;
-      if (touchingGround) {
-        this.setVelocityY(PHYSICS.WALL_RECOIL_VY_JUMP * this.upsideDown);
-      } else if (this.body && this.body.velocity.y * this.upsideDown > -50) {
+      if (this.body && this.body.velocity.y * this.upsideDown > -50) {
         this.setVelocityY(PHYSICS.WALL_RECOIL_VY * this.upsideDown);
       }
     }
@@ -340,6 +357,8 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
       this.lastAirborneVy = this.body.velocity.y;
       this.lastLandedPlatform = null;
       this.onCryo = false;
+      this.onPressurePlate = false;
+      this.onLiquidSurface = false;
       if (nowMs - this.lastTrailSampleMs >= 24) {
         this.lastTrailSampleMs = nowMs;
         this.trailPoints.push({ x: this.x, y: this.y });
@@ -352,14 +371,24 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     const wasRecoiling = this.recoilTimer > 0;
     const isActive = this.isEntangled || this.isFocused;
 
+    // Allow diving directly from a liquid platform surface on Down / S / swipe-down
+    if (isActive && touchingGround && this.onLiquidSurface && dive && !this.inLiquid) {
+      this.inLiquid = true;
+      this.onLiquidSurface = false;
+      this.isDiving = false;
+      this.setVelocityY(320 * this.upsideDown);
+      this.y += 4 * this.upsideDown;
+      gameEvents.emit('platform:liquid_plunge', { x: this.x, y: this.y });
+    }
+
     const res = stepHeroControl(
       {
         vx: this.body.velocity.x,
         vy: this.body.velocity.y,
-        touchingGround,
+        touchingGround: touchingGround && !this.inLiquid,
         recoilTimer: this.recoilTimer,
         recoilVx: this.recoilVx,
-        velocityMultiplier: this.velocityMultiplier,
+        velocityMultiplier: this.velocityMultiplier * this.coherenceSpeedMultiplier,
         upsideDown: this.upsideDown,
         flipX: this.flipX,
         animState: this.getAnimState(),
@@ -374,7 +403,7 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
         lastDiveEndTimeMs: this.lastDiveEndTimeMs,
         waveDashUntilMs: this.waveDashUntilMs,
         jumpMultiplier: this.fusionStack >= 2 ? PHYSICS.SUPER_QUANTA_JUMP_MULT : 1,
-        onCryo: this.onCryo
+        onCryo: this.onPressurePlate ? false : this.onCryo
       },
       { left: goLeft, right: goRight, jump, dive },
       delta

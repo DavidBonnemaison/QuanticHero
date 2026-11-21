@@ -402,6 +402,7 @@ export class QuantumSystems {
       }
     }
 
+    this.updateCoherenceParticleMagnetism(delta);
     this.updatePressurePlatesAndGates();
     this.updateTunneling();
     this.updatePauliRepulsion(time);
@@ -421,8 +422,55 @@ export class QuantumSystems {
     this.matterAndFields.updateAntigravityBubbles(time);
   }
 
+  private updateCoherenceParticleMagnetism(delta: number): void {
+    const ctx = this.ctx;
+    const tier = ctx.coherenceSystem?.getTier?.() ?? 'x1';
+    if (tier !== 'x3' && tier !== 'HYPER') return;
+    if (!ctx.particles || typeof ctx.particles.getChildren !== 'function') return;
+
+    const magnetRadius = tier === 'HYPER' ? 110 : 75;
+    const pullSpeed = tier === 'HYPER' ? 420 : 280;
+    const dt = Math.max(0, delta) / 1000;
+    if (dt <= 0) return;
+
+    const activeHeroes = ctx.heroes.filter((h) => h.active);
+    if (activeHeroes.length === 0) return;
+
+    const children = ctx.particles.getChildren() as Phaser.Physics.Arcade.Sprite[];
+    for (const part of children) {
+      if (!part?.active) continue;
+
+      let closestHero: Hero | null = null;
+      let closestDist = magnetRadius;
+      for (const hero of activeHeroes) {
+        const dist = Math.hypot(hero.x - part.x, hero.y - part.y);
+        if (dist > 1 && dist <= closestDist) {
+          closestDist = dist;
+          closestHero = hero;
+        }
+      }
+
+      if (closestHero) {
+        ctx.tweens?.killTweensOf?.(part);
+        const step = Math.min(closestDist, pullSpeed * dt);
+        const nx = (closestHero.x - part.x) / closestDist;
+        const ny = (closestHero.y - part.y) / closestDist;
+        part.x += nx * step;
+        part.y += ny * step;
+        const body = part.body as Phaser.Physics.Arcade.Body | undefined;
+        if (body && 'x' in body && 'y' in body) {
+          body.x = part.x - (body.width || 0) / 2;
+          body.y = part.y - (body.height || 0) / 2;
+        }
+      }
+    }
+  }
+
   private updatePressurePlatesAndGates(): void {
     const ctx = this.ctx;
+    for (const h of ctx.heroes) {
+      h.onPressurePlate = false;
+    }
     if (ctx.pressurePlatesList.length === 0) return;
 
     for (const item of ctx.pressurePlatesList) {
@@ -435,8 +483,18 @@ export class QuantumSystems {
         if (!h.active || !h.body) continue;
         if (isHeroOnPressurePlate(h.x, h.y, pl)) {
           hasHeroOnPlate = true;
-          triggeringHero = h;
-          break;
+          h.onPressurePlate = true;
+          h.onCryo = false;
+          const touchingGround =
+            h.upsideDown === 1
+              ? Boolean(h.body.touching.down || h.body.blocked.down)
+              : Boolean(h.body.touching.up || h.body.blocked.up);
+          if (!h.isFocused && touchingGround) {
+            h.setVelocityX(0);
+          }
+          if (!triggeringHero) {
+            triggeringHero = h;
+          }
         }
       }
 
@@ -452,6 +510,15 @@ export class QuantumSystems {
             const otherHero = ctx.heroes.find((hero) => hero !== triggeringHero && hero.active);
             if (otherHero) {
               triggeringHero?.setFocus(false);
+              if (triggeringHero?.body) {
+                const touchingGround =
+                  triggeringHero.upsideDown === 1
+                    ? Boolean(triggeringHero.body.touching.down || triggeringHero.body.blocked.down)
+                    : Boolean(triggeringHero.body.touching.up || triggeringHero.body.blocked.up);
+                if (touchingGround) {
+                  triggeringHero.setVelocityX(0);
+                }
+              }
               otherHero.setFocus(true);
               ctx.cameras.main.startFollow(otherHero, true, 0.1, 0.1);
               ctx.updateEdgePips();

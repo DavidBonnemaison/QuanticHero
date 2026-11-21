@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type Hero from '../scenes/Hero';
 import { useGameStore } from '../store';
+import { gameEvents } from '../tools/gameEvents';
 
 export interface VortexParticle {
   angle: number;
@@ -12,10 +13,26 @@ export interface VortexParticle {
   alpha: number;
 }
 
+interface DiveStreakEffect {
+  x: number;
+  y: number;
+  elapsedMs: number;
+  durationMs: number;
+}
+
+interface WaveDashShockwave {
+  x: number;
+  y: number;
+  elapsedMs: number;
+  durationMs: number;
+}
+
 export class QuantumEffectsManager {
   private scene: Phaser.Scene;
   private graphics: Phaser.GameObjects.Graphics;
   private vortexParticles: VortexParticle[] = [];
+  private diveStreaks: DiveStreakEffect[] = [];
+  private waveDashRings: WaveDashShockwave[] = [];
   private maxParticles = 24;
   private reducedParticles = 6;
 
@@ -24,6 +41,7 @@ export class QuantumEffectsManager {
   private lowFpsCounter = 0;
   private normalFpsCounter = 0;
   private unsubStore: (() => void) | null = null;
+  private unsubEvents: Array<() => void> = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -38,6 +56,15 @@ export class QuantumEffectsManager {
     this.unsubStore = useGameStore.subscribe((state) => {
       this.isReducedEffects = state.reducedEffects;
     });
+
+    this.unsubEvents.push(
+      gameEvents.on('hero:dive', ({ x, y }) => {
+        this.diveStreaks.push({ x, y, elapsedMs: 0, durationMs: 180 });
+      }),
+      gameEvents.on('hero:wavedash', ({ x, y }) => {
+        this.waveDashRings.push({ x, y, elapsedMs: 0, durationMs: 240 });
+      })
+    );
 
     this.initVortexParticles();
   }
@@ -111,9 +138,54 @@ export class QuantumEffectsManager {
     // 1. Render de Broglie Probability Waves, Spectral Coherence Trail & Time Dilation Trail
     this.renderDeBroglieWaves(time, heroes, isReduced, isTimeDilationActive, coherence);
 
-    // 2. Render Spacetime Distortion and Vortex Particles at portal
+    // 2. Render Dive Energy Lines & Wave-Dash Landing Shockwaves
+    this.renderDiveAndWaveDashVfx(delta, isReduced);
+
+    // 3. Render Spacetime Distortion and Vortex Particles at portal
     if (portal?.active) {
       this.renderSpacetimeDistortion(time, delta, portal, isReduced);
+    }
+  }
+
+  private renderDiveAndWaveDashVfx(delta: number, isReduced: boolean): void {
+    const dtMs = Math.max(0, delta);
+
+    for (let i = this.diveStreaks.length - 1; i >= 0; i--) {
+      const fx = this.diveStreaks[i];
+      fx.elapsedMs += dtMs;
+      if (fx.elapsedMs >= fx.durationMs) {
+        this.diveStreaks.splice(i, 1);
+        continue;
+      }
+      const progress = fx.elapsedMs / fx.durationMs;
+      const alpha = (1 - progress) * 0.85;
+      const len = 34 + progress * 36;
+      this.graphics.lineStyle(isReduced ? 2 : 3.5, 0x00e5ff, alpha);
+      this.graphics.lineBetween(fx.x, fx.y - 12, fx.x, fx.y + len);
+      if (!isReduced) {
+        this.graphics.lineStyle(1.5, 0xffffff, alpha * 0.9);
+        this.graphics.lineBetween(fx.x - 10, fx.y, fx.x - 10, fx.y + len * 0.7);
+        this.graphics.lineBetween(fx.x + 10, fx.y, fx.x + 10, fx.y + len * 0.7);
+      }
+    }
+
+    for (let i = this.waveDashRings.length - 1; i >= 0; i--) {
+      const ring = this.waveDashRings[i];
+      ring.elapsedMs += dtMs;
+      if (ring.elapsedMs >= ring.durationMs) {
+        this.waveDashRings.splice(i, 1);
+        continue;
+      }
+      const progress = ring.elapsedMs / ring.durationMs;
+      const alpha = (1 - progress) * 0.9;
+      const radiusX = 18 + progress * 54;
+      const radiusY = 8 + progress * 20;
+      this.graphics.lineStyle(isReduced ? 2 : 3, 0x00ffcc, alpha);
+      this.graphics.strokeEllipse(ring.x, ring.y + 16, radiusX * 2, radiusY * 2);
+      if (!isReduced) {
+        this.graphics.lineStyle(1.5, 0xfbbf24, alpha * 0.85);
+        this.graphics.strokeCircle(ring.x, ring.y + 14, 14 + progress * 38);
+      }
     }
   }
 
@@ -127,9 +199,21 @@ export class QuantumEffectsManager {
     isTimeDilationActive = false,
     coherence = 0
   ): void {
-    if (isReduced) return;
-
     const clampedCoherence = Math.max(0, Math.min(1, coherence));
+
+    if (isReduced) {
+      // Lightweight single-ring spectral indicator in FX:LO mode for x3 / HYPER
+      if (clampedCoherence >= 0.55) {
+        const ringColor = clampedCoherence >= 0.85 ? 0xfbbf24 : 0xc084fc;
+        const ringAlpha = clampedCoherence >= 0.85 ? 0.55 : 0.35;
+        for (const hero of heroes) {
+          if (!hero || !hero.active) continue;
+          this.graphics.lineStyle(2, ringColor, ringAlpha);
+          this.graphics.strokeCircle(hero.x, hero.y, 22);
+        }
+      }
+      return;
+    }
 
     for (const hero of heroes) {
       if (!hero || !hero.active || !hero.body) continue;
@@ -139,27 +223,45 @@ export class QuantumEffectsManager {
 
       // Render spectral luminous coherence trail behind moving hero (scales with coherence)
       if (clampedCoherence > 0.05 && speed >= 15) {
-        const spectralPalette =
-          clampedCoherence >= 0.85
-            ? [0x00e5ff, 0xe879f9, 0xfbbf24, 0x34d399]
-            : clampedCoherence >= 0.55
-              ? [0xc084fc, 0xe879f9, 0x00e5ff]
-              : clampedCoherence >= 0.25
-                ? [0x00ffcc, 0x00e5ff]
-                : [0x38bdf8];
-        const segments = Math.max(2, Math.min(6, Math.round(2 + clampedCoherence * 4)));
-        const baseAlpha = 0.14 + clampedCoherence * 0.24;
+        const isHyper = clampedCoherence >= 0.85;
+        const isX3 = clampedCoherence >= 0.55;
+        const spectralPalette = isHyper
+          ? [0xfbbf24, 0x00e5ff, 0xe879f9, 0x34d399]
+          : isX3
+            ? [0xc084fc, 0xe879f9, 0x00e5ff]
+            : clampedCoherence >= 0.25
+              ? [0x00ffcc, 0x00e5ff]
+              : [0x38bdf8];
+        const segments = isHyper
+          ? 8
+          : isX3
+            ? 6
+            : Math.max(2, Math.min(5, Math.round(2 + clampedCoherence * 4)));
+        const baseAlpha = isHyper ? 0.5 : isX3 ? 0.36 : 0.16 + clampedCoherence * 0.22;
 
         for (let t = 1; t <= segments; t++) {
-          const factor = 0.014 * t * (1 + clampedCoherence * 0.5);
+          const factor = 0.014 * t * (1 + clampedCoherence * 0.55);
           const trailX = hero.x - vx * factor;
           const trailY = hero.y - vy * factor;
           const color = spectralPalette[(t - 1) % spectralPalette.length];
-          const segAlpha = (baseAlpha * (1 - (t - 1) / (segments + 1))) / (t === 1 ? 1 : 1.15);
-          const radius = Math.max(3, 12 + clampedCoherence * 5 - t * 1.6);
+          const segAlpha = (baseAlpha * (1 - (t - 1) / (segments + 1))) / (t === 1 ? 1 : 1.12);
+          const radius = Math.max(3, 13 + clampedCoherence * 6 - t * 1.4);
 
           this.graphics.fillStyle(color, segAlpha);
           this.graphics.fillCircle(trailX, trailY, radius);
+        }
+
+        // Enhanced spectral halo in x3 / HYPER tiers
+        if (isX3) {
+          const pulse = Math.sin(time * (isHyper ? 0.014 : 0.009));
+          const haloColor = isHyper ? 0xfbbf24 : 0xc084fc;
+          const haloRadius = (isHyper ? 26 : 23) + pulse * 3;
+          this.graphics.lineStyle(isHyper ? 2.5 : 1.8, haloColor, isHyper ? 0.65 : 0.42);
+          this.graphics.strokeCircle(hero.x, hero.y, haloRadius);
+          if (isHyper) {
+            this.graphics.lineStyle(1.5, 0x00e5ff, 0.45);
+            this.graphics.strokeCircle(hero.x, hero.y, haloRadius + 6 - pulse * 2);
+          }
         }
       }
 
@@ -285,10 +387,16 @@ export class QuantumEffectsManager {
       this.unsubStore();
       this.unsubStore = null;
     }
+    for (const unsub of this.unsubEvents) {
+      unsub();
+    }
+    this.unsubEvents = [];
     if (this.graphics) {
       this.graphics.destroy();
     }
     this.vortexParticles = [];
+    this.diveStreaks = [];
+    this.waveDashRings = [];
   }
 }
 

@@ -414,15 +414,20 @@ export class HudController {
 
   public syncHudTransform(): void {
     const ctx = this.ctx;
-    if (!ctx.hudContainer || !ctx.cameras?.main) return;
+    if (!ctx.cameras?.main) return;
     const z = ctx.cameras.main.zoom;
     if (z <= 0) return;
     const inv = 1 / z;
-    ctx.hudContainer.setScale(inv);
-    ctx.hudContainer.setPosition(
-      (ctx.cameras.main.width / 2) * (1 - inv),
-      (ctx.cameras.main.height / 2) * (1 - inv)
-    );
+    const offsetX = (ctx.cameras.main.width / 2) * (1 - inv);
+    const offsetY = (ctx.cameras.main.height / 2) * (1 - inv);
+    if (ctx.hudContainer) {
+      ctx.hudContainer.setScale(inv);
+      ctx.hudContainer.setPosition(offsetX, offsetY);
+    }
+    if (ctx.levelCompleteOverlay?.active) {
+      ctx.levelCompleteOverlay.setScale?.(inv);
+      ctx.levelCompleteOverlay.setPosition?.(offsetX, offsetY);
+    }
   }
 
   public repositionOnResize(camW: number, camH: number): void {
@@ -510,15 +515,20 @@ export class HudController {
     if (gfx?.active) {
       const trackX = 36;
       const trackW = Math.max(0, camW - trackX);
-      const barY = 51;
-      const barH = 3;
+      const barH = 6;
+      const barY = 54 - barH;
 
       gfx.clear();
-      gfx.fillStyle(0x1e293b, 0.75);
+      gfx.fillStyle(0x1e293b, 0.8);
       gfx.fillRect(trackX, barY, trackW, barH);
       if (value > 0 && trackW > 0) {
-        gfx.fillStyle(colorNum, tier === 'HYPER' ? 0.98 : 0.88);
-        gfx.fillRect(trackX, barY, Math.max(2, Math.round(trackW * value)), barH);
+        const fillW = Math.max(3, Math.round(trackW * value));
+        gfx.fillStyle(colorNum, tier === 'HYPER' ? 1.0 : 0.92);
+        gfx.fillRect(trackX, barY, fillW, barH);
+        if (tier === 'x3' || tier === 'HYPER') {
+          gfx.fillStyle(0xffffff, tier === 'HYPER' ? 0.5 : 0.28);
+          gfx.fillRect(trackX, barY, fillW, 2);
+        }
       }
     }
 
@@ -527,6 +537,9 @@ export class HudController {
       ctx.coherenceTierText.setText(label);
       ctx.coherenceTierText.setColor(colorHex);
       ctx.coherenceTierText.setAlpha(value > 0 ? 1 : 0.45);
+      if (tier !== 'HYPER') {
+        ctx.coherenceTierText.setScale?.(1);
+      }
     }
   }
 
@@ -558,6 +571,11 @@ export class HudController {
       ctx.condenseButtonZone.setVisible(showCondense);
     }
     this.updateCoherenceGauge();
+    if (ctx.coherenceTierText?.active && ctx.lastCoherenceTier === 'HYPER') {
+      const nowMs = ctx.time?.now ?? Date.now();
+      const pulse = 1 + 0.12 * Math.sin(nowMs * 0.012);
+      ctx.coherenceTierText.setScale?.(pulse);
+    }
   }
 
   public updateThumbRibbon(): void {
