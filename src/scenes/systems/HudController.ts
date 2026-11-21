@@ -60,7 +60,8 @@ export class HudController {
         // safe
       }
       window.game = null;
-      push('/');
+      const isChronoLevel = /^chrono-\d+$/i.test(String(ctx.levelData?.id ?? ''));
+      push(isChronoLevel ? '/modes' : '/');
     });
     ctx.hudContainer.add(backButton);
 
@@ -205,6 +206,23 @@ export class HudController {
     ctx.dilationIndicatorText.setVisible(false);
     ctx.hudContainer.add(ctx.dilationIndicatorText);
 
+    if (ctx.levelData?.timeLoop) {
+      const loopIndicatorX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 44;
+      const initSec = (ctx.levelData.timeLoop.cycleMs / 1000).toFixed(1);
+      ctx.timeLoopIndicatorText = ctx.add.text(
+        loopIndicatorX,
+        29,
+        initialStrings.hud.timeLoopStatus(0, ctx.levelData.timeLoop.maxEchoes, initSec),
+        {
+          fontFamily: 'VT323',
+          fontSize: '18px',
+          color: '#00e5ff'
+        }
+      );
+      ctx.timeLoopIndicatorText.setScrollFactor(0);
+      ctx.hudContainer.add(ctx.timeLoopIndicatorText);
+    }
+
     if (isGodMode()) {
       const godBadge = ctx.add.text(274, 5, '[GOD]', {
         fontFamily: 'VT323',
@@ -241,6 +259,9 @@ export class HudController {
       }
       if (ctx.condenseButtonLabel?.active) {
         ctx.condenseButtonLabel.setText(s.hud.condenseButton);
+      }
+      if (ctx.loopButtonLabel?.active) {
+        ctx.loopButtonLabel.setText(s.hud.loopButton);
       }
       if (ctx.ghostButton?.active) {
         ctx.applyGhostMode();
@@ -332,6 +353,33 @@ export class HudController {
     ctx.hudContainer.add(condenseBg);
     ctx.hudContainer.add(condenseLabel);
     ctx.hudContainer.add(condenseZone);
+
+    if (ctx.levelData?.timeLoop) {
+      const loopX = camW - 58;
+      const loopY = camH - 96;
+      const loopBg = ctx.add.rectangle(loopX, loopY, 96, 44, 0x1e1035, 0.88);
+      loopBg.setStrokeStyle(2, 0xa855f7, 0.95);
+      const loopLabel = ctx.add.text(loopX, loopY, initialStrings.hud.loopButton, {
+        fontFamily: 'VT323',
+        fontSize: '20px',
+        color: '#00e5ff'
+      });
+      loopLabel.setOrigin(0.5);
+      const loopZone = ctx.add.zone(loopX, loopY, 96, 44);
+      loopZone.setInteractive({ useHandCursor: true });
+      loopZone.on('pointerdown', () => {
+        ctx.uiPointerConsumed = true;
+        if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
+          ctx.triggerTimeLoopRewind?.();
+        }
+      });
+      ctx.loopButtonBg = loopBg;
+      ctx.loopButtonLabel = loopLabel;
+      ctx.loopButtonZone = loopZone;
+      ctx.hudContainer.add(loopBg);
+      ctx.hudContainer.add(loopLabel);
+      ctx.hudContainer.add(loopZone);
+    }
 
     if (ctx.betaPipCamera) {
       ctx.betaPipCamera.ignore?.(ctx.hudContainer);
@@ -472,6 +520,18 @@ export class HudController {
       ctx.condenseButtonZone.setPosition(condenseX, condenseY);
     }
 
+    const loopX = camW - 58;
+    const loopY = ctx.hasCondenseAbility ? camH - 148 : camH - 96;
+    if (ctx.loopButtonBg?.active) {
+      ctx.loopButtonBg.setPosition(loopX, loopY);
+    }
+    if (ctx.loopButtonLabel?.active) {
+      ctx.loopButtonLabel.setPosition(loopX, loopY);
+    }
+    if (ctx.loopButtonZone?.active) {
+      ctx.loopButtonZone.setPosition(loopX, loopY);
+    }
+
     const pipY = camH - 70;
     ctx.edgePips.forEach((pip, index) => {
       const pipX = 40 + index * 70;
@@ -569,6 +629,19 @@ export class HudController {
     }
     if (ctx.condenseButtonZone?.active) {
       ctx.condenseButtonZone.setVisible(showCondense);
+    }
+    if (ctx.timeLoopIndicatorText?.active && ctx.timeLoopSystem?.isActive()) {
+      const s = getStrings(useGameStore.getState().locale ?? 'en');
+      const remMs = ctx.timeLoopSystem.getRemainingMs();
+      const remSec = (remMs / 1000).toFixed(1);
+      ctx.timeLoopIndicatorText.setText(
+        s.hud.timeLoopStatus(
+          ctx.timeLoopSystem.getEchoCount(),
+          ctx.timeLoopSystem.getMaxEchoes(),
+          remSec
+        )
+      );
+      ctx.timeLoopIndicatorText.setColor(remMs <= 1000 ? '#f43f5e' : '#00e5ff');
     }
     this.updateCoherenceGauge();
     if (ctx.coherenceTierText?.active && ctx.lastCoherenceTier === 'HYPER') {

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getNextChronoLoopLevel } from '../../data/chronoLoopLevels';
 import { getLevelMetadata, loadLevel, preloadLevel } from '../../data/levels';
 import { getStrings } from '../../i18n/strings';
 import { PHYSICS } from '../../physics/constants';
@@ -41,6 +42,9 @@ export class RespawnTransitionController {
     if (deathPosition) {
       this.spawnDeathEcho(deathPosition.x, deathPosition.y);
     }
+
+    // 0. Full reset clears all Chrono-Loop echoes and resets cycle timer
+    ctx.timeLoopSystem?.resetAllLoops();
 
     // 1. Reset physics world & active power-up states
     if (ctx.physics?.world) {
@@ -311,6 +315,8 @@ export class RespawnTransitionController {
     const dailyDateKey = dailyMatch ? dailyMatch[1] : null;
     const moleculeMatch = /^molecule-(.+)$/i.exec(rawLevelId);
     const moleculeId = moleculeMatch ? moleculeMatch[1] : null;
+    const isChronoLoop = /^chrono-\d+$/i.test(rawLevelId);
+    const chronoId = isChronoLoop ? rawLevelId.toLowerCase() : null;
     const currentLvl = Number(ctx.levelData.id);
     if (!Number.isNaN(currentLvl)) {
       ctx.previousCompletedLevelId = currentLvl;
@@ -324,9 +330,11 @@ export class RespawnTransitionController {
       ? (store.dailyHistory?.[dailyDateKey]?.bestMs ?? 0)
       : moleculeId
         ? (store.moleculeScores?.[moleculeId]?.best ?? 0)
-        : isShared
-          ? (store.scores[0]?.best ?? 0)
-          : (store.scores[currentLvl]?.best ?? 0);
+        : chronoId
+          ? (store.customModeScores?.[chronoId]?.best ?? 0)
+          : isShared
+            ? (store.scores[0]?.best ?? 0)
+            : (store.scores[currentLvl]?.best ?? 0);
 
     let nextLevelNumber: number | null = null;
     if (dailyDateKey) {
@@ -334,6 +342,15 @@ export class RespawnTransitionController {
     } else {
       if (moleculeId) {
         store.recordMoleculeScore(moleculeId, elapsedMs, trajectory, {
+          jumpCount: ctx.jumpCount,
+          switchCount: ctx.switchCount,
+          medal,
+          coherentRun: ctx.coherenceSystem?.isCoherentRun?.() ?? false,
+          styleScore: ctx.coherenceSystem?.getStyleScore?.() ?? 0
+        });
+      }
+      if (chronoId) {
+        store.recordCustomModeScore(chronoId, elapsedMs, trajectory, {
           jumpCount: ctx.jumpCount,
           switchCount: ctx.switchCount,
           medal,
@@ -376,9 +393,11 @@ export class RespawnTransitionController {
       ? (useGameStore.getState().dailyHistory?.[dailyDateKey]?.bestMs ?? elapsedMs)
       : moleculeId
         ? (useGameStore.getState().moleculeScores?.[moleculeId]?.best ?? elapsedMs)
-        : isShared
-          ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
-          : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
+        : chronoId
+          ? (useGameStore.getState().customModeScores?.[chronoId]?.best ?? elapsedMs)
+          : isShared
+            ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
+            : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
 
     store.setLastRun(
       dailyDateKey
@@ -447,6 +466,20 @@ export class RespawnTransitionController {
   public advanceToNextLevel(): void {
     const ctx = this.ctx;
     if (!ctx.isLevelCompleted || ctx.isTransitioningLevel) return;
+
+    const rawLevelId = String(ctx.levelData.id ?? '');
+    if (/^chrono-\d+$/i.test(rawLevelId)) {
+      const nextChrono = getNextChronoLoopLevel(rawLevelId.toLowerCase());
+      if (nextChrono) {
+        const store = useGameStore.getState();
+        store.setActiveDuel(null);
+        store.setPendingDuelShare(null);
+        store.setSharedLevel(nextChrono.levelData);
+        this.performLevelTransition(nextChrono.levelData, nextChrono.index);
+        return;
+      }
+    }
+
     if (ctx.nextLevelNumberPending === null) return;
 
     const store = useGameStore.getState();

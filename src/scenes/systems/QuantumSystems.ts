@@ -498,6 +498,16 @@ export class QuantumSystems {
         }
       }
 
+      if (!hasHeroOnPlate && ctx.timeLoopSystem?.isActive()) {
+        for (const echo of ctx.timeLoopSystem.getActiveEchoes()) {
+          if (!echo.active) continue;
+          if (isHeroOnPressurePlate(echo.x, echo.y, pl)) {
+            hasHeroOnPlate = true;
+            break;
+          }
+        }
+      }
+
       const gateEntry = ctx.gatesMap.get(pl.targetGateId);
       if (hasHeroOnPlate) {
         if (!item.isPressed) {

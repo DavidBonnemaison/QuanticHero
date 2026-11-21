@@ -47,6 +47,8 @@ export interface GameEventPayloads {
     styleScore: number;
     decoherence?: boolean;
   };
+  'timeloop:rewind': { echoCount: number; cycleMs: number; manual: boolean };
+  'timeloop:tick': { remainingMs: number };
 }
 
 export type GameEventName = keyof GameEventPayloads;

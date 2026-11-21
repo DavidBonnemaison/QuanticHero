@@ -32,6 +32,7 @@ describe('Menu component', () => {
           <Route path="/game" element={<div>Game Page</div>} />
           <Route path="/daily" element={<div>Daily Isotope Page</div>} />
           <Route path="/levels" element={<div>Levels Page</div>} />
+          <Route path="/modes" element={<div>Quantum Modes Page</div>} />
           <Route path="/editor" element={<div>Editor Page</div>} />
         </Routes>
       </MemoryRouter>
@@ -45,7 +46,14 @@ describe('Menu component', () => {
     expect(screen.queryByRole('button', { name: /continue/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /new game/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /periodic table/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /quantum modes/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /level lab/i })).not.toBeInTheDocument();
+  });
+
+  it('navigates to /modes on "Quantum Modes" button click', () => {
+    renderWithRouter();
+    fireEvent.click(screen.getByRole('button', { name: /quantum modes/i }));
+    expect(screen.getByText('Quantum Modes Page')).toBeInTheDocument();
   });
 
   it('navigates directly to explanation and sets current level to 1 on "New Game" click without progress', () => {

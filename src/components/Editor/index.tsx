@@ -421,6 +421,54 @@ export const EditorView: React.FC = () => {
             />
           </div>
         </div>
+        <h3>Time Loop</h3>
+        <div className={styles.fieldEditor}>
+          <div>
+            <label>Enabled:</label>
+            <input
+              type="checkbox"
+              checked={Boolean(level.timeLoop)}
+              onChange={(e) =>
+                updateLevelField({
+                  level: currentLevelNumber,
+                  type: 'timeLoop',
+                  prop: 'enabled',
+                  value: e.target.checked
+                })
+              }
+            />
+          </div>
+          {level.timeLoop && (
+            <>
+              <div>
+                <label>Cycle (ms):</label>
+                <input
+                  type="number"
+                  value={level.timeLoop.cycleMs}
+                  min={3000}
+                  max={15000}
+                  step={500}
+                  onChange={(e) => handleFieldChange(e, 'timeLoop')}
+                  data-n={0}
+                  data-prop="cycleMs"
+                />
+              </div>
+              <div>
+                <label>Max Echoes:</label>
+                <input
+                  type="number"
+                  value={level.timeLoop.maxEchoes}
+                  min={1}
+                  max={3}
+                  step={1}
+                  onChange={(e) => handleFieldChange(e, 'timeLoop')}
+                  data-n={0}
+                  data-prop="maxEchoes"
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
       <EditorComponent
         scale={scale}

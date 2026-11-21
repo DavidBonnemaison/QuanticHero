@@ -7,6 +7,7 @@ export interface Strings {
     title: string;
     continueAtom: (z: number, symbol: string) => string;
     periodicTable: string;
+    quantumModes: string;
     levelLab: string;
     newGame: string;
     installApp: string;
@@ -150,12 +151,15 @@ export interface Strings {
     phase: (phase: string) => string;
     timeDilation: string;
     condenseButton: string;
+    loopButton: string;
+    timeLoopStatus: (echoes: number, maxEchoes: number, remainingSec: string) => string;
     elementSynthesized: (symbol: string, atomUpper: string) => string;
     newRecord: string;
     rec: string;
     jumps: (count: number) => string;
     nextLevel: (symbol: string, atom: string) => string;
     levelsButton: string;
+    modesButton: string;
     shareCardButton: string;
     toasts: {
       bellSync: string;
@@ -178,6 +182,28 @@ export interface Strings {
         condense: string;
       };
     };
+  };
+  modes: {
+    backToMenu: string;
+    title: string;
+    subtitle: string;
+    chronoLoopTitle: string;
+    chronoLoopTag: string;
+    chronoLoopDesc: string;
+    chronoCompletedCount: (done: number, total: number) => string;
+    cycleLabel: (sec: string, maxEchoes: number) => string;
+    playLevel: string;
+    bestLabel: (formatted: string) => string;
+    notCleared: string;
+    schrodingerTitle: string;
+    schrodingerTag: string;
+    schrodingerDesc: string;
+    schrodingerStatus: string;
+    acceleratorTitle: string;
+    acceleratorTag: string;
+    acceleratorDesc: string;
+    acceleratorStatus: string;
+    acceleratorAction: string;
   };
   ghost: Record<GhostMode, string>;
   medals: {
@@ -213,6 +239,7 @@ export const STRINGS: Record<Locale, Strings> = {
       title: 'Quantum Hero',
       continueAtom: (z, symbol) => `Continue — Atom #${z} (${symbol})`,
       periodicTable: 'Periodic Table',
+      quantumModes: 'Quantum Modes',
       levelLab: 'Level Lab',
       newGame: 'New Game',
       installApp: 'Install App',
@@ -360,12 +387,16 @@ export const STRINGS: Record<Locale, Strings> = {
       phase: (phase) => `[PHASE: ${phase.toUpperCase()}]`,
       timeDilation: '[TIME: 0.25x]',
       condenseButton: '[CONDENSE]',
+      loopButton: '[LOOP]',
+      timeLoopStatus: (echoes, maxEchoes, remainingSec) =>
+        `[LOOP ${echoes}/${maxEchoes} • ${remainingSec}s]`,
       elementSynthesized: (symbol, atomUpper) => `ELEMENT SYNTHESIZED — ${symbol} ${atomUpper}`,
       newRecord: 'NEW RECORD',
       rec: 'REC',
       jumps: (count) => `JUMPS: ${count}`,
       nextLevel: (symbol, atom) => `[SPACE / TAP] NEXT: ${symbol} ${atom}`,
       levelsButton: '[LEVELS]',
+      modesButton: '[QUANTUM MODES]',
       shareCardButton: 'SHARE CARD',
       toasts: {
         bellSync: 'BELL SYNC ! (GOLD ISOTOPE)',
@@ -388,6 +419,32 @@ export const STRINGS: Record<Locale, Strings> = {
           condense: 'BROGLIE CONDENSE ! ([CONDENSE] / [C] / SPACE)'
         }
       }
+    },
+    modes: {
+      backToMenu: '◄ MENU',
+      title: 'QUANTUM MODES',
+      subtitle: 'EXPERIMENTAL PHYSICS ARENAS — CO-OP ECHOES, WAVE COLLAPSE & ENDLESS FUSION',
+      chronoLoopTitle: 'CHRONO-LOOP',
+      chronoLoopTag: 'CO-OP WITH YOUR PAST',
+      chronoLoopDesc:
+        'Rewind time with [R] or [LOOP] to leave up to 3 physical echoes. Hold pressure plates, Ghost Surf on your past self, or trigger Temporal Pauli Blasts.',
+      chronoCompletedCount: (done, total) => `${done} / ${total} CLEARED`,
+      cycleLabel: (sec, maxEchoes) =>
+        `${sec}s • ${maxEchoes} ${maxEchoes === 1 ? 'ECHO' : 'ECHOES'}`,
+      playLevel: 'PLAY',
+      bestLabel: (formatted) => `BEST ${formatted}`,
+      notCleared: 'UNSOLVED',
+      schrodingerTitle: 'SCHRODINGER LABS',
+      schrodingerTag: 'WAVEFUNCTION OBSERVER',
+      schrodingerDesc:
+        'Superposed platforms and hazards collapse under direct observation or sweeping observer beams.',
+      schrodingerStatus: 'CALIBRATING CHAMBER — COMING IN SECTOR 02',
+      acceleratorTitle: 'PARTICLE ACCELERATOR',
+      acceleratorTag: 'ENDLESS FUSION ROGUELITE',
+      acceleratorDesc:
+        'Chain rapid-fire micro-chambers from Z = 1 to 118+ with quantum mutations between rooms.',
+      acceleratorStatus: 'SYNCHROTRON CHARGING — SECTOR 03',
+      acceleratorAction: 'LAUNCH /ACCELERATOR'
     },
     ghost: {
       off: '[GHOST: OFF]',
@@ -426,6 +483,7 @@ export const STRINGS: Record<Locale, Strings> = {
       title: 'Quantum Hero',
       continueAtom: (z, symbol) => `Continuer — Atome #${z} (${symbol})`,
       periodicTable: 'Tableau Périodique',
+      quantumModes: 'Modes Quantiques',
       levelLab: 'Labo de Niveaux',
       newGame: 'Nouvelle Partie',
       installApp: "Installer l'app",
@@ -574,12 +632,16 @@ export const STRINGS: Record<Locale, Strings> = {
       phase: (phase) => `[PHASE : ${phase.toUpperCase()}]`,
       timeDilation: '[TEMPS : 0.25x]',
       condenseButton: '[CONDENSE]',
+      loopButton: '[BOUCLE]',
+      timeLoopStatus: (echoes, maxEchoes, remainingSec) =>
+        `[BOUCLE ${echoes}/${maxEchoes} • ${remainingSec}s]`,
       elementSynthesized: (symbol, atomUpper) => `ÉLÉMENT SYNTHÉTISÉ — ${symbol} ${atomUpper}`,
       newRecord: 'NOUVEAU RECORD',
       rec: 'REC',
       jumps: (count) => `SAUTS : ${count}`,
       nextLevel: (symbol, atom) => `[ESPACE / TAP] SUIVANT : ${symbol} ${atom}`,
       levelsButton: '[NIVEAUX]',
+      modesButton: '[MODES QUANTIQUES]',
       shareCardButton: 'CARTE PNG',
       toasts: {
         bellSync: "SYNCHRO BELL ! (ISOTOPE D'OR)",
@@ -602,6 +664,32 @@ export const STRINGS: Record<Locale, Strings> = {
           condense: 'CONDENSATION BROGLIE ! ([CONDENSE] / [C] / ESPACE)'
         }
       }
+    },
+    modes: {
+      backToMenu: '◄ MENU',
+      title: 'MODES QUANTIQUES',
+      subtitle: 'ARÈNES EXPÉRIMENTALES — ÉCHOS TEMPOREELS, OBSERVATEUR & ACCÉLÉRATEUR INFINI',
+      chronoLoopTitle: 'CHRONO-LOOP',
+      chronoLoopTag: 'CO-OP AVEC TON PASSÉ',
+      chronoLoopDesc:
+        'Rembobine avec [R] ou [BOUCLE] pour laisser jusqu’à 3 échos physiques. Maintiens les plaques, surfe sur ton passé ou déclenche la répulsion de Pauli temporelle.',
+      chronoCompletedCount: (done, total) => `${done} / ${total} RÉSOLUS`,
+      cycleLabel: (sec, maxEchoes) =>
+        `${sec}s • ${maxEchoes} ${maxEchoes === 1 ? 'ÉCHO' : 'ÉCHOS'}`,
+      playLevel: 'JOUER',
+      bestLabel: (formatted) => `RECORD ${formatted}`,
+      notCleared: 'NON RÉSOLU',
+      schrodingerTitle: 'LABOS SCHRODINGER',
+      schrodingerTag: 'OBSERVATEUR QUANTIQUE',
+      schrodingerDesc:
+        'Plateformes et piques en superposition : observer effondre la fonction d’onde dans l’état choisi.',
+      schrodingerStatus: 'CALIBRATION EN COURS — SECTEUR 02',
+      acceleratorTitle: 'ACCÉLÉRATEUR DE PARTICULES',
+      acceleratorTag: 'ROGUELITE FUSION INFINI',
+      acceleratorDesc:
+        'Enchaîne des micro-salles nerveuses de Z = 1 à 118+ avec mutations quantiques entre chaque salle.',
+      acceleratorStatus: 'SYNCHROTRON EN CHARGE — SECTEUR 03',
+      acceleratorAction: 'OUVRIR /ACCELERATOR'
     },
     ghost: {
       off: '[FANTÔME : OFF]',

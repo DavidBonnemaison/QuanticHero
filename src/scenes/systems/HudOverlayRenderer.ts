@@ -1,4 +1,5 @@
 import { soundManager } from '../../audio/SoundManager';
+import { getNextChronoLoopLevel } from '../../data/chronoLoopLevels';
 import { getNarrativeForLevel } from '../../data/cosmicNarrative';
 import { getLevelMetadata } from '../../data/levels';
 import { getStrings } from '../../i18n/strings';
@@ -521,13 +522,20 @@ export function showLevelCompleteOverlay(
     narrativeText.setScrollFactor?.(0);
     overlay.add(narrativeText);
 
-    const nextLevelData =
-      nextLevelNumber !== null
+    const rawId = String(ctx.levelData.id ?? '');
+    const isChronoLevel = /^chrono-\d+$/i.test(rawId);
+    const nextChronoEntry = isChronoLevel ? getNextChronoLoopLevel(rawId.toLowerCase()) : undefined;
+
+    const nextLevelData = nextChronoEntry
+      ? nextChronoEntry.levelData
+      : nextLevelNumber !== null
         ? ctx.resolveLevelData(nextLevelNumber) || getLevelMetadata(nextLevelNumber)
         : undefined;
     const primaryLabel = nextLevelData
       ? t.hud.nextLevel(nextLevelData.symbol, nextLevelData.atom)
-      : t.hud.levelsButton;
+      : isChronoLevel
+        ? t.hud.modesButton
+        : t.hud.levelsButton;
 
     const nextBtn = ctx.add.text(camW / 2, camH / 2 + (isCompact ? 56 : 48), primaryLabel, {
       fontFamily: 'VT323',
@@ -545,7 +553,7 @@ export function showLevelCompleteOverlay(
       (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
         ctx.uiPointerConsumed = true;
         ev?.stopPropagation?.();
-        if (nextLevelNumber !== null) {
+        if (nextLevelNumber !== null || nextChronoEntry) {
           ctx.advanceToNextLevel();
         } else {
           soundManager.stopBgm();
@@ -559,7 +567,7 @@ export function showLevelCompleteOverlay(
             // safe
           }
           window.game = null;
-          push('/levels');
+          push(isChronoLevel ? '/modes' : '/levels');
         }
       }
     );

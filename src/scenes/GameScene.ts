@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { soundManager } from '../audio/SoundManager';
+import { getChronoLoopLevelById } from '../data/chronoLoopLevels';
 import { getCachedLevel, preloadLevel } from '../data/levels';
 import { getMoleculeById } from '../data/molecules';
 import type { BohrBackgroundRenderer } from '../effects/BohrBackgroundRenderer';
@@ -35,6 +36,7 @@ import { HudController } from './systems/HudController';
 import { LevelBuilder } from './systems/LevelBuilder';
 import { QuantumSystems } from './systems/QuantumSystems';
 import { RespawnTransitionController } from './systems/RespawnTransitionController';
+import { TimeLoopSystem } from './systems/TimeLoopSystem';
 import type {
   AntigravityBubble,
   BroglieCrystal,
@@ -133,6 +135,10 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public condenseButtonBg: Phaser.GameObjects.Rectangle | null = null;
   public condenseButtonLabel: Phaser.GameObjects.Text | null = null;
   public condenseButtonZone: Phaser.GameObjects.Zone | null = null;
+  public loopButtonBg: Phaser.GameObjects.Rectangle | null = null;
+  public loopButtonLabel: Phaser.GameObjects.Text | null = null;
+  public loopButtonZone: Phaser.GameObjects.Zone | null = null;
+  public timeLoopIndicatorText: Phaser.GameObjects.Text | null = null;
   public betaPipCamera: Phaser.Cameras.Scene2D.Camera | null = null;
   public betaPipFrame: Phaser.GameObjects.Rectangle | null = null;
   public betaPipLabel: Phaser.GameObjects.Text | null = null;
@@ -190,6 +196,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public readonly quantumSystems: QuantumSystems;
   public readonly cameraDirector: CameraDirector;
   public readonly respawnTransitionController: RespawnTransitionController;
+  public readonly timeLoopSystem: TimeLoopSystem;
 
   constructor() {
     super('Game');
@@ -199,6 +206,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     this.quantumSystems = new QuantumSystems(this);
     this.cameraDirector = new CameraDirector(this, this.hudController);
     this.respawnTransitionController = new RespawnTransitionController(this);
+    this.timeLoopSystem = new TimeLoopSystem(this);
   }
 
   init(): void {
@@ -254,6 +262,13 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     }
 
     if (!store.sharedLevel && typeof window !== 'undefined') {
+      const chronoMatch = /\/game\/chrono\/([^/?#]+)/i.exec(window.location.pathname);
+      if (chronoMatch) {
+        const entry = getChronoLoopLevelById(chronoMatch[1]);
+        if (entry) {
+          store.setSharedLevel(entry.levelData);
+        }
+      }
       const molMatch = /\/game\/molecule\/([^/?#]+)/i.exec(window.location.pathname);
       if (molMatch) {
         const recipe = getMoleculeById(molMatch[1]);
@@ -331,11 +346,17 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
         .addKey(Phaser.Input.Keyboard.KeyCodes.THREE)
         .on('down', () => this.switchFocusByIndex(2));
 
-      this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R).on('down', () => {
-        if (!this.isLevelCompleted && !this.isTransitioningLevel) {
-          this.quickRespawn();
-        }
-      });
+      this.input.keyboard
+        .addKey(Phaser.Input.Keyboard.KeyCodes.R)
+        .on('down', (_key: Phaser.Input.Keyboard.Key, event?: KeyboardEvent) => {
+          if (!this.isLevelCompleted && !this.isTransitioningLevel) {
+            if (this.timeLoopSystem.isActive() && !event?.shiftKey) {
+              this.triggerTimeLoopRewind();
+            } else {
+              this.quickRespawn();
+            }
+          }
+        });
 
       this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE).on('down', () => {
         if (this.isLevelCompleted && this.canAdvanceLevel) {
@@ -655,6 +676,10 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public updateAntigravityBubbles(nowMs: number): void {
     this.quantumSystems.matterAndFields.updateAntigravityBubbles(nowMs);
   }
+  public triggerTimeLoopRewind(): void {
+    this.timeLoopSystem.triggerLoopRewind(true);
+  }
+
   public tryCrystallizeBroglieTrail(): boolean {
     return this.quantumSystems.matterAndFields.tryCrystallizeBroglieTrail();
   }
@@ -789,6 +814,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     this.touchController.consumeFrameFlags();
 
     this.ghostController.updateGhostSurfing(isGhostActive);
+    this.timeLoopSystem.update(time, delta);
     this.quantumSystems.updateWorldMechanics(time, delta, elapsedMs, timeDilationFactor);
     this.cameraDirector.checkEntanglementReveal();
   }

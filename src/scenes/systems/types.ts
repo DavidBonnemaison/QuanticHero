@@ -17,6 +17,7 @@ import type {
 } from '../../types';
 import type { GhostHero } from '../GhostHero';
 import type Hero from '../Hero';
+import type { TimeLoopSystem } from './TimeLoopSystem';
 
 export interface Gate {
   id: string;
@@ -216,6 +217,11 @@ export interface GameSceneContext {
   condenseButtonBg: Phaser.GameObjects.Rectangle | null;
   condenseButtonLabel: Phaser.GameObjects.Text | null;
   condenseButtonZone: Phaser.GameObjects.Zone | null;
+  loopButtonBg?: Phaser.GameObjects.Rectangle | null;
+  loopButtonLabel?: Phaser.GameObjects.Text | null;
+  loopButtonZone?: Phaser.GameObjects.Zone | null;
+  timeLoopIndicatorText?: Phaser.GameObjects.Text | null;
+  timeLoopSystem?: TimeLoopSystem;
   betaPipCamera: Phaser.Cameras.Scene2D.Camera | null;
   betaPipFrame: Phaser.GameObjects.Rectangle | null;
   betaPipLabel: Phaser.GameObjects.Text | null;
@@ -301,6 +307,7 @@ export interface GameSceneContext {
   handleResize(gameSize?: { width: number; height: number }): void;
   destroyBetaPipCamera(): void;
   tryCrystallizeBroglieTrail(): boolean;
+  triggerTimeLoopRewind?(): void;
   quickRespawn(deathPosition?: { x: number; y: number }): void;
   killHero(hero: Hero): void;
   completeLevel(): void;

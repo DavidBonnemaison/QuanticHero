@@ -244,6 +244,14 @@ export default function Menu(): React.ReactElement {
       <button type="button" className={styles.button} onClick={handleGoToLevels}>
         {t.menu.periodicTable}
       </button>
+      <button
+        type="button"
+        className={styles.button}
+        onClick={() => navigate('/modes')}
+        data-testid="quantum-modes-button"
+      >
+        {t.menu.quantumModes}
+      </button>
       {hasProgress && (
         <button
           type="button"

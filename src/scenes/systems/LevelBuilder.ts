@@ -96,6 +96,10 @@ export class LevelBuilder {
     ctx.condenseButtonBg = null;
     ctx.condenseButtonLabel = null;
     ctx.condenseButtonZone = null;
+    ctx.loopButtonBg = null;
+    ctx.loopButtonLabel = null;
+    ctx.loopButtonZone = null;
+    ctx.timeLoopIndicatorText = null;
     ctx.destroyBetaPipCamera?.();
     ctx.levelCompleteOverlay = null;
     ctx.phaseIndicatorText = null;
@@ -148,6 +152,9 @@ export class LevelBuilder {
     // 4. Heroes & Collisions
     this.spawnHeroes();
     setupLevelCollisions(ctx);
+
+    // 4b. Spec-01 Chrono-Loop System
+    ctx.timeLoopSystem?.initForLevel();
 
     // 5. Ghost Hero Replay
     ctx.initGhostForLevel();
@@ -330,6 +337,11 @@ export class LevelBuilder {
     ctx.condenseButtonBg = null;
     ctx.condenseButtonLabel = null;
     ctx.condenseButtonZone = null;
+    ctx.loopButtonBg = null;
+    ctx.loopButtonLabel = null;
+    ctx.loopButtonZone = null;
+    ctx.timeLoopIndicatorText = null;
+    ctx.timeLoopSystem?.destroy();
     if (ctx.levelCompleteOverlay) {
       ctx.levelCompleteOverlay.destroy(true);
       ctx.levelCompleteOverlay = null;
