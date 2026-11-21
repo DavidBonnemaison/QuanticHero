@@ -179,6 +179,25 @@ export interface Strings {
     bronze: { label: string; shortLabel: string };
     none: { label: string; shortLabel: string };
   };
+  duel: {
+    rivalBadge: (name: string, formattedSec: string) => string;
+    victoryBadge: (deltaStr: string) => string;
+    defeatBadge: (deltaStr: string) => string;
+    youBeat: (name: string, deltaStr: string) => string;
+    rivalTime: (name: string, formattedSec: string) => string;
+    challengeFriend: string;
+    sendRevengeLink: string;
+    rematch: string;
+    modalTitleDuel: string;
+    modalTitleRevenge: string;
+    modalSubtitle: string;
+    nicknameLabel: string;
+    nicknamePlaceholder: string;
+    shareNative: string;
+    copyLink: string;
+    linkCopied: string;
+    ghostIncluded: string;
+  };
 }
 
 export const STRINGS: Record<Locale, Strings> = {
@@ -367,6 +386,25 @@ export const STRINGS: Record<Locale, Strings> = {
       silver: { label: 'Pure Isotope (Silver)', shortLabel: 'SILVER' },
       bronze: { label: 'Stable Isotope (Bronze)', shortLabel: 'BRONZE' },
       none: { label: 'Not synthesized', shortLabel: '--' }
+    },
+    duel: {
+      rivalBadge: (name, formattedSec) => `VS ${name} — ${formattedSec}`,
+      victoryBadge: (deltaStr) => `VICTORY ${deltaStr}`,
+      defeatBadge: (deltaStr) => `DEFEAT ${deltaStr}`,
+      youBeat: (name, deltaStr) => `YOU BEAT ${name} BY ${deltaStr}!`,
+      rivalTime: (name, formattedSec) => `RIVAL ${name}: ${formattedSec}`,
+      challengeFriend: 'Challenge a Friend',
+      sendRevengeLink: 'SEND REVENGE LINK',
+      rematch: 'Rematch',
+      modalTitleDuel: '=== GHOST TENNIS DUEL ===',
+      modalTitleRevenge: '=== SEND REVENGE LINK ===',
+      modalSubtitle: 'SEND THIS #DUEL LINK TO CHALLENGE A FRIEND',
+      nicknameLabel: 'YOUR TAG',
+      nicknamePlaceholder: 'ALPHA',
+      shareNative: 'SHARE',
+      copyLink: 'COPY LINK',
+      linkCopied: '★ DUEL LINK COPIED TO CLIPBOARD! ★',
+      ghostIncluded: '★ YOUR GHOST TRAJECTORY IS ENCODED IN THIS LINK ★'
     }
   },
   fr: {
@@ -555,6 +593,25 @@ export const STRINGS: Record<Locale, Strings> = {
       silver: { label: 'Isotope Pur (Argent)', shortLabel: 'ARGENT' },
       bronze: { label: 'Isotope Stable (Bronze)', shortLabel: 'BRONZE' },
       none: { label: 'Non synthétisé', shortLabel: '--' }
+    },
+    duel: {
+      rivalBadge: (name, formattedSec) => `VS ${name} — ${formattedSec}`,
+      victoryBadge: (deltaStr) => `VICTOIRE ${deltaStr}`,
+      defeatBadge: (deltaStr) => `DÉFAITE ${deltaStr}`,
+      youBeat: (name, deltaStr) => `TU AS BATTU ${name} DE ${deltaStr} !`,
+      rivalTime: (name, formattedSec) => `RIVAL ${name} : ${formattedSec}`,
+      challengeFriend: 'Défier un ami',
+      sendRevengeLink: 'ENVOYER LIEN REVANCHE',
+      rematch: 'Revanche',
+      modalTitleDuel: '=== DUEL GHOST TENNIS ===',
+      modalTitleRevenge: '=== LIEN DE REVANCHE ===',
+      modalSubtitle: 'ENVOIE CE LIEN #DUEL POUR DÉFIER UN AMI',
+      nicknameLabel: 'TON PSEUDO',
+      nicknamePlaceholder: 'ALPHA',
+      shareNative: 'PARTAGER',
+      copyLink: 'COPIER LE LIEN',
+      linkCopied: '★ LIEN DE DUEL COPIÉ ! ★',
+      ghostIncluded: '★ TA TRAJECTOIRE FANTÔME EST INCLUSE DANS CE LIEN ★'
     }
   }
 };

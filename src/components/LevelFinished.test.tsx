@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useGameStore } from '../store';
+import { decodeDuelFromUrl, encodeDuelToUrl } from '../tools/levelCodec';
 import type { LevelData } from '../types';
 import LevelFinished from './LevelFinished';
 
@@ -205,6 +206,110 @@ describe('LevelFinished component', () => {
       renderWithRouter();
 
       expect(screen.queryByTestId('coherent-run-badge')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Spec-02: Ghost Tennis Duel verdict, Rematch, and Revenge Link', () => {
+    it('decodes #duel= challenge, shows VICTORY verdict, and generates a #duel= revenge link with the new ghost', () => {
+      const incomingUrl = encodeDuelToUrl({
+        kind: 'campaign',
+        levelId: 1,
+        challengerName: 'ALPHA',
+        challengerTimeMs: 8420,
+        challengerJumps: 4,
+        ghostTrajectory: 'v1|0,80,910,0,i;8420,750,750,0,r'
+      });
+      const decodedDuel = decodeDuelFromUrl(incomingUrl);
+      expect(decodedDuel).not.toBeNull();
+
+      const playerGhost = 'v1|0,80,910,0,i;8280,750,750,0,r';
+      useGameStore.setState({
+        currentLevel: 2,
+        scores: {
+          1: { last: 8280, best: 8280, ghostTrajectory: playerGhost, lastJumps: 3 }
+        },
+        sharedLevel: null,
+        activeDuel: decodedDuel,
+        lastRun: {
+          kind: 'campaign',
+          levelId: 1,
+          elapsedMs: 8280,
+          jumps: 3,
+          ghostTrajectory: playerGhost
+        }
+      });
+
+      renderWithRouter();
+
+      const verdict = screen.getByTestId('duel-verdict');
+      expect(verdict).toHaveTextContent('VICTORY -0.14s');
+      expect(verdict).toHaveTextContent('YOU BEAT ALPHA BY -0.14s!');
+
+      const revengeBtn = screen.getByRole('button', { name: /SEND REVENGE LINK/i });
+      fireEvent.click(revengeBtn);
+
+      // Update challenger tag and verify encoded #duel= revenge URL
+      const tagInput = screen.getByLabelText(/YOUR TAG/i);
+      fireEvent.change(tagInput, { target: { value: 'beta_99' } });
+
+      const duelUrlInput = screen.getByLabelText('Duel URL') as HTMLInputElement;
+      expect(duelUrlInput.value).toContain('#duel=');
+
+      const revengeDuel = decodeDuelFromUrl(duelUrlInput.value);
+      expect(revengeDuel).toEqual({
+        kind: 'campaign',
+        levelId: 1,
+        challengerName: 'BETA99',
+        challengerTimeMs: 8280,
+        challengerJumps: 3,
+        ghostTrajectory: playerGhost
+      });
+    });
+
+    it('shows DEFEAT verdict and keeps activeDuel when clicking Rematch', () => {
+      const activeDuel = {
+        kind: 'campaign' as const,
+        levelId: 1,
+        challengerName: 'ALPHA',
+        challengerTimeMs: 8000,
+        challengerJumps: 3,
+        ghostTrajectory: 'v1|0,80,910,0,i;8000,750,750,0,r'
+      };
+      useGameStore.setState({
+        currentLevel: 2,
+        scores: {
+          1: { last: 8220, best: 8000, lastJumps: 4 }
+        },
+        sharedLevel: null,
+        activeDuel,
+        lastRun: {
+          kind: 'campaign',
+          levelId: 1,
+          elapsedMs: 8220,
+          jumps: 4,
+          ghostTrajectory: 'v1|0,80,910,0,i;8220,750,750,0,r'
+        }
+      });
+
+      renderWithRouter();
+
+      const verdict = screen.getByTestId('duel-verdict');
+      expect(verdict).toHaveTextContent('DEFEAT +0.22s');
+
+      fireEvent.click(screen.getByRole('button', { name: /Rematch/i }));
+      expect(useGameStore.getState().activeDuel).toEqual(activeDuel);
+      expect(screen.getByText('Game Screen')).toBeInTheDocument();
+    });
+
+    it('offers Challenge a Friend button on non-duel completed levels and opens #duel= share modal', () => {
+      renderWithRouter();
+
+      fireEvent.click(screen.getByRole('button', { name: /Challenge a Friend/i }));
+      const duelUrlInput = screen.getByLabelText('Duel URL') as HTMLInputElement;
+      expect(duelUrlInput.value).toContain('#duel=');
+      const decoded = decodeDuelFromUrl(duelUrlInput.value);
+      expect(decoded?.kind).toBe('campaign');
+      expect(decoded?.challengerName).toBe('ALPHA');
     });
   });
 });

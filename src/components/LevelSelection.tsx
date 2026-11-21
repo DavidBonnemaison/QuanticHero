@@ -56,6 +56,7 @@ export const LevelSelection: React.FC = () => {
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    useGameStore.getState().setActiveDuel(null);
     return () => {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       if (navTimerRef.current) clearTimeout(navTimerRef.current);

@@ -22,8 +22,17 @@ export class GhostController {
   public initForLevel(): void {
     const ctx = this.ctx;
     const store = useGameStore.getState();
+    const activeDuel = store.activeDuel;
     const currentLvlNum = Number(ctx.levelData.id);
     const scoreItem = store.scores[currentLvlNum];
+
+    if (activeDuel) {
+      ctx.authorTrajectory = activeDuel.ghostTrajectory || undefined;
+      ctx.personalTrajectory = scoreItem?.ghostTrajectory;
+      ctx.hasAnyGhost = Boolean(activeDuel.ghostTrajectory);
+      this.applyGhostMode();
+      return;
+    }
 
     const isShared = Boolean(store.sharedLevel);
     const sharedScore = store.scores[0];
@@ -86,18 +95,44 @@ export class GhostController {
   public applyGhostMode(): void {
     const ctx = this.ctx;
     const store = useGameStore.getState();
+    const activeDuel = store.activeDuel;
     const mode = store.ghostMode ?? (store.ghostEnabled ? 'optimal' : 'off');
+
+    if (ctx.ghostHero) {
+      ctx.ghostHero.destroy();
+      ctx.ghostHero = null;
+    }
+
+    // Spec-02: Challenger duel ghost takes absolute priority (even on first run or when ghostMode is 'off')
+    if (activeDuel?.ghostTrajectory) {
+      if (!ctx.isLevelCompleted) {
+        this.destroySwarmGhosts();
+      }
+      ctx.ghostFrames = decompressTrajectory(activeDuel.ghostTrajectory);
+      if (ctx.ghostFrames.length > 0) {
+        ctx.ghostHero = new GhostHero(ctx as unknown as Phaser.Scene, ctx.ghostFrames, {
+          tint: 0xfbbf24,
+          alpha: 0.55,
+          finishedAlpha: 0.3,
+          label: `VS ${activeDuel.challengerName}`
+        });
+        ctx.ghostHero.setVisible(true);
+      }
+
+      if (ctx.ghostButton?.active) {
+        ctx.ghostButton.setVisible(false);
+      }
+      if (ctx.splitDeltaText?.active) {
+        ctx.splitDeltaText.setVisible(ctx.ghostFrames.length > 0);
+      }
+      return;
+    }
 
     let trajectoryToLoad: string | undefined;
     if (mode === 'optimal') {
       trajectoryToLoad = ctx.authorTrajectory ?? ctx.personalTrajectory;
     } else if (mode === 'best') {
       trajectoryToLoad = ctx.personalTrajectory ?? ctx.authorTrajectory;
-    }
-
-    if (ctx.ghostHero) {
-      ctx.ghostHero.destroy();
-      ctx.ghostHero = null;
     }
 
     if (mode === 'swarm') {
@@ -147,15 +182,15 @@ export class GhostController {
 
   public updateActiveGhostsAndSplit(time: number, elapsedMs: number): boolean {
     const ctx = this.ctx;
-    const currentGhostMode =
-      useGameStore.getState().ghostMode ??
-      (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
-    const isGhostActive = currentGhostMode !== 'off';
+    const store = useGameStore.getState();
+    const hasActiveDuelGhost = Boolean(store.activeDuel?.ghostTrajectory);
+    const currentGhostMode = store.ghostMode ?? (store.ghostEnabled ? 'optimal' : 'off');
+    const isGhostActive = hasActiveDuelGhost || currentGhostMode !== 'off';
 
     if (ctx.ghostHero && isGhostActive) {
       ctx.ghostHero.updateReplay(elapsedMs);
     }
-    if (currentGhostMode === 'swarm' && ctx.swarmGhosts.length > 0) {
+    if (!hasActiveDuelGhost && currentGhostMode === 'swarm' && ctx.swarmGhosts.length > 0) {
       for (const sg of ctx.swarmGhosts) {
         sg.updateReplay(elapsedMs);
       }

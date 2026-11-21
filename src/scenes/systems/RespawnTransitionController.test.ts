@@ -207,5 +207,39 @@ describe('RespawnTransitionController', () => {
     });
     expect(ctx.nextLevelNumberPending).toBeNull();
     expect(ctx.showLevelCompleteOverlay).toHaveBeenCalledWith(3200, 3200, 0, null, 'gold');
+    expect(state.lastRun).toMatchObject({
+      kind: 'daily',
+      dateKey: '2026-11-21',
+      elapsedMs: 3200,
+      jumps: 2
+    });
+  });
+
+  it('records campaign lastRun on completeLevel and clears activeDuel on advanceToNextLevel', () => {
+    const ctx = makeRespawnContext();
+    useGameStore.getState().setActiveDuel({
+      kind: 'campaign',
+      levelId: 1,
+      challengerName: 'ALPHA',
+      challengerTimeMs: 4500,
+      challengerJumps: 3,
+      ghostTrajectory: 'v1|0,100,400,0,i;4500,700,400,0,r'
+    });
+
+    const controller = new RespawnTransitionController(ctx);
+    controller.completeLevel();
+
+    const stateAfterComplete = useGameStore.getState();
+    expect(stateAfterComplete.lastRun).toMatchObject({
+      kind: 'campaign',
+      levelId: 1,
+      elapsedMs: 3200,
+      jumps: 2
+    });
+    expect(stateAfterComplete.lastRun?.ghostTrajectory.startsWith('v1|')).toBe(true);
+    expect(stateAfterComplete.activeDuel?.challengerName).toBe('ALPHA');
+
+    controller.advanceToNextLevel();
+    expect(useGameStore.getState().activeDuel).toBeNull();
   });
 });

@@ -152,6 +152,106 @@
   animation: fadeIn 0.2s ease-out;
 }
 
+.duelVerdict {
+  width: 100%;
+  max-width: 420px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  border-radius: 6px;
+  border: 2px solid #fbbf24;
+  background: rgba(11, 15, 25, 0.92);
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.28);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.duelVictory {
+  border-color: #34d399;
+  box-shadow: 0 0 22px rgba(52, 211, 153, 0.35);
+}
+
+.duelDefeat {
+  border-color: #f87171;
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.3);
+}
+
+.duelVerdictTitle {
+  font-size: 36px;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+
+.duelVictory .duelVerdictTitle {
+  color: #34d399;
+}
+
+.duelDefeat .duelVerdictTitle {
+  color: #f87171;
+}
+
+.duelVerdictSubtitle {
+  font-size: 22px;
+  color: #fbbf24;
+  letter-spacing: 0.04em;
+}
+
+.duelCtaRow {
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.buttonRevenge {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 28px;
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  border: 2px solid #fde047;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #050814;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.5);
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+
+.buttonRevenge:hover {
+  box-shadow: 0 0 26px rgba(251, 191, 36, 0.8);
+}
+
+.buttonRevenge:active {
+  transform: scale(0.97);
+}
+
+.buttonChallenge {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 22px;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+  border: 2px solid #fbbf24;
+  border-radius: 4px;
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.buttonChallenge:hover {
+  background: rgba(251, 191, 36, 0.25);
+}
+
+.buttonChallenge:active {
+  transform: scale(0.97);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

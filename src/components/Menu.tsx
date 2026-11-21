@@ -59,6 +59,7 @@ export default function Menu(): React.ReactElement {
   }, []);
 
   useEffect(() => {
+    useGameStore.getState().setActiveDuel(null);
     hapticFeedback.init();
 
     const handleBeforeInstallPrompt = (e: Event) => {

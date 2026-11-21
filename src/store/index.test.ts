@@ -620,4 +620,45 @@ describe('useGameStore', () => {
       });
     });
   });
+
+  describe('Spec-02: Ghost Tennis Duel transient state (non-persisted)', () => {
+    it('sets and clears activeDuel, lastRun, and pendingDuelShare without persisting them to localStorage', () => {
+      const duel = {
+        kind: 'campaign' as const,
+        levelId: 5,
+        challengerName: 'ALPHA',
+        challengerTimeMs: 8420,
+        challengerJumps: 4,
+        ghostTrajectory: 'v1|0,80,910,0,i;500,200,-100,0,r'
+      };
+      const lastRun = {
+        kind: 'campaign' as const,
+        levelId: 5,
+        elapsedMs: 8280,
+        jumps: 3,
+        ghostTrajectory: 'v1|0,80,910,0,i;400,220,-120,0,r'
+      };
+
+      useGameStore.getState().setActiveDuel(duel);
+      useGameStore.getState().setLastRun(lastRun);
+      useGameStore.getState().setPendingDuelShare({ duel, isRevenge: true });
+
+      expect(useGameStore.getState().activeDuel).toEqual(duel);
+      expect(useGameStore.getState().lastRun).toEqual(lastRun);
+      expect(useGameStore.getState().pendingDuelShare).toEqual({ duel, isRevenge: true });
+
+      // Trigger a persisted write and ensure transient duel fields are excluded from partialize
+      useGameStore.getState().updateCurrentLevel(5);
+      const persisted = JSON.parse(localStorage.getItem('qtmhro') || '{}');
+      expect(persisted.state.activeDuel).toBeUndefined();
+      expect(persisted.state.lastRun).toBeUndefined();
+      expect(persisted.state.pendingDuelShare).toBeUndefined();
+
+      // resetGame clears transient duel state
+      useGameStore.getState().resetGame();
+      expect(useGameStore.getState().activeDuel).toBeNull();
+      expect(useGameStore.getState().lastRun).toBeNull();
+      expect(useGameStore.getState().pendingDuelShare).toBeNull();
+    });
+  });
 });

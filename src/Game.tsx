@@ -3,6 +3,7 @@ import type React from 'react';
 import { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import styles from './Game.module.css';
+import ShareModal from './components/Editor/ShareModal';
 import { computeViewportSize, getInitialViewportSize } from './config';
 import { loadLevel, preloadLevel } from './data/levels';
 import { getMoleculeById } from './data/molecules';
@@ -11,7 +12,7 @@ import GameScene from './scenes/GameScene';
 import PreloadScene from './scenes/PreloadScene';
 import { generateDailyIsotope } from './services/DailyIsotopeService';
 import { useGameStore } from './store';
-import { decodeLevelFromUrl } from './tools/levelCodec';
+import { decodeDuelFromUrl, decodeLevelFromUrl } from './tools/levelCodec';
 
 declare global {
   interface Window {
@@ -27,6 +28,8 @@ export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false })
   const gameRef = useRef<Phaser.Game | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const { moleculeId } = useParams<{ moleculeId?: string }>();
+  const pendingDuelShare = useGameStore((state) => state.pendingDuelShare);
+  const setPendingDuelShare = useGameStore((state) => state.setPendingDuelShare);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,15 +37,26 @@ export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false })
     if (moleculeId) {
       const recipe = getMoleculeById(moleculeId);
       if (recipe) {
-        useGameStore.getState().setSharedLevel(recipe.levelData);
+        const store = useGameStore.getState();
+        store.setActiveDuel(null);
+        store.setSharedLevel(recipe.levelData);
       }
-    } else if (!isDaily && typeof window !== 'undefined') {
+    } else if (isDaily) {
+      useGameStore.getState().setActiveDuel(null);
+    } else if (typeof window !== 'undefined') {
       const hash = window.location.hash;
       const search = window.location.search;
-      if (hash.includes('custom=') || search.includes('custom=')) {
-        const decoded = decodeLevelFromUrl(hash || search);
+      if (hash.includes('duel=') || search.includes('duel=')) {
+        const duel = decodeDuelFromUrl(hash.includes('duel=') ? hash : search);
+        if (duel) {
+          useGameStore.getState().setActiveDuel(duel);
+        }
+      } else if (hash.includes('custom=') || search.includes('custom=')) {
+        const decoded = decodeLevelFromUrl(hash.includes('custom=') ? hash : search);
         if (decoded) {
-          useGameStore.getState().setSharedLevel(decoded);
+          const store = useGameStore.getState();
+          store.setActiveDuel(null);
+          store.setSharedLevel(decoded);
         }
       }
     }
@@ -70,12 +84,28 @@ export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false })
     };
 
     const startPhaser = async () => {
-      if (isDaily) {
+      const store = useGameStore.getState();
+      const activeDuel = store.activeDuel;
+
+      if (activeDuel) {
+        if (activeDuel.kind === 'campaign') {
+          store.updateCurrentLevel(activeDuel.levelId);
+          store.setSharedLevel(null);
+          await Promise.all([loadLevel(1), loadLevel(activeDuel.levelId)]);
+          preloadLevel(activeDuel.levelId + 1);
+        } else if (activeDuel.kind === 'daily') {
+          const dailyLevel = await generateDailyIsotope(activeDuel.dateKey);
+          if (cancelled) return;
+          store.setSharedLevel(dailyLevel);
+        } else {
+          store.setSharedLevel(activeDuel.level);
+        }
+      } else if (isDaily) {
         const dailyLevel = await generateDailyIsotope();
         if (cancelled) return;
-        useGameStore.getState().setSharedLevel(dailyLevel);
+        store.setSharedLevel(dailyLevel);
       } else {
-        const currentLevel = useGameStore.getState().currentLevel || 1;
+        const currentLevel = store.currentLevel || 1;
         await Promise.all([loadLevel(1), loadLevel(currentLevel)]);
         preloadLevel(currentLevel + 1);
       }
@@ -129,6 +159,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false })
       resizeObserver?.disconnect();
       window.removeEventListener('resize', handleViewportResize);
       window.removeEventListener('orientationchange', handleViewportResize);
+      useGameStore.getState().setPendingDuelShare(null);
       if (moleculeId || isDaily) {
         useGameStore.getState().setSharedLevel(null);
       }
@@ -147,6 +178,14 @@ export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false })
   return (
     <div className={styles.viewport}>
       <div id="game" ref={stageRef} className={styles.gameStage} />
+      {pendingDuelShare && (
+        <ShareModal
+          isOpen={true}
+          onClose={() => setPendingDuelShare(null)}
+          duel={pendingDuelShare.duel}
+          isRevenge={pendingDuelShare.isRevenge}
+        />
+      )}
     </div>
   );
 };

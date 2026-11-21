@@ -380,6 +380,32 @@ export class RespawnTransitionController {
           ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
           : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
 
+    store.setLastRun(
+      dailyDateKey
+        ? {
+            kind: 'daily',
+            dateKey: dailyDateKey,
+            elapsedMs,
+            jumps: ctx.jumpCount,
+            ghostTrajectory: trajectory
+          }
+        : isShared
+          ? {
+              kind: 'custom',
+              level: ctx.levelData,
+              elapsedMs,
+              jumps: ctx.jumpCount,
+              ghostTrajectory: trajectory
+            }
+          : {
+              kind: 'campaign',
+              levelId: Number.isNaN(currentLvl) ? 1 : currentLvl,
+              elapsedMs,
+              jumps: ctx.jumpCount,
+              ghostTrajectory: trajectory
+            }
+    );
+
     for (const hero of ctx.heroes) {
       if (!hero.active) continue;
       if (hero.body) {
@@ -422,6 +448,10 @@ export class RespawnTransitionController {
     const ctx = this.ctx;
     if (!ctx.isLevelCompleted || ctx.isTransitioningLevel) return;
     if (ctx.nextLevelNumberPending === null) return;
+
+    const store = useGameStore.getState();
+    store.setActiveDuel(null);
+    store.setPendingDuelShare(null);
 
     const nextNumber = ctx.nextLevelNumberPending;
     const nextData = ctx.resolveLevelData(nextNumber);

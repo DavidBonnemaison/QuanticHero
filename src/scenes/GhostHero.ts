@@ -5,12 +5,14 @@ export interface GhostHeroOptions {
   alpha?: number;
   finishedAlpha?: number;
   tint?: number;
+  label?: string;
 }
 
 export class GhostHero extends Phaser.GameObjects.Sprite {
   public frames: GhostFrame[];
   public totalDurationMs = 0;
   public body: null = null;
+  public labelText: Phaser.GameObjects.Text | null = null;
   private baseAlpha: number;
   private finishedAlpha: number;
 
@@ -33,6 +35,20 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
     this.setAlpha(this.baseAlpha);
     this.setTint(tint);
     this.setDepth(10);
+
+    if (options?.label && typeof scene.add?.text === 'function') {
+      this.labelText = scene.add.text(initialFrame.x, initialFrame.y - 24, options.label, {
+        fontFamily: 'VT323',
+        fontSize: '15px',
+        color: '#fbbf24',
+        stroke: '#050814',
+        strokeThickness: 3,
+        align: 'center'
+      });
+      this.labelText.setOrigin?.(0.5, 1);
+      this.labelText.setDepth?.(11);
+      this.labelText.setAlpha?.(Math.min(1, this.baseAlpha + 0.35));
+    }
 
     if (scene.anims?.exists('idle')) {
       this.play('idle');
@@ -64,11 +80,27 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
     }
 
     // Fade slightly when finished
-    if (this.totalDurationMs > 0 && elapsedMs >= this.totalDurationMs) {
-      this.setAlpha(this.finishedAlpha);
-    } else {
-      this.setAlpha(this.baseAlpha);
+    const isFinished = this.totalDurationMs > 0 && elapsedMs >= this.totalDurationMs;
+    this.setAlpha(isFinished ? this.finishedAlpha : this.baseAlpha);
+
+    if (this.labelText?.active) {
+      this.labelText.setPosition?.(interpolated.x, interpolated.y - 24);
+      this.labelText.setAlpha?.(
+        isFinished ? this.finishedAlpha : Math.min(1, this.baseAlpha + 0.35)
+      );
     }
+  }
+
+  public override destroy(fromScene?: boolean): void {
+    if (this.labelText) {
+      try {
+        this.labelText.destroy();
+      } catch {
+        // safe
+      }
+      this.labelText = null;
+    }
+    super.destroy(fromScene);
   }
 }
 

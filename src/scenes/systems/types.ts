@@ -206,6 +206,7 @@ export interface GameSceneContext {
   timerStarted: boolean;
   timerText: Phaser.GameObjects.Text;
   splitDeltaText: Phaser.GameObjects.Text | null;
+  duelBadgeText: Phaser.GameObjects.Text | null;
   ghostButton: Phaser.GameObjects.Text | null;
   hudBarGraphics: Phaser.GameObjects.Graphics | null;
   thumbRestartBg: Phaser.GameObjects.Rectangle | null;

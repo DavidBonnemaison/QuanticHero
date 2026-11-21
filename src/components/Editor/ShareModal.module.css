@@ -241,6 +241,56 @@
   box-shadow: 0 0 12px rgba(255, 0, 127, 0.6);
 }
 
+.duelModal {
+  border-color: #fbbf24;
+  box-shadow: 0 0 28px rgba(251, 191, 36, 0.45), inset 0 0 15px rgba(251, 191, 36, 0.14);
+}
+
+.duelTitle {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.65);
+}
+
+.duelTagRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.duelTagLabel {
+  font-size: 20px;
+  color: #fbbf24;
+  letter-spacing: 1px;
+}
+
+.duelTagInput {
+  width: 150px;
+  background: #000;
+  border: 2px solid #fbbf24;
+  padding: 4px 10px;
+  color: #fbbf24;
+  font-size: 22px;
+  font-family: "VT323", monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  outline: none;
+  text-align: center;
+}
+
+.nativeShareButton {
+  border-color: #fbbf24;
+  color: #05051a;
+  background: #fbbf24;
+}
+
+.nativeShareButton:hover {
+  background: #fde047;
+  color: #05051a;
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.7);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

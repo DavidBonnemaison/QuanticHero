@@ -12,14 +12,21 @@ import {
 import type {
   DailyScoreEntry,
   DailyStreakState,
+  DuelChallenge,
   GhostMode,
   IsotopeMedal,
+  LastRunSummary,
   LevelData,
   ScoreItem
 } from '../types';
 
 export { getNextLevelId, isEntanglementLevelId };
-export type { DailyScoreEntry, DailyStreakState, GhostMode, Locale };
+export type { DailyScoreEntry, DailyStreakState, DuelChallenge, GhostMode, LastRunSummary, Locale };
+
+export interface PendingDuelShare {
+  duel: DuelChallenge;
+  isRevenge: boolean;
+}
 
 export interface UpdateLevelFieldParams {
   level: number;
@@ -42,6 +49,9 @@ export interface GameStoreState {
   ghostEnabled: boolean;
   locale: Locale;
   sharedLevel: LevelData | null;
+  activeDuel: DuelChallenge | null;
+  lastRun: LastRunSummary | null;
+  pendingDuelShare: PendingDuelShare | null;
   unlockedMolecules: string[];
   moleculeScores: Record<string, ScoreItem>;
   dailyHistory: Record<string, DailyScoreEntry>;
@@ -85,6 +95,9 @@ export interface GameStoreActions {
   setLevels: (data: Record<string, LevelData> | null) => void;
   resetCustomLevel: (id: string) => void;
   setSharedLevel: (level: LevelData | null) => void;
+  setActiveDuel: (duel: DuelChallenge | null) => void;
+  setLastRun: (run: LastRunSummary | null) => void;
+  setPendingDuelShare: (share: PendingDuelShare | null) => void;
   saveSharedLevelToCustom: (slot?: number) => void;
   updateLevelField: (params: UpdateLevelFieldParams) => void;
   addPlatform: (params: { level: number }) => void;
@@ -207,6 +220,9 @@ export const useGameStore = create<GameStore>()(
       scores: {},
       customLevels: null,
       sharedLevel: null,
+      activeDuel: null,
+      lastRun: null,
+      pendingDuelShare: null,
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
@@ -308,6 +324,9 @@ export const useGameStore = create<GameStore>()(
           maxEntanglementLevel: 110,
           scores: {},
           sharedLevel: null,
+          activeDuel: null,
+          lastRun: null,
+          pendingDuelShare: null,
           unlockedMolecules: [],
           moleculeScores: {},
           dailyHistory: {},
@@ -564,6 +583,12 @@ export const useGameStore = create<GameStore>()(
         }),
 
       setSharedLevel: (level: LevelData | null) => set({ sharedLevel: level }),
+
+      setActiveDuel: (duel: DuelChallenge | null) => set({ activeDuel: duel }),
+
+      setLastRun: (run: LastRunSummary | null) => set({ lastRun: run }),
+
+      setPendingDuelShare: (share: PendingDuelShare | null) => set({ pendingDuelShare: share }),
 
       saveSharedLevelToCustom: (slot = 1) =>
         set((state) => {

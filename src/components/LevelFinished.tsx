@@ -6,8 +6,13 @@ import { getStrings } from '../i18n/strings';
 import { getMedalDisplayInfo } from '../services/MedalService';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
+import {
+  DEFAULT_CHALLENGER_NAME,
+  buildDuelFromLastRun,
+  formatDuelSeconds
+} from '../tools/levelCodec';
 import { getNextLevelId } from '../tools/levelProgression';
-import type { LevelData } from '../types';
+import type { DuelChallenge, LevelData } from '../types';
 import ShareModal from './Editor/ShareModal';
 import styles from './LevelFinished.module.css';
 
@@ -15,6 +20,10 @@ export default function LevelFinished(): React.ReactElement {
   const navigate = useNavigate();
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [duelShareState, setDuelShareState] = useState<{
+    duel: DuelChallenge;
+    isRevenge: boolean;
+  } | null>(null);
   const [loadedShareLevel, setLoadedShareLevel] = useState<LevelData | null>(null);
 
   const currentLevel = useGameStore((state) => state.currentLevel);
@@ -22,6 +31,9 @@ export default function LevelFinished(): React.ReactElement {
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
   const sharedLevel = useGameStore((state) => state.sharedLevel);
   const setSharedLevel = useGameStore((state) => state.setSharedLevel);
+  const activeDuel = useGameStore((state) => state.activeDuel);
+  const setActiveDuel = useGameStore((state) => state.setActiveDuel);
+  const lastRun = useGameStore((state) => state.lastRun);
   const saveSharedLevelToCustom = useGameStore((state) => state.saveSharedLevelToCustom);
   const locale = useGameStore((state) => state.locale ?? 'en');
   const t = getStrings(locale);
@@ -34,6 +46,13 @@ export default function LevelFinished(): React.ReactElement {
     currentLevelScore;
   const medalInfo = getMedalDisplayInfo(medal ?? (best > 0 ? 'bronze' : 'none'), locale);
   const displayStyleScore = lastStyleScore ?? bestStyleScore;
+
+  const duelElapsedMs = lastRun?.elapsedMs ?? last;
+  const duelDeltaMs = activeDuel ? duelElapsedMs - activeDuel.challengerTimeMs : 0;
+  const isDuelVictory = activeDuel ? duelElapsedMs < activeDuel.challengerTimeMs : false;
+  const duelDeltaStr = activeDuel
+    ? `${duelDeltaMs < 0 ? '-' : '+'}${(Math.abs(duelDeltaMs) / 1000).toFixed(2)}s`
+    : '';
 
   useEffect(() => {
     if (!isShared && levelIndex >= 1) {
@@ -67,7 +86,56 @@ export default function LevelFinished(): React.ReactElement {
 
   const { id, hue, antiHue, symbol, atom } = currentLevelData;
 
+  const buildCurrentDuelChallenge = (): DuelChallenge => {
+    if (lastRun) {
+      return buildDuelFromLastRun(lastRun, DEFAULT_CHALLENGER_NAME);
+    }
+    const dailyMatch = sharedLevel ? /^daily:(\d{4}-\d{2}-\d{2})$/.exec(sharedLevel.id) : null;
+    if (dailyMatch) {
+      return buildDuelFromLastRun(
+        {
+          kind: 'daily',
+          dateKey: dailyMatch[1],
+          elapsedMs: last || best,
+          jumps: lastJumps ?? 0,
+          ghostTrajectory: currentLevelScore.ghostTrajectory ?? ''
+        },
+        DEFAULT_CHALLENGER_NAME
+      );
+    }
+    if (isShared && sharedLevel) {
+      return buildDuelFromLastRun(
+        {
+          kind: 'custom',
+          level: sharedLevel,
+          elapsedMs: last || best,
+          jumps: lastJumps ?? 0,
+          ghostTrajectory: currentLevelScore.ghostTrajectory ?? ''
+        },
+        DEFAULT_CHALLENGER_NAME
+      );
+    }
+    return buildDuelFromLastRun(
+      {
+        kind: 'campaign',
+        levelId: levelIndex,
+        elapsedMs: last || best,
+        jumps: lastJumps ?? 0,
+        ghostTrajectory: currentLevelScore.ghostTrajectory ?? ''
+      },
+      DEFAULT_CHALLENGER_NAME
+    );
+  };
+
+  const handleOpenDuelShare = (isRevenge: boolean) => {
+    setDuelShareState({
+      duel: buildCurrentDuelChallenge(),
+      isRevenge
+    });
+  };
+
   const handleNextLevel = () => {
+    setActiveDuel(null);
     if (nextLevelId === null) {
       navigate('/levels');
       return;
@@ -93,6 +161,7 @@ export default function LevelFinished(): React.ReactElement {
   };
 
   const handleGoToMenu = () => {
+    setActiveDuel(null);
     if (isShared) {
       setSharedLevel(null);
     }
@@ -107,7 +176,26 @@ export default function LevelFinished(): React.ReactElement {
 
   return (
     <div className={styles.container}>
-      {isShared && (
+      {activeDuel && (
+        <div
+          data-testid="duel-verdict"
+          className={`${styles.duelVerdict} ${isDuelVictory ? styles.duelVictory : styles.duelDefeat}`}
+        >
+          <div className={styles.duelVerdictTitle}>
+            {isDuelVictory ? t.duel.victoryBadge(duelDeltaStr) : t.duel.defeatBadge(duelDeltaStr)}
+          </div>
+          <div className={styles.duelVerdictSubtitle}>
+            {isDuelVictory
+              ? t.duel.youBeat(activeDuel.challengerName, duelDeltaStr)
+              : t.duel.rivalTime(
+                  activeDuel.challengerName,
+                  formatDuelSeconds(activeDuel.challengerTimeMs)
+                )}
+          </div>
+        </div>
+      )}
+
+      {isShared && !activeDuel && (
         <div className={styles.customBadge}>
           {t.levelFinished.speedrunChallenge(
             atom,
@@ -165,6 +253,26 @@ export default function LevelFinished(): React.ReactElement {
         <span>{symbol}</span>
       </div>
 
+      <div className={styles.duelCtaRow}>
+        {activeDuel && isDuelVictory ? (
+          <button
+            type="button"
+            className={styles.buttonRevenge}
+            onClick={() => handleOpenDuelShare(true)}
+          >
+            ⚔ {t.duel.sendRevengeLink}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={styles.buttonChallenge}
+            onClick={() => handleOpenDuelShare(false)}
+          >
+            ⚔ {t.duel.challengeFriend}
+          </button>
+        )}
+      </div>
+
       {isShared ? (
         <div className={styles.buttonContainer} style={{ flexWrap: 'wrap', maxWidth: 440 }}>
           <button
@@ -179,7 +287,7 @@ export default function LevelFinished(): React.ReactElement {
             className={`${styles.button} ${styles.buttonRetry}`}
             onClick={handleRetry}
           >
-            {t.levelFinished.retry}
+            {activeDuel ? t.duel.rematch : t.levelFinished.retry}
           </button>
           <button
             type="button"
@@ -199,6 +307,7 @@ export default function LevelFinished(): React.ReactElement {
             type="button"
             className={`${styles.button} ${styles.buttonNext}`}
             onClick={() => {
+              setActiveDuel(null);
               setSharedLevel(null);
               navigate('/levels');
             }}
@@ -220,7 +329,7 @@ export default function LevelFinished(): React.ReactElement {
             className={`${styles.button} ${styles.buttonRetry}`}
             onClick={handleRetry}
           >
-            {t.levelFinished.retry}
+            {activeDuel ? t.duel.rematch : t.levelFinished.retry}
           </button>
           <button
             type="button"
@@ -266,6 +375,15 @@ export default function LevelFinished(): React.ReactElement {
             authorGhost: currentLevelScore.ghostTrajectory,
             authorTime: best || last
           }}
+        />
+      )}
+
+      {duelShareState && (
+        <ShareModal
+          isOpen={true}
+          onClose={() => setDuelShareState(null)}
+          duel={duelShareState.duel}
+          isRevenge={duelShareState.isRevenge}
         />
       )}
     </div>
