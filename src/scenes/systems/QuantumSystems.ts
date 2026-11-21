@@ -437,8 +437,6 @@ export class QuantumSystems {
       if (mol.circle.y < 0) mol.circle.y = ctx.levelData.height;
       if (mol.circle.y > ctx.levelData.height) mol.circle.y = 0;
     }
-
-    this.matterAndFields.updateAntigravityBubbles(time);
   }
 
   private updateCoherenceParticleMagnetism(delta: number): void {

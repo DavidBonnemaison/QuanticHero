@@ -249,9 +249,6 @@ export class SoundManager {
       gameEvents.on('bell:violation', () => {
         this.playBellViolationChord();
       }),
-      gameEvents.on('bubble:harvest', () => {
-        this.playBubbleChime();
-      }),
       gameEvents.on('hero:dive', () => {
         this.playDiveSound();
       }),

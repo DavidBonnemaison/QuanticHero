@@ -44,9 +44,7 @@ import { RespawnTransitionController } from './systems/RespawnTransitionControll
 import { TimeLoopSystem } from './systems/TimeLoopSystem';
 import type {
   ActiveObserverFlash,
-  AntigravityBubble,
   BroglieCrystal,
-  BubbleHarvestHit,
   DecayPlatformEntry,
   EdgePip,
   GameSceneContext,
@@ -198,8 +196,6 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public activePinPointerId: number | null = null;
   public alphaArrivalTimeMs: number | null = null;
   public betaArrivalTimeMs: number | null = null;
-  public bubbleHarvestHits: BubbleHarvestHit[] = [];
-  public antigravityBubbles: AntigravityBubble[] = [];
   public ephemeralPlatforms: Phaser.GameObjects.Rectangle[] = [];
   public entanglementRevealed = false;
   public constellationGraphics: Phaser.GameObjects.Graphics | null = null;
@@ -533,9 +529,6 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       const worldPt = this.getPointerWorldCoords(pointer);
-      if (!this.isLevelCompleted && !this.isTransitioningLevel) {
-        this.trackBubblePointerMove(worldPt.x, worldPt.y, this.time?.now ?? Date.now());
-      }
       if (
         pointer.isDown &&
         (this.activePinPointerId === null || this.activePinPointerId === pointer.id)
@@ -722,15 +715,6 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   }
   public applyPhase(phase: PlatformPhase): void {
     this.quantumSystems.applyPhase(phase);
-  }
-  public trackBubblePointerMove(worldX: number, worldY: number, nowMs: number): boolean {
-    return this.quantumSystems.matterAndFields.trackBubblePointerMove(worldX, worldY, nowMs);
-  }
-  public spawnAntigravityBubble(x: number, y: number, nowMs: number): void {
-    this.quantumSystems.matterAndFields.spawnAntigravityBubble(x, y, nowMs);
-  }
-  public updateAntigravityBubbles(nowMs: number): void {
-    this.quantumSystems.matterAndFields.updateAntigravityBubbles(nowMs);
   }
   public triggerTimeLoopRewind(): void {
     this.timeLoopSystem.triggerLoopRewind(true);

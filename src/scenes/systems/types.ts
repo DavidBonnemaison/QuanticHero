@@ -106,21 +106,6 @@ export interface BroglieCrystal {
   expiresAtMs: number;
 }
 
-export interface BubbleHarvestHit {
-  molIndex: number;
-  x: number;
-  y: number;
-  timeMs: number;
-}
-
-export interface AntigravityBubble {
-  x: number;
-  y: number;
-  radius: number;
-  expiresAtMs: number;
-  graphic: Phaser.GameObjects.Arc;
-}
-
 export interface SuperposedPlatformEntry {
   id: string;
   rect: Phaser.GameObjects.Rectangle;
@@ -308,8 +293,6 @@ export interface GameSceneContext {
   activePinPointerId: number | null;
   alphaArrivalTimeMs: number | null;
   betaArrivalTimeMs: number | null;
-  bubbleHarvestHits: BubbleHarvestHit[];
-  antigravityBubbles: AntigravityBubble[];
   ephemeralPlatforms: Phaser.GameObjects.Rectangle[];
   entanglementRevealed: boolean;
   constellationGraphics: Phaser.GameObjects.Graphics | null;

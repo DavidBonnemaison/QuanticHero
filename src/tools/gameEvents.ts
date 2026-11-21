@@ -33,7 +33,6 @@ export interface GameEventPayloads {
   'hero:broglie_crystallize': { count: number; durationMs: number };
   'hero:ghost_surf': { x: number; y: number };
   'bell:violation': { level: number; deltaMs: number };
-  'bubble:harvest': { x: number; y: number };
   'platform:ephemeral_vanish': { x: number; y: number };
   'platform:ephemeral_restore': { count: number };
   'entanglement:reveal': { revealAtX: number };

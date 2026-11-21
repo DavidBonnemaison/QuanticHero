@@ -170,8 +170,6 @@ function makeQuantumContext(): GameSceneContext {
     quantumPinningState: createQuantumPinningState(),
     ephemeralPlatforms: [],
     screenWrapGhosts: [],
-    antigravityBubbles: [],
-    bubbleHarvestHits: [],
     molecules: [],
     broglieCrystals: [],
     time: { now: 1000, delayedCall: vi.fn() },
@@ -267,7 +265,7 @@ describe('QuantumSystems', () => {
     expect(ctx.heroes[0].body?.velocity.y).toBe(-480);
   });
 
-  it('wraps hero across toroidal horizontal boundary and levitates in antigravity bubble', () => {
+  it('wraps hero across toroidal horizontal boundary', () => {
     const ctx = makeQuantumContext();
     const qs = new QuantumSystems(ctx);
     const hero = ctx.heroes[0];
@@ -276,13 +274,6 @@ describe('QuantumSystems', () => {
 
     qs.updateScreenWrap(1000);
     expect(hero.x).toBe(795);
-
-    qs.matterAndFields.spawnAntigravityBubble(795, 300, 1000);
-    qs.matterAndFields.updateAntigravityBubbles(1200);
-    expect(hero.body?.velocity.y).toBe(-180);
-
-    qs.matterAndFields.updateAntigravityBubbles(5200);
-    expect(ctx.antigravityBubbles).toHaveLength(0);
   });
 
   it('places Broglie condense crystal strictly below hero feet and damps fast downward fall', () => {

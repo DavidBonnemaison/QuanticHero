@@ -119,8 +119,6 @@ export class LevelBuilder {
     ctx.betaEnteredPortal = false;
     ctx.alphaArrivalTimeMs = null;
     ctx.betaArrivalTimeMs = null;
-    ctx.bubbleHarvestHits = [];
-    ctx.antigravityBubbles = [];
     ctx.isPauliActive = false;
     ctx.isTimeDilationActive = false;
     ctx.timeDilationUntil = 0;
@@ -227,11 +225,6 @@ export class LevelBuilder {
     ctx.betaEnteredPortal = false;
     ctx.alphaArrivalTimeMs = null;
     ctx.betaArrivalTimeMs = null;
-    ctx.bubbleHarvestHits = [];
-    for (const b of ctx.antigravityBubbles) {
-      b.graphic.destroy();
-    }
-    ctx.antigravityBubbles = [];
 
     const startX = ctx.levelData.player.position.x;
     const startY = ctx.levelData.player.position.y;
@@ -419,11 +412,6 @@ export class LevelBuilder {
       mol.circle.destroy();
     }
     ctx.molecules = [];
-    ctx.bubbleHarvestHits = [];
-    for (const b of ctx.antigravityBubbles) {
-      b.graphic.destroy();
-    }
-    ctx.antigravityBubbles = [];
 
     ctx.heroGroup?.clear?.(true, true);
     ctx.platforms?.clear?.(true, true);

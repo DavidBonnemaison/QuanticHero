@@ -195,8 +195,6 @@ function makeContext(levelData: LevelData): GameSceneContext {
     discoveryBoxObjects: [],
     edgePips: [],
     deathEchoes: [],
-    antigravityBubbles: [],
-    bubbleHarvestHits: [],
     swarmGhosts: [],
     ghostFrames: [],
     ghostRecorder: new GhostRecorder(),

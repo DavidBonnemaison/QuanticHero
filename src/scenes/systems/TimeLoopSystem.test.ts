@@ -221,7 +221,6 @@ function makeTimeLoopContext(levelData: LevelData): {
     gasPlatforms: [],
     pinnablePlatforms: [],
     broglieCrystals: [],
-    antigravityBubbles: [],
     screenWrapGhosts: [],
     isLevelCompleted: false,
     isTransitioningLevel: false,

@@ -908,49 +908,6 @@ describe('GameScene Spec-10: Curiosity Secrets (HUD Phase, Bubble Antigravity & 
     expect(scene.currentPhase).toBe('cyan');
   });
 
-  it('Secret #2: dragging within 35px of 3 background bubbles in < 800ms spawns an antigravity bubble that levitates heroes at -180 px/s', () => {
-    scene.levelData = makeTestLevel('1', 'Hydrogen', 'H');
-    scene.create();
-
-    const molecules = (scene as any).molecules as Array<{ circle: { x: number; y: number } }>;
-    expect(molecules.length).toBeGreaterThanOrEqual(3);
-
-    molecules[0].circle.x = 200;
-    molecules[0].circle.y = 300;
-    molecules[1].circle.x = 260;
-    molecules[1].circle.y = 300;
-    molecules[2].circle.x = 320;
-    molecules[2].circle.y = 300;
-
-    const harvestEvents: Array<{ x: number; y: number }> = [];
-    const unsub = gameEvents.on('bubble:harvest', (p) => harvestEvents.push(p));
-
-    expect(scene.trackBubblePointerMove(210, 300, 1000)).toBe(false);
-    expect(scene.trackBubblePointerMove(255, 300, 1200)).toBe(false);
-    expect(scene.trackBubblePointerMove(315, 300, 1400)).toBe(true);
-    unsub();
-
-    expect(harvestEvents).toHaveLength(1);
-    expect(harvestEvents[0].x).toBeCloseTo(260, 1);
-    expect(harvestEvents[0].y).toBeCloseTo(300, 1);
-
-    const bubbles = (scene as any).antigravityBubbles;
-    expect(bubbles).toHaveLength(1);
-    expect(bubbles[0].radius).toBe(36);
-    expect(bubbles[0].expiresAtMs).toBe(5400);
-
-    // Hero enters bubble -> levitates at vy = -180 px/s
-    const hero = scene.heroes[0];
-    hero.setPosition(260, 300);
-    scene.updateAntigravityBubbles(1500);
-    expect(hero.levitateUntilMs).toBe(3500);
-    expect(hero.body!.velocity.y).toBe(-180);
-
-    // Bubble expires after 4000ms
-    scene.updateAntigravityBubbles(5500);
-    expect((scene as any).antigravityBubbles).toHaveLength(0);
-  });
-
   it('Secret #3: entangled twins arriving within <= 50ms trigger bell:violation and award Bell Sync Gold Isotope', () => {
     scene.levelData = {
       ...makeTestLevel('110', 'Darmstadtium', 'Ds'),

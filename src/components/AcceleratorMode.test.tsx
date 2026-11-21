@@ -108,11 +108,12 @@ describe('AcceleratorMode UI (Spec-03)', () => {
     });
     fireEvent.click(screen.getByTestId('mutation-choice-1'));
 
-    // Lose 3 lives
+    // Lose all remaining lives
     act(() => {
-      gameEvents.emit('accelerator:life_lost', { deathPos: { x: 200, y: 400 } });
-      gameEvents.emit('accelerator:life_lost', { deathPos: { x: 200, y: 400 } });
-      gameEvents.emit('accelerator:life_lost', { deathPos: { x: 200, y: 400 } });
+      const remainingLives = manager.getState().lives;
+      for (let i = 0; i < remainingLives; i++) {
+        gameEvents.emit('accelerator:life_lost', { deathPos: { x: 200, y: 400 } });
+      }
     });
 
     expect(screen.getByTestId('accelerator-gameover-overlay')).toBeInTheDocument();

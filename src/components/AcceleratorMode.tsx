@@ -82,7 +82,7 @@ export default function AcceleratorMode({
   const [runState, setRunState] = useState<AcceleratorRunState>(() => {
     const mgr = managerRef.current;
     if (mgr.getState().status === 'idle') {
-      return mgr.startRun();
+      return mgr.startRun(injectedManager ? mgr.getState().seed : undefined);
     }
     return mgr.getState();
   });
