@@ -90,6 +90,7 @@ export const App: React.FC = () => {
           <Route path="/game" element={<Game />} />
           <Route path="/game/molecule/:moleculeId" element={<Game />} />
           <Route path="/game/chrono/:chronoId" element={<Game />} />
+          <Route path="/game/schrodinger/:schrodingerId" element={<Game />} />
           <Route path="/daily" element={<Game isDaily />} />
           <Route path="/done" element={<LevelFinished />} />
           <Route path="/explanation" element={<Explanation />} />

@@ -60,8 +60,9 @@ export class HudController {
         // safe
       }
       window.game = null;
-      const isChronoLevel = /^chrono-\d+$/i.test(String(ctx.levelData?.id ?? ''));
-      push(isChronoLevel ? '/modes' : '/');
+      const rawId = String(ctx.levelData?.id ?? '');
+      const isQuantumModeLevel = /^(?:chrono|schrodinger)-\d+$/i.test(rawId);
+      push(isQuantumModeLevel ? '/modes' : '/');
     });
     ctx.hudContainer.add(backButton);
 
@@ -263,6 +264,9 @@ export class HudController {
       if (ctx.loopButtonLabel?.active) {
         ctx.loopButtonLabel.setText(s.hud.loopButton);
       }
+      if (ctx.observeButtonLabel?.active) {
+        ctx.observeButtonLabel.setText(s.hud.observeButton);
+      }
       if (ctx.ghostButton?.active) {
         ctx.applyGhostMode();
       }
@@ -379,6 +383,38 @@ export class HudController {
       ctx.hudContainer.add(loopBg);
       ctx.hudContainer.add(loopLabel);
       ctx.hudContainer.add(loopZone);
+    }
+
+    const hasWavefunctionMechanics = Boolean(
+      (ctx.superposedPlatforms && ctx.superposedPlatforms.length > 0) ||
+        (ctx.superposedSpikes && ctx.superposedSpikes.length > 0) ||
+        (ctx.levelData?.observerBeams && ctx.levelData.observerBeams.length > 0)
+    );
+    if (hasWavefunctionMechanics) {
+      const observeX = camW - 58;
+      const observeY = ctx.levelData?.timeLoop ? camH - 148 : camH - 96;
+      const observeBg = ctx.add.rectangle(observeX, observeY, 108, 44, 0x1e1035, 0.88);
+      observeBg.setStrokeStyle(2, 0xfbbf24, 0.95);
+      const observeLabel = ctx.add.text(observeX, observeY, initialStrings.hud.observeButton, {
+        fontFamily: 'VT323',
+        fontSize: '20px',
+        color: '#fbbf24'
+      });
+      observeLabel.setOrigin(0.5);
+      const observeZone = ctx.add.zone(observeX, observeY, 108, 44);
+      observeZone.setInteractive({ useHandCursor: true });
+      observeZone.on('pointerdown', () => {
+        ctx.uiPointerConsumed = true;
+        if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
+          ctx.triggerActiveObservation?.();
+        }
+      });
+      ctx.observeButtonBg = observeBg;
+      ctx.observeButtonLabel = observeLabel;
+      ctx.observeButtonZone = observeZone;
+      ctx.hudContainer.add(observeBg);
+      ctx.hudContainer.add(observeLabel);
+      ctx.hudContainer.add(observeZone);
     }
 
     if (ctx.betaPipCamera) {
@@ -530,6 +566,24 @@ export class HudController {
     }
     if (ctx.loopButtonZone?.active) {
       ctx.loopButtonZone.setPosition(loopX, loopY);
+    }
+
+    const observeX = camW - 58;
+    const observeY = ctx.levelData?.timeLoop
+      ? ctx.hasCondenseAbility
+        ? camH - 200
+        : camH - 148
+      : ctx.hasCondenseAbility
+        ? camH - 148
+        : camH - 96;
+    if (ctx.observeButtonBg?.active) {
+      ctx.observeButtonBg.setPosition(observeX, observeY);
+    }
+    if (ctx.observeButtonLabel?.active) {
+      ctx.observeButtonLabel.setPosition(observeX, observeY);
+    }
+    if (ctx.observeButtonZone?.active) {
+      ctx.observeButtonZone.setPosition(observeX, observeY);
     }
 
     const pipY = camH - 70;

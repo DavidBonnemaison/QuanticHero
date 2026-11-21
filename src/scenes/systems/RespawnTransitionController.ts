@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { getNextChronoLoopLevel } from '../../data/chronoLoopLevels';
 import { getLevelMetadata, loadLevel, preloadLevel } from '../../data/levels';
+import { getNextSchrodingerLevel } from '../../data/schrodingerLevels';
 import { getStrings } from '../../i18n/strings';
+import { createSuperpositionState } from '../../mechanics/wavefunctionCollapse';
 import { PHYSICS } from '../../physics/constants';
 import { createQuantumPinningState } from '../../physics/matterStates';
 import { calculateIsotopeMedal } from '../../services/MedalService';
@@ -60,6 +62,25 @@ export class RespawnTransitionController {
     ctx.focusArcGraphics?.clear();
     ctx.fusionHaloGraphics?.clear();
     ctx.quantumPinGraphics?.clear();
+    ctx.wavefunctionGraphics?.clear();
+    ctx.observerBeamGraphics?.clear();
+    ctx.activeObserverFlash = null;
+    for (const sp of ctx.superposedPlatforms ?? []) {
+      sp.runtime = createSuperpositionState(sp.config.lockDurationMs);
+      const body = sp.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.enable = false;
+        if (body.checkCollision) body.checkCollision.none = true;
+      }
+    }
+    for (const ss of ctx.superposedSpikes ?? []) {
+      ss.runtime = createSuperpositionState(ss.config.lockDurationMs);
+      const body = ss.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (body) {
+        body.enable = false;
+        if (body.checkCollision) body.checkCollision.none = true;
+      }
+    }
     ctx.quantumPinningState = createQuantumPinningState();
     ctx.activePinPointerWorld = null;
     ctx.activePinPointerId = null;
@@ -315,8 +336,8 @@ export class RespawnTransitionController {
     const dailyDateKey = dailyMatch ? dailyMatch[1] : null;
     const moleculeMatch = /^molecule-(.+)$/i.exec(rawLevelId);
     const moleculeId = moleculeMatch ? moleculeMatch[1] : null;
-    const isChronoLoop = /^chrono-\d+$/i.test(rawLevelId);
-    const chronoId = isChronoLoop ? rawLevelId.toLowerCase() : null;
+    const isCustomModeLevel = /^(?:chrono|schrodinger)-\d+$/i.test(rawLevelId);
+    const customModeId = isCustomModeLevel ? rawLevelId.toLowerCase() : null;
     const currentLvl = Number(ctx.levelData.id);
     if (!Number.isNaN(currentLvl)) {
       ctx.previousCompletedLevelId = currentLvl;
@@ -330,8 +351,8 @@ export class RespawnTransitionController {
       ? (store.dailyHistory?.[dailyDateKey]?.bestMs ?? 0)
       : moleculeId
         ? (store.moleculeScores?.[moleculeId]?.best ?? 0)
-        : chronoId
-          ? (store.customModeScores?.[chronoId]?.best ?? 0)
+        : customModeId
+          ? (store.customModeScores?.[customModeId]?.best ?? 0)
           : isShared
             ? (store.scores[0]?.best ?? 0)
             : (store.scores[currentLvl]?.best ?? 0);
@@ -349,8 +370,8 @@ export class RespawnTransitionController {
           styleScore: ctx.coherenceSystem?.getStyleScore?.() ?? 0
         });
       }
-      if (chronoId) {
-        store.recordCustomModeScore(chronoId, elapsedMs, trajectory, {
+      if (customModeId) {
+        store.recordCustomModeScore(customModeId, elapsedMs, trajectory, {
           jumpCount: ctx.jumpCount,
           switchCount: ctx.switchCount,
           medal,
@@ -393,8 +414,8 @@ export class RespawnTransitionController {
       ? (useGameStore.getState().dailyHistory?.[dailyDateKey]?.bestMs ?? elapsedMs)
       : moleculeId
         ? (useGameStore.getState().moleculeScores?.[moleculeId]?.best ?? elapsedMs)
-        : chronoId
-          ? (useGameStore.getState().customModeScores?.[chronoId]?.best ?? elapsedMs)
+        : customModeId
+          ? (useGameStore.getState().customModeScores?.[customModeId]?.best ?? elapsedMs)
           : isShared
             ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
             : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
@@ -476,6 +497,17 @@ export class RespawnTransitionController {
         store.setPendingDuelShare(null);
         store.setSharedLevel(nextChrono.levelData);
         this.performLevelTransition(nextChrono.levelData, nextChrono.index);
+        return;
+      }
+    }
+    if (/^schrodinger-\d+$/i.test(rawLevelId)) {
+      const nextSchrodinger = getNextSchrodingerLevel(rawLevelId.toLowerCase());
+      if (nextSchrodinger) {
+        const store = useGameStore.getState();
+        store.setActiveDuel(null);
+        store.setPendingDuelShare(null);
+        store.setSharedLevel(nextSchrodinger.levelData);
+        this.performLevelTransition(nextSchrodinger.levelData, nextSchrodinger.index);
         return;
       }
     }

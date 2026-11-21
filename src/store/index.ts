@@ -111,6 +111,8 @@ export interface GameStoreActions {
   deletePlatform: (params: { level: number; n: number | string }) => void;
   addParticle: (params: { level: number }) => void;
   deleteParticle: (params: { level: number; n: number | string }) => void;
+  addObserverBeam: (params: { level: number }) => void;
+  deleteObserverBeam: (params: { level: number; n: number | string }) => void;
   toggleMute: () => void;
   setMuted: (muted: boolean) => void;
   toggleHaptics: () => void;
@@ -139,6 +141,14 @@ const defaultParticle = {
   x: 100,
   y: 100,
   type: 'duplicate' as const
+};
+
+const defaultObserverBeam = {
+  x: 480,
+  y: 70,
+  sweepAngleDeg: 120,
+  speedDegPerSec: 40,
+  range: 520
 };
 
 export function getEffectiveLevel(
@@ -769,6 +779,54 @@ export const useGameStore = create<GameStore>()(
               }
               break;
             }
+            case 'platformSuperposition': {
+              const targetIdx = Number(n);
+              updatedLevel.platforms = targetLevel.platforms.map((p, i) => {
+                if (i !== targetIdx) return p;
+                if (prop === 'enabled') {
+                  if (value) {
+                    return {
+                      ...p,
+                      superposition: p.superposition ?? {
+                        altX: p.x,
+                        altY: Math.max(40, p.y - 120),
+                        periodMs: 3000,
+                        lockDurationMs: 3000
+                      }
+                    };
+                  }
+                  const { superposition: _removed, ...rest } = p;
+                  return rest;
+                }
+                const current = p.superposition ?? {
+                  altX: p.x,
+                  altY: Math.max(40, p.y - 120),
+                  periodMs: 3000,
+                  lockDurationMs: 3000
+                };
+                return {
+                  ...p,
+                  superposition: {
+                    ...current,
+                    [prop as string]: Number(value)
+                  }
+                };
+              });
+              break;
+            }
+            case 'observerBeam': {
+              const targetIdx = Number(n);
+              const existing = targetLevel.observerBeams ?? [];
+              updatedLevel.observerBeams = existing.map((beam, i) =>
+                i === targetIdx
+                  ? {
+                      ...beam,
+                      [prop as string]: Number(value)
+                    }
+                  : beam
+              );
+              break;
+            }
             default:
               return state;
           }
@@ -845,6 +903,43 @@ export const useGameStore = create<GameStore>()(
           customLevels[levelKey] = {
             ...targetLevel,
             particles: targetLevel.particles.filter((_, i) => i !== Number(n))
+          };
+          return { customLevels };
+        }),
+
+      addObserverBeam: ({ level }: { level: number }) =>
+        set((state) => {
+          const levelKey = `level${level}`;
+          const sourceLevel = state.customLevels?.[levelKey] ?? getCachedLevel(levelKey);
+          if (!sourceLevel) return state;
+
+          const targetLevel = state.customLevels?.[levelKey]
+            ? sourceLevel
+            : structuredClone(sourceLevel);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
+
+          customLevels[levelKey] = {
+            ...targetLevel,
+            observerBeams: [...(targetLevel.observerBeams ?? []), { ...defaultObserverBeam }]
+          };
+          return { customLevels };
+        }),
+
+      deleteObserverBeam: ({ level, n }: { level: number; n: number | string }) =>
+        set((state) => {
+          const levelKey = `level${level}`;
+          const sourceLevel = state.customLevels?.[levelKey] ?? getCachedLevel(levelKey);
+          if (!sourceLevel) return state;
+
+          const targetLevel = state.customLevels?.[levelKey]
+            ? sourceLevel
+            : structuredClone(sourceLevel);
+          const customLevels = state.customLevels ? { ...state.customLevels } : {};
+          const nextBeams = (targetLevel.observerBeams ?? []).filter((_, i) => i !== Number(n));
+
+          customLevels[levelKey] = {
+            ...targetLevel,
+            observerBeams: nextBeams.length > 0 ? nextBeams : undefined
           };
           return { customLevels };
         })

@@ -8,6 +8,7 @@ import { computeViewportSize, getInitialViewportSize } from './config';
 import { getChronoLoopLevelById } from './data/chronoLoopLevels';
 import { loadLevel, preloadLevel } from './data/levels';
 import { getMoleculeById } from './data/molecules';
+import { getSchrodingerLevelById } from './data/schrodingerLevels';
 import BootScene from './scenes/BootScene';
 import GameScene from './scenes/GameScene';
 import PreloadScene from './scenes/PreloadScene';
@@ -28,7 +29,11 @@ export interface GameContainerProps {
 export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false }) => {
   const gameRef = useRef<Phaser.Game | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const { moleculeId, chronoId } = useParams<{ moleculeId?: string; chronoId?: string }>();
+  const { moleculeId, chronoId, schrodingerId } = useParams<{
+    moleculeId?: string;
+    chronoId?: string;
+    schrodingerId?: string;
+  }>();
   const pendingDuelShare = useGameStore((state) => state.pendingDuelShare);
   const setPendingDuelShare = useGameStore((state) => state.setPendingDuelShare);
 
@@ -37,6 +42,13 @@ export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false })
 
     if (chronoId) {
       const entry = getChronoLoopLevelById(chronoId);
+      if (entry) {
+        const store = useGameStore.getState();
+        store.setActiveDuel(null);
+        store.setSharedLevel(entry.levelData);
+      }
+    } else if (schrodingerId) {
+      const entry = getSchrodingerLevelById(schrodingerId);
       if (entry) {
         const store = useGameStore.getState();
         store.setActiveDuel(null);
@@ -171,7 +183,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false })
       window.removeEventListener('resize', handleViewportResize);
       window.removeEventListener('orientationchange', handleViewportResize);
       useGameStore.getState().setPendingDuelShare(null);
-      if (moleculeId || chronoId || isDaily) {
+      if (moleculeId || chronoId || schrodingerId || isDaily) {
         useGameStore.getState().setSharedLevel(null);
       }
       if (gameRef.current) {
@@ -184,7 +196,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false })
         window.game = null;
       }
     };
-  }, [moleculeId, chronoId, isDaily]);
+  }, [moleculeId, chronoId, schrodingerId, isDaily]);
 
   return (
     <div className={styles.viewport}>

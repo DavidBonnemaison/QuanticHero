@@ -2,6 +2,7 @@ import { soundManager } from '../../audio/SoundManager';
 import { getNextChronoLoopLevel } from '../../data/chronoLoopLevels';
 import { getNarrativeForLevel } from '../../data/cosmicNarrative';
 import { getLevelMetadata } from '../../data/levels';
+import { getNextSchrodingerLevel } from '../../data/schrodingerLevels';
 import { getStrings } from '../../i18n/strings';
 import { getMedalDisplayInfo } from '../../services/MedalService';
 import { shareReplayCard } from '../../services/ReplayCardGenerator';
@@ -524,16 +525,22 @@ export function showLevelCompleteOverlay(
 
     const rawId = String(ctx.levelData.id ?? '');
     const isChronoLevel = /^chrono-\d+$/i.test(rawId);
+    const isSchrodingerLevel = /^schrodinger-\d+$/i.test(rawId);
+    const isQuantumModeLevel = isChronoLevel || isSchrodingerLevel;
     const nextChronoEntry = isChronoLevel ? getNextChronoLoopLevel(rawId.toLowerCase()) : undefined;
+    const nextSchrodingerEntry = isSchrodingerLevel
+      ? getNextSchrodingerLevel(rawId.toLowerCase())
+      : undefined;
+    const nextModeEntry = nextChronoEntry ?? nextSchrodingerEntry;
 
-    const nextLevelData = nextChronoEntry
-      ? nextChronoEntry.levelData
+    const nextLevelData = nextModeEntry
+      ? nextModeEntry.levelData
       : nextLevelNumber !== null
         ? ctx.resolveLevelData(nextLevelNumber) || getLevelMetadata(nextLevelNumber)
         : undefined;
     const primaryLabel = nextLevelData
       ? t.hud.nextLevel(nextLevelData.symbol, nextLevelData.atom)
-      : isChronoLevel
+      : isQuantumModeLevel
         ? t.hud.modesButton
         : t.hud.levelsButton;
 
@@ -553,7 +560,7 @@ export function showLevelCompleteOverlay(
       (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
         ctx.uiPointerConsumed = true;
         ev?.stopPropagation?.();
-        if (nextLevelNumber !== null || nextChronoEntry) {
+        if (nextLevelNumber !== null || nextModeEntry) {
           ctx.advanceToNextLevel();
         } else {
           soundManager.stopBgm();
@@ -567,7 +574,7 @@ export function showLevelCompleteOverlay(
             // safe
           }
           window.game = null;
-          push(isChronoLevel ? '/modes' : '/levels');
+          push(isQuantumModeLevel ? '/modes' : '/levels');
         }
       }
     );

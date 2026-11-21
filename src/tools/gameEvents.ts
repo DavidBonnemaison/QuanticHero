@@ -49,6 +49,14 @@ export interface GameEventPayloads {
   };
   'timeloop:rewind': { echoCount: number; cycleMs: number; manual: boolean };
   'timeloop:tick': { remainingMs: number };
+  'wavefunction:collapse': {
+    id: string;
+    kind: 'platform' | 'spike';
+    collapsedTo: 'A' | 'B';
+    source: 'player' | 'beam' | 'pointer';
+    x: number;
+    y: number;
+  };
 }
 
 export type GameEventName = keyof GameEventPayloads;

@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CHRONO_LOOP_LEVELS, type ChronoLoopEntry } from '../data/chronoLoopLevels';
+import { SCHRODINGER_LEVELS, type SchrodingerLabEntry } from '../data/schrodingerLevels';
 import { getStrings } from '../i18n/strings';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
@@ -15,7 +16,11 @@ export default function QuantumModesHub(): React.ReactElement {
 
   const t = getStrings(locale);
 
-  const clearedCount = CHRONO_LOOP_LEVELS.filter(
+  const chronoClearedCount = CHRONO_LOOP_LEVELS.filter(
+    (entry) => (customModeScores[entry.id]?.best ?? 0) > 0
+  ).length;
+
+  const schrodingerClearedCount = SCHRODINGER_LEVELS.filter(
     (entry) => (customModeScores[entry.id]?.best ?? 0) > 0
   ).length;
 
@@ -23,6 +28,12 @@ export default function QuantumModesHub(): React.ReactElement {
     setActiveDuel(null);
     setSharedLevel(entry.levelData);
     navigate(`/game/chrono/${entry.id}`);
+  };
+
+  const handlePlaySchrodinger = (entry: SchrodingerLabEntry) => {
+    setActiveDuel(null);
+    setSharedLevel(entry.levelData);
+    navigate(`/game/schrodinger/${entry.id}`);
   };
 
   return (
@@ -53,7 +64,7 @@ export default function QuantumModesHub(): React.ReactElement {
               <span className={styles.modeTag}>{t.modes.chronoLoopTag}</span>
             </div>
             <span className={styles.counterBadge} data-testid="chrono-cleared-counter">
-              {t.modes.chronoCompletedCount(clearedCount, CHRONO_LOOP_LEVELS.length)}
+              {t.modes.chronoCompletedCount(chronoClearedCount, CHRONO_LOOP_LEVELS.length)}
             </span>
           </div>
           <p className={styles.modeDesc}>{t.modes.chronoLoopDesc}</p>
@@ -103,13 +114,13 @@ export default function QuantumModesHub(): React.ReactElement {
           </div>
         </section>
 
-        {/* Sector 02 & Sector 03: Schrodinger Labs & Particle Accelerator */}
-        <div className={styles.secondaryGrid}>
-          <section
-            className={styles.placeholderCard}
-            aria-labelledby="schrodinger-heading"
-            data-testid="schrodinger-mode-card"
-          >
+        {/* Sector 02: Schrodinger Labs (Spec-02) */}
+        <section
+          className={`${styles.modeSection} ${styles.schrodingerSection}`}
+          aria-labelledby="schrodinger-heading"
+          data-testid="schrodinger-mode-card"
+        >
+          <div className={styles.modeSectionHeader}>
             <div className={styles.modeTitleRow}>
               <h2 id="schrodinger-heading" className={styles.modeTitle}>
                 {t.modes.schrodingerTitle}
@@ -118,35 +129,89 @@ export default function QuantumModesHub(): React.ReactElement {
                 {t.modes.schrodingerTag}
               </span>
             </div>
-            <p className={styles.modeDesc}>{t.modes.schrodingerDesc}</p>
-            <div className={styles.statusLine}>{t.modes.schrodingerStatus}</div>
-          </section>
+            <span className={styles.counterBadge} data-testid="schrodinger-cleared-counter">
+              {t.modes.schrodingerCompletedCount(
+                schrodingerClearedCount,
+                SCHRODINGER_LEVELS.length
+              )}
+            </span>
+          </div>
+          <p className={styles.modeDesc}>{t.modes.schrodingerDesc}</p>
 
-          <section
-            className={`${styles.placeholderCard} ${styles.acceleratorCard}`}
-            aria-labelledby="accelerator-heading"
-            data-testid="accelerator-mode-card"
+          <div className={styles.chronoGrid}>
+            {SCHRODINGER_LEVELS.map((entry) => {
+              const score = customModeScores[entry.id];
+              const isCleared = Boolean(score?.best && score.best > 0);
+              const superposedCount =
+                entry.levelData.platforms.filter((p) => Boolean(p.superposition)).length +
+                entry.levelData.spikes.filter((s) => Boolean(s.superposition)).length;
+              const beamCount = entry.levelData.observerBeams?.length ?? 0;
+
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className={`${styles.levelCard} ${styles.schrodingerCard} ${
+                    isCleared ? styles.levelCardCleared : ''
+                  }`}
+                  onClick={() => handlePlaySchrodinger(entry)}
+                  data-testid={`schrodinger-card-${entry.id}`}
+                >
+                  <div className={styles.levelCardTop}>
+                    <span className={`${styles.levelCode} ${styles.levelCodeViolet}`}>
+                      {entry.code} · {entry.levelData.symbol}
+                    </span>
+                    <span className={styles.levelDifficulty}>{entry.difficulty}</span>
+                  </div>
+                  <div className={styles.levelName}>
+                    {locale === 'fr' ? entry.titleFr : entry.title}
+                  </div>
+                  <div className={styles.levelSummary}>
+                    {locale === 'fr' ? entry.summaryFr : entry.summary}
+                  </div>
+                  <div className={styles.levelFooter}>
+                    <span className={styles.cycleSpec}>
+                      {t.modes.observerSpecLabel(superposedCount, beamCount)}
+                    </span>
+                    {isCleared && score?.best ? (
+                      <span className={styles.bestScore}>
+                        {t.modes.bestLabel(formatScore(score.best))}
+                      </span>
+                    ) : (
+                      <span className={styles.unsolved}>{t.modes.notCleared}</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Sector 03: Particle Accelerator (Spec-03) */}
+        <section
+          className={`${styles.placeholderCard} ${styles.acceleratorCard}`}
+          aria-labelledby="accelerator-heading"
+          data-testid="accelerator-mode-card"
+        >
+          <div className={styles.modeTitleRow}>
+            <h2 id="accelerator-heading" className={styles.modeTitle}>
+              {t.modes.acceleratorTitle}
+            </h2>
+            <span className={`${styles.modeTag} ${styles.modeTagGold}`}>
+              {t.modes.acceleratorTag}
+            </span>
+          </div>
+          <p className={styles.modeDesc}>{t.modes.acceleratorDesc}</p>
+          <div className={styles.statusLine}>{t.modes.acceleratorStatus}</div>
+          <button
+            type="button"
+            className={styles.actionButton}
+            onClick={() => navigate('/accelerator')}
+            data-testid="accelerator-launch-button"
           >
-            <div className={styles.modeTitleRow}>
-              <h2 id="accelerator-heading" className={styles.modeTitle}>
-                {t.modes.acceleratorTitle}
-              </h2>
-              <span className={`${styles.modeTag} ${styles.modeTagGold}`}>
-                {t.modes.acceleratorTag}
-              </span>
-            </div>
-            <p className={styles.modeDesc}>{t.modes.acceleratorDesc}</p>
-            <div className={styles.statusLine}>{t.modes.acceleratorStatus}</div>
-            <button
-              type="button"
-              className={styles.actionButton}
-              onClick={() => navigate('/accelerator')}
-              data-testid="accelerator-launch-button"
-            >
-              {t.modes.acceleratorAction}
-            </button>
-          </section>
-        </div>
+            {t.modes.acceleratorAction}
+          </button>
+        </section>
       </div>
     </div>
   );

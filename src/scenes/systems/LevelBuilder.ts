@@ -99,7 +99,15 @@ export class LevelBuilder {
     ctx.loopButtonBg = null;
     ctx.loopButtonLabel = null;
     ctx.loopButtonZone = null;
+    ctx.observeButtonBg = null;
+    ctx.observeButtonLabel = null;
+    ctx.observeButtonZone = null;
     ctx.timeLoopIndicatorText = null;
+    ctx.superposedPlatforms = [];
+    ctx.superposedSpikes = [];
+    ctx.wavefunctionGraphics = null;
+    ctx.observerBeamGraphics = null;
+    ctx.activeObserverFlash = null;
     ctx.destroyBetaPipCamera?.();
     ctx.levelCompleteOverlay = null;
     ctx.phaseIndicatorText = null;
@@ -179,6 +187,16 @@ export class LevelBuilder {
     ctx.quantumPinGraphics.setDepth(24);
     ctx.wormholeGraphics = ctx.add.graphics();
     ctx.wormholeGraphics.setDepth(17);
+    const hasWavefunctionElements =
+      (ctx.superposedPlatforms && ctx.superposedPlatforms.length > 0) ||
+      (ctx.superposedSpikes && ctx.superposedSpikes.length > 0) ||
+      Boolean(ctx.levelData.observerBeams && ctx.levelData.observerBeams.length > 0);
+    if (hasWavefunctionElements && typeof ctx.add.graphics === 'function') {
+      ctx.wavefunctionGraphics = ctx.add.graphics();
+      ctx.wavefunctionGraphics.setDepth(15);
+      ctx.observerBeamGraphics = ctx.add.graphics();
+      ctx.observerBeamGraphics.setDepth(23);
+    }
     if (ctx.levelData.tetherPylons && ctx.levelData.tetherPylons.length > 0) {
       ctx.tetherPylonGraphics = ctx.add.graphics();
       ctx.tetherPylonGraphics.setDepth(16);
@@ -285,6 +303,11 @@ export class LevelBuilder {
     ctx.fusionHaloGraphics = destroyGraphic(ctx.fusionHaloGraphics);
     ctx.quantumPinGraphics = destroyGraphic(ctx.quantumPinGraphics);
     ctx.wormholeGraphics = destroyGraphic(ctx.wormholeGraphics);
+    ctx.wavefunctionGraphics = destroyGraphic(ctx.wavefunctionGraphics ?? null);
+    ctx.observerBeamGraphics = destroyGraphic(ctx.observerBeamGraphics ?? null);
+    ctx.activeObserverFlash = null;
+    ctx.superposedPlatforms = [];
+    ctx.superposedSpikes = [];
     ctx.constellationGraphics = destroyGraphic(ctx.constellationGraphics);
     ctx.periodicTableGraphics = destroyGraphic(ctx.periodicTableGraphics);
 
@@ -340,6 +363,9 @@ export class LevelBuilder {
     ctx.loopButtonBg = null;
     ctx.loopButtonLabel = null;
     ctx.loopButtonZone = null;
+    ctx.observeButtonBg = null;
+    ctx.observeButtonLabel = null;
+    ctx.observeButtonZone = null;
     ctx.timeLoopIndicatorText = null;
     ctx.timeLoopSystem?.destroy();
     if (ctx.levelCompleteOverlay) {

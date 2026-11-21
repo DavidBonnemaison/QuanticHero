@@ -3,6 +3,7 @@ import { soundManager } from '../audio/SoundManager';
 import { getChronoLoopLevelById } from '../data/chronoLoopLevels';
 import { getCachedLevel, preloadLevel } from '../data/levels';
 import { getMoleculeById } from '../data/molecules';
+import { getSchrodingerLevelById } from '../data/schrodingerLevels';
 import type { BohrBackgroundRenderer } from '../effects/BohrBackgroundRenderer';
 import type { QuantumEffectsManager } from '../effects/QuantumEffectsManager';
 import { assembleCampaignLevel, assemblePacedLevel } from '../generator/chunkAssembler';
@@ -38,6 +39,7 @@ import { QuantumSystems } from './systems/QuantumSystems';
 import { RespawnTransitionController } from './systems/RespawnTransitionController';
 import { TimeLoopSystem } from './systems/TimeLoopSystem';
 import type {
+  ActiveObserverFlash,
   AntigravityBubble,
   BroglieCrystal,
   BubbleHarvestHit,
@@ -50,7 +52,9 @@ import type {
   MovingPlatform,
   PhasePlatformEntry,
   PinnablePlatformEntry,
-  PressurePlateEntry
+  PressurePlateEntry,
+  SuperposedPlatformEntry,
+  SuperposedSpikeEntry
 } from './systems/types';
 
 export type { Gate, PressurePlate } from './systems/types';
@@ -138,7 +142,15 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public loopButtonBg: Phaser.GameObjects.Rectangle | null = null;
   public loopButtonLabel: Phaser.GameObjects.Text | null = null;
   public loopButtonZone: Phaser.GameObjects.Zone | null = null;
+  public observeButtonBg: Phaser.GameObjects.Rectangle | null = null;
+  public observeButtonLabel: Phaser.GameObjects.Text | null = null;
+  public observeButtonZone: Phaser.GameObjects.Zone | null = null;
   public timeLoopIndicatorText: Phaser.GameObjects.Text | null = null;
+  public superposedPlatforms: SuperposedPlatformEntry[] = [];
+  public superposedSpikes: SuperposedSpikeEntry[] = [];
+  public wavefunctionGraphics: Phaser.GameObjects.Graphics | null = null;
+  public observerBeamGraphics: Phaser.GameObjects.Graphics | null = null;
+  public activeObserverFlash: ActiveObserverFlash | null = null;
   public betaPipCamera: Phaser.Cameras.Scene2D.Camera | null = null;
   public betaPipFrame: Phaser.GameObjects.Rectangle | null = null;
   public betaPipLabel: Phaser.GameObjects.Text | null = null;
@@ -269,6 +281,13 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
           store.setSharedLevel(entry.levelData);
         }
       }
+      const schrodingerMatch = /\/game\/schrodinger\/([^/?#]+)/i.exec(window.location.pathname);
+      if (schrodingerMatch) {
+        const entry = getSchrodingerLevelById(schrodingerMatch[1]);
+        if (entry) {
+          store.setSharedLevel(entry.levelData);
+        }
+      }
       const molMatch = /\/game\/molecule\/([^/?#]+)/i.exec(window.location.pathname);
       if (molMatch) {
         const recipe = getMoleculeById(molMatch[1]);
@@ -333,9 +352,26 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       this.input.keyboard
         .addKey(Phaser.Input.Keyboard.KeyCodes.X)
         .on('down', () => this.tryInFlightFission());
-      this.input.keyboard
-        .addKey(Phaser.Input.Keyboard.KeyCodes.E)
-        .on('down', () => this.cycleFocusNext());
+      this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E).on('down', () => {
+        if (
+          !this.isLevelCompleted &&
+          !this.isTransitioningLevel &&
+          this.quantumSystems.hasWavefunctionMechanics()
+        ) {
+          this.triggerActiveObservation();
+        } else {
+          this.cycleFocusNext();
+        }
+      });
+      this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT).on('down', () => {
+        if (
+          !this.isLevelCompleted &&
+          !this.isTransitioningLevel &&
+          this.quantumSystems.hasWavefunctionMechanics()
+        ) {
+          this.triggerActiveObservation();
+        }
+      });
       this.input.keyboard
         .addKey(Phaser.Input.Keyboard.KeyCodes.ONE)
         .on('down', () => this.switchFocusByIndex(0));
@@ -437,6 +473,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       if (pointer.y <= 54) return;
 
       const worldPt = this.getPointerWorldCoords(pointer);
+      if (this.quantumSystems.hasSuperposedObjectAtPoint(worldPt.x, worldPt.y)) {
+        this.triggerActiveObservation(worldPt);
+      }
       const touchedPinnable = Boolean(
         findPinnablePlatformAtPoint(worldPt.x, worldPt.y, this.pinnablePlatforms)
       );
@@ -678,6 +717,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   }
   public triggerTimeLoopRewind(): void {
     this.timeLoopSystem.triggerLoopRewind(true);
+  }
+  public triggerActiveObservation(targetWorldPoint?: { x: number; y: number }): number {
+    return this.quantumSystems.triggerActiveObservation(targetWorldPoint);
   }
 
   public tryCrystallizeBroglieTrail(): boolean {

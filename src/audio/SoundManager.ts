@@ -269,6 +269,9 @@ export class SoundManager {
       }),
       gameEvents.on('timeloop:rewind', () => {
         this.playTimeLoopRewind();
+      }),
+      gameEvents.on('wavefunction:collapse', () => {
+        this.playCollapseSnap();
       })
     );
 
@@ -2008,6 +2011,63 @@ export class SoundManager {
       chimeGain.connect(this.sfxGain);
       chime.start(now + 0.09);
       chime.stop(now + 0.27);
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Wavefunction Collapse Snap (Spec-02 Observer)
+   * Crisp high-Q resonant snap + rapid crystalline eigenstate lock-in ping
+   */
+  public playCollapseSnap(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+
+      // 1. Sharp crystalline collapse snap (rapid downward pitch lock)
+      const snapOsc = ctx.createOscillator();
+      const snapGain = ctx.createGain();
+      const bandpass = ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.Q.setValueAtTime(6.0, now);
+      bandpass.frequency.setValueAtTime(2400, now);
+      bandpass.frequency.exponentialRampToValueAtTime(780, now + 0.085);
+
+      snapOsc.type = 'triangle';
+      snapOsc.frequency.setValueAtTime(1680, now);
+      snapOsc.frequency.exponentialRampToValueAtTime(520, now + 0.085);
+
+      snapGain.gain.setValueAtTime(0.001, now);
+      snapGain.gain.linearRampToValueAtTime(0.24, now + 0.004);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+      snapOsc.connect(bandpass);
+      bandpass.connect(snapGain);
+      snapGain.connect(this.sfxGain);
+      snapOsc.start(now);
+      snapOsc.stop(now + 0.095);
+
+      // 2. Eigenstate harmonic lock ping
+      const lockOsc = ctx.createOscillator();
+      const lockGain = ctx.createGain();
+      lockOsc.type = 'sine';
+      lockOsc.frequency.setValueAtTime(1046.5, now + 0.025);
+      lockOsc.frequency.exponentialRampToValueAtTime(1318.5, now + 0.14);
+
+      lockGain.gain.setValueAtTime(0.001, now + 0.025);
+      lockGain.gain.linearRampToValueAtTime(0.12, now + 0.035);
+      lockGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+      lockOsc.connect(lockGain);
+      lockGain.connect(this.sfxGain);
+      lockOsc.start(now + 0.025);
+      lockOsc.stop(now + 0.17);
     } catch {
       // safe fallback
     }

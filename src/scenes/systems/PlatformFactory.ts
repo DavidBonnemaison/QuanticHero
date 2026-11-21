@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { DecayPlatformState } from '../../mechanics/quantumMechanics';
+import { createSuperpositionState } from '../../mechanics/wavefunctionCollapse';
 import { PHYSICS } from '../../physics/constants';
 import { getScreenWrapAxes, shouldBreakCrackedPlatform } from '../../physics/entanglementTether';
 import {
@@ -247,6 +248,27 @@ export function buildPlatforms(ctx: GameSceneContext): void {
           gasBody.checkCollision.none = true;
         }
       }
+      if (p.superposition) {
+        const superId = `super_plat_${platIdx}`;
+        rect.setData('superpositionId', superId);
+        rect.setVisible(false);
+        const superBody = rect.body as Phaser.Physics.Arcade.StaticBody | null;
+        if (superBody) {
+          superBody.checkCollision.none = true;
+          superBody.enable = false;
+        }
+        if (!ctx.superposedPlatforms) {
+          ctx.superposedPlatforms = [];
+        }
+        ctx.superposedPlatforms.push({
+          id: superId,
+          rect,
+          base: { x: p.x, y: p.y, width, height },
+          config: p.superposition,
+          runtime: createSuperpositionState(p.superposition.lockDurationMs),
+          phaseOffsetMs: 0
+        });
+      }
       ctx.platforms.add(rect);
     }
   }
@@ -262,7 +284,8 @@ export function buildSpikesAndCollapse(ctx: GameSceneContext): void {
   spikeGfx.setDepth(12);
   ctx.spikeGfx = spikeGfx;
 
-  for (const s of ctx.levelData.spikes) {
+  for (let spikeIdx = 0; spikeIdx < ctx.levelData.spikes.length; spikeIdx++) {
+    const s = ctx.levelData.spikes[spikeIdx];
     const width = s.width ?? 200;
     const height = s.height ?? 20;
     const spikeRect = ctx.add.rectangle(
@@ -274,6 +297,31 @@ export function buildSpikesAndCollapse(ctx: GameSceneContext): void {
       0.15
     );
     ctx.physics.add.existing(spikeRect, true);
+
+    if (s.superposition) {
+      const superId = `super_spike_${spikeIdx}`;
+      spikeRect.setData('superpositionId', superId);
+      spikeRect.setVisible(false);
+      const spikeBody = spikeRect.body as Phaser.Physics.Arcade.StaticBody | null;
+      if (spikeBody) {
+        spikeBody.checkCollision.none = true;
+        spikeBody.enable = false;
+      }
+      if (!ctx.superposedSpikes) {
+        ctx.superposedSpikes = [];
+      }
+      ctx.superposedSpikes.push({
+        id: superId,
+        rect: spikeRect,
+        base: { x: s.x, y: s.y, width, height },
+        config: s.superposition,
+        runtime: createSuperpositionState(s.superposition.lockDurationMs),
+        phaseOffsetMs: 0
+      });
+      ctx.spikes.add(spikeRect);
+      continue;
+    }
+
     ctx.spikes.add(spikeRect);
 
     const toothWidth = width <= 40 ? Math.max(10, Math.round(width / 2)) : 16;
@@ -530,6 +578,13 @@ export function setupLevelCollisions(ctx: GameSceneContext): void {
       const plat = platObj as Phaser.GameObjects.Rectangle;
       const matterState = plat.getData('matterState') as MatterState | undefined;
 
+      if (plat.getData('superpositionId')) {
+        const superBody = plat.body as Phaser.Physics.Arcade.StaticBody | null;
+        if (superBody && (!superBody.enable || superBody.checkCollision?.none)) {
+          return false;
+        }
+      }
+
       if (matterState === 'gas') {
         return false;
       }
@@ -604,8 +659,11 @@ export function setupLevelCollisions(ctx: GameSceneContext): void {
     }
   });
 
-  ctx.physics.add.overlap(ctx.heroGroup, ctx.spikes, (_heroObj) => {
+  ctx.physics.add.overlap(ctx.heroGroup, ctx.spikes, (_heroObj, spikeObj) => {
     if (isGodMode()) return;
+    const spikeRect = spikeObj as Phaser.GameObjects.Rectangle | undefined;
+    const spikeBody = spikeRect?.body as Phaser.Physics.Arcade.StaticBody | null | undefined;
+    if (spikeBody && (!spikeBody.enable || spikeBody.checkCollision?.none)) return;
     ctx.killHero(_heroObj as Hero);
   });
 

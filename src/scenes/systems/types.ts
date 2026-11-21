@@ -4,6 +4,7 @@ import type { QuantumEffectsManager } from '../../effects/QuantumEffectsManager'
 import type { MobileTouchController } from '../../input/MobileTouchController';
 import type { CoherenceSystem } from '../../mechanics/coherenceSystem';
 import type { DecayPlatformState } from '../../mechanics/quantumMechanics';
+import type { SuperpositionRuntimeState } from '../../mechanics/wavefunctionCollapse';
 import type { PinnablePlatformRef, QuantumPinningState } from '../../physics/matterStates';
 import type { SessionSwarmBuffer } from '../../services/GhostManager';
 import type { GhostFrame, GhostRecorder } from '../../tools/GhostRecorder';
@@ -13,6 +14,7 @@ import type {
   IsotopeMedal,
   LevelData,
   PlatformPhase,
+  SuperpositionConfig,
   TetherPylon
 } from '../../types';
 import type { GhostHero } from '../GhostHero';
@@ -118,6 +120,34 @@ export interface AntigravityBubble {
   graphic: Phaser.GameObjects.Arc;
 }
 
+export interface SuperposedPlatformEntry {
+  id: string;
+  rect: Phaser.GameObjects.Rectangle;
+  base: { x: number; y: number; width: number; height: number };
+  config: SuperpositionConfig;
+  runtime: SuperpositionRuntimeState;
+  phaseOffsetMs: number;
+}
+
+export interface SuperposedSpikeEntry {
+  id: string;
+  rect: Phaser.GameObjects.Rectangle;
+  base: { x: number; y: number; width: number; height: number };
+  config: SuperpositionConfig;
+  runtime: SuperpositionRuntimeState;
+  phaseOffsetMs: number;
+}
+
+export interface ActiveObserverFlash {
+  originX: number;
+  originY: number;
+  angleDeg: number;
+  halfAngleDeg: number;
+  range: number;
+  expiresAtMs: number;
+  durationMs: number;
+}
+
 /**
  * Shared typed contract between GameScene and its extracted systems.
  * Keeps all systems decoupled from GameScene.ts (zero circular imports).
@@ -220,8 +250,16 @@ export interface GameSceneContext {
   loopButtonBg?: Phaser.GameObjects.Rectangle | null;
   loopButtonLabel?: Phaser.GameObjects.Text | null;
   loopButtonZone?: Phaser.GameObjects.Zone | null;
+  observeButtonBg?: Phaser.GameObjects.Rectangle | null;
+  observeButtonLabel?: Phaser.GameObjects.Text | null;
+  observeButtonZone?: Phaser.GameObjects.Zone | null;
   timeLoopIndicatorText?: Phaser.GameObjects.Text | null;
   timeLoopSystem?: TimeLoopSystem;
+  superposedPlatforms?: SuperposedPlatformEntry[];
+  superposedSpikes?: SuperposedSpikeEntry[];
+  wavefunctionGraphics?: Phaser.GameObjects.Graphics | null;
+  observerBeamGraphics?: Phaser.GameObjects.Graphics | null;
+  activeObserverFlash?: ActiveObserverFlash | null;
   betaPipCamera: Phaser.Cameras.Scene2D.Camera | null;
   betaPipFrame: Phaser.GameObjects.Rectangle | null;
   betaPipLabel: Phaser.GameObjects.Text | null;
@@ -308,6 +346,7 @@ export interface GameSceneContext {
   destroyBetaPipCamera(): void;
   tryCrystallizeBroglieTrail(): boolean;
   triggerTimeLoopRewind?(): void;
+  triggerActiveObservation?(targetWorldPoint?: { x: number; y: number }): number;
   quickRespawn(deathPosition?: { x: number; y: number }): void;
   killHero(hero: Hero): void;
   completeLevel(): void;

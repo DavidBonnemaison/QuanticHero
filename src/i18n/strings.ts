@@ -152,6 +152,7 @@ export interface Strings {
     timeDilation: string;
     condenseButton: string;
     loopButton: string;
+    observeButton: string;
     timeLoopStatus: (echoes: number, maxEchoes: number, remainingSec: string) => string;
     elementSynthesized: (symbol: string, atomUpper: string) => string;
     newRecord: string;
@@ -199,6 +200,8 @@ export interface Strings {
     schrodingerTag: string;
     schrodingerDesc: string;
     schrodingerStatus: string;
+    schrodingerCompletedCount: (done: number, total: number) => string;
+    observerSpecLabel: (superposedCount: number, beamCount: number) => string;
     acceleratorTitle: string;
     acceleratorTag: string;
     acceleratorDesc: string;
@@ -388,6 +391,7 @@ export const STRINGS: Record<Locale, Strings> = {
       timeDilation: '[TIME: 0.25x]',
       condenseButton: '[CONDENSE]',
       loopButton: '[LOOP]',
+      observeButton: '[OBSERVE]',
       timeLoopStatus: (echoes, maxEchoes, remainingSec) =>
         `[LOOP ${echoes}/${maxEchoes} • ${remainingSec}s]`,
       elementSynthesized: (symbol, atomUpper) => `ELEMENT SYNTHESIZED — ${symbol} ${atomUpper}`,
@@ -437,8 +441,13 @@ export const STRINGS: Record<Locale, Strings> = {
       schrodingerTitle: 'SCHRODINGER LABS',
       schrodingerTag: 'WAVEFUNCTION OBSERVER',
       schrodingerDesc:
-        'Superposed platforms and hazards collapse under direct observation or sweeping observer beams.',
-      schrodingerStatus: 'CALIBRATING CHAMBER — COMING IN SECTOR 02',
+        'Superposed platforms and hazards collapse under direct observation ([E] / [SHIFT] / TAP) or sweeping observer beams.',
+      schrodingerStatus: 'SECTOR 02 ONLINE — 6 EIGENSTATE CHAMBERS',
+      schrodingerCompletedCount: (done, total) => `${done} / ${total} CLEARED`,
+      observerSpecLabel: (superposedCount, beamCount) =>
+        beamCount > 0
+          ? `${superposedCount} Ψ • ${beamCount} ${beamCount === 1 ? 'BEAM' : 'BEAMS'}`
+          : `${superposedCount} Ψ ACTIVE`,
       acceleratorTitle: 'PARTICLE ACCELERATOR',
       acceleratorTag: 'ENDLESS FUSION ROGUELITE',
       acceleratorDesc:
@@ -633,6 +642,7 @@ export const STRINGS: Record<Locale, Strings> = {
       timeDilation: '[TEMPS : 0.25x]',
       condenseButton: '[CONDENSE]',
       loopButton: '[BOUCLE]',
+      observeButton: '[OBSERVER]',
       timeLoopStatus: (echoes, maxEchoes, remainingSec) =>
         `[BOUCLE ${echoes}/${maxEchoes} • ${remainingSec}s]`,
       elementSynthesized: (symbol, atomUpper) => `ÉLÉMENT SYNTHÉTISÉ — ${symbol} ${atomUpper}`,
@@ -682,8 +692,13 @@ export const STRINGS: Record<Locale, Strings> = {
       schrodingerTitle: 'LABOS SCHRODINGER',
       schrodingerTag: 'OBSERVATEUR QUANTIQUE',
       schrodingerDesc:
-        'Plateformes et piques en superposition : observer effondre la fonction d’onde dans l’état choisi.',
-      schrodingerStatus: 'CALIBRATION EN COURS — SECTEUR 02',
+        'Plateformes et piques en superposition : observer ([E] / [SHIFT] / TAP) ou un faisceau effondre la fonction d’onde dans l’état dominant.',
+      schrodingerStatus: 'SECTEUR 02 ACTIF — 6 CHAMBRES D’ÉTATS PROPRES',
+      schrodingerCompletedCount: (done, total) => `${done} / ${total} RÉSOLUS`,
+      observerSpecLabel: (superposedCount, beamCount) =>
+        beamCount > 0
+          ? `${superposedCount} Ψ • ${beamCount} ${beamCount === 1 ? 'FAISCEAU' : 'FAISCEAUX'}`
+          : `${superposedCount} Ψ ACTIF`,
       acceleratorTitle: 'ACCÉLÉRATEUR DE PARTICULES',
       acceleratorTag: 'ROGUELITE FUSION INFINI',
       acceleratorDesc:

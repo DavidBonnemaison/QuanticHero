@@ -7,6 +7,22 @@ import {
   togglePhase,
   updateDecayPlatform
 } from '../../mechanics/quantumMechanics';
+import {
+  DEFAULT_OBSERVER_CONE_HALF_ANGLE_DEG,
+  DEFAULT_OBSERVER_CONE_RANGE,
+  OBSERVER_BEAM_HALF_ANGLE_DEG,
+  OBSERVER_CONE_FLASH_MS,
+  type ObserverCone,
+  collapseSuperposition,
+  computeObserverBeamAngleDeg,
+  computeQuantumNoiseOffset,
+  computeSuperpositionProbability,
+  createSuperpositionState,
+  getSuperposedRectForState,
+  isSuperposedObjectAtPoint,
+  isSuperposedObjectInCone,
+  tickSuperpositionLock
+} from '../../mechanics/wavefunctionCollapse';
 import { PHYSICS } from '../../physics/constants';
 import {
   applyToroidalScreenWrap,
@@ -23,7 +39,7 @@ import Hero from '../Hero';
 import { EntanglementSystem } from './EntanglementSystem';
 import { MatterAndFieldController } from './MatterAndFieldController';
 import { SetPieceController } from './SetPieceController';
-import type { GameSceneContext } from './types';
+import type { GameSceneContext, SuperposedPlatformEntry, SuperposedSpikeEntry } from './types';
 
 /**
  * Main gameplay mechanics facade: particle power-ups, entanglement & tether,
@@ -34,6 +50,7 @@ export class QuantumSystems {
   public readonly entanglement: EntanglementSystem;
   public readonly setPieces: SetPieceController;
   public readonly matterAndFields: MatterAndFieldController;
+  private lastWavefunctionElapsedMs = 0;
 
   constructor(private readonly ctx: GameSceneContext) {
     this.entanglement = new EntanglementSystem(ctx);
@@ -407,6 +424,7 @@ export class QuantumSystems {
     this.updateTunneling();
     this.updatePauliRepulsion(time);
     this.updateDecayAndCollapse(delta, elapsedMs, timeDilationFactor);
+    this.updateWavefunctionCollapse(time, delta, elapsedMs);
     this.updateMovingPlatforms(timeDilationFactor);
 
     ctx.bohrBackground?.update(time, delta);
@@ -698,6 +716,476 @@ export class QuantumSystems {
       } else if (mp.direction.y === 'top') {
         body.setVelocityY(-PHYSICS.MOVING_PLATFORM_SPEED_Y * timeDilationFactor);
         if (mp.rect.y <= minY) mp.direction.y = 'bottom';
+      }
+    }
+  }
+
+  public hasWavefunctionMechanics(): boolean {
+    const ctx = this.ctx;
+    return Boolean(
+      (ctx.superposedPlatforms && ctx.superposedPlatforms.length > 0) ||
+        (ctx.superposedSpikes && ctx.superposedSpikes.length > 0) ||
+        (ctx.levelData?.observerBeams && ctx.levelData.observerBeams.length > 0)
+    );
+  }
+
+  public hasSuperposedObjectAtPoint(worldX: number, worldY: number): boolean {
+    const ctx = this.ctx;
+    for (const entry of ctx.superposedPlatforms ?? []) {
+      if (isSuperposedObjectAtPoint(entry.base, entry.config, worldX, worldY, 18)) {
+        return true;
+      }
+    }
+    for (const entry of ctx.superposedSpikes ?? []) {
+      if (isSuperposedObjectAtPoint(entry.base, entry.config, worldX, worldY, 18)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public resetSuperpositions(): void {
+    const ctx = this.ctx;
+    this.lastWavefunctionElapsedMs = 0;
+    ctx.activeObserverFlash = null;
+    for (const entry of ctx.superposedPlatforms ?? []) {
+      entry.runtime = createSuperpositionState(entry.config.lockDurationMs);
+      this.syncSuperposedBody(entry, false);
+    }
+    for (const entry of ctx.superposedSpikes ?? []) {
+      entry.runtime = createSuperpositionState(entry.config.lockDurationMs);
+      this.syncSuperposedBody(entry, false);
+    }
+    ctx.wavefunctionGraphics?.clear();
+    ctx.observerBeamGraphics?.clear();
+  }
+
+  public triggerActiveObservation(
+    targetWorldPoint?: { x: number; y: number },
+    elapsedMsOverride?: number
+  ): number {
+    const ctx = this.ctx;
+    if (!this.hasWavefunctionMechanics()) return 0;
+
+    const focusedHero = ctx.heroes.find((h) => h.isFocused && h.active) || ctx.heroes[0];
+    if (!focusedHero) return 0;
+
+    const elapsedMs =
+      elapsedMsOverride !== undefined ? elapsedMsOverride : this.lastWavefunctionElapsedMs;
+    const nowMs = ctx.time?.now ?? elapsedMs;
+
+    let angleDeg = focusedHero.flipX ? 180 : 0;
+    let range = DEFAULT_OBSERVER_CONE_RANGE;
+    let collapsedCount = 0;
+
+    if (targetWorldPoint) {
+      angleDeg =
+        (Math.atan2(targetWorldPoint.y - focusedHero.y, targetWorldPoint.x - focusedHero.x) * 180) /
+        Math.PI;
+      const dist = Math.hypot(
+        targetWorldPoint.x - focusedHero.x,
+        targetWorldPoint.y - focusedHero.y
+      );
+      range = Math.max(DEFAULT_OBSERVER_CONE_RANGE, Math.min(640, dist + 60));
+
+      for (const entry of ctx.superposedPlatforms ?? []) {
+        if (
+          isSuperposedObjectAtPoint(
+            entry.base,
+            entry.config,
+            targetWorldPoint.x,
+            targetWorldPoint.y,
+            20
+          )
+        ) {
+          this.applyCollapseToEntry(entry, 'platform', elapsedMs, 'pointer');
+          collapsedCount += 1;
+        }
+      }
+      for (const entry of ctx.superposedSpikes ?? []) {
+        if (
+          isSuperposedObjectAtPoint(
+            entry.base,
+            entry.config,
+            targetWorldPoint.x,
+            targetWorldPoint.y,
+            20
+          )
+        ) {
+          this.applyCollapseToEntry(entry, 'spike', elapsedMs, 'pointer');
+          collapsedCount += 1;
+        }
+      }
+    }
+
+    const cone: ObserverCone = {
+      originX: focusedHero.x,
+      originY: focusedHero.y,
+      angleDeg,
+      halfAngleDeg: DEFAULT_OBSERVER_CONE_HALF_ANGLE_DEG,
+      range
+    };
+
+    ctx.activeObserverFlash = {
+      ...cone,
+      expiresAtMs: nowMs + OBSERVER_CONE_FLASH_MS,
+      durationMs: OBSERVER_CONE_FLASH_MS
+    };
+
+    if (!targetWorldPoint || collapsedCount === 0) {
+      for (const entry of ctx.superposedPlatforms ?? []) {
+        if (isSuperposedObjectInCone(entry.base, entry.config, cone)) {
+          this.applyCollapseToEntry(entry, 'platform', elapsedMs, 'player');
+          collapsedCount += 1;
+        }
+      }
+      for (const entry of ctx.superposedSpikes ?? []) {
+        if (isSuperposedObjectInCone(entry.base, entry.config, cone)) {
+          this.applyCollapseToEntry(entry, 'spike', elapsedMs, 'player');
+          collapsedCount += 1;
+        }
+      }
+    }
+
+    return collapsedCount;
+  }
+
+  public updateWavefunctionCollapse(time: number, delta: number, elapsedMs: number): void {
+    const ctx = this.ctx;
+    this.lastWavefunctionElapsedMs = elapsedMs;
+
+    const superPlats = ctx.superposedPlatforms ?? [];
+    const superSpikes = ctx.superposedSpikes ?? [];
+    const beams = ctx.levelData?.observerBeams ?? [];
+    if (
+      superPlats.length === 0 &&
+      superSpikes.length === 0 &&
+      beams.length === 0 &&
+      !ctx.activeObserverFlash
+    ) {
+      return;
+    }
+
+    // 1. Tick lock countdowns and revert expired objects to intangible superposition
+    for (const entry of superPlats) {
+      const tick = tickSuperpositionLock(entry.runtime, delta);
+      entry.runtime = tick.state;
+      if (tick.released) {
+        this.syncSuperposedBody(entry, false);
+      }
+    }
+    for (const entry of superSpikes) {
+      const tick = tickSuperpositionLock(entry.runtime, delta);
+      entry.runtime = tick.state;
+      if (tick.released) {
+        this.syncSuperposedBody(entry, false);
+      }
+    }
+
+    // 2. Passive sweeping ObserverBeams
+    for (const beam of beams) {
+      const angleDeg = computeObserverBeamAngleDeg(beam, elapsedMs);
+      const beamCone: ObserverCone = {
+        originX: beam.x,
+        originY: beam.y,
+        angleDeg,
+        halfAngleDeg: OBSERVER_BEAM_HALF_ANGLE_DEG,
+        range: beam.range
+      };
+
+      for (const entry of superPlats) {
+        if (isSuperposedObjectInCone(entry.base, entry.config, beamCone)) {
+          this.applyCollapseToEntry(entry, 'platform', elapsedMs, 'beam');
+        }
+      }
+      for (const entry of superSpikes) {
+        if (isSuperposedObjectInCone(entry.base, entry.config, beamCone)) {
+          this.applyCollapseToEntry(entry, 'spike', elapsedMs, 'beam');
+        }
+      }
+    }
+
+    // 3. Render probability clouds, locked eigenstates, and countdown bars
+    this.renderWavefunctionObjects(elapsedMs);
+
+    // 4. Render passive observer beams and active observation cone flash
+    this.renderObserverBeamsAndFlash(time, elapsedMs);
+  }
+
+  private applyCollapseToEntry(
+    entry: SuperposedPlatformEntry | SuperposedSpikeEntry,
+    kind: 'platform' | 'spike',
+    elapsedMs: number,
+    source: 'player' | 'beam' | 'pointer'
+  ): void {
+    const result = collapseSuperposition(
+      entry.runtime,
+      elapsedMs,
+      entry.config,
+      source,
+      entry.phaseOffsetMs
+    );
+    entry.runtime = result.state;
+    const rectBounds = getSuperposedRectForState(entry.base, entry.config, result.collapsedTo);
+    entry.rect.setPosition(
+      rectBounds.x + rectBounds.width / 2,
+      rectBounds.y + rectBounds.height / 2
+    );
+    this.syncSuperposedBody(entry, true);
+
+    if (result.changed) {
+      gameEvents.emit('wavefunction:collapse', {
+        id: entry.id,
+        kind,
+        collapsedTo: result.collapsedTo,
+        source,
+        x: rectBounds.x + rectBounds.width / 2,
+        y: rectBounds.y + rectBounds.height / 2
+      });
+    }
+  }
+
+  private syncSuperposedBody(
+    entry: SuperposedPlatformEntry | SuperposedSpikeEntry,
+    solid: boolean
+  ): void {
+    const body = entry.rect.body as Phaser.Physics.Arcade.StaticBody | null;
+    if (!body) return;
+    body.enable = solid;
+    if (body.checkCollision) {
+      body.checkCollision.none = !solid;
+    }
+    if (solid) {
+      body.updateFromGameObject?.();
+    }
+  }
+
+  private renderWavefunctionObjects(elapsedMs: number): void {
+    const ctx = this.ctx;
+    const g = ctx.wavefunctionGraphics;
+    if (!g) return;
+    g.clear();
+
+    const isReduced = useGameStore.getState().reducedEffects;
+
+    for (const entry of ctx.superposedPlatforms ?? []) {
+      const rectA = getSuperposedRectForState(entry.base, entry.config, 'A');
+      const rectB = getSuperposedRectForState(entry.base, entry.config, 'B');
+      const locked = entry.runtime.collapsedState;
+
+      if (locked === null) {
+        const p = computeSuperpositionProbability(
+          elapsedMs,
+          entry.config.periodMs,
+          entry.phaseOffsetMs
+        );
+        const dominantA = p >= 0.5;
+        const alphaA = 0.14 + 0.64 * p;
+        const alphaB = 0.14 + 0.64 * (1 - p);
+
+        // Entanglement link between state A and state B centers
+        g.lineStyle(1, 0xa855f7, 0.28);
+        g.lineBetween(
+          rectA.x + rectA.width / 2,
+          rectA.y + rectA.height / 2,
+          rectB.x + rectB.width / 2,
+          rectB.y + rectB.height / 2
+        );
+
+        // Ghost State A
+        g.fillStyle(dominantA ? 0x00e5ff : 0xa855f7, alphaA);
+        g.fillRect(rectA.x, rectA.y, rectA.width, rectA.height);
+        g.lineStyle(dominantA ? 2.5 : 1, dominantA ? 0xfbbf24 : 0xc084fc, dominantA ? 0.95 : 0.45);
+        g.strokeRect(rectA.x, rectA.y, rectA.width, rectA.height);
+
+        // Ghost State B
+        g.fillStyle(!dominantA ? 0x00e5ff : 0xa855f7, alphaB);
+        g.fillRect(rectB.x, rectB.y, rectB.width, rectB.height);
+        g.lineStyle(
+          !dominantA ? 2.5 : 1,
+          !dominantA ? 0xfbbf24 : 0xc084fc,
+          !dominantA ? 0.95 : 0.45
+        );
+        g.strokeRect(rectB.x, rectB.y, rectB.width, rectB.height);
+
+        // Deterministic quantum noise particles around the dominant silhouette
+        if (!isReduced) {
+          const domRect = dominantA ? rectA : rectB;
+          const particleCount = Math.max(4, Math.min(10, Math.floor(domRect.width / 28)));
+          g.fillStyle(0xe0f2fe, 0.72);
+          for (let i = 0; i < particleCount; i++) {
+            const frac = (i + 0.5) / particleCount;
+            const noise = computeQuantumNoiseOffset(i, elapsedMs, 6);
+            const px = domRect.x + domRect.width * frac + noise.dx;
+            const py = domRect.y + domRect.height / 2 + noise.dy;
+            g.fillCircle(px, py, 2);
+          }
+        }
+      } else {
+        const activeRect = locked === 'A' ? rectA : rectB;
+        const ghostRect = locked === 'A' ? rectB : rectA;
+        const lockRatio = Math.max(
+          0,
+          Math.min(1, entry.runtime.lockRemainingMs / entry.runtime.lockDurationMs)
+        );
+
+        // Faint unchosen ghost
+        g.lineStyle(1, 0x64748b, 0.25);
+        g.strokeRect(ghostRect.x, ghostRect.y, ghostRect.width, ghostRect.height);
+
+        // Solid collapsed platform
+        g.fillStyle(0x00e5ff, 0.92);
+        g.fillRect(activeRect.x, activeRect.y, activeRect.width, activeRect.height);
+        g.lineStyle(2.5, 0xfbbf24, 0.98);
+        g.strokeRect(activeRect.x, activeRect.y, activeRect.width, activeRect.height);
+
+        // Lock countdown bar
+        const barH = 4;
+        g.fillStyle(0x0f172a, 0.8);
+        g.fillRect(activeRect.x, activeRect.y - barH - 2, activeRect.width, barH);
+        g.fillStyle(lockRatio <= 0.25 ? 0xf43f5e : 0xfbbf24, 0.95);
+        g.fillRect(activeRect.x, activeRect.y - barH - 2, activeRect.width * lockRatio, barH);
+      }
+    }
+
+    for (const entry of ctx.superposedSpikes ?? []) {
+      const rectA = getSuperposedRectForState(entry.base, entry.config, 'A');
+      const rectB = getSuperposedRectForState(entry.base, entry.config, 'B');
+      const locked = entry.runtime.collapsedState;
+
+      if (locked === null) {
+        const p = computeSuperpositionProbability(
+          elapsedMs,
+          entry.config.periodMs,
+          entry.phaseOffsetMs
+        );
+        const dominantA = p >= 0.5;
+        const alphaA = 0.14 + 0.62 * p;
+        const alphaB = 0.14 + 0.62 * (1 - p);
+
+        g.lineStyle(1, 0xf43f5e, 0.25);
+        g.lineBetween(
+          rectA.x + rectA.width / 2,
+          rectA.y + rectA.height / 2,
+          rectB.x + rectB.width / 2,
+          rectB.y + rectB.height / 2
+        );
+
+        this.drawSpikeTeeth(g, rectA, alphaA, dominantA ? 0xfbbf24 : 0xf43f5e, dominantA ? 2 : 1);
+        this.drawSpikeTeeth(g, rectB, alphaB, !dominantA ? 0xfbbf24 : 0xf43f5e, !dominantA ? 2 : 1);
+      } else {
+        const activeRect = locked === 'A' ? rectA : rectB;
+        const ghostRect = locked === 'A' ? rectB : rectA;
+        const lockRatio = Math.max(
+          0,
+          Math.min(1, entry.runtime.lockRemainingMs / entry.runtime.lockDurationMs)
+        );
+
+        g.lineStyle(1, 0x64748b, 0.22);
+        g.strokeRect(ghostRect.x, ghostRect.y, ghostRect.width, ghostRect.height);
+
+        this.drawSpikeTeeth(g, activeRect, 0.96, 0xfbbf24, 2);
+
+        const barH = 4;
+        g.fillStyle(0x0f172a, 0.8);
+        g.fillRect(activeRect.x, activeRect.y - barH - 2, activeRect.width, barH);
+        g.fillStyle(lockRatio <= 0.25 ? 0x38bdf8 : 0xfbbf24, 0.95);
+        g.fillRect(activeRect.x, activeRect.y - barH - 2, activeRect.width * lockRatio, barH);
+      }
+    }
+  }
+
+  private drawSpikeTeeth(
+    g: Phaser.GameObjects.Graphics,
+    rect: { x: number; y: number; width: number; height: number },
+    alpha: number,
+    strokeColor: number,
+    strokeWidth: number
+  ): void {
+    const toothWidth = rect.width <= 40 ? Math.max(10, Math.round(rect.width / 2)) : 16;
+    const count = Math.max(1, Math.floor(rect.width / toothWidth));
+    const actualToothW = rect.width / count;
+
+    g.fillStyle(0xff2a55, alpha);
+    g.lineStyle(strokeWidth, strokeColor, Math.min(1, alpha + 0.15));
+    for (let i = 0; i < count; i++) {
+      const x0 = rect.x + i * actualToothW;
+      const xMid = x0 + actualToothW / 2;
+      const x1 = x0 + actualToothW;
+      const yBase = rect.y + rect.height;
+      const yTip = rect.y;
+      g.fillTriangle?.(x0, yBase, xMid, yTip, x1, yBase);
+      g.strokeTriangle?.(x0, yBase, xMid, yTip, x1, yBase);
+    }
+  }
+
+  private renderObserverBeamsAndFlash(time: number, elapsedMs: number): void {
+    const ctx = this.ctx;
+    const g = ctx.observerBeamGraphics;
+    if (!g) return;
+    g.clear();
+
+    // Passive sweeping ObserverBeams
+    for (const beam of ctx.levelData?.observerBeams ?? []) {
+      const angleDeg = computeObserverBeamAngleDeg(beam, elapsedMs);
+      const radCenter = (angleDeg * Math.PI) / 180;
+      const radLeft = ((angleDeg - OBSERVER_BEAM_HALF_ANGLE_DEG) * Math.PI) / 180;
+      const radRight = ((angleDeg + OBSERVER_BEAM_HALF_ANGLE_DEG) * Math.PI) / 180;
+
+      const xL = beam.x + Math.cos(radLeft) * beam.range;
+      const yL = beam.y + Math.sin(radLeft) * beam.range;
+      const xR = beam.x + Math.cos(radRight) * beam.range;
+      const yR = beam.y + Math.sin(radRight) * beam.range;
+      const xC = beam.x + Math.cos(radCenter) * beam.range;
+      const yC = beam.y + Math.sin(radCenter) * beam.range;
+
+      // Sweeping light cone
+      g.fillStyle(0xfbbf24, 0.14);
+      g.fillTriangle?.(beam.x, beam.y, xL, yL, xR, yR);
+      g.lineStyle(1.5, 0xfbbf24, 0.55);
+      g.lineBetween(beam.x, beam.y, xL, yL);
+      g.lineBetween(beam.x, beam.y, xR, yR);
+
+      // Core observation laser
+      g.lineStyle(2, 0x00e5ff, 0.85);
+      g.lineBetween(beam.x, beam.y, xC, yC);
+
+      // Emitter eye housing
+      g.fillStyle(0x0b0f19, 0.95);
+      g.fillCircle(beam.x, beam.y, 14);
+      g.lineStyle(2, 0xfbbf24, 0.95);
+      g.strokeCircle(beam.x, beam.y, 14);
+      // Pupil tracking sweep direction
+      g.fillStyle(0x00e5ff, 1);
+      g.fillCircle(beam.x + Math.cos(radCenter) * 5, beam.y + Math.sin(radCenter) * 5, 4);
+    }
+
+    // Active player observation cone flash (220 ms)
+    const flash = ctx.activeObserverFlash;
+    if (flash) {
+      const remaining = flash.expiresAtMs - time;
+      if (remaining <= 0) {
+        ctx.activeObserverFlash = null;
+      } else {
+        const ratio = Math.max(0, Math.min(1, remaining / flash.durationMs));
+        const radLeft = ((flash.angleDeg - flash.halfAngleDeg) * Math.PI) / 180;
+        const radRight = ((flash.angleDeg + flash.halfAngleDeg) * Math.PI) / 180;
+        const radMid = (flash.angleDeg * Math.PI) / 180;
+
+        const xL = flash.originX + Math.cos(radLeft) * flash.range;
+        const yL = flash.originY + Math.sin(radLeft) * flash.range;
+        const xR = flash.originX + Math.cos(radRight) * flash.range;
+        const yR = flash.originY + Math.sin(radRight) * flash.range;
+        const xM = flash.originX + Math.cos(radMid) * flash.range;
+        const yM = flash.originY + Math.sin(radMid) * flash.range;
+
+        g.fillStyle(0x00e5ff, 0.24 * ratio);
+        g.fillTriangle?.(flash.originX, flash.originY, xL, yL, xR, yR);
+        g.lineStyle(2.5, 0xfbbf24, 0.9 * ratio);
+        g.lineBetween(flash.originX, flash.originY, xL, yL);
+        g.lineBetween(flash.originX, flash.originY, xR, yR);
+        g.lineStyle(1.5, 0x00e5ff, 0.75 * ratio);
+        g.lineBetween(flash.originX, flash.originY, xM, yM);
       }
     }
   }
