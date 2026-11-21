@@ -444,11 +444,15 @@ export class QuantumSystems {
   private updateCoherenceParticleMagnetism(delta: number): void {
     const ctx = this.ctx;
     const tier = ctx.coherenceSystem?.getTier?.() ?? 'x1';
-    if (tier !== 'x3' && tier !== 'HYPER') return;
+    const coherenceRadius = tier === 'HYPER' ? 110 : tier === 'x3' ? 75 : 0;
+    const acceleratorRadius = ctx.acceleratorModifiers?.particleMagnetRadiusPx ?? 0;
+    const magnetRadius = Math.max(coherenceRadius, acceleratorRadius);
+    if (magnetRadius <= 0) return;
     if (!ctx.particles || typeof ctx.particles.getChildren !== 'function') return;
 
-    const magnetRadius = tier === 'HYPER' ? 110 : 75;
-    const pullSpeed = tier === 'HYPER' ? 420 : 280;
+    const coherenceSpeed = tier === 'HYPER' ? 420 : tier === 'x3' ? 280 : 0;
+    const acceleratorSpeed = acceleratorRadius > 0 ? 260 : 0;
+    const pullSpeed = Math.max(coherenceSpeed, acceleratorSpeed);
     const dt = Math.max(0, delta) / 1000;
     if (dt <= 0) return;
 
@@ -457,7 +461,7 @@ export class QuantumSystems {
 
     const children = ctx.particles.getChildren() as Phaser.Physics.Arcade.Sprite[];
     for (const part of children) {
-      if (!part?.active) continue;
+      if (!part?.active || part.visible === false) continue;
 
       let closestHero: Hero | null = null;
       let closestDist = magnetRadius;
@@ -534,38 +538,6 @@ export class QuantumSystems {
         gameEvents.emit('accelerator:reflex_dilation', {
           durationMs: mods.reflexDilationDurationMs
         });
-      }
-    }
-
-    // 3. Particle Magnet: attract active power-up particles within 120 px toward nearest hero
-    if (mods.particleMagnetRadiusPx > 0 && ctx.particles?.getChildren) {
-      const pullRadius = mods.particleMagnetRadiusPx;
-      const pullSpeed = 260 * (delta / 1000);
-      for (const child of ctx.particles.getChildren()) {
-        const sprite = child as Phaser.Physics.Arcade.Sprite;
-        if (!sprite.active || !sprite.visible) continue;
-        let nearestHero: Hero | null = null;
-        let minDist = pullRadius;
-        for (const hero of activeHeroes) {
-          const dist = Math.hypot(hero.x - sprite.x, hero.y - sprite.y);
-          if (dist < minDist && dist > 1) {
-            minDist = dist;
-            nearestHero = hero;
-          }
-        }
-        if (nearestHero) {
-          ctx.tweens?.killTweensOf?.(sprite);
-          const dx = nearestHero.x - sprite.x;
-          const dy = nearestHero.y - sprite.y;
-          const step = Math.min(minDist, pullSpeed);
-          sprite.x += (dx / minDist) * step;
-          sprite.y += (dy / minDist) * step;
-          const pBody = sprite.body as Phaser.Physics.Arcade.Body | null;
-          if (pBody) {
-            pBody.x = sprite.x - pBody.width / 2;
-            pBody.y = sprite.y - pBody.height / 2;
-          }
-        }
       }
     }
   }

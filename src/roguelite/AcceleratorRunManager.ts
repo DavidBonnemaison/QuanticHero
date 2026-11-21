@@ -1,5 +1,5 @@
 import { getElementSpectroscopy } from '../data/spectroscopy';
-import { simulateLevelData } from '../generator/simulator';
+import { detectTrivialShortcut, simulateLevelData } from '../generator/simulator';
 import { useGameStore } from '../store';
 import type { LevelData, Particle, ParticleType, Platform, Spike } from '../types';
 import {
@@ -273,14 +273,20 @@ function buildCandidateChamber(z: number, seed: number, attempt: number): LevelD
  */
 export function generateChamber(z: number, seed: number): LevelData {
   const maxAttempts = 6;
+  let firstSolvable: LevelData | null = null;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const candidate = buildCandidateChamber(z, seed, attempt);
     const sim = simulateLevelData(candidate);
     if (sim.success) {
-      return candidate;
+      if (!detectTrivialShortcut(candidate).hasShortcut) {
+        return candidate;
+      }
+      if (!firstSolvable) {
+        firstSolvable = candidate;
+      }
     }
   }
-  return buildFallbackChamber(z, seed);
+  return firstSolvable ?? buildFallbackChamber(z, seed);
 }
 
 export type AcceleratorRunListener = (state: AcceleratorRunState) => void;

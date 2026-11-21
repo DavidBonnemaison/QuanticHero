@@ -382,20 +382,27 @@ export class HudController {
       const loopY = camH - 96;
       const loopBg = ctx.add.rectangle(loopX, loopY, 96, 44, 0x1e1035, 0.88);
       loopBg.setStrokeStyle(2, 0xa855f7, 0.95);
+      loopBg.setScrollFactor?.(0);
       const loopLabel = ctx.add.text(loopX, loopY, initialStrings.hud.loopButton, {
         fontFamily: 'VT323',
         fontSize: '20px',
         color: '#00e5ff'
       });
       loopLabel.setOrigin(0.5);
+      loopLabel.setScrollFactor?.(0);
       const loopZone = ctx.add.zone(loopX, loopY, 96, 44);
+      loopZone.setScrollFactor?.(0);
       loopZone.setInteractive({ useHandCursor: true });
-      loopZone.on('pointerdown', () => {
-        ctx.uiPointerConsumed = true;
-        if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
-          ctx.triggerTimeLoopRewind?.();
+      loopZone.on(
+        'pointerdown',
+        (_p: unknown, _lx: unknown, _ly: unknown, ev?: { stopPropagation?: () => void }) => {
+          ctx.uiPointerConsumed = true;
+          ev?.stopPropagation?.();
+          if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
+            ctx.triggerTimeLoopRewind?.();
+          }
         }
-      });
+      );
       ctx.loopButtonBg = loopBg;
       ctx.loopButtonLabel = loopLabel;
       ctx.loopButtonZone = loopZone;
@@ -414,20 +421,27 @@ export class HudController {
       const observeY = ctx.levelData?.timeLoop ? camH - 148 : camH - 96;
       const observeBg = ctx.add.rectangle(observeX, observeY, 108, 44, 0x1e1035, 0.88);
       observeBg.setStrokeStyle(2, 0xfbbf24, 0.95);
+      observeBg.setScrollFactor?.(0);
       const observeLabel = ctx.add.text(observeX, observeY, initialStrings.hud.observeButton, {
         fontFamily: 'VT323',
         fontSize: '20px',
         color: '#fbbf24'
       });
       observeLabel.setOrigin(0.5);
+      observeLabel.setScrollFactor?.(0);
       const observeZone = ctx.add.zone(observeX, observeY, 108, 44);
+      observeZone.setScrollFactor?.(0);
       observeZone.setInteractive({ useHandCursor: true });
-      observeZone.on('pointerdown', () => {
-        ctx.uiPointerConsumed = true;
-        if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
-          ctx.triggerActiveObservation?.();
+      observeZone.on(
+        'pointerdown',
+        (_p: unknown, _lx: unknown, _ly: unknown, ev?: { stopPropagation?: () => void }) => {
+          ctx.uiPointerConsumed = true;
+          ev?.stopPropagation?.();
+          if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
+            ctx.triggerActiveObservation?.();
+          }
         }
-      });
+      );
       ctx.observeButtonBg = observeBg;
       ctx.observeButtonLabel = observeLabel;
       ctx.observeButtonZone = observeZone;
