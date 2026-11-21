@@ -218,5 +218,43 @@ describe('HudController', () => {
     expect(
       createdTexts.some((txt) => typeof txt === 'string' && txt.includes('COHERENT RUN'))
     ).toBe(true);
+    expect(createdTexts.some((txt) => typeof txt === 'string' && txt.includes('SHARE CARD'))).toBe(
+      true
+    );
+  });
+
+  it('triggers shareReplayCard when SHARE CARD button is clicked in the in-canvas overlay', async () => {
+    const ReplayCardGenerator = await import('../../services/ReplayCardGenerator');
+    const shareSpy = vi
+      .spyOn(ReplayCardGenerator, 'shareReplayCard')
+      .mockResolvedValue('downloaded');
+
+    const ctx = makeHudContext();
+    ctx.ghostRecorder = {
+      getSerialized: () => 'v1|0,100,400,0,i;2500,700,400,0,r'
+    } as unknown as GameSceneContext['ghostRecorder'];
+
+    const hud = new HudController(ctx);
+    hud.showLevelCompleteOverlay(2500, 2500, 0, 2, 'gold');
+
+    const textResults = (ctx.add.text as ReturnType<typeof vi.fn>).mock.results
+      .map((r) => r.value)
+      .filter(Boolean);
+    const shareCardObj = textResults.find(
+      (obj: { text?: string }) => typeof obj.text === 'string' && obj.text.includes('SHARE CARD')
+    );
+    expect(shareCardObj).toBeDefined();
+
+    const handlers = shareCardObj.listeners.get('pointerdown') ?? [];
+    expect(handlers.length).toBeGreaterThan(0);
+    handlers[0]();
+
+    expect(shareSpy).toHaveBeenCalledTimes(1);
+    const [cardInput] = shareSpy.mock.calls[0];
+    expect(cardInput.level.id).toBe('1');
+    expect(cardInput.timeMs).toBe(2500);
+    expect(cardInput.medal).toBe('gold');
+    expect(cardInput.ghostTrajectory).toBe('v1|0,100,400,0,i;2500,700,400,0,r');
+    shareSpy.mockRestore();
   });
 });

@@ -130,6 +130,11 @@ export interface Strings {
     levels: string;
     next: string;
     savedToCustomToast: string;
+    shareCard: string;
+    cardSharedToast: string;
+    cardDownloadedToast: string;
+    cardDownloadedWithLinkToast: string;
+    cardErrorToast: string;
   };
   explanation: {
     gotIt: string;
@@ -150,6 +155,7 @@ export interface Strings {
     jumps: (count: number) => string;
     nextLevel: (symbol: string, atom: string) => string;
     levelsButton: string;
+    shareCardButton: string;
     toasts: {
       bellSync: string;
       entanglementRevealed: string;
@@ -332,7 +338,12 @@ export const STRINGS: Record<Locale, Strings> = {
       share: 'Share',
       levels: 'Levels',
       next: 'Next',
-      savedToCustomToast: 'Level saved to your custom levels!'
+      savedToCustomToast: 'Level saved to your custom levels!',
+      shareCard: 'Share Card',
+      cardSharedToast: 'Replay card shared!',
+      cardDownloadedToast: 'Replay card PNG downloaded!',
+      cardDownloadedWithLinkToast: 'Replay card PNG downloaded & link copied!',
+      cardErrorToast: 'Could not generate replay card.'
     },
     explanation: {
       gotIt: 'Got it'
@@ -353,6 +364,7 @@ export const STRINGS: Record<Locale, Strings> = {
       jumps: (count) => `JUMPS: ${count}`,
       nextLevel: (symbol, atom) => `[SPACE / TAP] NEXT: ${symbol} ${atom}`,
       levelsButton: '[LEVELS]',
+      shareCardButton: 'SHARE CARD',
       toasts: {
         bellSync: 'BELL SYNC ! (GOLD ISOTOPE)',
         entanglementRevealed: 'ENTANGLEMENT REVEALED !',
@@ -539,7 +551,12 @@ export const STRINGS: Record<Locale, Strings> = {
       share: 'Partager',
       levels: 'Niveaux',
       next: 'Suivant',
-      savedToCustomToast: 'Niveau sauvegardé dans vos niveaux personnalisés !'
+      savedToCustomToast: 'Niveau sauvegardé dans vos niveaux personnalisés !',
+      shareCard: 'Partager la Carte',
+      cardSharedToast: 'Carte replay partagée !',
+      cardDownloadedToast: 'Carte replay PNG téléchargée !',
+      cardDownloadedWithLinkToast: 'Carte replay PNG téléchargée et lien copié !',
+      cardErrorToast: 'Impossible de générer la carte replay.'
     },
     explanation: {
       gotIt: 'Compris'
@@ -560,6 +577,7 @@ export const STRINGS: Record<Locale, Strings> = {
       jumps: (count) => `SAUTS : ${count}`,
       nextLevel: (symbol, atom) => `[ESPACE / TAP] SUIVANT : ${symbol} ${atom}`,
       levelsButton: '[NIVEAUX]',
+      shareCardButton: 'CARTE PNG',
       toasts: {
         bellSync: "SYNCHRO BELL ! (ISOTOPE D'OR)",
         entanglementRevealed: 'INTRICATION RÉVÉLÉE !',

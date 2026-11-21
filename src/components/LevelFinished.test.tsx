@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as ReplayCardGenerator from '../services/ReplayCardGenerator';
 import { useGameStore } from '../store';
 import { decodeDuelFromUrl, encodeDuelToUrl } from '../tools/levelCodec';
 import type { LevelData } from '../types';
@@ -145,7 +146,8 @@ describe('LevelFinished component', () => {
       expect(screen.getAllByText('00:12:40').length).toBe(2);
       expect(screen.queryByRole('button', { name: /éditer ce niveau/i })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /share/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^share$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /share card/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /levels/i })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
     });
@@ -310,6 +312,109 @@ describe('LevelFinished component', () => {
       const decoded = decodeDuelFromUrl(duelUrlInput.value);
       expect(decoded?.kind).toBe('campaign');
       expect(decoded?.challengerName).toBe('ALPHA');
+    });
+  });
+
+  describe('Spec-03: Share Card (Isotope Record Card)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('renders Share Card button and invokes shareReplayCard with DUEL VICTORY badge and toast feedback', async () => {
+      const shareSpy = vi
+        .spyOn(ReplayCardGenerator, 'shareReplayCard')
+        .mockResolvedValue('downloaded');
+
+      const playerGhost = 'v1|0,80,700,0,i;7420,900,300,0,r';
+      useGameStore.setState({
+        currentLevel: 2,
+        locale: 'en',
+        scores: {
+          1: {
+            last: 7420,
+            best: 7420,
+            medal: 'gold',
+            lastJumps: 6,
+            coherentRun: true,
+            ghostTrajectory: playerGhost
+          }
+        },
+        sharedLevel: null,
+        activeDuel: {
+          kind: 'campaign',
+          levelId: 1,
+          challengerName: 'ALPHA',
+          challengerTimeMs: 8500,
+          challengerJumps: 7,
+          ghostTrajectory: 'v1|0,80,700,0,i;8500,900,300,0,r'
+        },
+        lastRun: {
+          kind: 'campaign',
+          levelId: 1,
+          elapsedMs: 7420,
+          jumps: 6,
+          ghostTrajectory: playerGhost
+        }
+      });
+
+      renderWithRouter();
+
+      const shareCardBtn = screen.getByRole('button', { name: /Share Card/i });
+      expect(shareCardBtn).toBeInTheDocument();
+
+      fireEvent.click(shareCardBtn);
+
+      await waitFor(() => {
+        expect(shareSpy).toHaveBeenCalledTimes(1);
+      });
+
+      const [cardInput] = shareSpy.mock.calls[0];
+      expect(cardInput.badge).toBe('DUEL VICTORY');
+      expect(cardInput.timeMs).toBe(7420);
+      expect(cardInput.jumps).toBe(6);
+      expect(cardInput.medal).toBe('gold');
+      expect(cardInput.coherenceTier).toBe('HYPER');
+      expect(cardInput.ghostTrajectory).toBe(playerGhost);
+      expect(cardInput.shareUrl).toContain('#duel=');
+
+      expect(
+        await screen.findByText('Replay card PNG downloaded & link copied!')
+      ).toBeInTheDocument();
+    });
+
+    it('passes DAILY ISOTOPE badge when sharing card for a daily run', async () => {
+      const shareSpy = vi.spyOn(ReplayCardGenerator, 'shareReplayCard').mockResolvedValue('shared');
+
+      useGameStore.setState({
+        locale: 'en',
+        sharedLevel: {
+          ...mockSharedLevel,
+          id: 'daily:2026-11-21'
+        },
+        scores: {
+          0: { last: 9200, best: 9200, medal: 'silver', lastJumps: 5 }
+        },
+        activeDuel: null,
+        lastRun: {
+          kind: 'daily',
+          dateKey: '2026-11-21',
+          elapsedMs: 9200,
+          jumps: 5,
+          ghostTrajectory: ''
+        }
+      });
+
+      renderWithRouter();
+
+      fireEvent.click(screen.getByRole('button', { name: /Share Card/i }));
+
+      await waitFor(() => {
+        expect(shareSpy).toHaveBeenCalledTimes(1);
+      });
+
+      const [cardInput] = shareSpy.mock.calls[0];
+      expect(cardInput.badge).toBe('DAILY ISOTOPE');
+      expect(await screen.findByText('Replay card shared!')).toBeInTheDocument();
     });
   });
 });

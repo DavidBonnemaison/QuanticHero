@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { getCachedLevel, getLevelMetadata, loadLevel } from '../data/levels';
 import { getStrings } from '../i18n/strings';
 import { getMedalDisplayInfo } from '../services/MedalService';
+import { shareReplayCard } from '../services/ReplayCardGenerator';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
 import {
   DEFAULT_CHALLENGER_NAME,
   buildDuelFromLastRun,
+  encodeDuelToUrl,
   formatDuelSeconds
 } from '../tools/levelCodec';
 import { getNextLevelId } from '../tools/levelProgression';
@@ -20,6 +22,7 @@ export default function LevelFinished(): React.ReactElement {
   const navigate = useNavigate();
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isSharingCard, setIsSharingCard] = useState(false);
   const [duelShareState, setDuelShareState] = useState<{
     duel: DuelChallenge;
     isRevenge: boolean;
@@ -174,6 +177,76 @@ export default function LevelFinished(): React.ReactElement {
     setTimeout(() => setSaveMessage(null), 3000);
   };
 
+  const resolveCardLevel = async (): Promise<LevelData> => {
+    if (isShared && sharedLevel) {
+      return sharedLevel;
+    }
+    const direct = loadedShareLevel || getCachedLevel(levelIndex);
+    if (direct) {
+      return direct;
+    }
+    if (levelIndex >= 1) {
+      const fetched = await loadLevel(levelIndex);
+      if (fetched) return fetched;
+    }
+    return {
+      id: String(id),
+      hue,
+      antiHue,
+      symbol,
+      atom,
+      width: 800,
+      height: 600,
+      player: { position: { x: 100, y: 100 } },
+      door: { x: 700, y: 500 },
+      platforms: [],
+      particles: [],
+      spikes: []
+    };
+  };
+
+  const handleShareCard = async () => {
+    if (isSharingCard) return;
+    setIsSharingCard(true);
+    try {
+      const cardLevel = await resolveCardLevel();
+      const isDaily =
+        lastRun?.kind === 'daily' ||
+        Boolean(sharedLevel && /^daily:\d{4}-\d{2}-\d{2}$/.test(sharedLevel.id));
+      const badge =
+        activeDuel && isDuelVictory ? 'DUEL VICTORY' : isDaily ? 'DAILY ISOTOPE' : undefined;
+      const duelChallenge = buildCurrentDuelChallenge();
+      const shareUrl = encodeDuelToUrl(duelChallenge);
+      const outcome = await shareReplayCard(
+        {
+          level: cardLevel,
+          timeMs: lastRun?.elapsedMs ?? (last || best),
+          jumps: lastRun?.jumps ?? lastJumps ?? 0,
+          medal: medal ?? (best > 0 ? 'bronze' : 'none'),
+          coherenceTier: coherentRun ? 'HYPER' : undefined,
+          ghostTrajectory: lastRun?.ghostTrajectory || currentLevelScore.ghostTrajectory,
+          badge,
+          shareUrl,
+          locale
+        },
+        { shareUrl }
+      );
+      setSaveMessage(
+        outcome === 'shared'
+          ? t.levelFinished.cardSharedToast
+          : shareUrl
+            ? t.levelFinished.cardDownloadedWithLinkToast
+            : t.levelFinished.cardDownloadedToast
+      );
+      setTimeout(() => setSaveMessage(null), 3500);
+    } catch {
+      setSaveMessage(t.levelFinished.cardErrorToast);
+      setTimeout(() => setSaveMessage(null), 3500);
+    } finally {
+      setIsSharingCard(false);
+    }
+  };
+
   return (
     <div className={styles.container}>
       {activeDuel && (
@@ -271,6 +344,16 @@ export default function LevelFinished(): React.ReactElement {
             ⚔ {t.duel.challengeFriend}
           </button>
         )}
+        <button
+          type="button"
+          className={styles.buttonShareCard}
+          onClick={() => {
+            void handleShareCard();
+          }}
+          disabled={isSharingCard}
+        >
+          🖼 {t.levelFinished.shareCard}
+        </button>
       </div>
 
       {isShared ? (

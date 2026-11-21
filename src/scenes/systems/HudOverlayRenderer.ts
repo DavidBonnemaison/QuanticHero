@@ -3,12 +3,14 @@ import { getNarrativeForLevel } from '../../data/cosmicNarrative';
 import { getLevelMetadata } from '../../data/levels';
 import { getStrings } from '../../i18n/strings';
 import { getMedalDisplayInfo } from '../../services/MedalService';
+import { shareReplayCard } from '../../services/ReplayCardGenerator';
 import { push } from '../../shims/navigation';
 import { useGameStore } from '../../store';
 import { formatScore } from '../../tools/formatScore';
 import {
   DEFAULT_CHALLENGER_NAME,
   buildDuelFromLastRun,
+  encodeDuelToUrl,
   formatDuelSeconds
 } from '../../tools/levelCodec';
 import type { IsotopeMedal } from '../../types';
@@ -151,15 +153,15 @@ export function showLevelCompleteOverlay(
 
   const cardW = Math.min(620, camW - 36);
   const isCompact = cardW < 520;
-  const cardH = activeDuel ? (isCompact ? 404 : 334) : isCompact ? 380 : 308;
+  const cardH = activeDuel ? (isCompact ? 452 : 384) : isCompact ? 428 : 362;
   const cardBg = ctx.add.rectangle(camW / 2, camH / 2, cardW, cardH, 0x0b0f19, 0.94);
   cardBg.setStrokeStyle(2, activeDuel ? 0xfbbf24 : 0x00e5ff, 0.9);
   overlay.add(cardBg);
 
-  const openDuelShare = (isRevenge: boolean) => {
+  const buildCurrentDuelPayload = () => {
     const latestStore = useGameStore.getState();
     const run = latestStore.lastRun;
-    const duelPayload = run
+    return run
       ? buildDuelFromLastRun(run, DEFAULT_CHALLENGER_NAME)
       : buildDuelFromLastRun(
           {
@@ -167,11 +169,53 @@ export function showLevelCompleteOverlay(
             levelId: Number(ctx.levelData.id) || 1,
             elapsedMs,
             jumps: ctx.jumpCount,
-            ghostTrajectory: ctx.ghostRecorder.getSerialized()
+            ghostTrajectory: ctx.ghostRecorder?.getSerialized?.() ?? ''
           },
           DEFAULT_CHALLENGER_NAME
         );
-    latestStore.setPendingDuelShare({ duel: duelPayload, isRevenge });
+  };
+
+  const openDuelShare = (isRevenge: boolean) => {
+    const latestStore = useGameStore.getState();
+    latestStore.setPendingDuelShare({ duel: buildCurrentDuelPayload(), isRevenge });
+  };
+
+  const triggerShareCard = () => {
+    const latestStore = useGameStore.getState();
+    const latestLocale = latestStore.locale ?? 'en';
+    const latestStrings = getStrings(latestLocale);
+    const run = latestStore.lastRun;
+    const isDuelWin = activeDuel ? elapsedMs < activeDuel.challengerTimeMs : false;
+    const isDaily =
+      run?.kind === 'daily' || /^daily:\d{4}-\d{2}-\d{2}$/.test(String(ctx.levelData.id ?? ''));
+    const badge = isDuelWin ? 'DUEL VICTORY' : isDaily ? 'DAILY ISOTOPE' : undefined;
+    const shareUrl = encodeDuelToUrl(buildCurrentDuelPayload());
+
+    void shareReplayCard(
+      {
+        level: ctx.levelData,
+        timeMs: elapsedMs,
+        jumps: ctx.jumpCount,
+        medal,
+        coherenceTier: ctx.coherenceSystem?.getTier?.(),
+        ghostTrajectory: run?.ghostTrajectory || ctx.ghostRecorder?.getSerialized?.() || undefined,
+        badge,
+        shareUrl,
+        locale: latestLocale
+      },
+      { shareUrl }
+    )
+      .then((outcome) => {
+        showRetroToast(
+          ctx,
+          outcome === 'shared'
+            ? latestStrings.levelFinished.cardSharedToast
+            : latestStrings.levelFinished.cardDownloadedToast
+        );
+      })
+      .catch(() => {
+        showRetroToast(ctx, latestStrings.levelFinished.cardErrorToast);
+      });
   };
 
   if (activeDuel) {
@@ -182,7 +226,7 @@ export function showLevelCompleteOverlay(
 
     const verdictText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? 158 : 128),
+      camH / 2 - (isCompact ? 182 : 148),
       isVictory ? t.duel.victoryBadge(deltaStr) : t.duel.defeatBadge(deltaStr),
       {
         fontFamily: 'VT323',
@@ -197,7 +241,7 @@ export function showLevelCompleteOverlay(
 
     const subtitleText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? 118 : 88),
+      camH / 2 - (isCompact ? 142 : 108),
       isVictory
         ? t.duel.youBeat(activeDuel.challengerName, deltaStr)
         : t.duel.rivalTime(
@@ -218,7 +262,7 @@ export function showLevelCompleteOverlay(
     const medalInfo = getMedalDisplayInfo(medal, locale);
     const statsText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? 80 : 52),
+      camH / 2 - (isCompact ? 102 : 70),
       `${formatScore(elapsedMs)}  •  ${t.hud.jumps(ctx.jumpCount)}  •  ${medalInfo.symbol} ${medalInfo.shortLabel}`,
       {
         fontFamily: 'VT323',
@@ -233,7 +277,7 @@ export function showLevelCompleteOverlay(
 
     const revengeBtn = ctx.add.text(
       camW / 2,
-      camH / 2 + (isCompact ? 6 : 10),
+      camH / 2 - (isCompact ? 22 : 8),
       isVictory ? `⚔ ${t.duel.sendRevengeLink}` : `⚔ ${t.duel.challengeFriend.toUpperCase()}`,
       {
         fontFamily: 'VT323',
@@ -252,9 +296,30 @@ export function showLevelCompleteOverlay(
     });
     overlay.add(revengeBtn);
 
+    const duelShareCardBtn = ctx.add.text(
+      camW / 2,
+      camH / 2 + (isCompact ? 54 : 58),
+      `🖼 ${t.hud.shareCardButton}`,
+      {
+        fontFamily: 'VT323',
+        fontSize: isCompact ? '19px' : '21px',
+        color: '#00e5ff',
+        backgroundColor: '#0c233c',
+        padding: { x: 14, y: 6 },
+        wordWrap: { width: cardW - 32 }
+      }
+    );
+    duelShareCardBtn.setOrigin(0.5);
+    duelShareCardBtn.setInteractive({ useHandCursor: true });
+    duelShareCardBtn.on('pointerdown', () => {
+      ctx.uiPointerConsumed = true;
+      triggerShareCard();
+    });
+    overlay.add(duelShareCardBtn);
+
     const rematchBtn = ctx.add.text(
       camW / 2 - (isCompact ? 76 : 96),
-      camH / 2 + (isCompact ? 96 : 86),
+      camH / 2 + (isCompact ? 132 : 124),
       `↻ ${t.duel.rematch.toUpperCase()}`,
       {
         fontFamily: 'VT323',
@@ -281,7 +346,7 @@ export function showLevelCompleteOverlay(
 
     const exitBtn = ctx.add.text(
       camW / 2 + (isCompact ? 76 : 96),
-      camH / 2 + (isCompact ? 96 : 86),
+      camH / 2 + (isCompact ? 132 : 124),
       t.hud.levelsButton,
       {
         fontFamily: 'VT323',
@@ -314,7 +379,7 @@ export function showLevelCompleteOverlay(
     const atom = ctx.levelData.atom || 'Element';
     const headerText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? 152 : 114),
+      camH / 2 - (isCompact ? 174 : 138),
       t.hud.elementSynthesized(symbol, atom.toUpperCase()),
       {
         fontFamily: 'VT323',
@@ -337,7 +402,7 @@ export function showLevelCompleteOverlay(
     const medalInfo = getMedalDisplayInfo(medal, locale);
     const statsText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? 112 : 78),
+      camH / 2 - (isCompact ? 134 : 102),
       `${formatScore(elapsedMs)}  •  ${t.hud.rec} ${formatScore(bestMs)}  •  ${deltaLabel}`,
       {
         fontFamily: 'VT323',
@@ -355,7 +420,7 @@ export function showLevelCompleteOverlay(
 
     const medalText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? 80 : 50),
+      camH / 2 - (isCompact ? 102 : 74),
       `${medalInfo.symbol} ${medalInfo.label.toUpperCase()}  •  ${t.hud.jumps(ctx.jumpCount)}`,
       {
         fontFamily: 'VT323',
@@ -373,7 +438,7 @@ export function showLevelCompleteOverlay(
         styleScore > 0 ? `⚡ COHERENT RUN  •  FLOW ${styleScore}` : '⚡ COHERENT RUN';
       const coherentBadge = ctx.add.text(
         camW / 2,
-        camH / 2 - (isCompact ? 58 : 26),
+        camH / 2 - (isCompact ? 76 : 48),
         coherentLabel,
         {
           fontFamily: 'VT323',
@@ -395,7 +460,7 @@ export function showLevelCompleteOverlay(
 
     const narrativeText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? (isCoherentRun ? 16 : 28) : isCoherentRun ? -2 : 12),
+      camH / 2 - (isCompact ? (isCoherentRun ? 32 : 44) : isCoherentRun ? 12 : 24),
       narrativeLines.join('\n'),
       {
         fontFamily: 'VT323',
@@ -416,7 +481,7 @@ export function showLevelCompleteOverlay(
       ? t.hud.nextLevel(nextLevelData.symbol, nextLevelData.atom)
       : t.hud.levelsButton;
 
-    const nextBtn = ctx.add.text(camW / 2, camH / 2 + (isCompact ? 76 : 64), primaryLabel, {
+    const nextBtn = ctx.add.text(camW / 2, camH / 2 + (isCompact ? 56 : 48), primaryLabel, {
       fontFamily: 'VT323',
       fontSize: isCompact ? '20px' : '22px',
       color: '#00ffcc',
@@ -449,7 +514,7 @@ export function showLevelCompleteOverlay(
 
     const challengeBtn = ctx.add.text(
       camW / 2,
-      camH / 2 + (isCompact ? 130 : 112),
+      camH / 2 + (isCompact ? 112 : 98),
       `⚔ ${t.duel.challengeFriend.toUpperCase()}`,
       {
         fontFamily: 'VT323',
@@ -467,6 +532,27 @@ export function showLevelCompleteOverlay(
       openDuelShare(false);
     });
     overlay.add(challengeBtn);
+
+    const shareCardBtn = ctx.add.text(
+      camW / 2,
+      camH / 2 + (isCompact ? 166 : 146),
+      `🖼 ${t.hud.shareCardButton}`,
+      {
+        fontFamily: 'VT323',
+        fontSize: isCompact ? '19px' : '21px',
+        color: '#00e5ff',
+        backgroundColor: '#0c233c',
+        padding: { x: 14, y: 6 },
+        wordWrap: { width: cardW - 32 }
+      }
+    );
+    shareCardBtn.setOrigin(0.5);
+    shareCardBtn.setInteractive({ useHandCursor: true });
+    shareCardBtn.on('pointerdown', () => {
+      ctx.uiPointerConsumed = true;
+      triggerShareCard();
+    });
+    overlay.add(shareCardBtn);
   }
 
   if (ctx.tweens?.add) {

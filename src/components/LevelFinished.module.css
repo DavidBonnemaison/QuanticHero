@@ -252,6 +252,33 @@
   transform: scale(0.97);
 }
 
+.buttonShareCard {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 22px;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+  border: 2px solid #00e5ff;
+  border-radius: 4px;
+  background: rgba(0, 229, 255, 0.14);
+  color: #00e5ff;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, opacity 0.15s;
+}
+
+.buttonShareCard:hover {
+  background: rgba(0, 229, 255, 0.24);
+}
+
+.buttonShareCard:active {
+  transform: scale(0.97);
+}
+
+.buttonShareCard:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
