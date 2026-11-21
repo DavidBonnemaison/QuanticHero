@@ -362,16 +362,27 @@ export const useGameStore = create<GameStore>()(
             lastCompletedDate: null
           };
 
-          let nextCurrent: number;
-          if (prevStreak.lastCompletedDate === dateKey) {
-            nextCurrent = prevStreak.current > 0 ? prevStreak.current : 1;
-          } else if (prevStreak.lastCompletedDate === getPreviousDateKey(dateKey)) {
-            nextCurrent = prevStreak.current + 1;
-          } else {
-            nextCurrent = 1;
-          }
+          const isPastDate =
+            prevStreak.lastCompletedDate !== null && dateKey < prevStreak.lastCompletedDate;
 
-          const nextLongest = Math.max(prevStreak.longest, nextCurrent);
+          let nextStreak = prevStreak;
+          if (!isPastDate) {
+            let nextCurrent: number;
+            if (prevStreak.lastCompletedDate === dateKey) {
+              nextCurrent = prevStreak.current > 0 ? prevStreak.current : 1;
+            } else if (prevStreak.lastCompletedDate === getPreviousDateKey(dateKey)) {
+              nextCurrent = prevStreak.current + 1;
+            } else {
+              nextCurrent = 1;
+            }
+
+            const nextLongest = Math.max(prevStreak.longest, nextCurrent);
+            nextStreak = {
+              current: nextCurrent,
+              longest: nextLongest,
+              lastCompletedDate: dateKey
+            };
+          }
 
           return {
             dailyHistory: {
@@ -383,11 +394,7 @@ export const useGameStore = create<GameStore>()(
                 ...(nextGhost ? { ghostTrajectory: nextGhost } : {})
               }
             },
-            dailyStreak: {
-              current: nextCurrent,
-              longest: nextLongest,
-              lastCompletedDate: dateKey
-            }
+            dailyStreak: nextStreak
           };
         }),
 

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getDailyIsotopePreview } from '../services/DailyIsotopeService';
+import { getDailyIsotopePreview, getPreviousDateKey } from '../services/DailyIsotopeService';
 import { useGameStore } from '../store';
 import Menu from './Menu';
 
@@ -260,5 +260,53 @@ describe('Menu component', () => {
     expect(screen.getByTestId('daily-countdown')).toHaveTextContent(
       /prochain dans \d{2}:\d{2}:\d{2} utc/i
     );
+  });
+
+  it('hides expired daily streak badge when lastCompletedDate is older than yesterday', () => {
+    const preview = getDailyIsotopePreview();
+    const yesterday = getPreviousDateKey(preview.dateKey);
+    const twoDaysAgo = getPreviousDateKey(yesterday);
+
+    useGameStore.setState({
+      dailyStreak: {
+        current: 5,
+        longest: 7,
+        lastCompletedDate: twoDaysAgo
+      }
+    });
+    const { unmount } = renderWithRouter();
+    expect(screen.queryByTestId('daily-streak-badge')).not.toBeInTheDocument();
+    unmount();
+
+    // Yesterday's completion still keeps the streak active
+    useGameStore.setState({
+      dailyStreak: {
+        current: 5,
+        longest: 7,
+        lastCompletedDate: yesterday
+      }
+    });
+    renderWithRouter();
+    expect(screen.getByTestId('daily-streak-badge')).toHaveTextContent('🔥 5 days');
+  });
+
+  it('does not clear activeDuel on mount when window.location contains a duel link', () => {
+    const duel = {
+      kind: 'campaign' as const,
+      levelId: 2,
+      challengerName: 'ALPHA',
+      challengerTimeMs: 7000,
+      challengerJumps: 3,
+      ghostTrajectory: 'v1|0,80,700,0,i;7000,900,300,0,r'
+    };
+    useGameStore.setState({ activeDuel: duel });
+    window.history.replaceState({}, '', '/#duel=testpayload');
+
+    try {
+      renderWithRouter();
+      expect(useGameStore.getState().activeDuel).toEqual(duel);
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
   });
 });

@@ -54,15 +54,19 @@
 .header {
   text-align: center;
   margin-bottom: 16px;
+  padding: 0 40px;
 }
 
 .title {
   margin: 0;
-  font-size: 32px;
+  font-size: clamp(22px, 5.5vw, 26px);
   font-weight: normal;
   color: #00ffcc;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
+  line-height: 1.15;
   text-shadow: 0 0 8px rgba(0, 255, 204, 0.6);
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
 
 .subtitle {
@@ -96,9 +100,12 @@
 }
 
 .ghostBadge {
-  font-size: 18px;
+  font-size: 16px;
+  line-height: 1.25;
   color: #38bdf8;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .qrContainer {

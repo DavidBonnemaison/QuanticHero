@@ -209,7 +209,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 {formatDuelSeconds(duel.challengerTimeMs)} • {t.hud.jumps(duel.challengerJumps)}
               </div>
               {duel.ghostTrajectory && (
-                <div className={styles.ghostBadge}>{t.duel.ghostIncluded}</div>
+                <div className={styles.ghostBadge}>
+                  {t.duel.ghostIncluded.replace(/^★\s+/, '★\u00A0').replace(/\s+★$/, '\u00A0★')}
+                </div>
               )}
               <div className={styles.duelTagRow}>
                 <label htmlFor="duel-tag-input" className={styles.duelTagLabel}>
@@ -238,7 +240,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 </div>
               )}
               {level?.authorGhost && (
-                <div className={styles.ghostBadge}>★ AUTHOR GHOST INCLUDED IN CHALLENGE ★</div>
+                <div className={styles.ghostBadge}>
+                  {'★\u00A0AUTHOR GHOST INCLUDED IN CHALLENGE\u00A0★'}
+                </div>
               )}
             </>
           )}

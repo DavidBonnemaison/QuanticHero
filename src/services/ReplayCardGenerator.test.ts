@@ -188,6 +188,45 @@ describe('ReplayCardGenerator', () => {
     expect(drawnTexts.some((txt) => txt === '4J')).toBe(true);
   });
 
+  it('resolves atomic number Z=113 from SPECTROSCOPY_DATABASE for Daily Isotope levels and falls back to CUSTOM', async () => {
+    const dailyNhLevel: LevelData = {
+      ...sampleLevel,
+      id: 'daily:2026-11-21',
+      symbol: 'Nh',
+      atom: 'Nihonium'
+    };
+
+    await renderReplayCardCanvas({
+      level: dailyNhLevel,
+      timeMs: 8420,
+      jumps: 5,
+      medal: 'gold',
+      badge: 'DAILY ISOTOPE'
+    });
+
+    const dailyTexts = mockCtx.fillText.mock.calls.map((c) => String(c[0]));
+    expect(dailyTexts).toContain('Z=113');
+    expect(dailyTexts).not.toContain('DAILY:20');
+
+    mockCtx.fillText.mockClear();
+    const customLevel: LevelData = {
+      ...sampleLevel,
+      id: 'custom-99',
+      symbol: 'Qx',
+      atom: 'Quarkonium'
+    };
+
+    await renderReplayCardCanvas({
+      level: customLevel,
+      timeMs: 9100,
+      jumps: 4,
+      medal: 'silver'
+    });
+
+    const customTexts = mockCtx.fillText.mock.calls.map((c) => String(c[0]));
+    expect(customTexts).toContain('CUSTOM');
+  });
+
   it('handles empty, undefined, or corrupt ghostTrajectory without throwing', async () => {
     const emptyCanvas = await renderReplayCardCanvas({
       level: sampleLevel,

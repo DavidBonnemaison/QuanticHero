@@ -26,17 +26,19 @@ export function showLevelTitle(ctx: GameSceneContext): void {
   }
   ctx.lastShownLevelId = ctx.levelData.id;
 
-  const title = ctx.add.text(
-    ctx.cameras.main.width / 2,
-    ctx.cameras.main.height / 2,
-    `${ctx.levelData.id} - ${ctx.levelData.atom}`,
-    {
-      fontFamily: 'VT323',
-      fontSize: '48px',
-      color: ctx.levelData.antiHue,
-      align: 'center'
-    }
-  );
+  const camW = ctx.cameras.main.width;
+  const rawId = String(ctx.levelData.id ?? '');
+  const titleText = rawId.startsWith('daily:')
+    ? `DAILY — ${ctx.levelData.symbol} ${ctx.levelData.atom}`
+    : `${ctx.levelData.id} - ${ctx.levelData.atom}`;
+
+  const title = ctx.add.text(camW / 2, ctx.cameras.main.height / 2, titleText, {
+    fontFamily: 'VT323',
+    fontSize: camW < 480 ? '30px' : '46px',
+    color: ctx.levelData.antiHue,
+    align: 'center',
+    wordWrap: { width: Math.max(240, camW - 32) }
+  });
   title.setOrigin(0.5);
   title.setScrollFactor(0);
   title.setDepth(90);

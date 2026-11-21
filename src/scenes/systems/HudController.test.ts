@@ -190,6 +190,31 @@ describe('HudController', () => {
     expect(ctx.levelCompleteOverlay).not.toBeNull();
   });
 
+  it('formats daily level entry title cleanly with responsive fontSize and wordWrap on mobile viewports', () => {
+    const ctx = makeHudContext();
+    ctx.cameras.main.width = 390;
+    ctx.cameras.main.height = 844;
+    ctx.levelData = {
+      ...ctx.levelData,
+      id: 'daily:2026-11-21',
+      symbol: 'Nh',
+      atom: 'Nihonium'
+    };
+
+    const hud = new HudController(ctx);
+    hud.showLevelTitle();
+
+    expect(ctx.add.text).toHaveBeenCalledWith(
+      195,
+      422,
+      'DAILY — Nh Nihonium',
+      expect.objectContaining({
+        fontSize: '30px',
+        wordWrap: { width: 358 }
+      })
+    );
+  });
+
   it('renders slim coherence gauge, updates tier indicator, and displays COHERENT RUN badge at HYPER tier', async () => {
     const { CoherenceSystem } = await import('../../mechanics/coherenceSystem');
     const ctx = makeHudContext();

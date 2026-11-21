@@ -1,4 +1,5 @@
 import QRCode from 'qrcode';
+import { SPECTROSCOPY_DATABASE } from '../data/spectroscopy';
 import { type Locale, getStrings } from '../i18n/strings';
 import { type GhostFrame, decompressTrajectory } from '../tools/GhostRecorder';
 import type { CoherenceTier, IsotopeMedal, LevelData } from '../types';
@@ -131,6 +132,32 @@ function getBadgeStyle(badge: string): { color: string; bg: string; border: stri
   };
 }
 
+function resolveAtomicZLabel(level: LevelData): string {
+  const rawId = String(level.id || '').trim();
+  const numericZ = Number(rawId);
+  if (Number.isInteger(numericZ) && numericZ > 0) {
+    return `Z=${numericZ}`;
+  }
+
+  const symbolClean = (level.symbol || '').trim().toLowerCase();
+  if (symbolClean) {
+    const bySymbol = SPECTROSCOPY_DATABASE.find((el) => el.symbol.toLowerCase() === symbolClean);
+    if (bySymbol) {
+      return `Z=${bySymbol.z}`;
+    }
+  }
+
+  const atomClean = (level.atom || '').trim().toLowerCase();
+  if (atomClean) {
+    const byAtom = SPECTROSCOPY_DATABASE.find((el) => el.name.toLowerCase() === atomClean);
+    if (byAtom) {
+      return `Z=${byAtom.z}`;
+    }
+  }
+
+  return 'CUSTOM';
+}
+
 function drawBackground(
   ctx: CanvasRenderingContext2D,
   hueRgb: [number, number, number],
@@ -241,10 +268,7 @@ function drawElementAndMetrics(
   ctx.stroke();
 
   // Atomic number Z
-  const rawId = String(input.level.id || '');
-  const numericZ = Number(rawId);
-  const zLabel =
-    Number.isInteger(numericZ) && numericZ > 0 ? `Z=${numericZ}` : rawId.slice(0, 8).toUpperCase();
+  const zLabel = resolveAtomicZLabel(input.level);
   ctx.fillStyle = rgba(antiRgb, 0.95);
   ctx.font = 'bold 22px "VT323", "Courier New", monospace';
   ctx.textBaseline = 'top';

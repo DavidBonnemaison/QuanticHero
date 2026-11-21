@@ -618,6 +618,21 @@ describe('useGameStore', () => {
         longest: 3,
         lastCompletedDate: '2027-01-01'
       });
+
+      // Past-date daily duel (e.g., 2026-12-25) updates dailyHistory without clobbering dailyStreak
+      useGameStore.getState().recordDailyScore('2026-12-25', 8500, 3, 'gold', 'v1|past');
+      state = useGameStore.getState();
+      expect(state.dailyHistory['2026-12-25']).toEqual({
+        bestMs: 8500,
+        bestJumps: 3,
+        medal: 'gold',
+        ghostTrajectory: 'v1|past'
+      });
+      expect(state.dailyStreak).toEqual({
+        current: 2,
+        longest: 3,
+        lastCompletedDate: '2027-01-01'
+      });
     });
   });
 

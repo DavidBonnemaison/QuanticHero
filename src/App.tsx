@@ -48,7 +48,8 @@ const SharedLevelSync: React.FC = () => {
             store.setSharedLevel(duel.level);
           }
           if (window.location.pathname !== '/game') {
-            navigate('/game');
+            const suffix = hash.includes('duel=') ? hash : search;
+            navigate(`/game${suffix}`, { replace: true });
           }
           return;
         }
@@ -61,7 +62,8 @@ const SharedLevelSync: React.FC = () => {
           store.setActiveDuel(null);
           store.setSharedLevel(decoded);
           if (window.location.pathname !== '/game') {
-            navigate('/game');
+            const suffix = hash.includes('custom=') ? hash : search;
+            navigate(`/game${suffix}`, { replace: true });
           }
         }
       }

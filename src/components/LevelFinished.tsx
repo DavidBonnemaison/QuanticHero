@@ -14,7 +14,7 @@ import {
   formatDuelSeconds
 } from '../tools/levelCodec';
 import { getNextLevelId } from '../tools/levelProgression';
-import type { DuelChallenge, LevelData } from '../types';
+import type { DuelChallenge, LevelData, ScoreItem } from '../types';
 import ShareModal from './Editor/ShareModal';
 import styles from './LevelFinished.module.css';
 
@@ -31,6 +31,7 @@ export default function LevelFinished(): React.ReactElement {
 
   const currentLevel = useGameStore((state) => state.currentLevel);
   const scores = useGameStore((state) => state.scores);
+  const dailyHistory = useGameStore((state) => state.dailyHistory ?? {});
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
   const sharedLevel = useGameStore((state) => state.sharedLevel);
   const setSharedLevel = useGameStore((state) => state.setSharedLevel);
@@ -42,9 +43,30 @@ export default function LevelFinished(): React.ReactElement {
   const t = getStrings(locale);
 
   const isShared = Boolean(sharedLevel);
+  const dailyMatch = sharedLevel ? /^daily:(\d{4}-\d{2}-\d{2})$/.exec(sharedLevel.id) : null;
+  const dailyDateKey = dailyMatch ? dailyMatch[1] : null;
+  const dailyEntry = dailyDateKey ? dailyHistory[dailyDateKey] : undefined;
+
   const levelIndex = isShared ? 0 : currentLevel === 115 ? 109 : Math.max(1, currentLevel - 1);
   const nextLevelId = isShared ? null : getNextLevelId(levelIndex);
-  const currentLevelScore = scores[levelIndex] || { best: 0, last: 0 };
+  const currentLevelScore: ScoreItem = dailyDateKey
+    ? {
+        best: dailyEntry?.bestMs ?? (lastRun?.kind === 'daily' ? lastRun.elapsedMs : 0),
+        last:
+          lastRun?.kind === 'daily' && lastRun.dateKey === dailyDateKey
+            ? lastRun.elapsedMs
+            : (lastRun?.elapsedMs ?? dailyEntry?.bestMs ?? 0),
+        medal: dailyEntry?.medal,
+        lastJumps:
+          lastRun?.kind === 'daily' && lastRun.dateKey === dailyDateKey
+            ? lastRun.jumps
+            : dailyEntry?.bestJumps,
+        ghostTrajectory:
+          (lastRun?.kind === 'daily' && lastRun.dateKey === dailyDateKey
+            ? lastRun.ghostTrajectory
+            : undefined) || dailyEntry?.ghostTrajectory
+      }
+    : scores[levelIndex] || { best: 0, last: 0 };
   const { last, best, medal, lastJumps, coherentRun, bestStyleScore, lastStyleScore } =
     currentLevelScore;
   const medalInfo = getMedalDisplayInfo(medal ?? (best > 0 ? 'bronze' : 'none'), locale);

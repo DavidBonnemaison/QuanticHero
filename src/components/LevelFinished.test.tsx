@@ -416,5 +416,44 @@ describe('LevelFinished component', () => {
       expect(cardInput.badge).toBe('DAILY ISOTOPE');
       expect(await screen.findByText('Replay card shared!')).toBeInTheDocument();
     });
+
+    it('reads Daily Isotope best time, last time, medal, and ghost from dailyHistory and lastRun on /done', () => {
+      useGameStore.setState({
+        locale: 'en',
+        sharedLevel: {
+          ...mockSharedLevel,
+          id: 'daily:2026-11-21',
+          symbol: 'Nh',
+          atom: 'Nihonium'
+        },
+        scores: {},
+        dailyHistory: {
+          '2026-11-21': {
+            bestMs: 8450,
+            bestJumps: 4,
+            medal: 'gold',
+            ghostTrajectory: 'v1|0,80,700,0,i;8450,900,300,0,r'
+          }
+        },
+        activeDuel: null,
+        lastRun: {
+          kind: 'daily',
+          dateKey: '2026-11-21',
+          elapsedMs: 9320,
+          jumps: 5,
+          ghostTrajectory: 'v1|0,80,700,0,i;9320,900,300,0,r'
+        }
+      });
+
+      renderWithRouter();
+
+      expect(screen.getByRole('heading', { level: 1, name: 'Nihonium' })).toBeInTheDocument();
+      // Last run: 9320 ms = 00:09:32, All Time Best: 8450 ms = 00:08:45
+      expect(screen.getByText('00:09:32')).toBeInTheDocument();
+      expect(screen.getByText('00:08:45')).toBeInTheDocument();
+      expect(screen.queryByText('00:00:00')).not.toBeInTheDocument();
+      expect(screen.getByText(/quantum isotope \(gold\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/5 jumps/i)).toBeInTheDocument();
+    });
   });
 });

@@ -4,7 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { soundManager } from '../audio/SoundManager';
 import { getLevelMetadata } from '../data/levels';
 import { getStrings } from '../i18n/strings';
-import { getDailyIsotopePreview, getTimeUntilNextDailyUtc } from '../services/DailyIsotopeService';
+import {
+  getDailyIsotopePreview,
+  getPreviousDateKey,
+  getTimeUntilNextDailyUtc
+} from '../services/DailyIsotopeService';
 import { useGameStore } from '../store';
 import { hapticFeedback } from '../tools/HapticFeedback';
 import formatScore from '../tools/formatScore';
@@ -43,6 +47,10 @@ export default function Menu(): React.ReactElement {
   const t = getStrings(locale);
   const dailyPreview = getDailyIsotopePreview();
   const todayDailyEntry = dailyHistory[dailyPreview.dateKey];
+  const isStreakActive =
+    dailyStreak.lastCompletedDate === dailyPreview.dateKey ||
+    dailyStreak.lastCompletedDate === getPreviousDateKey(dailyPreview.dateKey);
+  const effectiveStreak = isStreakActive ? dailyStreak.current : 0;
   const hasProgress = maxLevel > 1 || Object.keys(scores).length > 0;
   const resumeLevel =
     currentLevel >= 1 && currentLevel <= MAX_CLASSIC_LEVEL
@@ -59,7 +67,11 @@ export default function Menu(): React.ReactElement {
   }, []);
 
   useEffect(() => {
-    useGameStore.getState().setActiveDuel(null);
+    const hasActiveDuelLink =
+      window.location.hash.includes('duel=') || window.location.search.includes('duel=');
+    if (!hasActiveDuelLink) {
+      useGameStore.getState().setActiveDuel(null);
+    }
     hapticFeedback.init();
 
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -190,9 +202,9 @@ export default function Menu(): React.ReactElement {
           <span className={styles.dailyCardTitle}>
             {t.menu.dailyIsotopeTitle(dailyPreview.symbol, dailyPreview.atom)}
           </span>
-          {dailyStreak.current > 0 && (
+          {effectiveStreak > 0 && (
             <span className={styles.dailyStreakBadge} data-testid="daily-streak-badge">
-              {t.menu.dailyStreak(dailyStreak.current)}
+              {t.menu.dailyStreak(effectiveStreak)}
             </span>
           )}
         </div>
