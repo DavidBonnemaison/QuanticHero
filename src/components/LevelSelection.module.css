@@ -2,45 +2,55 @@
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 16px 16px calc(30px + env(safe-area-inset-bottom, 20px));
+  padding: 18px 16px calc(32px + env(safe-area-inset-bottom, 20px));
   box-sizing: border-box;
+  font-family: var(--font-ui);
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 3px dashed #444;
+  border-bottom: var(--border-subtle);
   padding-bottom: 16px;
   margin-bottom: 20px;
+  gap: 12px;
 }
 
 .backButton {
-  background: transparent;
-  border: 1px solid #666;
-  color: #fff;
-  font-family: inherit;
-  font-size: 22px;
-  padding: 6px 12px;
-  border-radius: 4px;
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--border-strong);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .backButton:hover {
-  background: #333;
+  background: var(--surface-glass-hover);
+  border-color: var(--accent-cyan);
 }
 
 .ghostToggle {
-  background: transparent;
-  border: 1px solid #666;
-  color: #fff;
-  font-family: inherit;
-  font-size: 18px;
-  padding: 6px 10px;
-  border-radius: 4px;
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--border-strong);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color
+    var(--transition-fast);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -48,55 +58,60 @@
 }
 
 .ghostToggle:hover {
-  background: #333;
-  border-color: #888;
+  background: var(--surface-glass-hover);
+  border-color: var(--text-secondary);
 }
 
 .ghostToggleActive {
-  border-color: #38bdf8;
-  color: #38bdf8;
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(0, 229, 255, 0.1);
 }
 
 .title {
   text-align: center;
-  color: white;
-  font-size: 32px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: clamp(22px, 3vw, 28px);
   margin: 0;
-  font-weight: normal;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .menuItem {
-  background-color: #222;
-  border: 1px solid #333;
-  border-radius: 6px;
-  color: white;
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
   padding: 16px;
   margin: 12px 0;
   display: flex;
   align-items: center;
   user-select: none;
-  transition: transform 0.1s, background-color 0.15s;
+  transition: transform 0.12s ease, background-color var(--transition-fast), border-color
+    var(--transition-fast);
   cursor: pointer;
 }
 
 .menuItem:hover {
-  background-color: #2a2a2a;
-  border-color: #555;
+  background: var(--surface-glass-hover);
+  border-color: var(--border-color-strong);
 }
 
 .menuItem:active {
-  transform: scale(0.98);
+  transform: scale(0.99);
 }
 
 .menuItemDisabled {
   cursor: not-allowed;
-  opacity: 0.25;
+  opacity: 0.3;
 }
 
 .menuItemDisabled:hover {
-  background-color: #222;
-  border-color: #333;
+  background: var(--surface-glass);
+  border-color: var(--border-color-subtle);
 }
 
 .menuItemDisabled:active {
@@ -104,22 +119,27 @@
 }
 
 .atom {
-  width: 80px;
-  height: 80px;
-  line-height: 80px;
-  font-size: 56px;
+  width: 76px;
+  height: 76px;
+  line-height: 76px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 38px;
   text-align: center;
   position: relative;
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .atomicNumber {
   position: absolute;
-  top: -28px;
-  left: 4px;
-  font-size: 24px;
-  color: #ddd;
+  top: -22px;
+  left: 6px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .atomDescription {
@@ -129,39 +149,43 @@
 }
 
 .atomTitle {
-  font-weight: normal;
-  font-size: 34px;
+  font-weight: 600;
+  font-size: 22px;
   padding: 0;
-  margin: 0 0 6px;
-  color: #fff;
+  margin: 0 0 4px;
+  color: var(--text-primary);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
 
 .atomScore {
-  font-size: 26px;
-  color: #bbb;
-  font-family: "VT323", monospace;
+  font-size: 17px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .tabContainer {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .tabButton {
   flex: 1;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid #444;
-  color: #aaa;
-  font-family: inherit;
-  font-size: 20px;
-  padding: 10px;
-  border-radius: 6px;
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,29 +193,32 @@
 }
 
 .tabButton:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--surface-glass-hover);
+  color: var(--text-primary);
 }
 
 .tabButtonActive {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: #38bdf8;
-  color: #fff;
+  background: rgba(0, 229, 255, 0.14);
+  border-color: var(--accent-cyan);
+  color: var(--text-primary);
 }
 
 .tabButtonActive.entanglementTab {
-  border-color: #ec4899;
-  color: #ec4899;
-  box-shadow: 0 0 10px rgba(236, 72, 153, 0.3);
+  border-color: var(--accent-magenta);
+  color: #f9a8d4;
+  background: rgba(236, 72, 153, 0.14);
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.25);
 }
 
 .entanglementTabBadge {
-  font-size: 16px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(236, 72, 153, 0.25);
-  border: 1px solid rgba(236, 72, 153, 0.6);
-  color: #ec4899;
+  background: rgba(236, 72, 153, 0.22);
+  border: 1px solid rgba(236, 72, 153, 0.55);
+  color: #f9a8d4;
 }
 
 .isotopeSummary {
@@ -199,27 +226,31 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 10px 14px;
   margin-bottom: 16px;
-  border-radius: 6px;
-  background: rgba(251, 191, 36, 0.08);
+  border-radius: var(--radius-md);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(251, 191, 36, 0.35);
-  color: #f8fafc;
-  font-size: 20px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
 }
 
 .goldStar {
-  color: #fbbf24;
-  font-size: 22px;
+  color: var(--accent-amber);
+  font-size: 18px;
 }
 
 .medalGold {
-  border-color: #fbbf24;
+  border-color: var(--accent-amber);
   box-shadow: 0 0 12px rgba(251, 191, 36, 0.28);
 }
 
 .medalSilver {
-  border-color: #cbd5e1;
+  border-color: var(--text-secondary);
   box-shadow: 0 0 8px rgba(203, 213, 225, 0.2);
 }
 
@@ -231,14 +262,16 @@
   position: absolute;
   bottom: 2px;
   right: 4px;
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
 }
 
 .jumpBadge {
-  font-size: 20px;
-  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--text-muted);
 }
 
 .alchemyToolbar {
@@ -253,53 +286,60 @@
 .alchemyButton {
   flex: 1;
   min-width: 220px;
-  background: rgba(168, 85, 247, 0.12);
-  border: 1px solid rgba(168, 85, 247, 0.45);
-  color: #e9d5ff;
-  font-family: inherit;
-  font-size: 18px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  background: rgba(168, 85, 247, 0.14);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(192, 132, 252, 0.45);
+  color: #f3e8ff;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
 }
 
 .alchemyButton:hover {
-  background: rgba(168, 85, 247, 0.22);
+  background: rgba(168, 85, 247, 0.24);
 }
 
 .alchemyButtonActive {
-  background: rgba(168, 85, 247, 0.32);
-  border-color: #c084fc;
-  color: #ffffff;
-  box-shadow: 0 0 12px rgba(192, 132, 252, 0.5);
+  background: rgba(168, 85, 247, 0.34);
+  border-color: var(--accent-violet);
+  color: var(--text-primary);
+  box-shadow: 0 0 14px rgba(192, 132, 252, 0.45);
 }
 
 .codexButton {
-  background: rgba(56, 189, 248, 0.14);
-  border: 1px solid rgba(56, 189, 248, 0.55);
+  background: rgba(0, 229, 255, 0.12);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(0, 229, 255, 0.45);
   color: #e0f2fe;
-  font-family: inherit;
-  font-size: 18px;
-  padding: 8px 16px;
-  border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
   white-space: nowrap;
 }
 
 .codexButton:hover {
-  background: rgba(56, 189, 248, 0.28);
-  border-color: #38bdf8;
-  color: #ffffff;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+  background: rgba(0, 229, 255, 0.24);
+  border-color: var(--accent-cyan);
+  color: var(--text-primary);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
 }
 
 .alchemyStatusHint {
   text-align: center;
-  color: #d8b4fe;
-  font-size: 16px;
-  margin: -6px 0 12px;
+  color: #e9d5ff;
+  font-size: 14px;
+  margin: -4px 0 12px;
 }
 
 .noBondToast {
@@ -309,11 +349,11 @@
   gap: 8px;
   padding: 8px 14px;
   margin-bottom: 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: rgba(248, 113, 113, 0.14);
   border: 1px solid rgba(248, 113, 113, 0.55);
   color: #fecaca;
-  font-size: 18px;
+  font-size: 15px;
   animation: noBondShake 0.35s ease-out;
 }
 
@@ -339,7 +379,7 @@
     circle at center,
     rgba(255, 255, 255, 0.65) 0%,
     rgba(192, 132, 252, 0.35) 40%,
-    rgba(56, 189, 248, 0.15) 75%,
+    rgba(0, 229, 255, 0.15) 75%,
     transparent 100%
   );
   animation: spectralFlashAnim 0.6s ease-out forwards;
@@ -361,7 +401,7 @@
 }
 
 .menuItemSelectedAlchemy {
-  border-color: #c084fc !important;
+  border-color: var(--accent-violet) !important;
   box-shadow: 0 0 16px rgba(192, 132, 252, 0.65);
   opacity: 1 !important;
 }
@@ -373,26 +413,27 @@
   gap: 12px;
   padding: 12px 16px;
   margin-bottom: 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: linear-gradient(
     90deg,
-    rgba(56, 189, 248, 0.2),
-    rgba(192, 132, 252, 0.25),
-    rgba(56, 189, 248, 0.2)
+    rgba(0, 229, 255, 0.18),
+    rgba(192, 132, 252, 0.24),
+    rgba(0, 229, 255, 0.18)
   );
-  border: 1px solid #c084fc;
-  color: #ffffff;
-  font-size: 22px;
-  box-shadow: 0 0 20px rgba(192, 132, 252, 0.45);
+  border: 1px solid var(--accent-violet);
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(192, 132, 252, 0.4);
   animation: covalentPulse 0.6s ease-in-out infinite alternate;
 }
 
 @keyframes covalentPulse {
   from {
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.35);
   }
   to {
-    box-shadow: 0 0 24px rgba(192, 132, 252, 0.85);
+    box-shadow: 0 0 24px rgba(192, 132, 252, 0.8);
   }
 }
 
@@ -401,7 +442,7 @@
   width: 36px;
   height: 4px;
   border-radius: 2px;
-  background: linear-gradient(90deg, #38bdf8, #e879f9);
+  background: linear-gradient(90deg, var(--accent-cyan), #e879f9);
   box-shadow: 0 0 8px #e879f9;
 }
 
@@ -413,18 +454,19 @@
 }
 
 .moleculeChip {
-  background: rgba(56, 189, 248, 0.14);
-  border: 1px solid rgba(56, 189, 248, 0.5);
-  color: #bae6fd;
-  font-family: inherit;
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 6px;
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  color: #e0f2fe;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
 }
 
 .moleculeChip:hover {
-  background: rgba(56, 189, 248, 0.28);
-  color: #ffffff;
+  background: rgba(0, 229, 255, 0.24);
+  color: var(--text-primary);
 }

@@ -8,6 +8,7 @@ import { PHYSICS } from '../../physics/constants';
 import { createQuantumPinningState } from '../../physics/matterStates';
 import { useGameStore } from '../../store';
 import Hero from '../Hero';
+import { HeroRenderer } from '../HeroRenderer';
 import {
   buildParticles,
   buildPlatforms,
@@ -129,6 +130,8 @@ export class LevelBuilder {
     ctx.collapseConfig = undefined;
     ctx.pauliGraphics = null;
     ctx.spikeGfx = null;
+    ctx.portalGraphics = null;
+    ctx.heroRenderer = null;
     if (ctx.unsubJump) {
       ctx.unsubJump();
       ctx.unsubJump = null;
@@ -175,6 +178,7 @@ export class LevelBuilder {
 
     // 8. Quantum Visual Effects & Graphics Layers
     ctx.quantumEffects = new QuantumEffectsManager(ctx as unknown as Phaser.Scene);
+    ctx.heroRenderer = new HeroRenderer(ctx as unknown as Phaser.Scene);
     ctx.diveTrailGraphics = ctx.add.graphics();
     ctx.diveTrailGraphics.setDepth(18);
     ctx.focusArcGraphics = ctx.add.graphics();
@@ -322,6 +326,11 @@ export class LevelBuilder {
     ctx.superposedSpikes = [];
     ctx.constellationGraphics = destroyGraphic(ctx.constellationGraphics);
     ctx.periodicTableGraphics = destroyGraphic(ctx.periodicTableGraphics);
+    ctx.portalGraphics = destroyGraphic(ctx.portalGraphics ?? null);
+    if (ctx.heroRenderer) {
+      ctx.heroRenderer.destroy();
+      ctx.heroRenderer = null;
+    }
 
     for (const crystal of ctx.broglieCrystals) {
       crystal.rect.destroy();
@@ -459,7 +468,7 @@ export class LevelBuilder {
     const muralY = Math.min(ctx.levelData.height * 0.45, viewH * 0.44);
 
     const symbolText = ctx.add.text(muralX, muralY - 24, spec.symbol, {
-      fontFamily: 'Orbitron',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '96px',
       color: spec.antiHue,
       fontStyle: 'bold'
@@ -475,7 +484,7 @@ export class LevelBuilder {
       muralY + 38,
       `Z=${spec.z} • ${spec.name.toUpperCase()} • ${mass} u`,
       {
-        fontFamily: 'Orbitron',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '14px',
         color: spec.antiHue
       }
@@ -487,8 +496,8 @@ export class LevelBuilder {
     ctx.muralObjects.push(metaText);
 
     const verseText = ctx.add.text(muralX, muralY + 62, verse, {
-      fontFamily: 'VT323',
-      fontSize: '20px',
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: '18px',
       color: '#ffffff'
     });
     verseText.setOrigin(0.5);
@@ -551,7 +560,7 @@ export class LevelBuilder {
     if (typeof ctx.add.text === 'function') {
       const [step1, step2] = discovery.hintSteps;
       const t1 = ctx.add.text(anchorX - 96, anchorY - 6, `1. ${step1}`, {
-        fontFamily: 'Orbitron',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '11px',
         color: colorHex,
         align: 'center'
@@ -562,7 +571,7 @@ export class LevelBuilder {
       ctx.discoveryBoxObjects.push(t1);
 
       const t2 = ctx.add.text(anchorX + 96, anchorY - 6, `2. ${step2}`, {
-        fontFamily: 'Orbitron',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '11px',
         color: colorHex,
         align: 'center'

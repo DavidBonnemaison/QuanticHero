@@ -334,4 +334,21 @@ describe('CameraDirector', () => {
     director.updateFraming(16);
     expect(ctx.betaPipCamera).toBeNull();
   });
+
+  it('fires calibrated camera shake when reducedEffects is false (FX:HI) and suppresses it when true (FX:LO)', async () => {
+    const { useGameStore } = await import('../../store');
+    const ctx = makeCameraContext();
+    const hud = { repositionOnResize: vi.fn() } as unknown as HudController;
+    const director = new CameraDirector(ctx, hud);
+
+    useGameStore.setState({ reducedEffects: false });
+    director.shake(130, 0.007);
+    expect(ctx.cameras.main.shake).toHaveBeenCalledTimes(1);
+    expect(ctx.cameras.main.shake).toHaveBeenCalledWith(130, 0.007);
+
+    useGameStore.setState({ reducedEffects: true });
+    director.shake(280, 0.014);
+    expect(ctx.cameras.main.shake).toHaveBeenCalledTimes(1);
+    useGameStore.setState({ reducedEffects: false });
+  });
 });

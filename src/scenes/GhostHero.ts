@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
+import { useGameStore } from '../store';
 import { type GhostFrame, sampleTrajectory } from '../tools/GhostRecorder';
+import { type HeroVisualState, drawProceduralHeroForSkin } from './HeroRenderer';
 
 export interface GhostHeroOptions {
   alpha?: number;
@@ -15,6 +17,8 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
   public labelText: Phaser.GameObjects.Text | null = null;
   private baseAlpha: number;
   private finishedAlpha: number;
+  private ghostTint: number;
+  private quantumGraphics: Phaser.GameObjects.Graphics | null = null;
 
   constructor(scene: Phaser.Scene, frames: GhostFrame[], options?: GhostHeroOptions) {
     const initialFrame = frames[0] || { x: 0, y: 0, flipX: false, animState: 'idle' };
@@ -27,18 +31,23 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
 
     this.baseAlpha = options?.alpha ?? 0.4;
     this.finishedAlpha = options?.finishedAlpha ?? Math.min(0.2, this.baseAlpha * 0.5);
-    const tint = options?.tint ?? 0x38bdf8;
+    this.ghostTint = options?.tint ?? 0x38bdf8;
 
     scene.add.existing(this);
 
     // Neon holographic semi-transparent style
     this.setAlpha(this.baseAlpha);
-    this.setTint(tint);
+    this.setTint(this.ghostTint);
     this.setDepth(10);
+
+    if (typeof scene.add?.graphics === 'function') {
+      this.quantumGraphics = scene.add.graphics();
+      this.quantumGraphics.setDepth?.(10);
+    }
 
     if (options?.label && typeof scene.add?.text === 'function') {
       this.labelText = scene.add.text(initialFrame.x, initialFrame.y - 24, options.label, {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '15px',
         color: '#fbbf24',
         stroke: '#050814',
@@ -57,6 +66,7 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
 
   /**
    * Replays the recorded trajectory synchronized with the level's elapsed time using LERP.
+   * Automatically matches the player's selected `heroSkin` (`quantum` vs `classic`).
    */
   public updateReplay(elapsedMs: number): void {
     if (!this.active || this.frames.length === 0) return;
@@ -70,18 +80,65 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
       this.setFlipY(interpolated.flipY);
     }
 
-    // Play corresponding animation
-    const animKey = interpolated.animState;
-    if (this.scene.anims?.exists(animKey)) {
-      const currentKey = this.anims.currentAnim?.key;
-      if (currentKey !== animKey) {
-        this.play(animKey, true);
-      }
-    }
-
     // Fade slightly when finished
     const isFinished = this.totalDurationMs > 0 && elapsedMs >= this.totalDurationMs;
-    this.setAlpha(isFinished ? this.finishedAlpha : this.baseAlpha);
+    const effectiveAlpha = isFinished ? this.finishedAlpha : this.baseAlpha;
+    const storeState = useGameStore.getState();
+    const activeSkin = storeState.heroSkin ?? 'gameboy';
+    const reducedEffects = Boolean(storeState.reducedEffects);
+
+    if (activeSkin !== 'classic' && this.quantumGraphics) {
+      // Hide classic spritesheet and render procedural ghost matching the active skin
+      this.setAlpha(0);
+      this.quantumGraphics.clear();
+      if (this.visible) {
+        const isRunning = interpolated.animState === 'left' || interpolated.animState === 'right';
+        const isAirborne = interpolated.animState === 'jump';
+        const facingDir: 1 | -1 = interpolated.flipX ? -1 : 1;
+        const upsideDown: 1 | -1 = interpolated.flipY ? -1 : 1;
+        const ghostVisualState: HeroVisualState = {
+          coreColor: 0xf8fafc,
+          envelopeColor: this.ghostTint,
+          accentColor: this.ghostTint,
+          alpha: effectiveAlpha,
+          scaleX: 1,
+          scaleY: 1,
+          leanRad: isRunning ? facingDir * 0.14 * upsideDown : 0,
+          facingDir,
+          upsideDown,
+          isDiving: false,
+          isRunning,
+          isAirborne,
+          speedRatio: isRunning ? 0.85 : 0,
+          isSuperQuanta: false,
+          hasTunnelCharge: false,
+          hasPauliAura: false,
+          glowLayers: 0,
+          waveSegments: 10
+        };
+        drawProceduralHeroForSkin(
+          this.quantumGraphics,
+          activeSkin,
+          interpolated.x,
+          interpolated.y,
+          elapsedMs,
+          ghostVisualState,
+          reducedEffects,
+          true
+        );
+      }
+    } else {
+      this.quantumGraphics?.clear();
+      // Play corresponding classic spritesheet animation
+      const animKey = interpolated.animState;
+      if (this.scene.anims?.exists(animKey)) {
+        const currentKey = this.anims.currentAnim?.key;
+        if (currentKey !== animKey) {
+          this.play(animKey, true);
+        }
+      }
+      this.setAlpha(effectiveAlpha);
+    }
 
     if (this.labelText?.active) {
       this.labelText.setPosition?.(interpolated.x, interpolated.y - 24);
@@ -92,6 +149,14 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
   }
 
   public override destroy(fromScene?: boolean): void {
+    if (this.quantumGraphics) {
+      try {
+        this.quantumGraphics.destroy();
+      } catch {
+        // safe
+      }
+      this.quantumGraphics = null;
+    }
     if (this.labelText) {
       try {
         this.labelText.destroy();

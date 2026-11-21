@@ -20,15 +20,91 @@ import type { GameSceneContext } from './types';
  * clone edge pips, thumb-ribbon feedback, resize anchoring, and overlays.
  */
 export class HudController {
+  private topHudButtons: Phaser.GameObjects.Text[] = [];
+  private lastRow2Signature = '';
+
   constructor(private readonly ctx: GameSceneContext) {}
+
+  private layoutTopHudButtons(camW: number): void {
+    const isCompact = camW < 460;
+    const fontSize = isCompact ? '12px' : '15px';
+    const charWidth = isCompact ? 7.6 : 9.4;
+    const gap = isCompact ? 6 : 12;
+    const row1Y = isCompact ? 7 : 6;
+    const row2Y = 29;
+    const timerReserve = isCompact ? 102 : 136;
+    const row1MaxRight = Math.max(200, camW - timerReserve);
+
+    let cursorX = 40;
+    let cursorY = row1Y;
+    let wrappedToRow2 = false;
+
+    for (const btn of this.topHudButtons) {
+      if (!btn?.active) continue;
+      if (typeof btn.setFontSize === 'function') {
+        btn.setFontSize(fontSize);
+      }
+      const measuredW =
+        typeof btn.width === 'number' && btn.width > 0
+          ? btn.width
+          : Math.ceil((btn.text?.length ?? 5) * charWidth);
+
+      if (!wrappedToRow2 && cursorX > 40 && cursorX + measuredW > row1MaxRight) {
+        wrappedToRow2 = true;
+        cursorX = 40;
+        cursorY = row2Y;
+      }
+
+      btn.setPosition(cursorX, cursorY);
+      cursorX += Math.ceil(measuredW) + gap;
+    }
+  }
+
+  private layoutRow2Indicators(camW: number, force = false): void {
+    const ctx = this.ctx;
+    const isCompact = camW < 460;
+    const fontSize = isCompact ? '11px' : '14px';
+    const charWidth = isCompact ? 6.8 : 8.6;
+    const gap = isCompact ? 6 : 12;
+    const row2Y = isCompact ? 30 : 29;
+    const items = [
+      ctx.duelBadgeText,
+      ctx.ghostButton,
+      ctx.phaseIndicatorText,
+      ctx.dilationIndicatorText,
+      ctx.timeLoopIndicatorText
+    ];
+
+    const sig = `${camW}|${items.map((el) => (el?.active && el.visible ? el.text : '')).join('|')}`;
+    if (!force && sig === this.lastRow2Signature) return;
+    this.lastRow2Signature = sig;
+
+    let cursorX = 40;
+    for (const el of items) {
+      if (!el?.active || !el.visible || !el.text) continue;
+      if (typeof el.setFontSize === 'function') {
+        el.setFontSize(fontSize);
+      }
+      el.setPosition(cursorX, row2Y);
+      const measuredW =
+        typeof el.width === 'number' && el.width > 0
+          ? el.width
+          : Math.ceil(el.text.length * charWidth);
+      cursorX += Math.ceil(measuredW) + gap;
+    }
+  }
 
   public createHUD(): void {
     const ctx = this.ctx;
     const camW = ctx.cameras.main.width;
     const camH = ctx.cameras.main.height;
     const hudHeight = 54;
+    const isCompact = camW < 460;
+    const topBtnFontSize = isCompact ? '12px' : '15px';
+    const row2FontSize = isCompact ? '13px' : '15px';
     const getHudStrings = () => getStrings(useGameStore.getState().locale ?? 'en');
     const initialStrings = getHudStrings();
+    this.topHudButtons = [];
 
     ctx.hudContainer = ctx.add.container(0, 0);
     ctx.hudContainer.setScrollFactor(0);
@@ -43,8 +119,8 @@ export class HudController {
     ctx.hudContainer.add(hudBar);
 
     const backButton = ctx.add.text(18, hudHeight / 2, '◄', {
-      fontFamily: 'VT323',
-      fontSize: '26px',
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: '24px',
       color: '#ffffff'
     });
     backButton.setOrigin(0.5);
@@ -66,9 +142,9 @@ export class HudController {
     });
     ctx.hudContainer.add(backButton);
 
-    const restartButton = ctx.add.text(44, 5, initialStrings.hud.restart, {
-      fontFamily: 'VT323',
-      fontSize: '18px',
+    const restartButton = ctx.add.text(40, 6, initialStrings.hud.restart, {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: topBtnFontSize,
       color: '#fbbf24'
     });
     restartButton.setScrollFactor(0);
@@ -80,14 +156,15 @@ export class HudController {
       }
     });
     ctx.hudContainer.add(restartButton);
+    this.topHudButtons.push(restartButton);
 
     const getSoundLabel = () => {
       const s = getHudStrings().hud;
       return useGameStore.getState().isMuted ? s.soundOff : s.soundOn;
     };
-    const soundButton = ctx.add.text(92, 5, getSoundLabel(), {
-      fontFamily: 'VT323',
-      fontSize: '18px',
+    const soundButton = ctx.add.text(100, 6, getSoundLabel(), {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: topBtnFontSize,
       color: '#00ffcc'
     });
     soundButton.setScrollFactor(0);
@@ -96,16 +173,18 @@ export class HudController {
       ctx.uiPointerConsumed = true;
       useGameStore.getState().toggleMute();
       soundButton.setText(getSoundLabel());
+      this.layoutTopHudButtons(ctx.cameras.main.width);
     });
     ctx.hudContainer.add(soundButton);
+    this.topHudButtons.push(soundButton);
 
     const getHapticLabel = () => {
       const s = getHudStrings().hud;
       return useGameStore.getState().hapticsEnabled ? s.hapticsOn : s.hapticsOff;
     };
-    const hapticButton = ctx.add.text(154, 5, getHapticLabel(), {
-      fontFamily: 'VT323',
-      fontSize: '18px',
+    const hapticButton = ctx.add.text(170, 6, getHapticLabel(), {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: topBtnFontSize,
       color: '#00ffcc'
     });
     hapticButton.setScrollFactor(0);
@@ -114,16 +193,18 @@ export class HudController {
       ctx.uiPointerConsumed = true;
       useGameStore.getState().toggleHaptics();
       hapticButton.setText(getHapticLabel());
+      this.layoutTopHudButtons(ctx.cameras.main.width);
     });
     ctx.hudContainer.add(hapticButton);
+    this.topHudButtons.push(hapticButton);
 
     const getFxLabel = () => {
       const s = getHudStrings().hud;
       return useGameStore.getState().reducedEffects ? s.fxLo : s.fxHi;
     };
-    const fxButton = ctx.add.text(216, 5, getFxLabel(), {
-      fontFamily: 'VT323',
-      fontSize: '18px',
+    const fxButton = ctx.add.text(240, 6, getFxLabel(), {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: topBtnFontSize,
       color: '#00ffcc'
     });
     fxButton.setScrollFactor(0);
@@ -132,17 +213,43 @@ export class HudController {
       ctx.uiPointerConsumed = true;
       useGameStore.getState().toggleReducedEffects();
       fxButton.setText(getFxLabel());
+      this.layoutTopHudButtons(ctx.cameras.main.width);
     });
     ctx.hudContainer.add(fxButton);
+    this.topHudButtons.push(fxButton);
+
+    const getSkinLabel = () => {
+      const s = getHudStrings().hud;
+      const skin = useGameStore.getState().heroSkin ?? 'gameboy';
+      if (skin === 'gameboy') return s.skinGameboy;
+      if (skin === 'neo') return s.skinNeo;
+      if (skin === 'quantum') return s.skinQuantum;
+      return s.skinClassic;
+    };
+    const skinButton = ctx.add.text(300, 6, getSkinLabel(), {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: topBtnFontSize,
+      color: '#38bdf8'
+    });
+    skinButton.setScrollFactor(0);
+    skinButton.setInteractive({ useHandCursor: true });
+    skinButton.on('pointerdown', () => {
+      ctx.uiPointerConsumed = true;
+      useGameStore.getState().toggleHeroSkin();
+      skinButton.setText(getSkinLabel());
+      this.layoutTopHudButtons(ctx.cameras.main.width);
+    });
+    ctx.hudContainer.add(skinButton);
+    this.topHudButtons.push(skinButton);
 
     const initialActiveDuel = useGameStore.getState().activeDuel;
     const currentMode =
       useGameStore.getState().ghostMode ??
       (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
     const ghostLabel = initialStrings.ghost[currentMode];
-    ctx.ghostButton = ctx.add.text(44, 29, ghostLabel, {
-      fontFamily: 'VT323',
-      fontSize: '18px',
+    ctx.ghostButton = ctx.add.text(40, 29, ghostLabel, {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: row2FontSize,
       color: '#38bdf8'
     });
     ctx.ghostButton.setScrollFactor(0);
@@ -165,9 +272,9 @@ export class HudController {
         formatDuelSeconds(duel.challengerTimeMs)
       );
     };
-    ctx.duelBadgeText = ctx.add.text(44, 29, getDuelBadgeLabel(), {
-      fontFamily: 'VT323',
-      fontSize: '18px',
+    ctx.duelBadgeText = ctx.add.text(40, 29, getDuelBadgeLabel(), {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: row2FontSize,
       color: '#fbbf24'
     });
     ctx.duelBadgeText.setScrollFactor(0);
@@ -175,14 +282,14 @@ export class HudController {
     ctx.hudContainer.add(ctx.duelBadgeText);
 
     if (ctx.hasPhasePlatforms) {
-      const phaseX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 44;
+      const phaseX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 40;
       ctx.phaseIndicatorText = ctx.add.text(
         phaseX,
         29,
         initialStrings.hud.phase(ctx.currentPhase),
         {
-          fontFamily: 'VT323',
-          fontSize: '18px',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: row2FontSize,
           color: ctx.currentPhase === 'cyan' ? '#00ffff' : '#ec4899'
         }
       );
@@ -198,25 +305,25 @@ export class HudController {
       ctx.hudContainer.add(ctx.phaseIndicatorText);
     }
 
-    const dilationX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 44;
+    const dilationX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 40;
     ctx.dilationIndicatorText = ctx.add.text(dilationX, 29, initialStrings.hud.timeDilation, {
-      fontFamily: 'VT323',
-      fontSize: '18px',
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: row2FontSize,
       color: '#22d3ee'
     });
     ctx.dilationIndicatorText.setVisible(false);
     ctx.hudContainer.add(ctx.dilationIndicatorText);
 
     if (ctx.levelData?.timeLoop) {
-      const loopIndicatorX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 44;
+      const loopIndicatorX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 40;
       const initSec = (ctx.levelData.timeLoop.cycleMs / 1000).toFixed(1);
       ctx.timeLoopIndicatorText = ctx.add.text(
         loopIndicatorX,
         29,
         initialStrings.hud.timeLoopStatus(0, ctx.levelData.timeLoop.maxEchoes, initSec),
         {
-          fontFamily: 'VT323',
-          fontSize: '18px',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: row2FontSize,
           color: '#00e5ff'
         }
       );
@@ -225,13 +332,17 @@ export class HudController {
     }
 
     if (isGodMode()) {
-      const godBadge = ctx.add.text(274, 5, '[GOD]', {
-        fontFamily: 'VT323',
-        fontSize: '18px',
+      const godBadge = ctx.add.text(380, 6, '[GOD]', {
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: topBtnFontSize,
         color: '#fbbf24'
       });
       ctx.hudContainer.add(godBadge);
+      this.topHudButtons.push(godBadge);
     }
+
+    this.layoutTopHudButtons(camW);
+    this.layoutRow2Indicators(camW, true);
 
     if (ctx.unsubHudStore) {
       ctx.unsubHudStore();
@@ -248,6 +359,11 @@ export class HudController {
       if (fxButton.active) {
         fxButton.setText(getFxLabel());
       }
+      if (skinButton.active) {
+        skinButton.setText(getSkinLabel());
+      }
+      const w = ctx.cameras?.main?.width ?? 800;
+      this.layoutTopHudButtons(w);
       if (ctx.duelBadgeText?.active) {
         ctx.duelBadgeText.setText(getDuelBadgeLabel());
         ctx.duelBadgeText.setVisible(Boolean(duel));
@@ -270,13 +386,14 @@ export class HudController {
       if (ctx.ghostButton?.active) {
         ctx.applyGhostMode();
       }
+      this.layoutRow2Indicators(w, true);
     });
 
     const hideTopHud = Boolean(ctx.acceleratorMode);
 
-    ctx.timerText = ctx.add.text(camW - 10, 3, '00:00:00', {
-      fontFamily: 'VT323',
-      fontSize: '22px',
+    ctx.timerText = ctx.add.text(camW - 10, isCompact ? 5 : 3, '00:00:00', {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: isCompact ? '18px' : '22px',
       color: '#ffffff'
     });
     ctx.timerText.setOrigin(1, 0);
@@ -284,7 +401,7 @@ export class HudController {
     ctx.hudContainer.add(ctx.timerText);
 
     ctx.splitDeltaText = ctx.add.text(camW - 10, 28, '--', {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#94a3b8'
     });
@@ -302,7 +419,7 @@ export class HudController {
 
     const coherenceTierX = camW < 440 ? camW - 76 : camW - 110;
     ctx.coherenceTierText = ctx.add.text(coherenceTierX, 28, 'x1', {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: camW < 440 ? '16px' : '18px',
       color: '#38bdf8'
     });
@@ -317,6 +434,7 @@ export class HudController {
       soundButton.setVisible(false);
       hapticButton.setVisible(false);
       fxButton.setVisible(false);
+      skinButton.setVisible(false);
       ctx.ghostButton.setVisible(false);
       ctx.duelBadgeText.setVisible(false);
       ctx.phaseIndicatorText?.setVisible(false);
@@ -327,7 +445,7 @@ export class HudController {
     const thumbRestartBg = ctx.add.rectangle(camW - 36, camH - 36, 48, 48, 0x0b0f19, 0.35);
     thumbRestartBg.setStrokeStyle(1.5, 0xfbbf24, 0.35);
     const thumbRestartLabel = ctx.add.text(camW - 36, camH - 36, '↻', {
-      fontFamily: 'VT323',
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '28px',
       color: '#fbbf24'
     });
@@ -348,17 +466,19 @@ export class HudController {
     ctx.hudContainer.add(thumbRestartLabel);
     ctx.hudContainer.add(thumbRestartZone);
 
-    const condenseX = camW - 58;
+    const actionBtnW = 116;
+    const actionBtnX = camW - Math.ceil(actionBtnW / 2) - 10;
+    const condenseX = actionBtnX;
     const condenseY = camH - 96;
-    const condenseBg = ctx.add.rectangle(condenseX, condenseY, 96, 44, 0x083344, 0.88);
+    const condenseBg = ctx.add.rectangle(condenseX, condenseY, actionBtnW, 42, 0x083344, 0.88);
     condenseBg.setStrokeStyle(2, 0x00e5ff, 0.95);
     const condenseLabel = ctx.add.text(condenseX, condenseY, initialStrings.hud.condenseButton, {
-      fontFamily: 'VT323',
-      fontSize: '20px',
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: '15px',
       color: '#00e5ff'
     });
     condenseLabel.setOrigin(0.5);
-    const condenseZone = ctx.add.zone(condenseX, condenseY, 96, 44);
+    const condenseZone = ctx.add.zone(condenseX, condenseY, actionBtnW, 42);
     condenseZone.setInteractive({ useHandCursor: true });
     condenseZone.on('pointerdown', () => {
       ctx.uiPointerConsumed = true;
@@ -378,19 +498,19 @@ export class HudController {
     ctx.hudContainer.add(condenseZone);
 
     if (ctx.levelData?.timeLoop) {
-      const loopX = camW - 58;
+      const loopX = actionBtnX;
       const loopY = camH - 96;
-      const loopBg = ctx.add.rectangle(loopX, loopY, 96, 44, 0x1e1035, 0.88);
+      const loopBg = ctx.add.rectangle(loopX, loopY, actionBtnW, 42, 0x1e1035, 0.88);
       loopBg.setStrokeStyle(2, 0xa855f7, 0.95);
       loopBg.setScrollFactor?.(0);
       const loopLabel = ctx.add.text(loopX, loopY, initialStrings.hud.loopButton, {
-        fontFamily: 'VT323',
-        fontSize: '20px',
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: '15px',
         color: '#00e5ff'
       });
       loopLabel.setOrigin(0.5);
       loopLabel.setScrollFactor?.(0);
-      const loopZone = ctx.add.zone(loopX, loopY, 96, 44);
+      const loopZone = ctx.add.zone(loopX, loopY, actionBtnW, 42);
       loopZone.setScrollFactor?.(0);
       loopZone.setInteractive({ useHandCursor: true });
       loopZone.on(
@@ -417,19 +537,19 @@ export class HudController {
         (ctx.levelData?.observerBeams && ctx.levelData.observerBeams.length > 0)
     );
     if (hasWavefunctionMechanics) {
-      const observeX = camW - 58;
+      const observeX = actionBtnX;
       const observeY = ctx.levelData?.timeLoop ? camH - 148 : camH - 96;
-      const observeBg = ctx.add.rectangle(observeX, observeY, 108, 44, 0x1e1035, 0.88);
+      const observeBg = ctx.add.rectangle(observeX, observeY, actionBtnW, 42, 0x1e1035, 0.88);
       observeBg.setStrokeStyle(2, 0xfbbf24, 0.95);
       observeBg.setScrollFactor?.(0);
       const observeLabel = ctx.add.text(observeX, observeY, initialStrings.hud.observeButton, {
-        fontFamily: 'VT323',
-        fontSize: '20px',
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: '15px',
         color: '#fbbf24'
       });
       observeLabel.setOrigin(0.5);
       observeLabel.setScrollFactor?.(0);
-      const observeZone = ctx.add.zone(observeX, observeY, 108, 44);
+      const observeZone = ctx.add.zone(observeX, observeY, actionBtnW, 42);
       observeZone.setScrollFactor?.(0);
       observeZone.setInteractive({ useHandCursor: true });
       observeZone.on(
@@ -496,7 +616,7 @@ export class HudController {
       bg.setStrokeStyle(2, isFocused ? 0x00e5ff : 0x64748b, isFocused ? 0.95 : 0.5);
 
       const label = ctx.add.text(pipX, pipY, subscripts[index] ?? `ψ${index + 1}`, {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '24px',
         color: isFocused ? '#00e5ff' : '#94a3b8'
       });
@@ -550,10 +670,16 @@ export class HudController {
 
   public repositionOnResize(camW: number, camH: number): void {
     const ctx = this.ctx;
+    const isCompact = camW < 460;
     this.drawHudBar(camW);
+    this.layoutTopHudButtons(camW);
+    this.layoutRow2Indicators(camW, true);
 
     if (ctx.timerText?.active) {
-      ctx.timerText.setPosition(camW - 10, 3);
+      ctx.timerText.setPosition(camW - 10, isCompact ? 5 : 3);
+      if (typeof ctx.timerText.setFontSize === 'function') {
+        ctx.timerText.setFontSize(isCompact ? '18px' : '22px');
+      }
     }
     if (ctx.splitDeltaText?.active) {
       ctx.splitDeltaText.setPosition(camW - 10, 28);
@@ -578,7 +704,8 @@ export class HudController {
       ctx.thumbRestartZone.setPosition(thumbX, thumbY);
     }
 
-    const condenseX = camW - 58;
+    const actionBtnX = camW - 68;
+    const condenseX = actionBtnX;
     const condenseY = camH - 96;
     if (ctx.condenseButtonBg?.active) {
       ctx.condenseButtonBg.setPosition(condenseX, condenseY);
@@ -590,7 +717,7 @@ export class HudController {
       ctx.condenseButtonZone.setPosition(condenseX, condenseY);
     }
 
-    const loopX = camW - 58;
+    const loopX = actionBtnX;
     const loopY = ctx.hasCondenseAbility ? camH - 148 : camH - 96;
     if (ctx.loopButtonBg?.active) {
       ctx.loopButtonBg.setPosition(loopX, loopY);
@@ -602,7 +729,7 @@ export class HudController {
       ctx.loopButtonZone.setPosition(loopX, loopY);
     }
 
-    const observeX = camW - 58;
+    const observeX = actionBtnX;
     const observeY = ctx.levelData?.timeLoop
       ? ctx.hasCondenseAbility
         ? camH - 200
@@ -737,6 +864,7 @@ export class HudController {
       );
       ctx.timeLoopIndicatorText.setColor(remMs <= 1000 ? '#f43f5e' : '#00e5ff');
     }
+    this.layoutRow2Indicators(ctx.cameras?.main?.width ?? 800);
     this.updateCoherenceGauge();
     if (ctx.coherenceTierText?.active && ctx.lastCoherenceTier === 'HYPER') {
       const nowMs = ctx.time?.now ?? Date.now();

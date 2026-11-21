@@ -297,4 +297,25 @@ describe('Hero Quantum Entanglement Mechanics', () => {
     });
     expect(hero.body.velocity.x).toBeCloseTo(350 * 1.15, 2);
   });
+
+  it('triggers calibrated micro screen-shake on neon wall bounce when FX:HI and suppresses when FX:LO', async () => {
+    const { useGameStore } = await import('../store');
+    const shake = vi.fn();
+    const sceneWithCam = {
+      ...mockScene,
+      cameras: { main: { shake } }
+    } as any;
+
+    useGameStore.setState({ reducedEffects: false });
+    const heroHi = new Hero(sceneWithCam, 100, 200, true);
+    heroHi.bounceOffLeftWall(true);
+    expect(shake).toHaveBeenCalledTimes(1);
+    expect(shake).toHaveBeenCalledWith(75, 0.004);
+
+    useGameStore.setState({ reducedEffects: true });
+    const heroLo = new Hero(sceneWithCam, 100, 200, true);
+    heroLo.bounceOffRightWall(true);
+    expect(shake).toHaveBeenCalledTimes(1);
+    useGameStore.setState({ reducedEffects: false });
+  });
 });

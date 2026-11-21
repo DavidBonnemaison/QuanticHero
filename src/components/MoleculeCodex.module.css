@@ -22,13 +22,16 @@
 .drawer {
   width: min(680px, 100vw);
   height: 100%;
-  background: linear-gradient(165deg, #0b1120 0%, #111827 55%, #0f172a 100%);
-  border-left: 1px solid rgba(192, 132, 252, 0.4);
+  background: var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-left: 1px solid rgba(192, 132, 252, 0.35);
   box-shadow: -12px 0 36px rgba(0, 0, 0, 0.65);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  color: #f8fafc;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
   animation: codexSlideIn 0.22s ease-out;
 }
 
@@ -49,7 +52,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 20px 22px 14px;
-  border-bottom: 1px dashed rgba(148, 163, 184, 0.35);
+  border-bottom: var(--border-subtle);
 }
 
 .titleBlock {
@@ -67,10 +70,10 @@
 
 .title {
   margin: 0;
-  font-size: 30px;
-  font-weight: normal;
-  color: #ffffff;
-  letter-spacing: 0.04em;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.03em;
 }
 
 .counterBadge {
@@ -80,33 +83,37 @@
   border-radius: 999px;
   background: rgba(168, 85, 247, 0.2);
   border: 1px solid rgba(192, 132, 252, 0.65);
-  color: #e9d5ff;
-  font-size: 17px;
+  color: #f3e8ff;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .subtitle {
   margin: 0;
-  font-size: 16px;
-  color: #94a3b8;
-  line-height: 1.3;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .closeButton {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid #475569;
-  color: #f8fafc;
-  font-family: inherit;
-  font-size: 20px;
-  padding: 5px 12px;
-  border-radius: 6px;
+  background: var(--surface-glass);
+  border: var(--border-strong);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .closeButton:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: #94a3b8;
+  background: var(--surface-glass-hover);
+  border-color: var(--accent-cyan);
 }
 
 .grid {
@@ -120,15 +127,18 @@
 }
 
 .card {
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(15, 23, 42, 0.85);
+  border-radius: var(--radius-md);
+  border: var(--border-subtle);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   padding: 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 10px;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow
+    var(--transition-fast);
 }
 
 .cardUnlocked:hover {
@@ -137,9 +147,8 @@
 }
 
 .cardLocked {
-  background: rgba(15, 23, 42, 0.55);
-  border-style: dashed;
-  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.48);
+  border-color: rgba(148, 163, 184, 0.22);
 }
 
 .cardHeader {
@@ -151,20 +160,22 @@
 .formulaBadge {
   width: 54px;
   height: 54px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  font-weight: bold;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  font-weight: 700;
   flex-shrink: 0;
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .formulaBadgeLocked {
   background: rgba(30, 41, 59, 0.8);
-  color: #64748b;
-  border-color: rgba(100, 116, 139, 0.45);
+  color: var(--text-muted);
+  border-color: rgba(148, 163, 184, 0.35);
 }
 
 .cardTitleGroup {
@@ -176,35 +187,37 @@
 
 .cardName {
   margin: 0;
-  font-size: 21px;
-  font-weight: normal;
-  color: #ffffff;
-  line-height: 1.15;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .cardLockedTitle {
   margin: 0;
-  font-size: 19px;
-  font-weight: normal;
-  color: #94a3b8;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
 }
 
 .cardSlotIndex {
-  font-size: 14px;
-  color: #64748b;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .mechanicSummary {
   margin: 0;
-  font-size: 15px;
-  color: #cbd5e1;
-  line-height: 1.3;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .hintBox {
-  background: rgba(168, 85, 247, 0.09);
-  border: 1px solid rgba(192, 132, 252, 0.25);
-  border-radius: 6px;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(192, 132, 252, 0.28);
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
@@ -212,18 +225,19 @@
 }
 
 .hintLabel {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #c084fc;
+  color: var(--accent-violet);
 }
 
 .hintText {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-style: italic;
-  color: #e2e8f0;
-  line-height: 1.3;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .statsRow {
@@ -231,38 +245,43 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  padding-top: 8px;
+  border-top: var(--border-subtle);
 }
 
 .statItem {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .statLabel {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .statValue {
-  font-size: 18px;
-  color: #f8fafc;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .playButton {
-  background: linear-gradient(135deg, #0284c7, #6366f1);
+  background: linear-gradient(135deg, #0284c7, #4f46e5);
   border: 1px solid #38bdf8;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 18px;
-  padding: 6px 14px;
-  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: filter 0.15s, transform 0.1s;
+  transition: filter var(--transition-fast), transform 0.1s ease;
   width: 100%;
 }
 

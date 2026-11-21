@@ -35,7 +35,7 @@ export function showLevelTitle(ctx: GameSceneContext): void {
     : `${ctx.levelData.id} - ${ctx.levelData.atom}`;
 
   const title = ctx.add.text(camW / 2, ctx.cameras.main.height / 2, titleText, {
-    fontFamily: 'VT323',
+    fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
     fontSize: camW < 480 ? '30px' : '46px',
     color: ctx.levelData.antiHue,
     align: 'center',
@@ -70,29 +70,56 @@ export function showRetroToast(ctx: GameSceneContext, message: string): void {
   }
 
   const camW = ctx.cameras?.main?.width || 800;
+  const isCompact = camW < 480;
   const startX = camW / 2;
   const startY = 88;
   const accentHex = ctx.levelData?.antiHue || '#38bdf8';
   const accentColor = Number.parseInt(accentHex.replace('#', ''), 16) || 0x38bdf8;
+  const maxTextW = Math.max(180, camW - 56);
 
   const toast = ctx.add.text(startX, startY, message, {
-    fontFamily: 'VT323',
-    fontSize: '36px',
+    fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
+    fontSize: isCompact ? '15px' : '36px',
     fontStyle: 'bold',
     color: '#ffffff',
     stroke: '#050814',
-    strokeThickness: 5,
-    align: 'center'
+    strokeThickness: isCompact ? 3 : 5,
+    align: 'center',
+    wordWrap: { width: isCompact ? maxTextW : maxTextW * 1.45 }
   });
   toast.setOrigin(0.5);
   toast.setScrollFactor?.(0);
   toast.setAlpha(1);
   toast.setDepth(121);
 
-  const pillWidth = Math.min(camW - 32, Math.max(220, message.length * 18 + 44));
+  if (typeof toast.setScale === 'function') {
+    const targetScale = isCompact ? 1 : 0.65;
+    const fitScale =
+      typeof toast.width === 'number' && toast.width > 0 ? maxTextW / toast.width : 1;
+    const finalScale = Math.min(targetScale, fitScale);
+    if (finalScale < 1) {
+      toast.setScale(finalScale);
+    }
+  }
+
+  const measuredW =
+    typeof toast.displayWidth === 'number' && toast.displayWidth > 0
+      ? toast.displayWidth
+      : typeof toast.width === 'number' && toast.width > 0
+        ? toast.width
+        : message.length * (isCompact ? 11 : 15);
+  const measuredH =
+    typeof toast.displayHeight === 'number' && toast.displayHeight > 0
+      ? toast.displayHeight
+      : typeof toast.height === 'number' && toast.height > 0
+        ? toast.height
+        : 24;
+
+  const pillWidth = Math.min(camW - 20, Math.max(180, Math.ceil(measuredW + 32)));
+  const pillHeight = Math.max(42, Math.ceil(measuredH + 18));
   const pill =
     typeof ctx.add.rectangle === 'function'
-      ? ctx.add.rectangle(startX, startY, pillWidth, 48, 0x050814, 0.85)
+      ? ctx.add.rectangle(startX, startY, pillWidth, pillHeight, 0x050814, 0.88)
       : null;
   if (pill) {
     pill.setOrigin?.(0.5);
@@ -251,7 +278,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 182 : 148),
       isVictory ? t.duel.victoryBadge(deltaStr) : t.duel.defeatBadge(deltaStr),
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '30px' : '38px',
         color: isVictory ? '#34d399' : '#f87171',
         align: 'center',
@@ -272,7 +299,7 @@ export function showLevelCompleteOverlay(
             formatDuelSeconds(activeDuel.challengerTimeMs)
           ),
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '18px' : '24px',
         color: '#fbbf24',
         align: 'center',
@@ -289,7 +316,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 102 : 70),
       `${formatScore(elapsedMs)}  •  ${t.hud.jumps(ctx.jumpCount)}  •  ${medalInfo.symbol} ${medalInfo.shortLabel}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: isCompact ? '16px' : '21px',
         color: '#f8fafc',
         align: 'center',
@@ -305,7 +332,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 22 : 8),
       isVictory ? `⚔ ${t.duel.sendRevengeLink}` : `⚔ ${t.duel.challengeFriend.toUpperCase()}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '22px' : '28px',
         color: '#050814',
         backgroundColor: '#fbbf24',
@@ -331,7 +358,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 54 : 58),
       `🖼 ${t.hud.shareCardButton}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '19px' : '21px',
         color: '#00e5ff',
         backgroundColor: '#0c233c',
@@ -357,7 +384,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 132 : 124),
       `↻ ${t.duel.rematch.toUpperCase()}`,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '20px' : '22px',
         color: '#00ffcc',
         backgroundColor: '#083344',
@@ -389,7 +416,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 132 : 124),
       t.hud.levelsButton,
       {
-        fontFamily: 'VT323',
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '20px' : '22px',
         color: '#cbd5e1',
         backgroundColor: '#1e293b',
@@ -422,21 +449,26 @@ export function showLevelCompleteOverlay(
   } else {
     const symbol = ctx.levelData.symbol || '?';
     const atom = ctx.levelData.atom || 'Element';
+    const wrapW = Math.max(200, cardW - 34);
+    const stacked: Array<{ obj: Phaser.GameObjects.Text; fallbackH: number; gapAfter: number }> =
+      [];
+
     const headerText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? 174 : 138),
+      camH / 2 - 140,
       t.hud.elementSynthesized(symbol, atom.toUpperCase()),
       {
-        fontFamily: 'VT323',
-        fontSize: isCompact ? '20px' : '28px',
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
+        fontSize: isCompact ? '16px' : '22px',
         color: '#00e5ff',
         align: 'center',
-        wordWrap: { width: cardW - 24 }
+        wordWrap: { width: wrapW }
       }
     );
     headerText.setOrigin(0.5);
     headerText.setScrollFactor?.(0);
     overlay.add(headerText);
+    stacked.push({ obj: headerText, fallbackH: isCompact ? 36 : 32, gapAfter: 10 });
 
     let deltaLabel = t.hud.newRecord;
     if (prevBestMs > 0) {
@@ -448,57 +480,55 @@ export function showLevelCompleteOverlay(
     const medalInfo = getMedalDisplayInfo(medal, locale);
     const statsText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? 134 : 102),
-      `${formatScore(elapsedMs)}  •  ${t.hud.rec} ${formatScore(bestMs)}  •  ${deltaLabel}`,
+      camH / 2 - 102,
+      `${formatScore(elapsedMs)} · ${t.hud.rec} ${formatScore(bestMs)} · ${deltaLabel}`,
       {
-        fontFamily: 'VT323',
-        fontSize: isCompact ? '16px' : '22px',
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: isCompact ? '13px' : '17px',
         color: prevBestMs === 0 || elapsedMs <= prevBestMs ? '#34d399' : '#f8fafc',
         align: 'center',
-        wordWrap: { width: cardW - 24 }
+        wordWrap: { width: wrapW }
       }
     );
     statsText.setOrigin(0.5);
     statsText.setScrollFactor?.(0);
     overlay.add(statsText);
+    stacked.push({ obj: statsText, fallbackH: isCompact ? 32 : 24, gapAfter: 8 });
 
     const isCoherentRun = ctx.coherenceSystem?.isCoherentRun?.() ?? false;
     const styleScore = ctx.coherenceSystem?.getStyleScore?.() ?? 0;
 
     const medalText = ctx.add.text(
       camW / 2,
-      camH / 2 - (isCompact ? 102 : 74),
-      `${medalInfo.symbol} ${medalInfo.label.toUpperCase()}  •  ${t.hud.jumps(ctx.jumpCount)}`,
+      camH / 2 - 74,
+      `${medalInfo.symbol} ${medalInfo.label.toUpperCase()} · ${t.hud.jumps(ctx.jumpCount)}`,
       {
-        fontFamily: 'VT323',
-        fontSize: isCompact ? '15px' : '19px',
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: isCompact ? '12px' : '15px',
         color: medalInfo.color,
         align: 'center',
-        wordWrap: { width: cardW - 24 }
+        wordWrap: { width: wrapW }
       }
     );
     medalText.setOrigin(0.5);
     medalText.setScrollFactor?.(0);
     overlay.add(medalText);
+    stacked.push({ obj: medalText, fallbackH: 22, gapAfter: isCoherentRun ? 8 : 12 });
 
     if (isCoherentRun) {
       const coherentLabel =
-        styleScore > 0 ? `⚡ COHERENT RUN  •  FLOW ${styleScore}` : '⚡ COHERENT RUN';
-      const coherentBadge = ctx.add.text(
-        camW / 2,
-        camH / 2 - (isCompact ? 76 : 48),
-        coherentLabel,
-        {
-          fontFamily: 'VT323',
-          fontSize: isCompact ? '16px' : '20px',
-          color: '#fbbf24',
-          align: 'center',
-          wordWrap: { width: cardW - 24 }
-        }
-      );
+        styleScore > 0 ? `⚡ COHERENT RUN · FLOW ${styleScore}` : '⚡ COHERENT RUN';
+      const coherentBadge = ctx.add.text(camW / 2, camH / 2 - 48, coherentLabel, {
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: isCompact ? '13px' : '16px',
+        color: '#fbbf24',
+        align: 'center',
+        wordWrap: { width: wrapW }
+      });
       coherentBadge.setOrigin(0.5);
       coherentBadge.setScrollFactor?.(0);
       overlay.add(coherentBadge);
+      stacked.push({ obj: coherentBadge, fallbackH: 22, gapAfter: 12 });
     }
 
     const currentLvl = Number(ctx.levelData.id) || 1;
@@ -507,21 +537,17 @@ export function showLevelCompleteOverlay(
         ? ctx.levelData.explanations.slice(0, 2)
         : getNarrativeForLevel(currentLvl).slice(0, 2);
 
-    const narrativeText = ctx.add.text(
-      camW / 2,
-      camH / 2 - (isCompact ? (isCoherentRun ? 32 : 44) : isCoherentRun ? 12 : 24),
-      narrativeLines.join('\n'),
-      {
-        fontFamily: 'VT323',
-        fontSize: isCompact ? '16px' : '18px',
-        color: '#cbd5e1',
-        align: 'center',
-        wordWrap: { width: cardW - 36 }
-      }
-    );
+    const narrativeText = ctx.add.text(camW / 2, camH / 2 - 20, narrativeLines.join('\n'), {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: isCompact ? '12px' : '14px',
+      color: '#cbd5e1',
+      align: 'center',
+      wordWrap: { width: wrapW }
+    });
     narrativeText.setOrigin(0.5);
     narrativeText.setScrollFactor?.(0);
     overlay.add(narrativeText);
+    stacked.push({ obj: narrativeText, fallbackH: isCompact ? 68 : 48, gapAfter: 16 });
 
     const rawId = String(ctx.levelData.id ?? '');
     const isChronoLevel = /^chrono-\d+$/i.test(rawId);
@@ -544,13 +570,14 @@ export function showLevelCompleteOverlay(
         ? t.hud.modesButton
         : t.hud.levelsButton;
 
-    const nextBtn = ctx.add.text(camW / 2, camH / 2 + (isCompact ? 56 : 48), primaryLabel, {
-      fontFamily: 'VT323',
-      fontSize: isCompact ? '20px' : '22px',
+    const nextBtn = ctx.add.text(camW / 2, camH / 2 + 48, primaryLabel, {
+      fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
+      fontSize: isCompact ? '14px' : '17px',
       color: '#00ffcc',
       backgroundColor: '#083344',
-      padding: { x: 12, y: 6 },
-      wordWrap: { width: cardW - 32 }
+      align: 'center',
+      padding: { x: 12, y: 8 },
+      wordWrap: { width: wrapW - 12 }
     });
     nextBtn.setOrigin(0.5);
     nextBtn.setScrollFactor?.(0);
@@ -579,18 +606,20 @@ export function showLevelCompleteOverlay(
       }
     );
     overlay.add(nextBtn);
+    stacked.push({ obj: nextBtn, fallbackH: 38, gapAfter: 12 });
 
     const challengeBtn = ctx.add.text(
       camW / 2,
-      camH / 2 + (isCompact ? 112 : 98),
+      camH / 2 + 98,
       `⚔ ${t.duel.challengeFriend.toUpperCase()}`,
       {
-        fontFamily: 'VT323',
-        fontSize: isCompact ? '19px' : '21px',
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
+        fontSize: isCompact ? '13px' : '16px',
         color: '#fbbf24',
         backgroundColor: '#422006',
-        padding: { x: 14, y: 6 },
-        wordWrap: { width: cardW - 32 }
+        align: 'center',
+        padding: { x: 12, y: 7 },
+        wordWrap: { width: wrapW - 12 }
       }
     );
     challengeBtn.setOrigin(0.5);
@@ -605,20 +634,17 @@ export function showLevelCompleteOverlay(
       }
     );
     overlay.add(challengeBtn);
+    stacked.push({ obj: challengeBtn, fallbackH: 36, gapAfter: 12 });
 
-    const shareCardBtn = ctx.add.text(
-      camW / 2,
-      camH / 2 + (isCompact ? 166 : 146),
-      `🖼 ${t.hud.shareCardButton}`,
-      {
-        fontFamily: 'VT323',
-        fontSize: isCompact ? '19px' : '21px',
-        color: '#00e5ff',
-        backgroundColor: '#0c233c',
-        padding: { x: 14, y: 6 },
-        wordWrap: { width: cardW - 32 }
-      }
-    );
+    const shareCardBtn = ctx.add.text(camW / 2, camH / 2 + 146, `🖼 ${t.hud.shareCardButton}`, {
+      fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
+      fontSize: isCompact ? '13px' : '16px',
+      color: '#00e5ff',
+      backgroundColor: '#0c233c',
+      align: 'center',
+      padding: { x: 12, y: 7 },
+      wordWrap: { width: wrapW - 12 }
+    });
     shareCardBtn.setOrigin(0.5);
     shareCardBtn.setScrollFactor?.(0);
     shareCardBtn.setInteractive({ useHandCursor: true });
@@ -631,6 +657,62 @@ export function showLevelCompleteOverlay(
       }
     );
     overlay.add(shareCardBtn);
+    stacked.push({ obj: shareCardBtn, fallbackH: 36, gapAfter: 0 });
+
+    // Dynamically position stacked items vertically so nothing overlaps or clips the card border
+    const heights = stacked.map((s) =>
+      typeof s.obj.height === 'number' && s.obj.height > 0 ? s.obj.height : s.fallbackH
+    );
+    const totalContentH = heights.reduce((sum, h, i) => sum + h + stacked[i].gapAfter, 0);
+    const finalCardH = Math.min(camH - 96, Math.max(cardH, Math.ceil(totalContentH + 40)));
+    if (typeof cardBg.setSize === 'function') {
+      cardBg.setSize(cardW, finalCardH);
+    }
+    let cursorY = camH / 2 - totalContentH / 2;
+    for (let i = 0; i < stacked.length; i++) {
+      const h = heights[i];
+      stacked[i].obj.setPosition?.(camW / 2, Math.round(cursorY + h / 2));
+      cursorY += h + stacked[i].gapAfter;
+    }
+  }
+
+  const isNewPb = prevBestMs === 0 || elapsedMs <= prevBestMs;
+  const isGold = medal === 'gold';
+  if ((isNewPb || isGold) && !store.reducedEffects) {
+    if (isGold) {
+      ctx.cameras.main.flash?.(260, 251, 191, 36, false);
+    } else {
+      ctx.cameras.main.flash?.(220, 0, 229, 255, false);
+    }
+    if (ctx.add?.circle && ctx.tweens?.add) {
+      const palette = isGold
+        ? [0xfbbf24, 0xfde047, 0x00e5ff, 0xec4899]
+        : [0x00e5ff, 0x34d399, 0xc084fc, 0xfbbf24];
+      for (let i = 0; i < 10; i++) {
+        const angle = (Math.PI * 2 * i) / 10;
+        const dist = 110 + (i % 3) * 45;
+        const p = ctx.add.circle(
+          camW / 2,
+          camH / 2,
+          4 + (i % 2) * 2,
+          palette[i % palette.length],
+          0.9
+        );
+        p.setScrollFactor?.(0);
+        p.setDepth?.(205);
+        overlay.add(p);
+        ctx.tweens.add({
+          targets: p,
+          x: camW / 2 + Math.cos(angle) * dist,
+          y: camH / 2 + Math.sin(angle) * dist,
+          alpha: 0,
+          scale: 0.25,
+          duration: 620,
+          ease: 'Cubic.easeOut',
+          onComplete: () => p.destroy()
+        });
+      }
+    }
   }
 
   if (ctx.tweens?.add) {

@@ -1,8 +1,9 @@
 .container {
-  color: white;
+  color: var(--text-primary);
   text-align: center;
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -10,98 +11,121 @@
   align-items: center;
   padding: 30px 16px calc(24px + env(safe-area-inset-bottom, 20px));
   box-sizing: border-box;
+  font-family: var(--font-ui);
+  overflow: hidden;
 }
 
 .done {
-  font-size: 56px;
-  font-weight: normal;
+  font-size: clamp(32px, 6vw, 48px);
+  font-weight: 700;
   margin: 0 0 20px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
 }
 
 .scoresWrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
-  max-width: 320px;
-  margin-bottom: 24px;
+  max-width: 340px;
+  margin-bottom: 22px;
 }
 
 .scoreBox {
-  border: 2px solid #444;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 12px 16px;
-  border-radius: 4px;
+  border: var(--border-subtle);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-glass);
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .scoreType {
-  font-size: 20px;
-  color: #888;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
   margin-bottom: 4px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .scoreValue {
-  font-size: 36px;
-  color: #fff;
-  font-family: "VT323", monospace;
-  letter-spacing: 0.05em;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
 }
 
 .bestBadge {
-  background-color: #b71c1c;
-  color: white;
-  padding: 2px 8px;
-  font-size: 18px;
-  margin-top: 6px;
-  border-radius: 2px;
+  background: rgba(251, 191, 36, 0.18);
+  border: 1px solid var(--accent-amber);
+  color: var(--accent-amber);
+  padding: 3px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-top: 8px;
+  border-radius: 999px;
 }
 
 .molecule {
   text-align: center;
-  width: 140px;
-  height: 140px;
-  line-height: 140px;
-  font-size: 70px;
+  width: 132px;
+  height: 132px;
+  line-height: 132px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 56px;
   margin: 0 auto 24px;
   position: relative;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  box-shadow: var(--shadow-glass);
 }
 
 .atomicId {
   position: absolute;
-  font-size: 26px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 600;
   top: 8px;
-  left: 8px;
+  left: 10px;
   line-height: 1;
 }
 
 .buttonContainer {
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
 }
 
 .button {
   flex: 1;
-  padding: 12px 8px;
-  font-size: 24px;
-  font-family: inherit;
-  border: none;
-  border-radius: 4px;
+  padding: 12px 10px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  color: #fff;
-  transition: opacity 0.15s, transform 0.1s;
+  color: var(--text-primary);
+  transition: filter var(--transition-fast), transform 0.1s ease, background-color
+    var(--transition-fast);
 }
 
 .button:hover {
-  opacity: 0.9;
+  filter: brightness(1.12);
 }
 
 .button:active {
@@ -109,46 +133,53 @@
 }
 
 .buttonMenu {
-  background-color: #444;
+  background: var(--surface-glass);
+  border-color: var(--border-color-strong);
+  color: var(--text-primary);
 }
 
 .buttonRetry {
-  background-color: #b1810f;
+  background-color: #b45309;
+  color: var(--text-primary);
 }
 
 .buttonNext {
-  background-color: #b71c1c;
+  background-color: #0284c7;
+  color: var(--text-primary);
 }
 
 .buttonEdit {
-  background-color: #11998e;
+  background-color: #0f766e;
+  color: var(--text-primary);
 }
 
 .buttonSave {
-  background-color: #38ef7d;
-  color: #06171b;
+  background-color: var(--accent-emerald);
+  color: var(--bg-deep);
 }
 
 .buttonShare {
-  background-color: #0284c7;
+  background-color: #4f46e5;
+  color: var(--text-primary);
 }
 
 .customBadge {
-  background-color: #38ef7d;
-  color: #06171b;
-  font-size: 18px;
+  background-color: var(--accent-emerald);
+  color: var(--bg-deep);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
   padding: 4px 12px;
-  border-radius: 4px;
-  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
   display: inline-block;
-  font-family: inherit;
 }
 
 .saveToast {
   margin-top: 12px;
-  font-size: 20px;
-  color: #38ef7d;
-  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-emerald);
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -157,10 +188,12 @@
   max-width: 420px;
   padding: 14px 18px;
   margin-bottom: 18px;
-  border-radius: 6px;
-  border: 2px solid #fbbf24;
-  background: rgba(11, 15, 25, 0.92);
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.28);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--accent-amber);
+  background: var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.24);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -168,38 +201,41 @@
 }
 
 .duelVictory {
-  border-color: #34d399;
-  box-shadow: 0 0 22px rgba(52, 211, 153, 0.35);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 22px rgba(52, 211, 153, 0.3);
 }
 
 .duelDefeat {
-  border-color: #f87171;
-  box-shadow: 0 0 20px rgba(248, 113, 113, 0.3);
+  border-color: var(--accent-danger);
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.28);
 }
 
 .duelVerdictTitle {
-  font-size: 36px;
-  letter-spacing: 0.06em;
-  line-height: 1.1;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
 }
 
 .duelVictory .duelVerdictTitle {
-  color: #34d399;
+  color: var(--accent-emerald);
 }
 
 .duelDefeat .duelVerdictTitle {
-  color: #f87171;
+  color: var(--accent-danger);
 }
 
 .duelVerdictSubtitle {
-  font-size: 22px;
-  color: #fbbf24;
-  letter-spacing: 0.04em;
+  font-size: 16px;
+  color: var(--accent-amber);
+  letter-spacing: 0.03em;
 }
 
 .duelCtaRow {
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   margin-bottom: 12px;
   display: flex;
   flex-direction: column;
@@ -208,22 +244,22 @@
 
 .buttonRevenge {
   width: 100%;
-  padding: 14px 16px;
-  font-size: 28px;
-  font-family: inherit;
-  letter-spacing: 0.06em;
-  border: 2px solid #fde047;
-  border-radius: 4px;
-  background: linear-gradient(135deg, #f59e0b, #fbbf24);
-  color: #050814;
-  font-weight: bold;
+  padding: 12px 16px;
+  font-size: 18px;
+  font-family: var(--font-ui);
+  letter-spacing: 0.04em;
+  border: 1.5px solid #fde047;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #f59e0b, var(--accent-amber));
+  color: var(--bg-deep);
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 0 18px rgba(251, 191, 36, 0.5);
-  transition: transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.45);
+  transition: transform 0.1s ease, box-shadow var(--transition-fast);
 }
 
 .buttonRevenge:hover {
-  box-shadow: 0 0 26px rgba(251, 191, 36, 0.8);
+  box-shadow: 0 0 26px rgba(251, 191, 36, 0.72);
 }
 
 .buttonRevenge:active {
@@ -233,19 +269,20 @@
 .buttonChallenge {
   width: 100%;
   padding: 10px 14px;
-  font-size: 22px;
-  font-family: inherit;
-  letter-spacing: 0.05em;
-  border: 2px solid #fbbf24;
-  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  letter-spacing: 0.04em;
+  border: 1.5px solid var(--accent-amber);
+  border-radius: var(--radius-sm);
   background: rgba(251, 191, 36, 0.14);
-  color: #fbbf24;
+  color: var(--accent-amber);
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  transition: background var(--transition-fast), transform 0.1s ease;
 }
 
 .buttonChallenge:hover {
-  background: rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.24);
 }
 
 .buttonChallenge:active {
@@ -255,19 +292,20 @@
 .buttonShareCard {
   width: 100%;
   padding: 10px 14px;
-  font-size: 22px;
-  font-family: inherit;
-  letter-spacing: 0.05em;
-  border: 2px solid #00e5ff;
-  border-radius: 4px;
-  background: rgba(0, 229, 255, 0.14);
-  color: #00e5ff;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  letter-spacing: 0.04em;
+  border: 1.5px solid var(--accent-cyan);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 229, 255, 0.12);
+  color: var(--accent-cyan);
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s, opacity 0.15s;
+  transition: background var(--transition-fast), transform 0.1s ease, opacity var(--transition-fast);
 }
 
 .buttonShareCard:hover {
-  background: rgba(0, 229, 255, 0.24);
+  background: rgba(0, 229, 255, 0.22);
 }
 
 .buttonShareCard:active {
@@ -279,11 +317,82 @@
   cursor: wait;
 }
 
+/* Chromatic Flash + Spectral Particles Celebration (NEW PB / Gold Medal) */
+.celebrationFlash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  background: radial-gradient(
+    circle at 50% 42%,
+    rgba(251, 191, 36, 0.36) 0%,
+    rgba(0, 229, 255, 0.2) 38%,
+    rgba(236, 72, 153, 0.12) 68%,
+    transparent 100%
+  );
+  animation: chromaticFlash 650ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.spectralParticles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 41;
+  overflow: hidden;
+}
+
+.spectralParticle {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: spectralBurst 850ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes chromaticFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes spectralBurst {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  70% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, -80px))) scale(1.3);
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebrationFlash,
+  .spectralParticles {
+    display: none;
   }
 }

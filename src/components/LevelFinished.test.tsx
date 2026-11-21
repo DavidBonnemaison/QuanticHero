@@ -456,4 +456,61 @@ describe('LevelFinished component', () => {
       expect(screen.getByText(/5 jumps/i)).toBeInTheDocument();
     });
   });
+
+  describe('Epic 06 Spec-01: PB / Gold Chromatic Celebration', () => {
+    it('renders chromatic flash and spectral particles on NEW PB or Gold Medal when FX:HI', () => {
+      useGameStore.setState({
+        currentLevel: 2,
+        reducedEffects: false,
+        scores: {
+          1: { last: 7420, best: 7420, medal: 'gold', lastJumps: 5 }
+        },
+        sharedLevel: null,
+        activeDuel: null,
+        lastRun: null
+      });
+
+      renderWithRouter();
+
+      expect(screen.getByTestId('celebration-flash')).toBeInTheDocument();
+      const particles = screen.getByTestId('spectral-particles');
+      expect(particles.children.length).toBe(12);
+    });
+
+    it('suppresses chromatic flash and spectral particles when FX:LO (reducedEffects)', () => {
+      useGameStore.setState({
+        currentLevel: 2,
+        reducedEffects: true,
+        scores: {
+          1: { last: 7420, best: 7420, medal: 'gold', lastJumps: 5 }
+        },
+        sharedLevel: null,
+        activeDuel: null,
+        lastRun: null
+      });
+
+      renderWithRouter();
+
+      expect(screen.queryByTestId('celebration-flash')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('spectral-particles')).not.toBeInTheDocument();
+    });
+
+    it('does not trigger celebration when run is neither NEW PB nor Gold Medal', () => {
+      useGameStore.setState({
+        currentLevel: 2,
+        reducedEffects: false,
+        scores: {
+          1: { last: 15000, best: 10000, medal: 'bronze', lastJumps: 12 }
+        },
+        sharedLevel: null,
+        activeDuel: null,
+        lastRun: null
+      });
+
+      renderWithRouter();
+
+      expect(screen.queryByTestId('celebration-flash')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('spectral-particles')).not.toBeInTheDocument();
+    });
+  });
 });

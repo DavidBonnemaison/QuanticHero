@@ -7,72 +7,85 @@
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
-  padding: 20px;
+  padding: 86px 20px 28px;
   box-sizing: border-box;
+  font-family: var(--font-ui);
 }
 
 .title {
   position: relative;
   z-index: 1;
   text-align: center;
-  color: #999;
-  padding-bottom: 20px;
-  font-size: 80px;
-  letter-spacing: 0.1em;
-  margin: 0 0 40px;
-  font-weight: normal;
+  color: var(--text-primary);
+  padding-bottom: 16px;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 6.8vw, 62px);
+  letter-spacing: 0.06em;
+  margin: 0 0 32px;
+  font-weight: 700;
+  text-shadow: 0 4px 0 rgba(0, 229, 255, 0.25), 0 0 28px rgba(0, 229, 255, 0.28);
 }
 
 .button {
   position: relative;
   z-index: 1;
-  color: #e2e2e2;
-  font-size: 30px;
-  font-family: inherit;
+  color: var(--text-primary);
+  font-size: 17px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
   width: 100%;
   max-width: 360px;
   text-align: center;
-  padding: 16px 24px;
-  margin: 12px auto;
-  border: 2px solid #e2e2e2;
-  background: transparent;
+  padding: 14px 24px;
+  margin: 8px auto;
+  border: var(--border-strong);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.15s, color 0.15s, transform 0.1s, border-color 0.15s;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-glass);
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform 0.1s
+    ease, border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .button:hover {
-  background-color: #e2e2e2;
-  color: #000;
+  background-color: var(--surface-glass-hover);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
 }
 
 .button:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 
 .primaryButton {
-  border-color: #00ffcc;
-  color: #00ffcc;
-  box-shadow: 0 0 14px rgba(0, 255, 204, 0.2);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(0, 229, 255, 0.1);
+  box-shadow: var(--shadow-glow-cyan);
 }
 
 .primaryButton:hover {
-  background-color: #00ffcc;
-  color: #000;
-  box-shadow: 0 0 22px rgba(0, 255, 204, 0.45);
+  background-color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  color: var(--bg-deep);
+  box-shadow: 0 0 26px rgba(0, 229, 255, 0.45);
 }
 
 .secondaryButton {
-  border-color: #64748b;
-  color: #94a3b8;
-  font-size: 24px;
-  padding: 12px 20px;
+  border-color: var(--border-color-strong);
+  color: var(--text-secondary);
+  font-size: 16px;
+  font-weight: 500;
+  padding: 10px 20px;
 }
 
 .secondaryButton:hover {
-  background-color: #ef4444;
-  border-color: #ef4444;
-  color: #fff;
+  background-color: var(--accent-danger-solid);
+  border-color: var(--accent-danger-solid);
+  color: var(--text-primary);
 }
 
 .topControls {
@@ -82,22 +95,26 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
   z-index: 10;
 }
 
 .soundButton {
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid #444;
-  border-radius: 4px;
-  font-family: "VT323", monospace;
-  font-size: 20px;
-  letter-spacing: 1px;
-  line-height: 1;
-  padding: 6px 10px;
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  padding: 7px 10px;
   cursor: pointer;
-  color: #00ffcc;
-  transition: all 0.15s;
+  color: var(--accent-cyan);
+  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -105,9 +122,9 @@
 }
 
 .soundButton:hover {
-  background-color: #111;
-  border-color: #00ffcc;
-  box-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+  background-color: var(--surface-glass-hover);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
 }
 
 .soundButton:active {
@@ -115,18 +132,20 @@
 }
 
 .langActive {
-  color: #00ffcc;
-  font-weight: bold;
+  color: var(--accent-cyan);
+  font-weight: 700;
 }
 
 .langInactive {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .modalBackdrop {
   position: fixed;
   inset: 0;
   background: rgba(5, 8, 20, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -135,9 +154,11 @@
 }
 
 .modalCard {
-  background: #0b0f19;
-  border: 2px solid #ef4444;
-  border-radius: 6px;
+  background: var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1.5px solid var(--accent-danger);
+  border-radius: var(--radius-lg);
   padding: 28px 32px;
   max-width: 440px;
   width: 100%;
@@ -147,80 +168,87 @@
 
 .modalTitle {
   margin: 0 0 12px;
-  font-size: 34px;
-  font-weight: normal;
-  color: #f87171;
-  letter-spacing: 0.06em;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent-danger);
+  letter-spacing: 0.04em;
 }
 
 .modalMessage {
   margin: 0 0 24px;
-  font-size: 22px;
-  color: #e2e8f0;
-  line-height: 1.35;
+  font-size: 16px;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .modalActions {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .modalCancelButton,
 .modalConfirmButton {
-  font-family: inherit;
-  font-size: 24px;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 600;
   padding: 10px 20px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color
+    var(--transition-fast);
 }
 
 .modalCancelButton {
-  background: transparent;
-  border: 2px solid #64748b;
-  color: #e2e8f0;
+  background: var(--surface-glass);
+  border: var(--border-strong);
+  color: var(--text-primary);
 }
 
 .modalCancelButton:hover {
-  background: #334155;
-  border-color: #94a3b8;
+  background: var(--surface-glass-hover);
+  border-color: var(--text-secondary);
 }
 
 .modalConfirmButton {
-  background: #ef4444;
-  border: 2px solid #ef4444;
-  color: #fff;
+  background: var(--accent-danger-solid);
+  border: 1px solid var(--accent-danger);
+  color: var(--text-primary);
 }
 
 .modalConfirmButton:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: #b91c1c;
+  border-color: #ef4444;
 }
 
 .entanglementButton {
-  max-width: 340px;
-  border-color: #ec4899;
-  color: #ec4899;
-  box-shadow: 0 0 15px rgba(236, 72, 153, 0.25);
+  max-width: 360px;
+  border-color: var(--accent-magenta);
+  color: #f9a8d4;
+  background: rgba(236, 72, 153, 0.1);
+  box-shadow: 0 0 16px rgba(236, 72, 153, 0.22);
 }
 
 .entanglementButton:hover {
-  background-color: #ec4899;
-  color: #fff;
-  box-shadow: 0 0 25px rgba(236, 72, 153, 0.5);
+  background-color: var(--accent-magenta);
+  border-color: var(--accent-magenta);
+  color: var(--bg-deep);
+  box-shadow: 0 0 26px rgba(236, 72, 153, 0.45);
 }
 
 .entanglementBadge {
   display: inline-block;
   margin-left: 8px;
   padding: 2px 8px;
-  font-size: 22px;
-  letter-spacing: 0.05em;
-  border-radius: 4px;
-  background: rgba(236, 72, 153, 0.2);
-  border: 1px solid rgba(236, 72, 153, 0.5);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-sm);
+  background: rgba(236, 72, 153, 0.22);
+  border: 1px solid rgba(236, 72, 153, 0.55);
 }
 
 .dailyCard {
@@ -229,16 +257,19 @@
   width: 100%;
   max-width: 420px;
   margin: 0 auto 20px;
-  padding: 14px 18px;
-  border: 2px solid #f59e0b;
-  border-radius: 6px;
-  background: rgba(11, 15, 25, 0.85);
-  color: #f8fafc;
-  font-family: inherit;
+  padding: 16px 18px;
+  border: 1.5px solid rgba(251, 191, 36, 0.65);
+  border-radius: var(--radius-md);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 0 18px rgba(245, 158, 11, 0.25);
-  transition: transform 0.12s, box-shadow 0.15s, border-color 0.15s, background-color 0.15s;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.18);
+  transition: transform 0.12s ease, box-shadow var(--transition-fast), border-color
+    var(--transition-fast), background-color var(--transition-fast);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -246,8 +277,9 @@
 
 .dailyCard:hover {
   transform: translateY(-2px);
-  background: rgba(245, 158, 11, 0.14);
-  box-shadow: 0 0 26px rgba(245, 158, 11, 0.45);
+  background: rgba(251, 191, 36, 0.12);
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 26px rgba(251, 191, 36, 0.35);
 }
 
 .dailyCard:active {
@@ -263,18 +295,23 @@
 }
 
 .dailyCardTitle {
-  font-size: 26px;
-  letter-spacing: 0.05em;
-  color: #fbbf24;
-  line-height: 1.1;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent-amber);
+  line-height: 1.3;
 }
 
 .dailyStreakBadge {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 18px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 600;
   color: #fed7aa;
   background: rgba(234, 88, 12, 0.28);
   border: 1px solid rgba(251, 146, 60, 0.65);
@@ -287,26 +324,32 @@
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
-  font-size: 19px;
-  color: #cbd5e1;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .dailyCompletedBadge {
-  color: #34d399;
-  font-weight: bold;
+  color: var(--accent-emerald);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 
 .dailyDifficultyTag {
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-size: 16px;
-  letter-spacing: 0.06em;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  color: #94a3b8;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  border: var(--border-subtle);
+  color: var(--text-secondary);
+  background: rgba(15, 23, 42, 0.55);
 }
 
 .dailyCountdown {
-  color: #94a3b8;
-  font-size: 18px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-size: 13px;
   letter-spacing: 0.04em;
 }

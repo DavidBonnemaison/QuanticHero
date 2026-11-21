@@ -317,4 +317,28 @@ describe('Menu component', () => {
       window.history.replaceState({}, '', '/');
     }
   });
+
+  it('cycles hero skin through GAMEBOY -> NEO -> QUANTUM -> CLASSIC -> GAMEBOY', () => {
+    useGameStore.setState({ heroSkin: 'gameboy', locale: 'en' });
+    renderWithRouter();
+
+    const skinBtn = screen.getByTestId('skin-toggle');
+    expect(skinBtn).toHaveTextContent('SKIN: GAMEBOY');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('neo');
+    expect(skinBtn).toHaveTextContent('SKIN: NEO');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('quantum');
+    expect(skinBtn).toHaveTextContent('SKIN: QUANTUM');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('classic');
+    expect(skinBtn).toHaveTextContent('SKIN: CLASSIC');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('gameboy');
+    expect(skinBtn).toHaveTextContent('SKIN: GAMEBOY');
+  });
 });

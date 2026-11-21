@@ -35,6 +35,7 @@ import type {
 } from '../types';
 import type { GhostHero } from './GhostHero';
 import type Hero from './Hero';
+import type { HeroRenderer } from './HeroRenderer';
 import { CameraDirector } from './systems/CameraDirector';
 import { GhostController } from './systems/GhostController';
 import { HudController } from './systems/HudController';
@@ -97,6 +98,8 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public collapseConfig?: CollapseConfig;
   public pauliGraphics: Phaser.GameObjects.Graphics | null = null;
   public spikeGfx: Phaser.GameObjects.Graphics | null = null;
+  public portalGraphics: Phaser.GameObjects.Graphics | null = null;
+  public heroRenderer: HeroRenderer | null = null;
   public unsubJump: (() => void) | null = null;
   public unsubHudStore: (() => void) | null = null;
 
@@ -661,6 +664,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public destroyBetaPipCamera(): void {
     this.cameraDirector.destroyBetaPipCamera();
   }
+  public shakeCamera(duration: number, intensity = 0.01): void {
+    this.cameraDirector.shake(duration, intensity);
+  }
 
   // --- RespawnTransitionController delegations ---
   public quickRespawn(deathPosition?: { x: number; y: number }): void {
@@ -776,6 +782,17 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     this.quantumSystems.setPieces.revealPeriodicTableSilhouette();
   }
 
+  private renderHeroSkin(time: number): void {
+    const storeState = useGameStore.getState();
+    this.heroRenderer?.render(time, this.heroes, {
+      skin: storeState.heroSkin ?? 'gameboy',
+      reducedEffects: storeState.reducedEffects ?? false,
+      activePhase: this.currentPhase,
+      hasPhasePlatforms: this.hasPhasePlatforms,
+      isPauliActive: this.isPauliActive
+    });
+  }
+
   update(time: number, delta: number): void {
     if (this.isLevelCompleted || this.isTransitioningLevel || this.isRespawning) {
       this.ghostController.updateSwarmVictoryPlayback(delta);
@@ -787,6 +804,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
         this.isTimeDilationActive,
         this.coherenceSystem.getValue()
       );
+      this.renderHeroSkin(time);
       return;
     }
 
@@ -838,10 +856,11 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     this.cameraDirector.updateFraming(delta);
 
     if (this.quantumSystems.entanglement.updateEntanglementFrame(time)) {
+      this.renderHeroSkin(time);
       return;
     }
 
-    const isGhostActive = this.ghostController.updateActiveGhostsAndSplit(time, elapsedMs);
+    this.ghostController.updateActiveGhostsAndSplit(time, elapsedMs);
 
     this.quantumEffects?.update(
       time,
@@ -887,9 +906,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     }
     this.touchController.consumeFrameFlags();
 
-    this.ghostController.updateGhostSurfing(isGhostActive);
     this.timeLoopSystem.update(time, delta);
     this.quantumSystems.updateWorldMechanics(time, delta, elapsedMs, timeDilationFactor);
+    this.renderHeroSkin(time);
     this.cameraDirector.checkEntanglementReveal();
   }
 }
