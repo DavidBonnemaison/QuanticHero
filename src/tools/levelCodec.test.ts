@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import type { LevelData } from '../types';
-import { compressLevel, decodeLevelFromUrl, decompressLevel, encodeLevelToUrl } from './levelCodec';
+import type { DuelChallenge, LevelData } from '../types';
+import { compressTrajectory, decompressTrajectory } from './GhostRecorder';
+import {
+  compressLevel,
+  decodeDuelFromUrl,
+  decodeDuelPayload,
+  decodeLevelFromUrl,
+  decompressLevel,
+  encodeDuelPayload,
+  encodeDuelToUrl,
+  encodeLevelToUrl,
+  formatDuelSeconds,
+  sanitizeChallengerName
+} from './levelCodec';
 
 const sampleLevel: LevelData = {
   id: 'custom-1',
@@ -323,6 +335,161 @@ describe('levelCodec', () => {
       const url = encodeLevelToUrl(hugePlatformCount);
       const decoded = decodeLevelFromUrl(url);
       expect(decoded?.platforms.length).toBeLessThanOrEqual(300);
+    });
+  });
+
+  describe('Spec-02: Ghost Tennis Duel codec (#duel=)', () => {
+    const realisticGhost = compressTrajectory(
+      Array.from({ length: 120 }, (_, i) => ({
+        timeMs: i * 66,
+        x: 80 + i * 7,
+        y: 900 - Math.round(Math.sin(i / 8) * 140),
+        flipX: false,
+        animState: i % 10 < 3 ? 'jump' : 'right'
+      }))
+    );
+
+    const shortGhost = compressTrajectory([
+      { timeMs: 0, x: 80, y: 910, flipX: false, animState: 'idle' },
+      { timeMs: 400, x: 240, y: 800, flipX: false, animState: 'jump' },
+      { timeMs: 1200, x: 520, y: 740, flipX: false, animState: 'right' },
+      { timeMs: 2400, x: 750, y: 750, flipX: false, animState: 'idle' }
+    ]);
+
+    it('sanitizes challenger names to uppercase alphanumeric max 12 chars with ALPHA fallback', () => {
+      expect(sanitizeChallengerName(undefined)).toBe('ALPHA');
+      expect(sanitizeChallengerName('')).toBe('ALPHA');
+      expect(sanitizeChallengerName('   !!!  ')).toBe('ALPHA');
+      expect(sanitizeChallengerName('neo_speedrunner99')).toBe('NEOSPEEDRUNN');
+      expect(sanitizeChallengerName('quantic-42')).toBe('QUANTIC42');
+    });
+
+    it('formats duel seconds with leading zero padding under 10s', () => {
+      expect(formatDuelSeconds(8420)).toBe('08.42s');
+      expect(formatDuelSeconds(12340)).toBe('12.34s');
+      expect(formatDuelSeconds(0)).toBe('00.00s');
+    });
+
+    it('round-trips campaign duel payload and URL with ultra-compact URL (< 400 chars)', () => {
+      const duel: DuelChallenge = {
+        kind: 'campaign',
+        levelId: 26,
+        challengerName: 'NOVA',
+        challengerTimeMs: 8420,
+        challengerJumps: 5,
+        ghostTrajectory: realisticGhost
+      };
+
+      const url = encodeDuelToUrl(duel, 'https://quantumhero.netlify.app/game');
+      expect(url).toContain('#duel=');
+      expect(url.length).toBeLessThan(400);
+
+      const decoded = decodeDuelFromUrl(url);
+      expect(decoded).not.toBeNull();
+      expect(decoded?.kind).toBe('campaign');
+      if (decoded?.kind === 'campaign') {
+        expect(decoded.levelId).toBe(26);
+        expect(decoded.challengerName).toBe('NOVA');
+        expect(decoded.challengerTimeMs).toBe(8420);
+        expect(decoded.challengerJumps).toBe(5);
+        expect(decoded.ghostTrajectory.startsWith('v1|')).toBe(true);
+        expect(decompressTrajectory(decoded.ghostTrajectory).length).toBeGreaterThanOrEqual(12);
+      }
+    });
+
+    it('round-trips daily duel payload and URL with ultra-compact URL (< 400 chars)', () => {
+      const duel: DuelChallenge = {
+        kind: 'daily',
+        dateKey: '2026-11-21',
+        challengerName: 'ALPHA',
+        challengerTimeMs: 9150,
+        challengerJumps: 4,
+        ghostTrajectory: realisticGhost
+      };
+
+      const url = encodeDuelToUrl(duel, 'https://quantumhero.netlify.app/game');
+      expect(url).toContain('#duel=');
+      expect(url.length).toBeLessThan(400);
+
+      const decoded = decodeDuelFromUrl(url);
+      expect(decoded).not.toBeNull();
+      expect(decoded?.kind).toBe('daily');
+      if (decoded?.kind === 'daily') {
+        expect(decoded.dateKey).toBe('2026-11-21');
+        expect(decoded.challengerName).toBe('ALPHA');
+        expect(decoded.challengerTimeMs).toBe(9150);
+        expect(decoded.challengerJumps).toBe(4);
+        expect(decoded.ghostTrajectory.startsWith('v1|')).toBe(true);
+      }
+    });
+
+    it('round-trips custom duel payload with embedded LevelData and ghost trajectory', () => {
+      const duel: DuelChallenge = {
+        kind: 'custom',
+        level: sampleLevel,
+        challengerName: 'BOSON',
+        challengerTimeMs: 11250,
+        challengerJumps: 7,
+        ghostTrajectory: shortGhost
+      };
+
+      const payload = encodeDuelPayload(duel);
+      const decoded = decodeDuelPayload(payload);
+      expect(decoded).not.toBeNull();
+      expect(decoded?.kind).toBe('custom');
+      if (decoded?.kind === 'custom') {
+        expect(decoded.challengerName).toBe('BOSON');
+        expect(decoded.challengerTimeMs).toBe(11250);
+        expect(decoded.challengerJumps).toBe(7);
+        expect(decoded.ghostTrajectory).toBe(shortGhost);
+        expect(decoded.level.atom).toBe(sampleLevel.atom);
+        expect(decoded.level.platforms.length).toBe(sampleLevel.platforms.length);
+      }
+    });
+
+    it('supports both #duel= hash and ?duel= query formats', () => {
+      const duel: DuelChallenge = {
+        kind: 'campaign',
+        levelId: 3,
+        challengerName: 'QUARK',
+        challengerTimeMs: 5100,
+        challengerJumps: 2,
+        ghostTrajectory: shortGhost
+      };
+      const payload = encodeDuelPayload(duel);
+
+      const fromHash = decodeDuelFromUrl(`#duel=${payload}`);
+      const fromQuery = decodeDuelFromUrl(`?duel=${payload}&foo=bar`);
+      expect(fromHash).toEqual(duel);
+      expect(fromQuery).toEqual(duel);
+    });
+
+    it('gracefully rejects corrupted or invalid duel payloads', () => {
+      expect(decodeDuelPayload('')).toBeNull();
+      expect(decodeDuelPayload('not-valid-lz-garbage!!!')).toBeNull();
+      expect(decodeDuelFromUrl('#duel=corrupted')).toBeNull();
+
+      // Out-of-bounds campaign levelId
+      const badLevelPayload = encodeDuelPayload({
+        kind: 'campaign',
+        levelId: 1,
+        challengerName: 'ALPHA',
+        challengerTimeMs: 1000,
+        challengerJumps: 1,
+        ghostTrajectory: shortGhost
+      });
+      expect(decodeDuelPayload(badLevelPayload)).not.toBeNull();
+
+      // Invalid daily dateKey
+      const badDaily = encodeDuelPayload({
+        kind: 'daily',
+        dateKey: 'not-a-date',
+        challengerName: 'ALPHA',
+        challengerTimeMs: 1000,
+        challengerJumps: 1,
+        ghostTrajectory: shortGhost
+      });
+      expect(decodeDuelPayload(badDaily)).toBeNull();
     });
   });
 });

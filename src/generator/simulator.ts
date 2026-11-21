@@ -420,10 +420,7 @@ export function stepSimulation(
   if (input.condense && next.hasCondenseAbility && !next.touchingGround) {
     const scaffoldWidth = 72;
     const scaffoldHeight = 14;
-    const scaffoldY =
-      next.upsideDown === 1
-        ? newY + halfH + 2
-        : newY - halfH - scaffoldHeight - 2;
+    const scaffoldY = next.upsideDown === 1 ? newY + halfH + 2 : newY - halfH - scaffoldHeight - 2;
     activeScaffolds = [
       ...activeScaffolds,
       {
@@ -838,7 +835,8 @@ export function simulatePlatformTransition(
       ? world.platforms.find((p) => {
           if (p.matterState !== 'gas' || p.height < 100) return false;
           const minX = Math.min(fromPlatform.x, toPlatform.x) - 40;
-          const maxX = Math.max(fromPlatform.x + fromPlatform.width, toPlatform.x + toPlatform.width) + 40;
+          const maxX =
+            Math.max(fromPlatform.x + fromPlatform.width, toPlatform.x + toPlatform.width) + 40;
           const vOverlap = p.y <= fromPlatform.y && p.y + p.height >= toPlatform.y;
           return vOverlap && p.x + p.width >= minX && p.x <= maxX;
         })
@@ -1160,13 +1158,9 @@ function checkHeroHazards(hero: SimHeroState, world: SimWorld): string | null {
   const halfW = PHYSICS.HERO_WIDTH / 2;
   const halfH = PHYSICS.HERO_HEIGHT / 2;
   const wrapH =
-    world.screenWrap === true ||
-    world.screenWrap === 'horizontal' ||
-    world.screenWrap === 'both';
+    world.screenWrap === true || world.screenWrap === 'horizontal' || world.screenWrap === 'both';
   const wrapV =
-    world.screenWrap === true ||
-    world.screenWrap === 'vertical' ||
-    world.screenWrap === 'both';
+    world.screenWrap === true || world.screenWrap === 'vertical' || world.screenWrap === 'both';
 
   if (!wrapV && (hero.y > world.height + 60 || hero.y < -60)) {
     return `fell out of vertical bounds (y=${Math.round(hero.y)})`;
@@ -1236,9 +1230,7 @@ export function simulateFullLevel(
       entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity'
         ? -1
         : 1;
-    const betaStartX = entanglement.betaSpawn
-      ? entanglement.betaSpawn.x
-      : world.width - startPos.x;
+    const betaStartX = entanglement.betaSpawn ? entanglement.betaSpawn.x : world.width - startPos.x;
     const betaStartY = entanglement.betaSpawn ? entanglement.betaSpawn.y : startPos.y;
     const isDualPortal = entanglement.portalMode === 'dual' || Boolean(entanglement.betaDoor);
     betaDoor = isDualPortal && entanglement.betaDoor ? entanglement.betaDoor : door;
@@ -1254,10 +1246,7 @@ export function simulateFullLevel(
     }
   }
 
-  const stepBetaWithAlphaInput = (
-    alphaInput: SimInput,
-    alphaState: SimHeroState
-  ): boolean => {
+  const stepBetaWithAlphaInput = (alphaInput: SimInput, alphaState: SimHeroState): boolean => {
     if (!entanglement || !beta || betaEnteredPortal) return true;
     const betaInput = transformInputForBeta(alphaInput, entanglement.mode);
     // Sync global world state (gates & phase) with Alpha just like GameScene.ts
@@ -1521,22 +1510,20 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
   const underPlayer = walkable.filter(
     (p) => startX >= p.x - 16 && startX <= p.x + p.width + 16 && Math.abs(p.y - heroFeetY) <= 45
   );
-  const startPlat =
-    (underPlayer.length > 0 ? underPlayer : walkable).sort((a, b) => {
-      const da = Math.hypot(startX - (a.x + a.width / 2), startY - a.y);
-      const db = Math.hypot(startX - (b.x + b.width / 2), startY - b.y);
-      return da - db;
-    })[0];
+  const startPlat = (underPlayer.length > 0 ? underPlayer : walkable).sort((a, b) => {
+    const da = Math.hypot(startX - (a.x + a.width / 2), startY - a.y);
+    const db = Math.hypot(startX - (b.x + b.width / 2), startY - b.y);
+    return da - db;
+  })[0];
 
   const underDoor = walkable.filter(
     (p) => doorX >= p.x - 16 && doorX <= p.x + p.width + 16 && Math.abs(p.y - doorY) <= 80
   );
-  const doorPlat =
-    (underDoor.length > 0 ? underDoor : walkable).sort((a, b) => {
-      const da = Math.hypot(doorX - (a.x + a.width / 2), doorY - a.y);
-      const db = Math.hypot(doorX - (b.x + b.width / 2), doorY - b.y);
-      return da - db;
-    })[0];
+  const doorPlat = (underDoor.length > 0 ? underDoor : walkable).sort((a, b) => {
+    const da = Math.hypot(doorX - (a.x + a.width / 2), doorY - a.y);
+    const db = Math.hypot(doorX - (b.x + b.width / 2), doorY - b.y);
+    return da - db;
+  })[0];
 
   if (!startPlat || !doorPlat) {
     return simulateFullLevel(world, levelData.player.position, levelData.door, []);
@@ -1596,7 +1583,9 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
       .filter((p) => p !== startPlat && p !== doorPlat)
       .filter((p) => {
         const cx = p.x + p.width / 2;
-        return dir > 0 ? cx >= startX - 60 && cx <= doorX + 60 : cx <= startX + 60 && cx >= doorX - 60;
+        return dir > 0
+          ? cx >= startX - 60 && cx <= doorX + 60
+          : cx <= startX + 60 && cx >= doorX - 60;
       });
     if (sortByX) {
       mid.sort((a, b) => (dir > 0 ? a.x - b.x : b.x - a.x));
@@ -1613,6 +1602,21 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
   );
   if (jsonOrderAttempt.success) {
     return jsonOrderAttempt;
+  }
+
+  // Try unclamped JSON declaration order (preserves multi-tier vertical_ascent, vertical_descent & serpentine S-curves)
+  const unclampedJsonPath =
+    doorPlat === startPlat
+      ? [startPlat]
+      : [startPlat, ...mainCandidates.filter((p) => p !== startPlat && p !== doorPlat), doorPlat];
+  const unclampedJsonAttempt = simulateFullLevel(
+    world,
+    levelData.player.position,
+    levelData.door,
+    unclampedJsonPath
+  );
+  if (unclampedJsonAttempt.success) {
+    return unclampedJsonAttempt;
   }
 
   // Try X-sorted order next
@@ -1650,7 +1654,8 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
       return da - db;
     });
 
-    const node = queue.shift()!;
+    const node = queue.shift();
+    if (!node) break;
     expansions++;
 
     if (node.plat === doorPlat) {

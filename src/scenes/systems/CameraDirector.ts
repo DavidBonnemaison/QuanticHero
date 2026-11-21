@@ -19,9 +19,96 @@ export class CameraDirector {
   ) {}
 
   private static readonly MIN_DUAL_READABLE_ZOOM = 0.42;
+  private static readonly BETA_PIP_WIDTH = 124;
+  private static readonly BETA_PIP_HEIGHT = 96;
+  private static readonly BETA_PIP_MARGIN_X = 10;
+  private static readonly BETA_PIP_TOP_Y = 62;
+  private static readonly BETA_PIP_ZOOM = 0.42;
 
   private getSingleHeroZoom(viewW: number): number {
     return Phaser.Math.Clamp(viewW / 620, 0.65, 1.0);
+  }
+
+  public destroyBetaPipCamera(): void {
+    const ctx = this.ctx;
+    if (ctx.betaPipCamera) {
+      ctx.cameras?.remove?.(ctx.betaPipCamera);
+      ctx.betaPipCamera = null;
+    }
+    if (ctx.betaPipFrame) {
+      ctx.betaPipFrame.destroy();
+      ctx.betaPipFrame = null;
+    }
+    if (ctx.betaPipLabel) {
+      ctx.betaPipLabel.destroy();
+      ctx.betaPipLabel = null;
+    }
+  }
+
+  private ensureBetaPipCamera(beta: Hero, viewW: number): void {
+    const ctx = this.ctx;
+    const pipW = CameraDirector.BETA_PIP_WIDTH;
+    const pipH = CameraDirector.BETA_PIP_HEIGHT;
+    const pipX = Math.max(8, viewW - pipW - CameraDirector.BETA_PIP_MARGIN_X);
+    const pipY = CameraDirector.BETA_PIP_TOP_Y;
+
+    if (!ctx.betaPipCamera && typeof ctx.cameras?.add === 'function') {
+      const pipCam = ctx.cameras.add(pipX, pipY, pipW, pipH);
+      pipCam.setZoom?.(CameraDirector.BETA_PIP_ZOOM);
+      if (ctx.levelData?.hue) {
+        pipCam.setBackgroundColor?.(ctx.levelData.hue);
+      }
+      if (ctx.levelData) {
+        pipCam.setBounds?.(0, 0, ctx.levelData.width, ctx.levelData.height);
+      }
+      ctx.betaPipCamera = pipCam;
+    }
+
+    if (ctx.betaPipCamera) {
+      ctx.betaPipCamera.setViewport?.(pipX, pipY, pipW, pipH);
+      ctx.betaPipCamera.setZoom?.(CameraDirector.BETA_PIP_ZOOM);
+      if (ctx.hudContainer) {
+        ctx.betaPipCamera.ignore?.(ctx.hudContainer);
+      }
+      if (ctx.levelCompleteOverlay) {
+        ctx.betaPipCamera.ignore?.(ctx.levelCompleteOverlay);
+      }
+      ctx.betaPipCamera.centerOn?.(beta.x, beta.y);
+    }
+
+    if (!ctx.betaPipFrame && typeof ctx.add?.rectangle === 'function') {
+      const frame = ctx.add.rectangle(pipX + pipW / 2, pipY + pipH / 2, pipW, pipH, 0x000000, 0);
+      frame.setStrokeStyle?.(2, 0xec4899, 0.95);
+      frame.setScrollFactor?.(0);
+      frame.setDepth?.(105);
+      ctx.betaPipFrame = frame;
+      if (ctx.hudContainer) {
+        ctx.hudContainer.add(frame);
+      } else {
+        ctx.betaPipCamera?.ignore?.(frame);
+      }
+    } else if (ctx.betaPipFrame?.active) {
+      ctx.betaPipFrame.setPosition?.(pipX + pipW / 2, pipY + pipH / 2);
+    }
+
+    if (!ctx.betaPipLabel && typeof ctx.add?.text === 'function') {
+      const label = ctx.add.text(pipX + 6, pipY + 4, 'β', {
+        fontFamily: 'VT323',
+        fontSize: '20px',
+        color: '#ec4899',
+        backgroundColor: '#0b0f19'
+      });
+      label.setScrollFactor?.(0);
+      label.setDepth?.(106);
+      ctx.betaPipLabel = label;
+      if (ctx.hudContainer) {
+        ctx.hudContainer.add(label);
+      } else {
+        ctx.betaPipCamera?.ignore?.(label);
+      }
+    } else if (ctx.betaPipLabel?.active) {
+      ctx.betaPipLabel.setPosition?.(pipX + 6, pipY + 4);
+    }
   }
 
   public setupInitialFraming(initialHero: Hero): void {
@@ -31,6 +118,7 @@ export class CameraDirector {
     if (entanglement && ctx.betaHero) {
       if (entanglement.revealAtX !== undefined) {
         ctx.entanglementRevealed = false;
+        this.destroyBetaPipCamera();
         ctx.cameras.main.setZoom(1);
         ctx.cameras.main.followOffset?.set?.(0, 0);
         ctx.cameras.main.centerOn(initialHero.x, initialHero.y);
@@ -43,6 +131,7 @@ export class CameraDirector {
         const rawZoom = Math.min(initZoomX, initZoomY);
 
         if (rawZoom >= CameraDirector.MIN_DUAL_READABLE_ZOOM) {
+          this.destroyBetaPipCamera();
           const cx = (initialHero.x + ctx.betaHero.x) / 2;
           const cy = (initialHero.y + ctx.betaHero.y) / 2;
           const initZoom = Phaser.Math.Clamp(rawZoom, CameraDirector.MIN_DUAL_READABLE_ZOOM, 1.0);
@@ -50,13 +139,15 @@ export class CameraDirector {
           ctx.cameras.main.centerOn(cx, cy);
         } else {
           // On narrow viewports (e.g. mobile portrait) when Alpha and Beta start far apart,
-          // frame Alpha at a readable zoom instead of clamping both heroes off-screen.
+          // frame Alpha at a readable zoom and show Beta in a Picture-in-Picture camera.
           const singleZoom = this.getSingleHeroZoom(ctx.cameras.main.width);
           ctx.cameras.main.setZoom(singleZoom);
           ctx.cameras.main.centerOn(initialHero.x, initialHero.y);
+          this.ensureBetaPipCamera(ctx.betaHero, ctx.cameras.main.width);
         }
       }
     } else {
+      this.destroyBetaPipCamera();
       ctx.cameras.main.setZoom(1);
       ctx.cameras.main.followOffset?.set?.(0, 0);
       ctx.cameras.main.centerOn(initialHero.x, initialHero.y);
@@ -73,6 +164,7 @@ export class CameraDirector {
         const hasPendingReveal =
           ctx.levelData.entanglement?.revealAtX !== undefined && !ctx.entanglementRevealed;
         if (hasPendingReveal) {
+          this.destroyBetaPipCamera();
           return;
         }
 
@@ -83,6 +175,7 @@ export class CameraDirector {
 
         // If one hero has already docked in their portal, focus cleanly on the remaining hero
         if (alpha.enteredPortal && !beta.enteredPortal) {
+          this.destroyBetaPipCamera();
           const targetZoom = this.getSingleHeroZoom(viewW);
           ctx.cameras.main.setZoom(Phaser.Math.Linear(currentZoom, targetZoom, 0.08));
           ctx.syncHudTransform();
@@ -93,6 +186,7 @@ export class CameraDirector {
           return;
         }
         if (beta.enteredPortal && !alpha.enteredPortal) {
+          this.destroyBetaPipCamera();
           const targetZoom = this.getSingleHeroZoom(viewW);
           ctx.cameras.main.setZoom(Phaser.Math.Linear(currentZoom, targetZoom, 0.08));
           ctx.syncHudTransform();
@@ -114,14 +208,17 @@ export class CameraDirector {
         let targetY: number;
 
         if (rawZoom >= CameraDirector.MIN_DUAL_READABLE_ZOOM) {
+          this.destroyBetaPipCamera();
           targetZoom = Phaser.Math.Clamp(rawZoom, CameraDirector.MIN_DUAL_READABLE_ZOOM, 1.0);
           targetX = (alpha.x + beta.x) / 2;
           targetY = (alpha.y + beta.y) / 2;
         } else {
-          // Keep Alpha clearly visible when both heroes cannot fit on a narrow screen
+          // Keep Alpha clearly visible when both heroes cannot fit on a narrow screen,
+          // and track Beta in the top-right Picture-in-Picture camera.
           targetZoom = this.getSingleHeroZoom(viewW);
           targetX = alpha.x;
           targetY = alpha.y;
+          this.ensureBetaPipCamera(beta, viewW);
         }
 
         const newZoom = Phaser.Math.Linear(currentZoom, targetZoom, 0.08);
@@ -133,6 +230,7 @@ export class CameraDirector {
         ctx.cameras.main.centerOn(newCamX, newCamY);
       }
     } else {
+      this.destroyBetaPipCamera();
       const lookHero = ctx.heroes.find((h) => h.isFocused) || ctx.heroes[0];
       if (lookHero?.active && lookHero.body) {
         const targetOffset = computeLookAheadOffset(
@@ -208,9 +306,11 @@ export class CameraDirector {
       const beta = ctx.heroes.find((h) => h.isBeta);
       if (alpha?.active && beta?.active) {
         if (alpha.enteredPortal && !beta.enteredPortal) {
+          this.destroyBetaPipCamera();
           ctx.cameras.main.setZoom(this.getSingleHeroZoom(camW));
           ctx.cameras.main.centerOn(beta.x, beta.y);
         } else if (beta.enteredPortal && !alpha.enteredPortal) {
+          this.destroyBetaPipCamera();
           ctx.cameras.main.setZoom(this.getSingleHeroZoom(camW));
           ctx.cameras.main.centerOn(alpha.x, alpha.y);
         } else {
@@ -220,6 +320,7 @@ export class CameraDirector {
           const zoomY = camH / (dy + 200);
           const rawZoom = Math.min(zoomX, zoomY);
           if (rawZoom >= CameraDirector.MIN_DUAL_READABLE_ZOOM) {
+            this.destroyBetaPipCamera();
             const targetZoom = Phaser.Math.Clamp(
               rawZoom,
               CameraDirector.MIN_DUAL_READABLE_ZOOM,
@@ -230,9 +331,12 @@ export class CameraDirector {
           } else {
             ctx.cameras.main.setZoom(this.getSingleHeroZoom(camW));
             ctx.cameras.main.centerOn(alpha.x, alpha.y);
+            this.ensureBetaPipCamera(beta, camW);
           }
         }
       }
+    } else {
+      this.destroyBetaPipCamera();
     }
 
     this.hudController.repositionOnResize(camW, camH);

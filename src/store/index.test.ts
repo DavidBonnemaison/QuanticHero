@@ -542,4 +542,138 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().unlockedMolecules).toEqual([]);
     });
   });
+
+  describe('Daily Isotope streak & history persistence', () => {
+    it('tracks first day, same-day replay, consecutive days, month/year rollovers, and streak reset', () => {
+      // Day 1: first completion
+      useGameStore.getState().recordDailyScore('2026-05-30', 14000, 7, 'silver', 'v1|day1_a');
+      let state = useGameStore.getState();
+      expect(state.dailyStreak).toEqual({
+        current: 1,
+        longest: 1,
+        lastCompletedDate: '2026-05-30'
+      });
+      expect(state.dailyHistory['2026-05-30']).toEqual({
+        bestMs: 14000,
+        bestJumps: 7,
+        medal: 'silver',
+        ghostTrajectory: 'v1|day1_a'
+      });
+
+      // Same day replayed faster with gold -> keeps streak at 1, upgrades best/medal/ghost
+      useGameStore.getState().recordDailyScore('2026-05-30', 11500, 5, 'gold', 'v1|day1_best');
+      state = useGameStore.getState();
+      expect(state.dailyStreak.current).toBe(1);
+      expect(state.dailyStreak.longest).toBe(1);
+      expect(state.dailyHistory['2026-05-30']).toEqual({
+        bestMs: 11500,
+        bestJumps: 5,
+        medal: 'gold',
+        ghostTrajectory: 'v1|day1_best'
+      });
+
+      // Same day replayed slower with bronze -> keeps best time, best jumps, gold medal, best ghost
+      useGameStore.getState().recordDailyScore('2026-05-30', 18000, 9, 'bronze', 'v1|day1_slow');
+      state = useGameStore.getState();
+      expect(state.dailyHistory['2026-05-30']).toEqual({
+        bestMs: 11500,
+        bestJumps: 5,
+        medal: 'gold',
+        ghostTrajectory: 'v1|day1_best'
+      });
+
+      // Consecutive day (May 31) -> streak increments to 2
+      useGameStore.getState().recordDailyScore('2026-05-31', 12000, 6, 'bronze');
+      state = useGameStore.getState();
+      expect(state.dailyStreak).toEqual({
+        current: 2,
+        longest: 2,
+        lastCompletedDate: '2026-05-31'
+      });
+
+      // Month rollover (May 31 -> June 1) -> streak increments to 3
+      useGameStore.getState().recordDailyScore('2026-06-01', 13000, 6, 'silver');
+      state = useGameStore.getState();
+      expect(state.dailyStreak).toEqual({
+        current: 3,
+        longest: 3,
+        lastCompletedDate: '2026-06-01'
+      });
+
+      // Skipped day (June 1 -> June 3) -> streak resets to 1, longest preserved at 3
+      useGameStore.getState().recordDailyScore('2026-06-03', 10000, 4, 'gold');
+      state = useGameStore.getState();
+      expect(state.dailyStreak).toEqual({
+        current: 1,
+        longest: 3,
+        lastCompletedDate: '2026-06-03'
+      });
+
+      // Year rollover (Dec 31 -> Jan 1)
+      useGameStore.getState().recordDailyScore('2026-12-31', 10000, 5, 'gold');
+      useGameStore.getState().recordDailyScore('2027-01-01', 9800, 4, 'gold');
+      state = useGameStore.getState();
+      expect(state.dailyStreak).toEqual({
+        current: 2,
+        longest: 3,
+        lastCompletedDate: '2027-01-01'
+      });
+
+      // Past-date daily duel (e.g., 2026-12-25) updates dailyHistory without clobbering dailyStreak
+      useGameStore.getState().recordDailyScore('2026-12-25', 8500, 3, 'gold', 'v1|past');
+      state = useGameStore.getState();
+      expect(state.dailyHistory['2026-12-25']).toEqual({
+        bestMs: 8500,
+        bestJumps: 3,
+        medal: 'gold',
+        ghostTrajectory: 'v1|past'
+      });
+      expect(state.dailyStreak).toEqual({
+        current: 2,
+        longest: 3,
+        lastCompletedDate: '2027-01-01'
+      });
+    });
+  });
+
+  describe('Spec-02: Ghost Tennis Duel transient state (non-persisted)', () => {
+    it('sets and clears activeDuel, lastRun, and pendingDuelShare without persisting them to localStorage', () => {
+      const duel = {
+        kind: 'campaign' as const,
+        levelId: 5,
+        challengerName: 'ALPHA',
+        challengerTimeMs: 8420,
+        challengerJumps: 4,
+        ghostTrajectory: 'v1|0,80,910,0,i;500,200,-100,0,r'
+      };
+      const lastRun = {
+        kind: 'campaign' as const,
+        levelId: 5,
+        elapsedMs: 8280,
+        jumps: 3,
+        ghostTrajectory: 'v1|0,80,910,0,i;400,220,-120,0,r'
+      };
+
+      useGameStore.getState().setActiveDuel(duel);
+      useGameStore.getState().setLastRun(lastRun);
+      useGameStore.getState().setPendingDuelShare({ duel, isRevenge: true });
+
+      expect(useGameStore.getState().activeDuel).toEqual(duel);
+      expect(useGameStore.getState().lastRun).toEqual(lastRun);
+      expect(useGameStore.getState().pendingDuelShare).toEqual({ duel, isRevenge: true });
+
+      // Trigger a persisted write and ensure transient duel fields are excluded from partialize
+      useGameStore.getState().updateCurrentLevel(5);
+      const persisted = JSON.parse(localStorage.getItem('qtmhro') || '{}');
+      expect(persisted.state.activeDuel).toBeUndefined();
+      expect(persisted.state.lastRun).toBeUndefined();
+      expect(persisted.state.pendingDuelShare).toBeUndefined();
+
+      // resetGame clears transient duel state
+      useGameStore.getState().resetGame();
+      expect(useGameStore.getState().activeDuel).toBeNull();
+      expect(useGameStore.getState().lastRun).toBeNull();
+      expect(useGameStore.getState().pendingDuelShare).toBeNull();
+    });
+  });
 });

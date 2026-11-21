@@ -7,7 +7,10 @@
   "height": 1200,
   "hue": "#062024",
   "antiHue": "#2dd4bf",
-  "explanations": [],
+  "explanations": [
+    "Dense liquid mercury carries a spring-loaded tide.",
+    "Step lightly on the surface, or dive (↓) for a buoyant super-bounce."
+  ],
   "player": {
     "position": {
       "x": 184,
@@ -129,8 +132,8 @@
     "enabled": true,
     "mechanic": "mercury_bath",
     "hintSteps": [
-      "SINK IN MERCURY",
-      "HIGH BUOYANCY"
+      "WALK ON MERCURY",
+      "DIVE (↓) FOR SUPER BOUNCE"
     ],
     "safeZoneRatio": 0.35
   },

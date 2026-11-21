@@ -190,6 +190,31 @@ describe('HudController', () => {
     expect(ctx.levelCompleteOverlay).not.toBeNull();
   });
 
+  it('formats daily level entry title cleanly with responsive fontSize and wordWrap on mobile viewports', () => {
+    const ctx = makeHudContext();
+    ctx.cameras.main.width = 390;
+    ctx.cameras.main.height = 844;
+    ctx.levelData = {
+      ...ctx.levelData,
+      id: 'daily:2026-11-21',
+      symbol: 'Nh',
+      atom: 'Nihonium'
+    };
+
+    const hud = new HudController(ctx);
+    hud.showLevelTitle();
+
+    expect(ctx.add.text).toHaveBeenCalledWith(
+      195,
+      422,
+      'DAILY — Nh Nihonium',
+      expect.objectContaining({
+        fontSize: '30px',
+        wordWrap: { width: 358 }
+      })
+    );
+  });
+
   it('renders slim coherence gauge, updates tier indicator, and displays COHERENT RUN badge at HYPER tier', async () => {
     const { CoherenceSystem } = await import('../../mechanics/coherenceSystem');
     const ctx = makeHudContext();
@@ -218,5 +243,77 @@ describe('HudController', () => {
     expect(
       createdTexts.some((txt) => typeof txt === 'string' && txt.includes('COHERENT RUN'))
     ).toBe(true);
+    expect(createdTexts.some((txt) => typeof txt === 'string' && txt.includes('SHARE CARD'))).toBe(
+      true
+    );
+  });
+
+  it('triggers shareReplayCard when SHARE CARD button is clicked in the in-canvas overlay', async () => {
+    const ReplayCardGenerator = await import('../../services/ReplayCardGenerator');
+    const shareSpy = vi
+      .spyOn(ReplayCardGenerator, 'shareReplayCard')
+      .mockResolvedValue('downloaded');
+
+    const ctx = makeHudContext();
+    ctx.ghostRecorder = {
+      getSerialized: () => 'v1|0,100,400,0,i;2500,700,400,0,r'
+    } as unknown as GameSceneContext['ghostRecorder'];
+
+    const hud = new HudController(ctx);
+    hud.showLevelCompleteOverlay(2500, 2500, 0, 2, 'gold');
+
+    const textResults = (ctx.add.text as ReturnType<typeof vi.fn>).mock.results
+      .map((r) => r.value)
+      .filter(Boolean);
+    const shareCardObj = textResults.find(
+      (obj: { text?: string }) => typeof obj.text === 'string' && obj.text.includes('SHARE CARD')
+    );
+    expect(shareCardObj).toBeDefined();
+
+    const handlers = shareCardObj.listeners.get('pointerdown') ?? [];
+    expect(handlers.length).toBeGreaterThan(0);
+    handlers[0]();
+
+    expect(shareSpy).toHaveBeenCalledTimes(1);
+    const [cardInput] = shareSpy.mock.calls[0];
+    expect(cardInput.level.id).toBe('1');
+    expect(cardInput.timeMs).toBe(2500);
+    expect(cardInput.medal).toBe('gold');
+    expect(cardInput.ghostTrajectory).toBe('v1|0,100,400,0,i;2500,700,400,0,r');
+    shareSpy.mockRestore();
+  });
+
+  it('shows dedicated [CONDENSE] HUD button when hasCondenseAbility is true and triggers tryCrystallizeBroglieTrail on tap', () => {
+    const ctx = makeHudContext();
+    ctx.hasCondenseAbility = false;
+    ctx.tryCrystallizeBroglieTrail = vi.fn(() => true);
+
+    const hud = new HudController(ctx);
+    hud.createHUD();
+
+    expect(ctx.condenseButtonBg?.visible).toBe(false);
+    expect(ctx.condenseButtonLabel?.visible).toBe(false);
+    expect(ctx.condenseButtonZone?.visible).toBe(false);
+
+    ctx.hasCondenseAbility = true;
+    hud.updateTimerAndIndicators();
+
+    expect(ctx.condenseButtonBg?.visible).toBe(true);
+    expect(ctx.condenseButtonLabel?.visible).toBe(true);
+    expect(ctx.condenseButtonZone?.visible).toBe(true);
+
+    hud.repositionOnResize(390, 844);
+    expect(ctx.condenseButtonBg?.x).toBe(332);
+    expect(ctx.condenseButtonBg?.y).toBe(748);
+
+    const zone = ctx.condenseButtonZone as unknown as {
+      listeners: Map<string, Array<() => void>>;
+    };
+    const handlers = zone.listeners.get('pointerdown') ?? [];
+    expect(handlers.length).toBeGreaterThan(0);
+    handlers[0]();
+
+    expect(ctx.uiPointerConsumed).toBe(true);
+    expect(ctx.tryCrystallizeBroglieTrail).toHaveBeenCalledTimes(1);
   });
 });

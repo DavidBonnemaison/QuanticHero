@@ -95,8 +95,8 @@
     "enabled": true,
     "mechanic": "de_broglie_wave",
     "hintSteps": [
-      "AIR SPACE / [C]",
-      "SOLIDIFY TRAIL"
+      "[CONDENSE] / [C] / SPACE",
+      "SOLIDIFY UNDER FEET"
     ],
     "safeZoneRatio": 0.35
   },

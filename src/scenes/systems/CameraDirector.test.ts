@@ -145,11 +145,15 @@ describe('CameraDirector', () => {
     const ctx = makeCameraContext();
     ctx.cameras.main.width = 390;
     ctx.cameras.main.height = 844;
-    delete ctx.levelData.entanglement!.revealAtX;
+    if (ctx.levelData.entanglement) {
+      ctx.levelData.entanglement.revealAtX = undefined;
+    }
     ctx.heroes[0].x = 190;
     ctx.heroes[0].y = 831;
-    ctx.betaHero!.x = 2361;
-    ctx.betaHero!.y = 291;
+    if (ctx.betaHero) {
+      ctx.betaHero.x = 2361;
+      ctx.betaHero.y = 291;
+    }
 
     const hud = { repositionOnResize: vi.fn() } as unknown as HudController;
     const director = new CameraDirector(ctx, hud);
@@ -161,7 +165,9 @@ describe('CameraDirector', () => {
 
   it('hands camera focus to Beta once Alpha enters their portal', () => {
     const ctx = makeCameraContext();
-    delete ctx.levelData.entanglement!.revealAtX;
+    if (ctx.levelData.entanglement) {
+      ctx.levelData.entanglement.revealAtX = undefined;
+    }
     ctx.cameras.main.width = 390;
     ctx.cameras.main.height = 844;
     ctx.cameras.main.midPoint.x = 2200;
@@ -177,8 +183,78 @@ describe('CameraDirector', () => {
     const director = new CameraDirector(ctx, hud);
     director.updateFraming(16);
 
-    const [targetX, targetY] = (ctx.cameras.main.centerOn as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [targetX, targetY] = (ctx.cameras.main.centerOn as ReturnType<typeof vi.fn>).mock
+      .calls[0];
     expect(targetX).toBeLessThan(2200);
     expect(targetY).toBeLessThan(800);
+  });
+
+  it('spawns and cleans up Beta PiP camera on narrow mobile portrait when entangled heroes are far apart', () => {
+    const pipCam = {
+      setZoom: vi.fn(),
+      setBackgroundColor: vi.fn(),
+      setBounds: vi.fn(),
+      setViewport: vi.fn(),
+      ignore: vi.fn(),
+      centerOn: vi.fn()
+    };
+    const makeHudObj = () => ({
+      active: true,
+      setStrokeStyle: vi.fn(),
+      setScrollFactor: vi.fn(),
+      setDepth: vi.fn(),
+      setPosition: vi.fn(),
+      destroy: vi.fn()
+    });
+    const hudContainer = { add: vi.fn() };
+    const ctx = makeCameraContext();
+    if (ctx.levelData.entanglement) {
+      ctx.levelData.entanglement.revealAtX = undefined;
+    }
+    ctx.cameras.main.width = 390;
+    ctx.cameras.main.height = 844;
+    const camMgr = ctx.cameras as unknown as {
+      add: ReturnType<typeof vi.fn>;
+      remove: ReturnType<typeof vi.fn>;
+    };
+    camMgr.add = vi.fn(() => pipCam);
+    camMgr.remove = vi.fn();
+    (ctx as unknown as { hudContainer: typeof hudContainer }).hudContainer = hudContainer;
+    (ctx as unknown as { add: Record<string, ReturnType<typeof vi.fn>> }).add = {
+      rectangle: vi.fn(() => makeHudObj()),
+      text: vi.fn(() => makeHudObj())
+    };
+    ctx.heroes[0].x = 190;
+    ctx.heroes[0].y = 831;
+    ctx.heroes[1].x = 2361;
+    ctx.heroes[1].y = 291;
+    if (ctx.betaHero) {
+      ctx.betaHero.x = 2361;
+      ctx.betaHero.y = 291;
+    }
+
+    const hud = { repositionOnResize: vi.fn() } as unknown as HudController;
+    const director = new CameraDirector(ctx, hud);
+
+    director.updateFraming(16);
+
+    expect(ctx.betaPipCamera).toBe(pipCam);
+    expect(pipCam.setZoom).toHaveBeenCalledWith(0.42);
+    expect(pipCam.ignore).toHaveBeenCalledWith(hudContainer);
+    expect(pipCam.centerOn).toHaveBeenCalledWith(2361, 291);
+    expect(ctx.betaPipFrame).not.toBeNull();
+    expect(ctx.betaPipLabel).not.toBeNull();
+
+    // Resizing to a wide desktop viewport where both fit destroys the PiP camera cleanly
+    const frameRef = ctx.betaPipFrame;
+    const labelRef = ctx.betaPipLabel;
+    director.handleResize({ width: 1600, height: 900 });
+
+    expect(ctx.betaPipCamera).toBeNull();
+    expect(ctx.betaPipFrame).toBeNull();
+    expect(ctx.betaPipLabel).toBeNull();
+    expect(camMgr.remove).toHaveBeenCalledWith(pipCam);
+    expect(frameRef?.destroy).toHaveBeenCalledTimes(1);
+    expect(labelRef?.destroy).toHaveBeenCalledTimes(1);
   });
 });

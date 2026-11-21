@@ -417,11 +417,14 @@ export default class Hero extends Phaser.Physics.Arcade.Sprite {
     this.wasTouchingGround = touchingGround;
 
     // Asymmetric gravity (Apex Hang-Time & Fall Gravity) + Terminal Velocity
-    const asymFactor = getAsymmetricGravityMultiplier(
-      this.body.velocity.y,
-      this.upsideDown,
-      touchingGround && !res.jumped
-    );
+    // Disable extra fall gravity while submerged in liquid so buoyancy dominates cleanly
+    const asymFactor = this.inLiquid
+      ? 1
+      : getAsymmetricGravityMultiplier(
+          this.body.velocity.y,
+          this.upsideDown,
+          touchingGround && !res.jumped
+        );
     const worldGravityY = this.scene?.physics?.world?.gravity?.y ?? PHYSICS.GRAVITY_Y;
     const effectiveBaseGravity = Math.abs(worldGravityY) * this.upsideDown;
     const arcadeBody = this.body as Phaser.Physics.Arcade.Body;

@@ -168,6 +168,8 @@
   "entanglement": {
     "mode": "inverted_gravity",
     "portalMode": "dual",
+    "tetherPhysical": true,
+    "tetherMaxLength": 540,
     "betaSpawn": {
       "x": 176,
       "y": 503
@@ -177,6 +179,26 @@
       "y": 455
     }
   },
+  "tetherPylons": [
+    {
+      "x": 640,
+      "y": 650,
+      "radius": 18,
+      "maxLength": 540
+    },
+    {
+      "x": 1724,
+      "y": 650,
+      "radius": 18,
+      "maxLength": 540
+    },
+    {
+      "x": 2586,
+      "y": 650,
+      "radius": 18,
+      "maxLength": 540
+    }
+  ],
   "door": {
     "x": 3036,
     "y": 865

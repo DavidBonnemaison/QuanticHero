@@ -5,6 +5,7 @@ import { push } from '../../shims/navigation';
 import { useGameStore } from '../../store';
 import { formatScore } from '../../tools/formatScore';
 import { isGodMode } from '../../tools/godMode';
+import { formatDuelSeconds } from '../../tools/levelCodec';
 import type { IsotopeMedal } from '../../types';
 import {
   showLevelCompleteOverlay as renderLevelCompleteOverlay,
@@ -132,6 +133,7 @@ export class HudController {
     });
     ctx.hudContainer.add(fxButton);
 
+    const initialActiveDuel = useGameStore.getState().activeDuel;
     const currentMode =
       useGameStore.getState().ghostMode ??
       (useGameStore.getState().ghostEnabled ? 'optimal' : 'off');
@@ -143,7 +145,7 @@ export class HudController {
     });
     ctx.ghostButton.setScrollFactor(0);
     ctx.ghostButton.setAlpha(currentMode !== 'off' ? 1 : 0.45);
-    ctx.ghostButton.setVisible(ctx.hasAnyGhost || ctx.swarmBuffer.size > 0);
+    ctx.ghostButton.setVisible(!initialActiveDuel && (ctx.hasAnyGhost || ctx.swarmBuffer.size > 0));
     ctx.ghostButton.setInteractive({ useHandCursor: true });
     ctx.ghostButton.on('pointerdown', () => {
       ctx.uiPointerConsumed = true;
@@ -153,8 +155,25 @@ export class HudController {
     });
     ctx.hudContainer.add(ctx.ghostButton);
 
+    const getDuelBadgeLabel = () => {
+      const duel = useGameStore.getState().activeDuel;
+      if (!duel) return '';
+      return getHudStrings().duel.rivalBadge(
+        duel.challengerName,
+        formatDuelSeconds(duel.challengerTimeMs)
+      );
+    };
+    ctx.duelBadgeText = ctx.add.text(44, 29, getDuelBadgeLabel(), {
+      fontFamily: 'VT323',
+      fontSize: '18px',
+      color: '#fbbf24'
+    });
+    ctx.duelBadgeText.setScrollFactor(0);
+    ctx.duelBadgeText.setVisible(Boolean(initialActiveDuel));
+    ctx.hudContainer.add(ctx.duelBadgeText);
+
     if (ctx.hasPhasePlatforms) {
-      const phaseX = ctx.hasAnyGhost ? 186 : 44;
+      const phaseX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 44;
       ctx.phaseIndicatorText = ctx.add.text(
         phaseX,
         29,
@@ -177,7 +196,7 @@ export class HudController {
       ctx.hudContainer.add(ctx.phaseIndicatorText);
     }
 
-    const dilationX = ctx.hasAnyGhost ? 186 : 44;
+    const dilationX = ctx.hasAnyGhost || initialActiveDuel ? 196 : 44;
     ctx.dilationIndicatorText = ctx.add.text(dilationX, 29, initialStrings.hud.timeDilation, {
       fontFamily: 'VT323',
       fontSize: '18px',
@@ -200,6 +219,7 @@ export class HudController {
     }
     ctx.unsubHudStore = useGameStore.subscribe(() => {
       const s = getHudStrings();
+      const duel = useGameStore.getState().activeDuel;
       if (soundButton.active) {
         soundButton.setText(getSoundLabel());
       }
@@ -209,11 +229,18 @@ export class HudController {
       if (fxButton.active) {
         fxButton.setText(getFxLabel());
       }
+      if (ctx.duelBadgeText?.active) {
+        ctx.duelBadgeText.setText(getDuelBadgeLabel());
+        ctx.duelBadgeText.setVisible(Boolean(duel));
+      }
       if (ctx.phaseIndicatorText?.active) {
         ctx.phaseIndicatorText.setText(s.hud.phase(ctx.currentPhase));
       }
       if (ctx.dilationIndicatorText?.active) {
         ctx.dilationIndicatorText.setText(s.hud.timeDilation);
+      }
+      if (ctx.condenseButtonLabel?.active) {
+        ctx.condenseButtonLabel.setText(s.hud.condenseButton);
       }
       if (ctx.ghostButton?.active) {
         ctx.applyGhostMode();
@@ -234,7 +261,10 @@ export class HudController {
       color: '#94a3b8'
     });
     ctx.splitDeltaText.setOrigin(1, 0);
-    ctx.splitDeltaText.setVisible(currentMode !== 'off' && ctx.ghostFrames.length > 0);
+    ctx.splitDeltaText.setVisible(
+      (Boolean(initialActiveDuel?.ghostTrajectory) || currentMode !== 'off') &&
+        ctx.ghostFrames.length > 0
+    );
     ctx.hudContainer.add(ctx.splitDeltaText);
 
     ctx.coherenceBarGraphics = ctx.add.graphics();
@@ -273,6 +303,45 @@ export class HudController {
     ctx.hudContainer.add(thumbRestartBg);
     ctx.hudContainer.add(thumbRestartLabel);
     ctx.hudContainer.add(thumbRestartZone);
+
+    const condenseX = camW - 58;
+    const condenseY = camH - 96;
+    const condenseBg = ctx.add.rectangle(condenseX, condenseY, 96, 44, 0x083344, 0.88);
+    condenseBg.setStrokeStyle(2, 0x00e5ff, 0.95);
+    const condenseLabel = ctx.add.text(condenseX, condenseY, initialStrings.hud.condenseButton, {
+      fontFamily: 'VT323',
+      fontSize: '20px',
+      color: '#00e5ff'
+    });
+    condenseLabel.setOrigin(0.5);
+    const condenseZone = ctx.add.zone(condenseX, condenseY, 96, 44);
+    condenseZone.setInteractive({ useHandCursor: true });
+    condenseZone.on('pointerdown', () => {
+      ctx.uiPointerConsumed = true;
+      if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
+        ctx.tryCrystallizeBroglieTrail();
+      }
+    });
+    const showCondense = Boolean(ctx.hasCondenseAbility);
+    condenseBg.setVisible(showCondense);
+    condenseLabel.setVisible(showCondense);
+    condenseZone.setVisible(showCondense);
+    ctx.condenseButtonBg = condenseBg;
+    ctx.condenseButtonLabel = condenseLabel;
+    ctx.condenseButtonZone = condenseZone;
+    ctx.hudContainer.add(condenseBg);
+    ctx.hudContainer.add(condenseLabel);
+    ctx.hudContainer.add(condenseZone);
+
+    if (ctx.betaPipCamera) {
+      ctx.betaPipCamera.ignore?.(ctx.hudContainer);
+      if (ctx.betaPipFrame) {
+        ctx.hudContainer.add(ctx.betaPipFrame);
+      }
+      if (ctx.betaPipLabel) {
+        ctx.hudContainer.add(ctx.betaPipLabel);
+      }
+    }
 
     this.updateCoherenceGauge(true);
     this.updateEdgePips();
@@ -386,6 +455,18 @@ export class HudController {
       ctx.thumbRestartZone.setPosition(thumbX, thumbY);
     }
 
+    const condenseX = camW - 58;
+    const condenseY = camH - 96;
+    if (ctx.condenseButtonBg?.active) {
+      ctx.condenseButtonBg.setPosition(condenseX, condenseY);
+    }
+    if (ctx.condenseButtonLabel?.active) {
+      ctx.condenseButtonLabel.setPosition(condenseX, condenseY);
+    }
+    if (ctx.condenseButtonZone?.active) {
+      ctx.condenseButtonZone.setPosition(condenseX, condenseY);
+    }
+
     const pipY = camH - 70;
     ctx.edgePips.forEach((pip, index) => {
       const pipX = 40 + index * 70;
@@ -465,6 +546,16 @@ export class HudController {
     }
     if (ctx.dilationIndicatorText?.active) {
       ctx.dilationIndicatorText.setVisible(ctx.isTimeDilationActive);
+    }
+    const showCondense = Boolean(ctx.hasCondenseAbility);
+    if (ctx.condenseButtonBg?.active) {
+      ctx.condenseButtonBg.setVisible(showCondense);
+    }
+    if (ctx.condenseButtonLabel?.active) {
+      ctx.condenseButtonLabel.setVisible(showCondense);
+    }
+    if (ctx.condenseButtonZone?.active) {
+      ctx.condenseButtonZone.setVisible(showCondense);
     }
     this.updateCoherenceGauge();
   }

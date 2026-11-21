@@ -40,7 +40,7 @@ export const SPEC02_QUOTAS = {
   tunnel: 20,
   condense: 12,
   wormholes: 15,
-  entanglement: 18,
+  entanglement: 10,
   tetherPhysical: 6,
   gatesAndPlates: 15,
   smartArchetypeLevels: 24,
@@ -391,7 +391,9 @@ function main() {
   console.log(
     `Milestone Discovery Boxes: ${report.milestoneCount}/${MILESTONE_LEVEL_NUMBERS.length}`
   );
-  console.log(`Smart Archetypes Wired   : ${report.smartArchetypesFound}/6 (${q.smartArchetypeLevels} levels >= ${SPEC02_QUOTAS.smartArchetypeLevels})`);
+  console.log(
+    `Smart Archetypes Wired   : ${report.smartArchetypesFound}/6 (${q.smartArchetypeLevels} levels >= ${SPEC02_QUOTAS.smartArchetypeLevels})`
+  );
   console.log(`parJumps Configured      : ${report.parJumpsCount}/118`);
   console.log(`Secret Molecules Verified: ${report.moleculeCount}/12 (100% real simulated ghosts)`);
   console.log('---------------------------------------------------------------');
@@ -402,10 +404,16 @@ function main() {
   console.log(`  tunnel           : ${q.tunnel} (min ${SPEC02_QUOTAS.tunnel})`);
   console.log(`  condense         : ${q.condense} (min ${SPEC02_QUOTAS.condense})`);
   console.log(`  wormholes        : ${q.wormholes} (min ${SPEC02_QUOTAS.wormholes})`);
-  console.log(`  entanglement     : ${q.entanglement} (min ${SPEC02_QUOTAS.entanglement}) [tetherPhysical: ${q.tetherPhysical} >= ${SPEC02_QUOTAS.tetherPhysical}]`);
+  console.log(
+    `  entanglement     : ${q.entanglement} (min ${SPEC02_QUOTAS.entanglement}) [tetherPhysical: ${q.tetherPhysical} >= ${SPEC02_QUOTAS.tetherPhysical}]`
+  );
   console.log(`  gates + plates   : ${q.gatesAndPlates} (min ${SPEC02_QUOTAS.gatesAndPlates})`);
-  console.log(`  Period 2 dup/phs : ${q.period2DupOrPhase}/8 (${Math.round((q.period2DupOrPhase / 8) * 100)}% >= 60%)`);
-  console.log(`  Max level width  : ${q.maxWidth}px (limit <= ${SPEC02_QUOTAS.maxAllowedWidth}px, violations: ${q.over5500Count})`);
+  console.log(
+    `  Period 2 dup/phs : ${q.period2DupOrPhase}/8 (${Math.round((q.period2DupOrPhase / 8) * 100)}% >= 60%)`
+  );
+  console.log(
+    `  Max level width  : ${q.maxWidth}px (limit <= ${SPEC02_QUOTAS.maxAllowedWidth}px, violations: ${q.over5500Count})`
+  );
 
   if (report.errors.length > 0) {
     console.error('\nVerification FAILED with errors:');
@@ -418,6 +426,6 @@ function main() {
   console.log('\n✓ ALL 130 LEVELS (118 Campaign + 12 Secret Molecules) PASSED 100%!');
 }
 
-if (process.argv[1] && process.argv[1].endsWith('verify-all-levels.ts')) {
+if (process.argv[1]?.endsWith('verify-all-levels.ts')) {
   main();
 }

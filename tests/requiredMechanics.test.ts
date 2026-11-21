@@ -300,7 +300,8 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
       }
     }
 
-    expect(entangledCount).toBeGreaterThanOrEqual(18);
+    expect(entangledCount).toBeGreaterThanOrEqual(10);
+    expect(entangledCount).toBeLessThanOrEqual(14);
     expect(failures).toEqual([]);
   });
 });

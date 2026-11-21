@@ -60,4 +60,27 @@ describe('Spec-02: Campaign Mechanic Density, Quotas & Real Molecule Ghosts', ()
       expect(mol.levelData.authorGhost).toBe(sim.authorGhost);
     }
   });
+
+  it('enforces multi-directional topology diversity (left, ascent, descent) and <= 14 entangled levels across 118 levels', () => {
+    let leftGoing = 0;
+    let strongAscent = 0;
+    let strongDescent = 0;
+    let entangled = 0;
+
+    for (let z = 1; z <= 118; z++) {
+      const data = loadCampaignLevel(z);
+      const dx = data.door.x - data.player.position.x;
+      const dy = data.door.y - data.player.position.y;
+      if (dx < -150) leftGoing++;
+      if (dy < -250) strongAscent++;
+      if (dy > 250) strongDescent++;
+      if (data.entanglement) entangled++;
+    }
+
+    expect(leftGoing).toBeGreaterThanOrEqual(15);
+    expect(strongAscent).toBeGreaterThanOrEqual(10);
+    expect(strongDescent).toBeGreaterThanOrEqual(10);
+    expect(entangled).toBeGreaterThanOrEqual(10);
+    expect(entangled).toBeLessThanOrEqual(14);
+  });
 });

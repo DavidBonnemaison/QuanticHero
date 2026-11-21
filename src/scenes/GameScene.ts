@@ -106,6 +106,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public jumpCount = 0;
   public switchCount = 0;
   public splitDeltaText: Phaser.GameObjects.Text | null = null;
+  public duelBadgeText: Phaser.GameObjects.Text | null = null;
   public ghostButton: Phaser.GameObjects.Text | null = null;
   public movingPlatforms: MovingPlatform[] = [];
   public molecules: MoleculeParticle[] = [];
@@ -129,6 +130,12 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public thumbRestartBg: Phaser.GameObjects.Rectangle | null = null;
   public thumbRestartLabel: Phaser.GameObjects.Text | null = null;
   public thumbRestartZone: Phaser.GameObjects.Zone | null = null;
+  public condenseButtonBg: Phaser.GameObjects.Rectangle | null = null;
+  public condenseButtonLabel: Phaser.GameObjects.Text | null = null;
+  public condenseButtonZone: Phaser.GameObjects.Zone | null = null;
+  public betaPipCamera: Phaser.Cameras.Scene2D.Camera | null = null;
+  public betaPipFrame: Phaser.GameObjects.Rectangle | null = null;
+  public betaPipLabel: Phaser.GameObjects.Text | null = null;
   public lastTimerString = '';
   public lastTimerColor = '';
   public lastSplitString = '';
@@ -256,9 +263,13 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       }
     }
 
-    if (!store.sharedLevel && typeof window !== 'undefined') {
+    if (!store.sharedLevel && !store.activeDuel && typeof window !== 'undefined') {
       const hashOrSearch = window.location.hash || window.location.search;
-      if (hashOrSearch && (hashOrSearch.includes('custom=') || hashOrSearch.length > 20)) {
+      if (
+        hashOrSearch &&
+        !hashOrSearch.includes('duel=') &&
+        (hashOrSearch.includes('custom=') || hashOrSearch.length > 20)
+      ) {
         const decoded = decodeLevelFromUrl(hashOrSearch);
         if (decoded) {
           store.setSharedLevel(decoded);
@@ -573,6 +584,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   }
   public handleResize(gameSize?: { width: number; height: number }): void {
     this.cameraDirector.handleResize(gameSize);
+  }
+  public destroyBetaPipCamera(): void {
+    this.cameraDirector.destroyBetaPipCamera();
   }
 
   // --- RespawnTransitionController delegations ---

@@ -1,8 +1,10 @@
 import LZString from 'lz-string';
 import type {
+  DuelChallenge,
   EntanglementConfig,
   EntanglementMode,
   Gate,
+  LastRunSummary,
   LevelData,
   MatterState,
   Particle,
@@ -12,6 +14,7 @@ import type {
   Spike,
   Wormhole
 } from '../types';
+import { compressTrajectory, decompressTrajectory } from './GhostRecorder';
 
 export const PARTICLE_TYPES: ParticleType[] = [
   'duplicate',
@@ -975,4 +978,301 @@ export function decodeLevelFromUrl(hashOrQueryOrUrl: string): LevelData | null {
   }
 
   return decompressLevel(payload);
+}
+
+// ============================================================================
+// Spec-02: Ghost Tennis Asynchronous Duel Codec (#duel=<payload>)
+// ============================================================================
+
+export const DEFAULT_CHALLENGER_NAME = 'ALPHA';
+const MAX_COMPACT_DUEL_PAYLOAD_LEN = 340;
+
+interface MinifiedDuelPayload {
+  v: 1;
+  k: 'c' | 'd' | 'u';
+  l?: number;
+  dk?: string;
+  lv?: string;
+  n?: string;
+  t: number;
+  j: number;
+  g: string;
+}
+
+/**
+ * Sanitizes a challenger nickname to uppercase alphanumeric (max 12 chars),
+ * defaulting to 'ALPHA' when empty or invalid.
+ */
+export function sanitizeChallengerName(val: unknown): string {
+  if (typeof val !== 'string') return DEFAULT_CHALLENGER_NAME;
+  const cleaned = val
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 12);
+  return cleaned || DEFAULT_CHALLENGER_NAME;
+}
+
+/**
+ * Formats milliseconds into compact duel seconds (e.g. 8420 -> '08.42s', 12340 -> '12.34s').
+ */
+export function formatDuelSeconds(ms: number): string {
+  const safeMs = Number.isFinite(ms) && ms > 0 ? ms : 0;
+  const secs = (safeMs / 1000).toFixed(2);
+  return `${secs.padStart(5, '0')}s`;
+}
+
+/**
+ * Builds a DuelChallenge from a completed run summary.
+ */
+export function buildDuelFromLastRun(
+  run: LastRunSummary,
+  challengerName: string = DEFAULT_CHALLENGER_NAME
+): DuelChallenge {
+  const base = {
+    challengerName: sanitizeChallengerName(challengerName),
+    challengerTimeMs: Math.max(0, Math.round(run.elapsedMs)),
+    challengerJumps: Math.max(0, Math.round(run.jumps)),
+    ghostTrajectory: run.ghostTrajectory || ''
+  };
+
+  if (run.kind === 'daily' && run.dateKey) {
+    return {
+      kind: 'daily',
+      dateKey: run.dateKey,
+      ...base
+    };
+  }
+  if (run.kind === 'custom' && run.level) {
+    return {
+      kind: 'custom',
+      level: run.level,
+      ...base
+    };
+  }
+  return {
+    kind: 'campaign',
+    levelId: Math.min(118, Math.max(1, Math.round(run.levelId ?? 1))),
+    ...base
+  };
+}
+
+/**
+ * Downsamples a v1| ghost trajectory to at most maxFrames while preserving
+ * first frame, last frame, and uniform temporal spacing for smooth LERP replay.
+ */
+function compactGhostTrajectoryForDuel(raw: string, maxFrames: number): string {
+  if (!raw || !raw.startsWith('v1|')) return raw;
+  const frames = decompressTrajectory(raw);
+  if (frames.length <= maxFrames || maxFrames < 2) {
+    return raw;
+  }
+
+  const sampled = [frames[0]];
+  const interiorCount = maxFrames - 2;
+  const span = frames.length - 1;
+  for (let i = 1; i <= interiorCount; i++) {
+    const idx = Math.round((i * span) / (interiorCount + 1));
+    if (idx > 0 && idx < span) {
+      sampled.push(frames[idx]);
+    }
+  }
+  sampled.push(frames[span]);
+  return compressTrajectory(sampled);
+}
+
+function buildMinifiedDuel(duel: DuelChallenge, ghostTrajectory: string): MinifiedDuelPayload {
+  const name = sanitizeChallengerName(duel.challengerName);
+  const base: MinifiedDuelPayload = {
+    v: 1,
+    k: duel.kind === 'campaign' ? 'c' : duel.kind === 'daily' ? 'd' : 'u',
+    ...(name !== DEFAULT_CHALLENGER_NAME ? { n: name } : {}),
+    t: Math.max(0, Math.round(sanitizeNumber(duel.challengerTimeMs, 0, 3_600_000, 0))),
+    j: Math.max(0, Math.round(sanitizeNumber(duel.challengerJumps, 0, 10_000, 0))),
+    g: ghostTrajectory
+  };
+
+  if (duel.kind === 'campaign') {
+    base.l = Math.round(sanitizeNumber(duel.levelId, 1, 118, 1));
+  } else if (duel.kind === 'daily') {
+    base.dk = duel.dateKey;
+  } else {
+    base.lv = compressLevel(duel.level);
+  }
+
+  return base;
+}
+
+/**
+ * Encodes a DuelChallenge into a compact URI-safe LZString payload.
+ * Campaign and Daily duels never re-encode level platforms and compact long
+ * ghost trajectories so the resulting #duel= URL stays under 400 characters.
+ */
+export function encodeDuelPayload(duel: DuelChallenge): string {
+  const rawGhost =
+    typeof duel.ghostTrajectory === 'string' && duel.ghostTrajectory.startsWith('v1|')
+      ? duel.ghostTrajectory
+      : '';
+
+  const initialPayload = LZString.compressToEncodedURIComponent(
+    JSON.stringify(buildMinifiedDuel(duel, rawGhost))
+  );
+
+  if (
+    duel.kind === 'custom' ||
+    initialPayload.length <= MAX_COMPACT_DUEL_PAYLOAD_LEN ||
+    !rawGhost
+  ) {
+    return initialPayload;
+  }
+
+  let bestPayload = initialPayload;
+  const budgets = [60, 44, 32, 24, 18, 12];
+  for (const maxFrames of budgets) {
+    const compactedGhost = compactGhostTrajectoryForDuel(rawGhost, maxFrames);
+    const candidate = LZString.compressToEncodedURIComponent(
+      JSON.stringify(buildMinifiedDuel(duel, compactedGhost))
+    );
+    bestPayload = candidate;
+    if (candidate.length <= MAX_COMPACT_DUEL_PAYLOAD_LEN) {
+      break;
+    }
+  }
+
+  return bestPayload;
+}
+
+function extractDuelParam(hashOrPayload: string): string {
+  const trimmed = hashOrPayload.trim();
+  const duelIndex = trimmed.indexOf('duel=');
+  if (duelIndex !== -1) {
+    const start = duelIndex + 'duel='.length;
+    const end = trimmed.indexOf('&', start);
+    const raw = end === -1 ? trimmed.slice(start) : trimmed.slice(start, end);
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  }
+  const cleaned = trimmed.startsWith('#') || trimmed.startsWith('?') ? trimmed.slice(1) : trimmed;
+  try {
+    return decodeURIComponent(cleaned);
+  } catch {
+    return cleaned;
+  }
+}
+
+/**
+ * Decodes a DuelChallenge from a raw compressed payload or #duel= hash fragment.
+ * Returns null if the payload is corrupt, invalid, or has an unsupported kind.
+ */
+export function decodeDuelPayload(hashOrPayload: string): DuelChallenge | null {
+  if (!hashOrPayload || typeof hashOrPayload !== 'string') return null;
+
+  const payload = extractDuelParam(hashOrPayload);
+  if (!payload) return null;
+
+  let rawJson: string | null = null;
+  try {
+    rawJson = LZString.decompressFromEncodedURIComponent(payload);
+  } catch {
+    return null;
+  }
+  if (!rawJson) return null;
+
+  // biome-ignore lint/suspicious/noExplicitAny: parsing untyped external JSON
+  let raw: any;
+  try {
+    raw = JSON.parse(rawJson);
+  } catch {
+    return null;
+  }
+
+  if (!raw || typeof raw !== 'object' || raw.v !== 1) {
+    return null;
+  }
+
+  if (
+    typeof raw.t !== 'number' ||
+    !Number.isFinite(raw.t) ||
+    raw.t < 0 ||
+    typeof raw.j !== 'number' ||
+    !Number.isFinite(raw.j) ||
+    raw.j < 0 ||
+    typeof raw.g !== 'string'
+  ) {
+    return null;
+  }
+
+  if (raw.g.length > 0 && !raw.g.startsWith('v1|')) {
+    return null;
+  }
+
+  const base = {
+    challengerName: sanitizeChallengerName(raw.n),
+    challengerTimeMs: Math.round(raw.t),
+    challengerJumps: Math.round(raw.j),
+    ghostTrajectory: raw.g
+  };
+
+  if (raw.k === 'c') {
+    if (typeof raw.l !== 'number' || !Number.isInteger(raw.l) || raw.l < 1 || raw.l > 118) {
+      return null;
+    }
+    return {
+      kind: 'campaign',
+      levelId: raw.l,
+      ...base
+    };
+  }
+
+  if (raw.k === 'd') {
+    if (typeof raw.dk !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.dk)) {
+      return null;
+    }
+    return {
+      kind: 'daily',
+      dateKey: raw.dk,
+      ...base
+    };
+  }
+
+  if (raw.k === 'u') {
+    if (typeof raw.lv !== 'string' || !raw.lv) {
+      return null;
+    }
+    const level = decompressLevel(raw.lv);
+    if (!level) return null;
+    return {
+      kind: 'custom',
+      level,
+      ...base
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Encodes a DuelChallenge into a full playable URL containing #duel=<payload>.
+ */
+export function encodeDuelToUrl(duel: DuelChallenge, baseUrl?: string): string {
+  const payload = encodeDuelPayload(duel);
+  let base = baseUrl;
+  if (!base) {
+    const origin =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : 'https://quantumhero.netlify.app';
+    base = `${origin}/game`;
+  }
+  return `${base}#duel=${payload}`;
+}
+
+/**
+ * Decodes a DuelChallenge from a full URL, hash fragment (#duel=...), or query string (?duel=...).
+ */
+export function decodeDuelFromUrl(urlOrHash: string): DuelChallenge | null {
+  if (!urlOrHash || typeof urlOrHash !== 'string') return null;
+  return decodeDuelPayload(urlOrHash);
 }

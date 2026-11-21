@@ -2,16 +2,31 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { getCachedLevel } from '../data/levels';
 import type { Locale } from '../i18n/strings';
+import { getPreviousDateKey } from '../services/DailyIsotopeService';
 import { bestMedal } from '../services/MedalService';
 import {
   ENTANGLEMENT_LEVEL_MAX,
   getNextLevelId,
   isEntanglementLevelId
 } from '../tools/levelProgression';
-import type { GhostMode, IsotopeMedal, LevelData, ScoreItem } from '../types';
+import type {
+  DailyScoreEntry,
+  DailyStreakState,
+  DuelChallenge,
+  GhostMode,
+  IsotopeMedal,
+  LastRunSummary,
+  LevelData,
+  ScoreItem
+} from '../types';
 
 export { getNextLevelId, isEntanglementLevelId };
-export type { GhostMode, Locale };
+export type { DailyScoreEntry, DailyStreakState, DuelChallenge, GhostMode, LastRunSummary, Locale };
+
+export interface PendingDuelShare {
+  duel: DuelChallenge;
+  isRevenge: boolean;
+}
 
 export interface UpdateLevelFieldParams {
   level: number;
@@ -34,8 +49,13 @@ export interface GameStoreState {
   ghostEnabled: boolean;
   locale: Locale;
   sharedLevel: LevelData | null;
+  activeDuel: DuelChallenge | null;
+  lastRun: LastRunSummary | null;
+  pendingDuelShare: PendingDuelShare | null;
   unlockedMolecules: string[];
   moleculeScores: Record<string, ScoreItem>;
+  dailyHistory: Record<string, DailyScoreEntry>;
+  dailyStreak: DailyStreakState;
 }
 
 export interface RecordScoreMeta {
@@ -63,11 +83,21 @@ export interface GameStoreActions {
     ghostTrajectory?: string,
     meta?: RecordScoreMeta
   ) => void;
+  recordDailyScore: (
+    dateKey: string,
+    timeMs: number,
+    jumps: number,
+    medal: IsotopeMedal,
+    ghostTrajectory?: string
+  ) => void;
   recordCoherenceResult: (level: number, styleScore: number, coherentRun: boolean) => void;
   saveGhostTrajectory: (level: number, trajectory: string) => void;
   setLevels: (data: Record<string, LevelData> | null) => void;
   resetCustomLevel: (id: string) => void;
   setSharedLevel: (level: LevelData | null) => void;
+  setActiveDuel: (duel: DuelChallenge | null) => void;
+  setLastRun: (run: LastRunSummary | null) => void;
+  setPendingDuelShare: (share: PendingDuelShare | null) => void;
   saveSharedLevelToCustom: (slot?: number) => void;
   updateLevelField: (params: UpdateLevelFieldParams) => void;
   addPlatform: (params: { level: number }) => void;
@@ -190,6 +220,9 @@ export const useGameStore = create<GameStore>()(
       scores: {},
       customLevels: null,
       sharedLevel: null,
+      activeDuel: null,
+      lastRun: null,
+      pendingDuelShare: null,
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
@@ -198,6 +231,12 @@ export const useGameStore = create<GameStore>()(
       locale: 'en',
       unlockedMolecules: [],
       moleculeScores: {},
+      dailyHistory: {},
+      dailyStreak: {
+        current: 0,
+        longest: 0,
+        lastCompletedDate: null
+      },
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
       setMuted: (muted: boolean) => set({ isMuted: muted }),
@@ -285,8 +324,78 @@ export const useGameStore = create<GameStore>()(
           maxEntanglementLevel: 110,
           scores: {},
           sharedLevel: null,
+          activeDuel: null,
+          lastRun: null,
+          pendingDuelShare: null,
           unlockedMolecules: [],
-          moleculeScores: {}
+          moleculeScores: {},
+          dailyHistory: {},
+          dailyStreak: {
+            current: 0,
+            longest: 0,
+            lastCompletedDate: null
+          }
+        }),
+
+      recordDailyScore: (
+        dateKey: string,
+        timeMs: number,
+        jumps: number,
+        medal: IsotopeMedal,
+        ghostTrajectory?: string
+      ) =>
+        set((state) => {
+          const currentHistory = state.dailyHistory ?? {};
+          const prevEntry = currentHistory[dateKey];
+          const isNewBest = !prevEntry || prevEntry.bestMs <= 0 || timeMs < prevEntry.bestMs;
+          const bestMs =
+            prevEntry && prevEntry.bestMs > 0 ? Math.min(prevEntry.bestMs, timeMs) : timeMs;
+          const bestJumps = prevEntry ? Math.min(prevEntry.bestJumps, jumps) : jumps;
+          const nextMedal = bestMedal(prevEntry?.medal, medal);
+          const nextGhost = isNewBest
+            ? (ghostTrajectory ?? prevEntry?.ghostTrajectory)
+            : prevEntry?.ghostTrajectory;
+
+          const prevStreak = state.dailyStreak ?? {
+            current: 0,
+            longest: 0,
+            lastCompletedDate: null
+          };
+
+          const isPastDate =
+            prevStreak.lastCompletedDate !== null && dateKey < prevStreak.lastCompletedDate;
+
+          let nextStreak = prevStreak;
+          if (!isPastDate) {
+            let nextCurrent: number;
+            if (prevStreak.lastCompletedDate === dateKey) {
+              nextCurrent = prevStreak.current > 0 ? prevStreak.current : 1;
+            } else if (prevStreak.lastCompletedDate === getPreviousDateKey(dateKey)) {
+              nextCurrent = prevStreak.current + 1;
+            } else {
+              nextCurrent = 1;
+            }
+
+            const nextLongest = Math.max(prevStreak.longest, nextCurrent);
+            nextStreak = {
+              current: nextCurrent,
+              longest: nextLongest,
+              lastCompletedDate: dateKey
+            };
+          }
+
+          return {
+            dailyHistory: {
+              ...currentHistory,
+              [dateKey]: {
+                bestMs,
+                bestJumps,
+                medal: nextMedal,
+                ...(nextGhost ? { ghostTrajectory: nextGhost } : {})
+              }
+            },
+            dailyStreak: nextStreak
+          };
         }),
 
       recordMoleculeScore: (
@@ -482,6 +591,12 @@ export const useGameStore = create<GameStore>()(
 
       setSharedLevel: (level: LevelData | null) => set({ sharedLevel: level }),
 
+      setActiveDuel: (duel: DuelChallenge | null) => set({ activeDuel: duel }),
+
+      setLastRun: (run: LastRunSummary | null) => set({ lastRun: run }),
+
+      setPendingDuelShare: (share: PendingDuelShare | null) => set({ pendingDuelShare: share }),
+
       saveSharedLevelToCustom: (slot = 1) =>
         set((state) => {
           if (!state.sharedLevel) return state;
@@ -670,7 +785,9 @@ export const useGameStore = create<GameStore>()(
         ghostEnabled: state.ghostEnabled,
         locale: state.locale,
         unlockedMolecules: state.unlockedMolecules,
-        moleculeScores: state.moleculeScores
+        moleculeScores: state.moleculeScores,
+        dailyHistory: state.dailyHistory,
+        dailyStreak: state.dailyStreak
       })
     }
   )

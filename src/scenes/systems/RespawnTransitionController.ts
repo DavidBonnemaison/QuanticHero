@@ -306,7 +306,10 @@ export class RespawnTransitionController {
     });
 
     const isShared = Boolean(store.sharedLevel);
-    const moleculeMatch = /^molecule-(.+)$/i.exec(String(ctx.levelData.id ?? ''));
+    const rawLevelId = String(ctx.levelData.id ?? '');
+    const dailyMatch = /^daily:(\d{4}-\d{2}-\d{2})$/.exec(rawLevelId);
+    const dailyDateKey = dailyMatch ? dailyMatch[1] : null;
+    const moleculeMatch = /^molecule-(.+)$/i.exec(rawLevelId);
     const moleculeId = moleculeMatch ? moleculeMatch[1] : null;
     const currentLvl = Number(ctx.levelData.id);
     if (!Number.isNaN(currentLvl)) {
@@ -317,57 +320,91 @@ export class RespawnTransitionController {
     } else if (currentLvl === 118) {
       ctx.revealPeriodicTableSilhouette();
     }
-    const prevBest = moleculeId
-      ? (store.moleculeScores?.[moleculeId]?.best ?? 0)
-      : isShared
-        ? (store.scores[0]?.best ?? 0)
-        : (store.scores[currentLvl]?.best ?? 0);
+    const prevBest = dailyDateKey
+      ? (store.dailyHistory?.[dailyDateKey]?.bestMs ?? 0)
+      : moleculeId
+        ? (store.moleculeScores?.[moleculeId]?.best ?? 0)
+        : isShared
+          ? (store.scores[0]?.best ?? 0)
+          : (store.scores[currentLvl]?.best ?? 0);
 
     let nextLevelNumber: number | null = null;
-    if (moleculeId) {
-      store.recordMoleculeScore(moleculeId, elapsedMs, trajectory, {
-        jumpCount: ctx.jumpCount,
-        switchCount: ctx.switchCount,
-        medal,
-        coherentRun: ctx.coherenceSystem?.isCoherentRun?.() ?? false,
-        styleScore: ctx.coherenceSystem?.getStyleScore?.() ?? 0
-      });
-    }
-    if (isShared) {
-      store.recordScore(0, elapsedMs, trajectory, {
-        jumpCount: ctx.jumpCount,
-        switchCount: ctx.switchCount,
-        medal
-      });
+    if (dailyDateKey) {
+      store.recordDailyScore(dailyDateKey, elapsedMs, ctx.jumpCount, medal, trajectory);
     } else {
-      store.recordScore(currentLvl, elapsedMs, trajectory, {
-        jumpCount: ctx.jumpCount,
-        switchCount: ctx.switchCount,
-        medal
-      });
-      const nextLevel = getNextLevelId(currentLvl);
-      if (nextLevel !== null) {
-        store.updateCurrentLevel(nextLevel);
-        if (isEntanglementLevelId(currentLvl)) {
-          if (store.maxEntanglementLevel < nextLevel) {
-            store.updateMaxEntanglementLevel(nextLevel);
+      if (moleculeId) {
+        store.recordMoleculeScore(moleculeId, elapsedMs, trajectory, {
+          jumpCount: ctx.jumpCount,
+          switchCount: ctx.switchCount,
+          medal,
+          coherentRun: ctx.coherenceSystem?.isCoherentRun?.() ?? false,
+          styleScore: ctx.coherenceSystem?.getStyleScore?.() ?? 0
+        });
+      }
+      if (isShared) {
+        store.recordScore(0, elapsedMs, trajectory, {
+          jumpCount: ctx.jumpCount,
+          switchCount: ctx.switchCount,
+          medal
+        });
+      } else {
+        store.recordScore(currentLvl, elapsedMs, trajectory, {
+          jumpCount: ctx.jumpCount,
+          switchCount: ctx.switchCount,
+          medal
+        });
+        const nextLevel = getNextLevelId(currentLvl);
+        if (nextLevel !== null) {
+          store.updateCurrentLevel(nextLevel);
+          if (isEntanglementLevelId(currentLvl)) {
+            if (store.maxEntanglementLevel < nextLevel) {
+              store.updateMaxEntanglementLevel(nextLevel);
+            }
+          } else if (store.maxLevel < nextLevel) {
+            store.updateMaxLevel(nextLevel);
           }
-        } else if (store.maxLevel < nextLevel) {
-          store.updateMaxLevel(nextLevel);
-        }
-        if (ctx.resolveLevelData(nextLevel) || getLevelMetadata(nextLevel)) {
-          nextLevelNumber = nextLevel;
-          preloadLevel(nextLevel);
+          if (ctx.resolveLevelData(nextLevel) || getLevelMetadata(nextLevel)) {
+            nextLevelNumber = nextLevel;
+            preloadLevel(nextLevel);
+          }
         }
       }
     }
     ctx.nextLevelNumberPending = nextLevelNumber;
 
-    const newBest = moleculeId
-      ? (useGameStore.getState().moleculeScores?.[moleculeId]?.best ?? elapsedMs)
-      : isShared
-        ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
-        : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
+    const newBest = dailyDateKey
+      ? (useGameStore.getState().dailyHistory?.[dailyDateKey]?.bestMs ?? elapsedMs)
+      : moleculeId
+        ? (useGameStore.getState().moleculeScores?.[moleculeId]?.best ?? elapsedMs)
+        : isShared
+          ? (useGameStore.getState().scores[0]?.best ?? elapsedMs)
+          : (useGameStore.getState().scores[currentLvl]?.best ?? elapsedMs);
+
+    store.setLastRun(
+      dailyDateKey
+        ? {
+            kind: 'daily',
+            dateKey: dailyDateKey,
+            elapsedMs,
+            jumps: ctx.jumpCount,
+            ghostTrajectory: trajectory
+          }
+        : isShared
+          ? {
+              kind: 'custom',
+              level: ctx.levelData,
+              elapsedMs,
+              jumps: ctx.jumpCount,
+              ghostTrajectory: trajectory
+            }
+          : {
+              kind: 'campaign',
+              levelId: Number.isNaN(currentLvl) ? 1 : currentLvl,
+              elapsedMs,
+              jumps: ctx.jumpCount,
+              ghostTrajectory: trajectory
+            }
+    );
 
     for (const hero of ctx.heroes) {
       if (!hero.active) continue;
@@ -411,6 +448,10 @@ export class RespawnTransitionController {
     const ctx = this.ctx;
     if (!ctx.isLevelCompleted || ctx.isTransitioningLevel) return;
     if (ctx.nextLevelNumberPending === null) return;
+
+    const store = useGameStore.getState();
+    store.setActiveDuel(null);
+    store.setPendingDuelShare(null);
 
     const nextNumber = ctx.nextLevelNumberPending;
     const nextData = ctx.resolveLevelData(nextNumber);

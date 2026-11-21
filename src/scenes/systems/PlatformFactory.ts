@@ -126,7 +126,31 @@ export function buildPlatforms(ctx: GameSceneContext): void {
       rect.setData('kind', 'wall');
     } else if (matterState === 'liquid') {
       rect.setStrokeStyle(2, 0x38bdf8, 0.9);
-      ctx.liquidPlatforms.push({ rect, startY: p.y + height / 2 });
+      let waveGfx: Phaser.GameObjects.Graphics | undefined;
+      if (typeof ctx.add.graphics === 'function') {
+        waveGfx = ctx.add.graphics();
+        waveGfx.setDepth?.(14);
+        const topY = p.y + 3;
+        const step = 12;
+        waveGfx.lineStyle(2, 0xe0f2fe, 0.92);
+        waveGfx.beginPath();
+        for (let wx = 0; wx <= width; wx += step) {
+          const px = p.x + Math.min(wx, width);
+          const py = topY + Math.sin((wx / step) * Math.PI) * 2.5;
+          if (wx === 0) {
+            waveGfx.moveTo(px, py);
+          } else {
+            waveGfx.lineTo(px, py);
+          }
+        }
+        waveGfx.strokePath();
+        // Subtle surface reflections for immediate liquid readability
+        waveGfx.lineStyle(1.5, 0xbae6fd, 0.55);
+        for (let sx = 12; sx < width - 16; sx += 34) {
+          waveGfx.lineBetween(p.x + sx, p.y + 11, p.x + Math.min(sx + 16, width - 8), p.y + 11);
+        }
+      }
+      ctx.liquidPlatforms.push({ rect, startY: p.y + height / 2, waveGfx });
     } else if (matterState === 'gas') {
       rect.setStrokeStyle(1.5, 0xc084fc, 0.75);
       ctx.gasPlatforms.push(rect);
@@ -518,6 +542,12 @@ export function setupLevelCollisions(ctx: GameSceneContext): void {
         ) {
           if (!hero.inLiquid) {
             hero.inLiquid = true;
+            if (hero.upsideDown === 1 && vy > 280) {
+              hero.setVelocityY(280);
+            } else if (hero.upsideDown === -1 && vy < -280) {
+              hero.setVelocityY(-280);
+            }
+            hero.isDiving = false;
             gameEvents.emit('platform:liquid_plunge', { x: hero.x, y: hero.y });
           }
           return false;

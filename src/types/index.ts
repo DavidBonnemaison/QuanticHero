@@ -187,6 +187,19 @@ export interface ScoreItem {
 
 export type ScoreState = Record<number, ScoreItem>;
 
+export interface DailyScoreEntry {
+  bestMs: number;
+  bestJumps: number;
+  medal: IsotopeMedal;
+  ghostTrajectory?: string;
+}
+
+export interface DailyStreakState {
+  current: number;
+  longest: number;
+  lastCompletedDate: string | null;
+}
+
 export interface RootState {
   game: GameState;
   levels: LevelsMap | null;
@@ -195,3 +208,37 @@ export interface RootState {
 }
 
 export type GhostMode = 'off' | 'optimal' | 'best' | 'swarm';
+
+export interface DuelChallengeBase {
+  challengerName: string;
+  challengerTimeMs: number;
+  challengerJumps: number;
+  ghostTrajectory: string;
+}
+
+export interface CampaignDuelChallenge extends DuelChallengeBase {
+  kind: 'campaign';
+  levelId: number;
+}
+
+export interface DailyDuelChallenge extends DuelChallengeBase {
+  kind: 'daily';
+  dateKey: string;
+}
+
+export interface CustomDuelChallenge extends DuelChallengeBase {
+  kind: 'custom';
+  level: LevelData;
+}
+
+export type DuelChallenge = CampaignDuelChallenge | DailyDuelChallenge | CustomDuelChallenge;
+
+export interface LastRunSummary {
+  kind: 'campaign' | 'daily' | 'custom';
+  levelId?: number;
+  dateKey?: string;
+  level?: LevelData;
+  elapsedMs: number;
+  jumps: number;
+  ghostTrajectory: string;
+}

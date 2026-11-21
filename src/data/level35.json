@@ -7,7 +7,10 @@
   "height": 1200,
   "hue": "#240909",
   "antiHue": "#f87171",
-  "explanations": [],
+  "explanations": [
+    "Bromine pools shimmer beneath your feet.",
+    "Walk across the liquid surface, or dive (↓) to bounce high."
+  ],
   "player": {
     "position": {
       "x": 192,
@@ -155,8 +158,8 @@
     "enabled": true,
     "mechanic": "liquid_platforms",
     "hintSteps": [
-      "ENTER LIQUID",
-      "BUOYANT JUMP"
+      "WALK ON LIQUID",
+      "DIVE (↓) TO BOUNCE HIGH"
     ],
     "safeZoneRatio": 0.35
   },

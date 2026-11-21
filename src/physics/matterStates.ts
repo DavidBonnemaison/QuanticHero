@@ -34,7 +34,7 @@ export function isHeroOverlappingRect(
 
 /**
  * Returns true if the hero should plunge into a liquid platform rather than float on its surface.
- * Triggered by diving (Flick-Down / S / ArrowDown) or arriving at vy * upsideDown > 380 px/s.
+ * Triggered by diving (Flick-Down / S / ArrowDown) or arriving at vy * upsideDown > 520 px/s.
  */
 export function shouldPlungeIntoLiquid(
   vy: number,
@@ -47,7 +47,7 @@ export function shouldPlungeIntoLiquid(
 
 /**
  * Applies Archimedes buoyancy thrust inside a liquid platform:
- * vy -= 900 * dt (in normal gravity), inverted when upsideDown === -1.
+ * vy -= 1650 * dt (in normal gravity), inverted when upsideDown === -1.
  */
 export function stepLiquidBuoyancy(vy: number, upsideDown: number, dt: number): number {
   if (dt <= 0) return vy;
@@ -260,9 +260,13 @@ export interface CrystalSegment {
 }
 
 /**
- * Crystallizes up to the last 8 Broglie wave-trail points into solid cyan crystal platform segments.
+ * Crystallizes up to the last 8 Broglie wave-trail points into solid cyan crystal platform segments
+ * positioned strictly below the hero's feet.
  */
-export function buildBroglieScaffoldSegments(points: TrailPoint[], yOffset = 22): CrystalSegment[] {
+export function buildBroglieScaffoldSegments(
+  points: TrailPoint[],
+  yOffset = PHYSICS.HERO_HEIGHT / 2 + 10
+): CrystalSegment[] {
   const recent = points.slice(-PHYSICS.BROGLIE_TRAIL_POINTS);
   return recent.map((pt) => ({
     x: pt.x,

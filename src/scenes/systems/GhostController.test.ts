@@ -198,4 +198,50 @@ describe('GhostController', () => {
     expect(ctx.heroes[0].setVelocityY).toHaveBeenCalled();
     expect(ctx.heroes[0].hasSurfedThisJump).toBe(true);
   });
+
+  it('loads activeDuel challenger ghost with golden tint (0xfbbf24), alpha 0.55, and live split delta even on first attempt with ghostMode off', () => {
+    const ctx = makeGhostContext();
+    ctx.hasAnyGhost = false;
+    (ctx.add as unknown as { text: ReturnType<typeof vi.fn> }).text = vi.fn(() => ({
+      active: true,
+      setOrigin: vi.fn(),
+      setDepth: vi.fn(),
+      setAlpha: vi.fn(),
+      setPosition: vi.fn(),
+      destroy: vi.fn()
+    }));
+
+    const rivalTraj = compressTrajectory([
+      { timeMs: 0, x: 100, y: 400, flipX: false, animState: 'idle' },
+      { timeMs: 600, x: 260, y: 310, flipX: false, animState: 'right' }
+    ]);
+
+    useGameStore.setState({
+      maxLevel: 1,
+      scores: {},
+      ghostMode: 'off',
+      ghostEnabled: false,
+      activeDuel: {
+        kind: 'campaign',
+        levelId: 1,
+        challengerName: 'ALPHA',
+        challengerTimeMs: 8420,
+        challengerJumps: 4,
+        ghostTrajectory: rivalTraj
+      }
+    });
+
+    const controller = new GhostController(ctx);
+    controller.initForLevel();
+
+    expect(ctx.hasAnyGhost).toBe(true);
+    expect(ctx.ghostHero).not.toBeNull();
+    expect(ctx.ghostHero?.alpha).toBe(0.55);
+    expect(ctx.ghostFrames).toHaveLength(2);
+    expect(ctx.splitDeltaText?.setVisible).toHaveBeenCalledWith(true);
+
+    const isActive = controller.updateActiveGhostsAndSplit(300, 300);
+    expect(isActive).toBe(true);
+    expect(ctx.splitDeltaText?.setText).toHaveBeenCalled();
+  });
 });

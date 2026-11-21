@@ -222,3 +222,91 @@
   background: rgba(236, 72, 153, 0.2);
   border: 1px solid rgba(236, 72, 153, 0.5);
 }
+
+.dailyCard {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto 20px;
+  padding: 14px 18px;
+  border: 2px solid #f59e0b;
+  border-radius: 6px;
+  background: rgba(11, 15, 25, 0.85);
+  color: #f8fafc;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.25);
+  transition: transform 0.12s, box-shadow 0.15s, border-color 0.15s, background-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dailyCard:hover {
+  transform: translateY(-2px);
+  background: rgba(245, 158, 11, 0.14);
+  box-shadow: 0 0 26px rgba(245, 158, 11, 0.45);
+}
+
+.dailyCard:active {
+  transform: scale(0.98);
+}
+
+.dailyCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dailyCardTitle {
+  font-size: 26px;
+  letter-spacing: 0.05em;
+  color: #fbbf24;
+  line-height: 1.1;
+}
+
+.dailyStreakBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 18px;
+  color: #fed7aa;
+  background: rgba(234, 88, 12, 0.28);
+  border: 1px solid rgba(251, 146, 60, 0.65);
+  white-space: nowrap;
+}
+
+.dailyCardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 19px;
+  color: #cbd5e1;
+}
+
+.dailyCompletedBadge {
+  color: #34d399;
+  font-weight: bold;
+}
+
+.dailyDifficultyTag {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #94a3b8;
+}
+
+.dailyCountdown {
+  color: #94a3b8;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}

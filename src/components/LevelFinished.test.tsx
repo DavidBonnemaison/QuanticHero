@@ -1,7 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as ReplayCardGenerator from '../services/ReplayCardGenerator';
 import { useGameStore } from '../store';
+import { decodeDuelFromUrl, encodeDuelToUrl } from '../tools/levelCodec';
 import type { LevelData } from '../types';
 import LevelFinished from './LevelFinished';
 
@@ -144,7 +146,8 @@ describe('LevelFinished component', () => {
       expect(screen.getAllByText('00:12:40').length).toBe(2);
       expect(screen.queryByRole('button', { name: /éditer ce niveau/i })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /share/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^share$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /share card/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /levels/i })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
     });
@@ -205,6 +208,252 @@ describe('LevelFinished component', () => {
       renderWithRouter();
 
       expect(screen.queryByTestId('coherent-run-badge')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Spec-02: Ghost Tennis Duel verdict, Rematch, and Revenge Link', () => {
+    it('decodes #duel= challenge, shows VICTORY verdict, and generates a #duel= revenge link with the new ghost', () => {
+      const incomingUrl = encodeDuelToUrl({
+        kind: 'campaign',
+        levelId: 1,
+        challengerName: 'ALPHA',
+        challengerTimeMs: 8420,
+        challengerJumps: 4,
+        ghostTrajectory: 'v1|0,80,910,0,i;8420,750,750,0,r'
+      });
+      const decodedDuel = decodeDuelFromUrl(incomingUrl);
+      expect(decodedDuel).not.toBeNull();
+
+      const playerGhost = 'v1|0,80,910,0,i;8280,750,750,0,r';
+      useGameStore.setState({
+        currentLevel: 2,
+        scores: {
+          1: { last: 8280, best: 8280, ghostTrajectory: playerGhost, lastJumps: 3 }
+        },
+        sharedLevel: null,
+        activeDuel: decodedDuel,
+        lastRun: {
+          kind: 'campaign',
+          levelId: 1,
+          elapsedMs: 8280,
+          jumps: 3,
+          ghostTrajectory: playerGhost
+        }
+      });
+
+      renderWithRouter();
+
+      const verdict = screen.getByTestId('duel-verdict');
+      expect(verdict).toHaveTextContent('VICTORY -0.14s');
+      expect(verdict).toHaveTextContent('YOU BEAT ALPHA BY -0.14s!');
+
+      const revengeBtn = screen.getByRole('button', { name: /SEND REVENGE LINK/i });
+      fireEvent.click(revengeBtn);
+
+      // Update challenger tag and verify encoded #duel= revenge URL
+      const tagInput = screen.getByLabelText(/YOUR TAG/i);
+      fireEvent.change(tagInput, { target: { value: 'beta_99' } });
+
+      const duelUrlInput = screen.getByLabelText('Duel URL') as HTMLInputElement;
+      expect(duelUrlInput.value).toContain('#duel=');
+
+      const revengeDuel = decodeDuelFromUrl(duelUrlInput.value);
+      expect(revengeDuel).toEqual({
+        kind: 'campaign',
+        levelId: 1,
+        challengerName: 'BETA99',
+        challengerTimeMs: 8280,
+        challengerJumps: 3,
+        ghostTrajectory: playerGhost
+      });
+    });
+
+    it('shows DEFEAT verdict and keeps activeDuel when clicking Rematch', () => {
+      const activeDuel = {
+        kind: 'campaign' as const,
+        levelId: 1,
+        challengerName: 'ALPHA',
+        challengerTimeMs: 8000,
+        challengerJumps: 3,
+        ghostTrajectory: 'v1|0,80,910,0,i;8000,750,750,0,r'
+      };
+      useGameStore.setState({
+        currentLevel: 2,
+        scores: {
+          1: { last: 8220, best: 8000, lastJumps: 4 }
+        },
+        sharedLevel: null,
+        activeDuel,
+        lastRun: {
+          kind: 'campaign',
+          levelId: 1,
+          elapsedMs: 8220,
+          jumps: 4,
+          ghostTrajectory: 'v1|0,80,910,0,i;8220,750,750,0,r'
+        }
+      });
+
+      renderWithRouter();
+
+      const verdict = screen.getByTestId('duel-verdict');
+      expect(verdict).toHaveTextContent('DEFEAT +0.22s');
+
+      fireEvent.click(screen.getByRole('button', { name: /Rematch/i }));
+      expect(useGameStore.getState().activeDuel).toEqual(activeDuel);
+      expect(screen.getByText('Game Screen')).toBeInTheDocument();
+    });
+
+    it('offers Challenge a Friend button on non-duel completed levels and opens #duel= share modal', () => {
+      renderWithRouter();
+
+      fireEvent.click(screen.getByRole('button', { name: /Challenge a Friend/i }));
+      const duelUrlInput = screen.getByLabelText('Duel URL') as HTMLInputElement;
+      expect(duelUrlInput.value).toContain('#duel=');
+      const decoded = decodeDuelFromUrl(duelUrlInput.value);
+      expect(decoded?.kind).toBe('campaign');
+      expect(decoded?.challengerName).toBe('ALPHA');
+    });
+  });
+
+  describe('Spec-03: Share Card (Isotope Record Card)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('renders Share Card button and invokes shareReplayCard with DUEL VICTORY badge and toast feedback', async () => {
+      const shareSpy = vi
+        .spyOn(ReplayCardGenerator, 'shareReplayCard')
+        .mockResolvedValue('downloaded');
+
+      const playerGhost = 'v1|0,80,700,0,i;7420,900,300,0,r';
+      useGameStore.setState({
+        currentLevel: 2,
+        locale: 'en',
+        scores: {
+          1: {
+            last: 7420,
+            best: 7420,
+            medal: 'gold',
+            lastJumps: 6,
+            coherentRun: true,
+            ghostTrajectory: playerGhost
+          }
+        },
+        sharedLevel: null,
+        activeDuel: {
+          kind: 'campaign',
+          levelId: 1,
+          challengerName: 'ALPHA',
+          challengerTimeMs: 8500,
+          challengerJumps: 7,
+          ghostTrajectory: 'v1|0,80,700,0,i;8500,900,300,0,r'
+        },
+        lastRun: {
+          kind: 'campaign',
+          levelId: 1,
+          elapsedMs: 7420,
+          jumps: 6,
+          ghostTrajectory: playerGhost
+        }
+      });
+
+      renderWithRouter();
+
+      const shareCardBtn = screen.getByRole('button', { name: /Share Card/i });
+      expect(shareCardBtn).toBeInTheDocument();
+
+      fireEvent.click(shareCardBtn);
+
+      await waitFor(() => {
+        expect(shareSpy).toHaveBeenCalledTimes(1);
+      });
+
+      const [cardInput] = shareSpy.mock.calls[0];
+      expect(cardInput.badge).toBe('DUEL VICTORY');
+      expect(cardInput.timeMs).toBe(7420);
+      expect(cardInput.jumps).toBe(6);
+      expect(cardInput.medal).toBe('gold');
+      expect(cardInput.coherenceTier).toBe('HYPER');
+      expect(cardInput.ghostTrajectory).toBe(playerGhost);
+      expect(cardInput.shareUrl).toContain('#duel=');
+
+      expect(
+        await screen.findByText('Replay card PNG downloaded & link copied!')
+      ).toBeInTheDocument();
+    });
+
+    it('passes DAILY ISOTOPE badge when sharing card for a daily run', async () => {
+      const shareSpy = vi.spyOn(ReplayCardGenerator, 'shareReplayCard').mockResolvedValue('shared');
+
+      useGameStore.setState({
+        locale: 'en',
+        sharedLevel: {
+          ...mockSharedLevel,
+          id: 'daily:2026-11-21'
+        },
+        scores: {
+          0: { last: 9200, best: 9200, medal: 'silver', lastJumps: 5 }
+        },
+        activeDuel: null,
+        lastRun: {
+          kind: 'daily',
+          dateKey: '2026-11-21',
+          elapsedMs: 9200,
+          jumps: 5,
+          ghostTrajectory: ''
+        }
+      });
+
+      renderWithRouter();
+
+      fireEvent.click(screen.getByRole('button', { name: /Share Card/i }));
+
+      await waitFor(() => {
+        expect(shareSpy).toHaveBeenCalledTimes(1);
+      });
+
+      const [cardInput] = shareSpy.mock.calls[0];
+      expect(cardInput.badge).toBe('DAILY ISOTOPE');
+      expect(await screen.findByText('Replay card shared!')).toBeInTheDocument();
+    });
+
+    it('reads Daily Isotope best time, last time, medal, and ghost from dailyHistory and lastRun on /done', () => {
+      useGameStore.setState({
+        locale: 'en',
+        sharedLevel: {
+          ...mockSharedLevel,
+          id: 'daily:2026-11-21',
+          symbol: 'Nh',
+          atom: 'Nihonium'
+        },
+        scores: {},
+        dailyHistory: {
+          '2026-11-21': {
+            bestMs: 8450,
+            bestJumps: 4,
+            medal: 'gold',
+            ghostTrajectory: 'v1|0,80,700,0,i;8450,900,300,0,r'
+          }
+        },
+        activeDuel: null,
+        lastRun: {
+          kind: 'daily',
+          dateKey: '2026-11-21',
+          elapsedMs: 9320,
+          jumps: 5,
+          ghostTrajectory: 'v1|0,80,700,0,i;9320,900,300,0,r'
+        }
+      });
+
+      renderWithRouter();
+
+      expect(screen.getByRole('heading', { level: 1, name: 'Nihonium' })).toBeInTheDocument();
+      // Last run: 9320 ms = 00:09:32, All Time Best: 8450 ms = 00:08:45
+      expect(screen.getByText('00:09:32')).toBeInTheDocument();
+      expect(screen.getByText('00:08:45')).toBeInTheDocument();
+      expect(screen.queryByText('00:00:00')).not.toBeInTheDocument();
+      expect(screen.getByText(/quantum isotope \(gold\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/5 jumps/i)).toBeInTheDocument();
     });
   });
 });

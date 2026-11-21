@@ -284,4 +284,45 @@ describe('QuantumSystems', () => {
     qs.matterAndFields.updateAntigravityBubbles(5200);
     expect(ctx.antigravityBubbles).toHaveLength(0);
   });
+
+  it('places Broglie condense crystal strictly below hero feet and damps fast downward fall', () => {
+    const ctx = makeQuantumContext();
+    ctx.hasCondenseAbility = true;
+    const rectCalls: Array<{ x: number; y: number; w: number; h: number }> = [];
+    (ctx.add as unknown as { rectangle: ReturnType<typeof vi.fn> }).rectangle = vi.fn(
+      (x: number, y: number, w: number, h: number) => {
+        rectCalls.push({ x, y, w, h });
+        return {
+          setStrokeStyle: vi.fn(),
+          setDepth: vi.fn(),
+          setAlpha: vi.fn(),
+          destroy: vi.fn()
+        };
+      }
+    );
+    (ctx as unknown as { platforms: { add: ReturnType<typeof vi.fn> } }).platforms = {
+      add: vi.fn()
+    };
+
+    const hero = ctx.heroes[0];
+    hero.x = 200;
+    hero.y = 300;
+    (hero.body as unknown as { height: number; velocity: { x: number; y: number } }).height = 64;
+    (hero.body as unknown as { velocity: { x: number; y: number } }).velocity.y = 350;
+
+    const qs = new QuantumSystems(ctx);
+    expect(qs.matterAndFields.tryCrystallizeBroglieTrail()).toBe(true);
+
+    // Main catch crystal (last segment) must be strictly below feet: y = 300 + (32 + 10) = 342, size 88x16
+    const mainCrystal = rectCalls[rectCalls.length - 1];
+    expect(mainCrystal.x).toBe(200);
+    expect(mainCrystal.y).toBe(342);
+    expect(mainCrystal.w).toBe(88);
+    expect(mainCrystal.h).toBe(16);
+    // Top of crystal (342 - 8 = 334) is strictly below hero feet (300 + 32 = 332)
+    expect(mainCrystal.y - mainCrystal.h / 2).toBeGreaterThan(hero.y + 32);
+
+    // Fast downward fall velocity must be damped to 60 * upsideDown
+    expect(hero.body?.velocity.y).toBe(60);
+  });
 });

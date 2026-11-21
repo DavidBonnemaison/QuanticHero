@@ -27,6 +27,12 @@ export interface Strings {
     confirmResetMessage: string;
     confirmResetAction: string;
     cancel: string;
+    dailyIsotopeTitle: (symbol: string, atom: string) => string;
+    dailyStreak: (days: number) => string;
+    dailyCompleted: string;
+    dailyBestTime: (formattedTime: string) => string;
+    dailyNextIn: (countdown: string) => string;
+    dailyDifficulty: (difficulty: 'medium' | 'hard') => string;
   };
   levelSelection: {
     backToMenu: string;
@@ -124,6 +130,11 @@ export interface Strings {
     levels: string;
     next: string;
     savedToCustomToast: string;
+    shareCard: string;
+    cardSharedToast: string;
+    cardDownloadedToast: string;
+    cardDownloadedWithLinkToast: string;
+    cardErrorToast: string;
   };
   explanation: {
     gotIt: string;
@@ -138,12 +149,14 @@ export interface Strings {
     fxLo: string;
     phase: (phase: string) => string;
     timeDilation: string;
+    condenseButton: string;
     elementSynthesized: (symbol: string, atomUpper: string) => string;
     newRecord: string;
     rec: string;
     jumps: (count: number) => string;
     nextLevel: (symbol: string, atom: string) => string;
     levelsButton: string;
+    shareCardButton: string;
     toasts: {
       bellSync: string;
       entanglementRevealed: string;
@@ -173,6 +186,25 @@ export interface Strings {
     bronze: { label: string; shortLabel: string };
     none: { label: string; shortLabel: string };
   };
+  duel: {
+    rivalBadge: (name: string, formattedSec: string) => string;
+    victoryBadge: (deltaStr: string) => string;
+    defeatBadge: (deltaStr: string) => string;
+    youBeat: (name: string, deltaStr: string) => string;
+    rivalTime: (name: string, formattedSec: string) => string;
+    challengeFriend: string;
+    sendRevengeLink: string;
+    rematch: string;
+    modalTitleDuel: string;
+    modalTitleRevenge: string;
+    modalSubtitle: string;
+    nicknameLabel: string;
+    nicknamePlaceholder: string;
+    shareNative: string;
+    copyLink: string;
+    linkCopied: string;
+    ghostIncluded: string;
+  };
 }
 
 export const STRINGS: Record<Locale, Strings> = {
@@ -200,7 +232,13 @@ export const STRINGS: Record<Locale, Strings> = {
       confirmResetTitle: 'New Game',
       confirmResetMessage: 'Reset all progress, medals and unlocked molecules?',
       confirmResetAction: 'Reset & Start',
-      cancel: 'Cancel'
+      cancel: 'Cancel',
+      dailyIsotopeTitle: (symbol, atom) => `DAILY ISOTOPE — ${symbol} ${atom}`,
+      dailyStreak: (days) => `🔥 ${days} ${days === 1 ? 'day' : 'days'}`,
+      dailyCompleted: 'Completed ✓',
+      dailyBestTime: (formattedTime) => `Best ${formattedTime}`,
+      dailyNextIn: (countdown) => `Next in ${countdown} UTC`,
+      dailyDifficulty: (difficulty) => (difficulty === 'hard' ? 'HARD' : 'MEDIUM')
     },
     levelSelection: {
       backToMenu: '◄ MENU',
@@ -301,7 +339,12 @@ export const STRINGS: Record<Locale, Strings> = {
       share: 'Share',
       levels: 'Levels',
       next: 'Next',
-      savedToCustomToast: 'Level saved to your custom levels!'
+      savedToCustomToast: 'Level saved to your custom levels!',
+      shareCard: 'Share Card',
+      cardSharedToast: 'Replay card shared!',
+      cardDownloadedToast: 'Replay card PNG downloaded!',
+      cardDownloadedWithLinkToast: 'Replay card PNG downloaded & link copied!',
+      cardErrorToast: 'Could not generate replay card.'
     },
     explanation: {
       gotIt: 'Got it'
@@ -316,12 +359,14 @@ export const STRINGS: Record<Locale, Strings> = {
       fxLo: 'FX:LO',
       phase: (phase) => `[PHASE: ${phase.toUpperCase()}]`,
       timeDilation: '[TIME: 0.25x]',
+      condenseButton: '[CONDENSE]',
       elementSynthesized: (symbol, atomUpper) => `ELEMENT SYNTHESIZED — ${symbol} ${atomUpper}`,
       newRecord: 'NEW RECORD',
       rec: 'REC',
       jumps: (count) => `JUMPS: ${count}`,
       nextLevel: (symbol, atom) => `[SPACE / TAP] NEXT: ${symbol} ${atom}`,
       levelsButton: '[LEVELS]',
+      shareCardButton: 'SHARE CARD',
       toasts: {
         bellSync: 'BELL SYNC ! (GOLD ISOTOPE)',
         entanglementRevealed: 'ENTANGLEMENT REVEALED !',
@@ -340,7 +385,7 @@ export const STRINGS: Record<Locale, Strings> = {
           tunnel: 'TUNNELING CHARGE !',
           pauli: 'PAULI BLAST !',
           timeDilation: 'TIME DILATION !',
-          condense: 'BROGLIE CONDENSE !'
+          condense: 'BROGLIE CONDENSE ! ([CONDENSE] / [C] / SPACE)'
         }
       }
     },
@@ -355,6 +400,25 @@ export const STRINGS: Record<Locale, Strings> = {
       silver: { label: 'Pure Isotope (Silver)', shortLabel: 'SILVER' },
       bronze: { label: 'Stable Isotope (Bronze)', shortLabel: 'BRONZE' },
       none: { label: 'Not synthesized', shortLabel: '--' }
+    },
+    duel: {
+      rivalBadge: (name, formattedSec) => `VS ${name} — ${formattedSec}`,
+      victoryBadge: (deltaStr) => `VICTORY ${deltaStr}`,
+      defeatBadge: (deltaStr) => `DEFEAT ${deltaStr}`,
+      youBeat: (name, deltaStr) => `YOU BEAT ${name} BY ${deltaStr}!`,
+      rivalTime: (name, formattedSec) => `RIVAL ${name}: ${formattedSec}`,
+      challengeFriend: 'Challenge a Friend',
+      sendRevengeLink: 'SEND REVENGE LINK',
+      rematch: 'Rematch',
+      modalTitleDuel: '=== GHOST TENNIS DUEL ===',
+      modalTitleRevenge: '=== SEND REVENGE LINK ===',
+      modalSubtitle: 'SEND THIS #DUEL LINK TO CHALLENGE A FRIEND',
+      nicknameLabel: 'YOUR TAG',
+      nicknamePlaceholder: 'ALPHA',
+      shareNative: 'SHARE',
+      copyLink: 'COPY LINK',
+      linkCopied: '★ DUEL LINK COPIED TO CLIPBOARD! ★',
+      ghostIncluded: '★ YOUR GHOST TRAJECTORY IS ENCODED IN THIS LINK ★'
     }
   },
   fr: {
@@ -382,7 +446,13 @@ export const STRINGS: Record<Locale, Strings> = {
       confirmResetMessage:
         'Réinitialiser toute la progression, les médailles et les molécules débloquées ?',
       confirmResetAction: 'Réinitialiser',
-      cancel: 'Annuler'
+      cancel: 'Annuler',
+      dailyIsotopeTitle: (symbol, atom) => `DAILY ISOTOPE — ${symbol} ${atom}`,
+      dailyStreak: (days) => `🔥 ${days} ${days === 1 ? 'jour' : 'jours'}`,
+      dailyCompleted: 'Complété ✓',
+      dailyBestTime: (formattedTime) => `Record ${formattedTime}`,
+      dailyNextIn: (countdown) => `Prochain dans ${countdown} UTC`,
+      dailyDifficulty: (difficulty) => (difficulty === 'hard' ? 'DIFFICILE' : 'MOYEN')
     },
     levelSelection: {
       backToMenu: '◄ MENU',
@@ -483,7 +553,12 @@ export const STRINGS: Record<Locale, Strings> = {
       share: 'Partager',
       levels: 'Niveaux',
       next: 'Suivant',
-      savedToCustomToast: 'Niveau sauvegardé dans vos niveaux personnalisés !'
+      savedToCustomToast: 'Niveau sauvegardé dans vos niveaux personnalisés !',
+      shareCard: 'Partager la Carte',
+      cardSharedToast: 'Carte replay partagée !',
+      cardDownloadedToast: 'Carte replay PNG téléchargée !',
+      cardDownloadedWithLinkToast: 'Carte replay PNG téléchargée et lien copié !',
+      cardErrorToast: 'Impossible de générer la carte replay.'
     },
     explanation: {
       gotIt: 'Compris'
@@ -498,12 +573,14 @@ export const STRINGS: Record<Locale, Strings> = {
       fxLo: 'FX:BAS',
       phase: (phase) => `[PHASE : ${phase.toUpperCase()}]`,
       timeDilation: '[TEMPS : 0.25x]',
+      condenseButton: '[CONDENSE]',
       elementSynthesized: (symbol, atomUpper) => `ÉLÉMENT SYNTHÉTISÉ — ${symbol} ${atomUpper}`,
       newRecord: 'NOUVEAU RECORD',
       rec: 'REC',
       jumps: (count) => `SAUTS : ${count}`,
       nextLevel: (symbol, atom) => `[ESPACE / TAP] SUIVANT : ${symbol} ${atom}`,
       levelsButton: '[NIVEAUX]',
+      shareCardButton: 'CARTE PNG',
       toasts: {
         bellSync: "SYNCHRO BELL ! (ISOTOPE D'OR)",
         entanglementRevealed: 'INTRICATION RÉVÉLÉE !',
@@ -522,7 +599,7 @@ export const STRINGS: Record<Locale, Strings> = {
           tunnel: 'CHARGE TUNNEL !',
           pauli: 'ONDE DE PAULI !',
           timeDilation: 'DILATATION TEMPORELLE !',
-          condense: 'CONDENSATION BROGLIE !'
+          condense: 'CONDENSATION BROGLIE ! ([CONDENSE] / [C] / ESPACE)'
         }
       }
     },
@@ -537,6 +614,25 @@ export const STRINGS: Record<Locale, Strings> = {
       silver: { label: 'Isotope Pur (Argent)', shortLabel: 'ARGENT' },
       bronze: { label: 'Isotope Stable (Bronze)', shortLabel: 'BRONZE' },
       none: { label: 'Non synthétisé', shortLabel: '--' }
+    },
+    duel: {
+      rivalBadge: (name, formattedSec) => `VS ${name} — ${formattedSec}`,
+      victoryBadge: (deltaStr) => `VICTOIRE ${deltaStr}`,
+      defeatBadge: (deltaStr) => `DÉFAITE ${deltaStr}`,
+      youBeat: (name, deltaStr) => `TU AS BATTU ${name} DE ${deltaStr} !`,
+      rivalTime: (name, formattedSec) => `RIVAL ${name} : ${formattedSec}`,
+      challengeFriend: 'Défier un ami',
+      sendRevengeLink: 'ENVOYER LIEN REVANCHE',
+      rematch: 'Revanche',
+      modalTitleDuel: '=== DUEL GHOST TENNIS ===',
+      modalTitleRevenge: '=== LIEN DE REVANCHE ===',
+      modalSubtitle: 'ENVOIE CE LIEN #DUEL POUR DÉFIER UN AMI',
+      nicknameLabel: 'TON PSEUDO',
+      nicknamePlaceholder: 'ALPHA',
+      shareNative: 'PARTAGER',
+      copyLink: 'COPIER LE LIEN',
+      linkCopied: '★ LIEN DE DUEL COPIÉ ! ★',
+      ghostIncluded: '★ TA TRAJECTOIRE FANTÔME EST INCLUSE DANS CE LIEN ★'
     }
   }
 };

@@ -149,16 +149,22 @@ export class MatterAndFieldController {
         : focused.body.touching.up || focused.body.blocked.up;
     if (touchingGround) return false;
 
+    const halfH = (focused.body?.height || PHYSICS.HERO_HEIGHT) / 2;
+    const yOffset = (halfH + 10) * focused.upsideDown;
     const points =
       focused.trailPoints.length > 0 ? focused.trailPoints : [{ x: focused.x, y: focused.y }];
-    const segments = buildBroglieScaffoldSegments(points, 22 * focused.upsideDown);
+    const segments = buildBroglieScaffoldSegments(points, yOffset);
     segments.push({
       x: focused.x,
-      y: focused.y + 22 * focused.upsideDown,
-      width: 68,
-      height: 12
+      y: focused.y + yOffset,
+      width: 88,
+      height: 16
     });
     if (segments.length === 0) return false;
+
+    if (focused.body && focused.body.velocity.y * focused.upsideDown > 120) {
+      focused.setVelocityY(60 * focused.upsideDown);
+    }
 
     const expiresAtMs = (ctx.time?.now ?? 0) + PHYSICS.BROGLIE_SCAFFOLD_DURATION_MS;
     for (const seg of segments) {
@@ -205,7 +211,11 @@ export class MatterAndFieldController {
     for (let i = 0; i < ctx.liquidPlatforms.length; i++) {
       const lp = ctx.liquidPlatforms[i];
       if (lp.rect.active) {
-        lp.rect.y = lp.startY + Math.sin(time * 0.004 + i) * 1.5;
+        const bobOffset = Math.sin(time * 0.004 + i) * 1.5;
+        lp.rect.y = lp.startY + bobOffset;
+        if (lp.waveGfx?.active) {
+          lp.waveGfx.y = bobOffset;
+        }
       }
     }
 
@@ -222,7 +232,11 @@ export class MatterAndFieldController {
         }
 
         if (overlappingLiquid && hero.inLiquid) {
-          const nextVy = stepLiquidBuoyancy(hero.body.velocity.y, hero.upsideDown, dt);
+          const dampedVy =
+            hero.upsideDown === 1
+              ? Math.min(hero.body.velocity.y, 280)
+              : Math.max(hero.body.velocity.y, -280);
+          const nextVy = stepLiquidBuoyancy(dampedVy, hero.upsideDown, dt);
           hero.setVelocityY(nextVy);
           hero.isDiving = false;
 
