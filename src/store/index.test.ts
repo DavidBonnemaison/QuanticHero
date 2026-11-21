@@ -675,5 +675,25 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().lastRun).toBeNull();
       expect(useGameStore.getState().pendingDuelShare).toBeNull();
     });
+
+    it('defaults heroSkin to quantum, toggles & sets skin, and persists heroSkin to localStorage', () => {
+      useGameStore.setState({ heroSkin: 'quantum' });
+      expect(useGameStore.getState().heroSkin).toBe('quantum');
+
+      useGameStore.getState().toggleHeroSkin();
+      expect(useGameStore.getState().heroSkin).toBe('classic');
+
+      const persistedClassic = JSON.parse(localStorage.getItem('qtmhro') || '{}');
+      expect(persistedClassic.state.heroSkin).toBe('classic');
+
+      useGameStore.getState().toggleHeroSkin();
+      expect(useGameStore.getState().heroSkin).toBe('quantum');
+
+      useGameStore.getState().setHeroSkin('classic');
+      expect(useGameStore.getState().heroSkin).toBe('classic');
+
+      const persistedExplicit = JSON.parse(localStorage.getItem('qtmhro') || '{}');
+      expect(persistedExplicit.state.heroSkin).toBe('classic');
+    });
   });
 });

@@ -317,4 +317,20 @@ describe('Menu component', () => {
       window.history.replaceState({}, '', '/');
     }
   });
+
+  it('toggles hero skin between SKIN: QUANTUM and SKIN: CLASSIC', () => {
+    useGameStore.setState({ heroSkin: 'quantum', locale: 'en' });
+    renderWithRouter();
+
+    const skinBtn = screen.getByTestId('skin-toggle');
+    expect(skinBtn).toHaveTextContent('SKIN: QUANTUM');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('classic');
+    expect(skinBtn).toHaveTextContent('SKIN: CLASSIC');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('quantum');
+    expect(skinBtn).toHaveTextContent('SKIN: QUANTUM');
+  });
 });

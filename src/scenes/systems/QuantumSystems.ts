@@ -36,6 +36,7 @@ import { useGameStore } from '../../store';
 import { gameEvents } from '../../tools/gameEvents';
 import type { ParticleType, PlatformPhase } from '../../types';
 import Hero from '../Hero';
+import { drawPortalSingularity } from '../ProceduralTextures';
 import { EntanglementSystem } from './EntanglementSystem';
 import { MatterAndFieldController } from './MatterAndFieldController';
 import { SetPieceController } from './SetPieceController';
@@ -427,6 +428,7 @@ export class QuantumSystems {
     this.updateDecayAndCollapse(delta, elapsedMs, timeDilationFactor);
     this.updateWavefunctionCollapse(time, delta, elapsedMs);
     this.updateMovingPlatforms(timeDilationFactor);
+    this.updatePortalVisuals(time, delta);
 
     ctx.bohrBackground?.update(time, delta);
     for (const mol of ctx.molecules) {
@@ -436,6 +438,65 @@ export class QuantumSystems {
       if (mol.circle.x > ctx.levelData.width) mol.circle.x = 0;
       if (mol.circle.y < 0) mol.circle.y = ctx.levelData.height;
       if (mol.circle.y > ctx.levelData.height) mol.circle.y = 0;
+    }
+  }
+
+  private updatePortalVisuals(time: number, delta: number): void {
+    const ctx = this.ctx;
+    const dtSec = Math.max(0, delta) * 0.001;
+
+    // Determine whether any gate in the level remains sealed/locked
+    let hasLockedGate = false;
+    if (ctx.gatesMap && ctx.gatesMap.size > 0) {
+      for (const entry of ctx.gatesMap.values()) {
+        const body = entry.rect?.body as Phaser.Physics.Arcade.StaticBody | null | undefined;
+        const isClosed = body ? body.enable !== false : (entry.rect?.alpha ?? 1) > 0.1;
+        if (isClosed) {
+          hasLockedGate = true;
+          break;
+        }
+      }
+    }
+
+    const spinRate = hasLockedGate ? 0.55 : 1.85;
+    if (ctx.portalSprite?.active) {
+      if (typeof ctx.portalSprite.rotation === 'number') {
+        ctx.portalSprite.rotation += dtSec * spinRate;
+      }
+      ctx.portalSprite.setAlpha?.(hasLockedGate ? 0.55 : 0.92);
+    }
+    if (ctx.betaPortalSprite?.active) {
+      if (typeof ctx.betaPortalSprite.rotation === 'number') {
+        ctx.betaPortalSprite.rotation -= dtSec * spinRate;
+      }
+      ctx.betaPortalSprite.setAlpha?.(hasLockedGate ? 0.55 : 0.92);
+    }
+
+    const g = ctx.portalGraphics;
+    if (!g) return;
+    g.clear();
+
+    const reducedEffects = useGameStore.getState().reducedEffects ?? false;
+    const primaryColor = ctx.levelData?.antiHue
+      ? Phaser.Display.Color.HexStringToColor(ctx.levelData.antiHue).color
+      : 0x00e5ff;
+
+    if (ctx.portalSprite?.active) {
+      drawPortalSingularity(g, ctx.portalSprite.x, ctx.portalSprite.y, time, {
+        primaryColor,
+        accentColor: 0xe0f2fe,
+        isLocked: hasLockedGate,
+        reducedEffects
+      });
+    }
+
+    if (ctx.betaPortalSprite?.active) {
+      drawPortalSingularity(g, ctx.betaPortalSprite.x, ctx.betaPortalSprite.y, time, {
+        primaryColor: 0xec4899,
+        accentColor: 0xfce7f3,
+        isLocked: hasLockedGate,
+        reducedEffects
+      });
     }
   }
 

@@ -135,6 +135,26 @@ export class HudController {
     });
     ctx.hudContainer.add(fxButton);
 
+    const getSkinLabel = () => {
+      const s = getHudStrings().hud;
+      return (useGameStore.getState().heroSkin ?? 'quantum') === 'quantum'
+        ? s.skinQuantum
+        : s.skinClassic;
+    };
+    const skinButton = ctx.add.text(274, 5, getSkinLabel(), {
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: '18px',
+      color: '#38bdf8'
+    });
+    skinButton.setScrollFactor(0);
+    skinButton.setInteractive({ useHandCursor: true });
+    skinButton.on('pointerdown', () => {
+      ctx.uiPointerConsumed = true;
+      useGameStore.getState().toggleHeroSkin();
+      skinButton.setText(getSkinLabel());
+    });
+    ctx.hudContainer.add(skinButton);
+
     const initialActiveDuel = useGameStore.getState().activeDuel;
     const currentMode =
       useGameStore.getState().ghostMode ??
@@ -225,7 +245,7 @@ export class HudController {
     }
 
     if (isGodMode()) {
-      const godBadge = ctx.add.text(274, 5, '[GOD]', {
+      const godBadge = ctx.add.text(352, 5, '[GOD]', {
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: '18px',
         color: '#fbbf24'
@@ -247,6 +267,9 @@ export class HudController {
       }
       if (fxButton.active) {
         fxButton.setText(getFxLabel());
+      }
+      if (skinButton.active) {
+        skinButton.setText(getSkinLabel());
       }
       if (ctx.duelBadgeText?.active) {
         ctx.duelBadgeText.setText(getDuelBadgeLabel());
@@ -317,6 +340,7 @@ export class HudController {
       soundButton.setVisible(false);
       hapticButton.setVisible(false);
       fxButton.setVisible(false);
+      skinButton.setVisible(false);
       ctx.ghostButton.setVisible(false);
       ctx.duelBadgeText.setVisible(false);
       ctx.phaseIndicatorText?.setVisible(false);

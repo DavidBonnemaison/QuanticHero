@@ -38,6 +38,8 @@ export default function Menu(): React.ReactElement {
   const toggleHaptics = useGameStore((state) => state.toggleHaptics);
   const reducedEffects = useGameStore((state) => state.reducedEffects);
   const toggleReducedEffects = useGameStore((state) => state.toggleReducedEffects);
+  const heroSkin = useGameStore((state) => state.heroSkin ?? 'quantum');
+  const toggleHeroSkin = useGameStore((state) => state.toggleHeroSkin);
   const locale = useGameStore((state) => state.locale ?? 'en');
   const toggleLocale = useGameStore((state) => state.toggleLocale);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -176,6 +178,18 @@ export default function Menu(): React.ReactElement {
           title={reducedEffects ? t.menu.enableFullEffects : t.menu.enableReducedEffects}
         >
           {reducedEffects ? t.menu.fxLo : t.menu.fxHi}
+        </button>
+        <button
+          type="button"
+          className={styles.soundButton}
+          onClick={toggleHeroSkin}
+          aria-label={
+            heroSkin === 'quantum' ? t.menu.switchToClassicSkin : t.menu.switchToQuantumSkin
+          }
+          title={heroSkin === 'quantum' ? t.menu.switchToClassicSkin : t.menu.switchToQuantumSkin}
+          data-testid="skin-toggle"
+        >
+          {heroSkin === 'quantum' ? t.menu.skinQuantum : t.menu.skinClassic}
         </button>
         <button
           type="button"

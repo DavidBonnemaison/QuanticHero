@@ -20,6 +20,7 @@ import type {
 } from '../../types';
 import type { GhostHero } from '../GhostHero';
 import type Hero from '../Hero';
+import type { HeroRenderer } from '../HeroRenderer';
 import type { TimeLoopSystem } from './TimeLoopSystem';
 
 export interface Gate {
@@ -195,6 +196,8 @@ export interface GameSceneContext {
   collapseConfig?: CollapseConfig;
   pauliGraphics: Phaser.GameObjects.Graphics | null;
   spikeGfx: Phaser.GameObjects.Graphics | null;
+  portalGraphics?: Phaser.GameObjects.Graphics | null;
+  heroRenderer?: HeroRenderer | null;
   unsubJump: (() => void) | null;
   unsubHudStore: (() => void) | null;
   entanglementGraphics: Phaser.GameObjects.Graphics | null;

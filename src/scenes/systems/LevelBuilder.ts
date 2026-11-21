@@ -8,6 +8,7 @@ import { PHYSICS } from '../../physics/constants';
 import { createQuantumPinningState } from '../../physics/matterStates';
 import { useGameStore } from '../../store';
 import Hero from '../Hero';
+import { HeroRenderer } from '../HeroRenderer';
 import {
   buildParticles,
   buildPlatforms,
@@ -129,6 +130,8 @@ export class LevelBuilder {
     ctx.collapseConfig = undefined;
     ctx.pauliGraphics = null;
     ctx.spikeGfx = null;
+    ctx.portalGraphics = null;
+    ctx.heroRenderer = null;
     if (ctx.unsubJump) {
       ctx.unsubJump();
       ctx.unsubJump = null;
@@ -175,6 +178,7 @@ export class LevelBuilder {
 
     // 8. Quantum Visual Effects & Graphics Layers
     ctx.quantumEffects = new QuantumEffectsManager(ctx as unknown as Phaser.Scene);
+    ctx.heroRenderer = new HeroRenderer(ctx as unknown as Phaser.Scene);
     ctx.diveTrailGraphics = ctx.add.graphics();
     ctx.diveTrailGraphics.setDepth(18);
     ctx.focusArcGraphics = ctx.add.graphics();
@@ -322,6 +326,11 @@ export class LevelBuilder {
     ctx.superposedSpikes = [];
     ctx.constellationGraphics = destroyGraphic(ctx.constellationGraphics);
     ctx.periodicTableGraphics = destroyGraphic(ctx.periodicTableGraphics);
+    ctx.portalGraphics = destroyGraphic(ctx.portalGraphics ?? null);
+    if (ctx.heroRenderer) {
+      ctx.heroRenderer.destroy();
+      ctx.heroRenderer = null;
+    }
 
     for (const crystal of ctx.broglieCrystals) {
       crystal.rect.destroy();

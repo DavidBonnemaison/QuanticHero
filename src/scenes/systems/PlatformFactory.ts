@@ -10,8 +10,9 @@ import {
 } from '../../physics/matterStates';
 import { gameEvents } from '../../tools/gameEvents';
 import { isGodMode } from '../../tools/godMode';
-import type { MatterState, ParticleType } from '../../types';
+import type { MatterState } from '../../types';
 import type Hero from '../Hero';
+import { PARTICLE_TEXTURE_KEYS, PORTAL_TEXTURE_KEY } from '../ProceduralTextures';
 import type { GameSceneContext } from './types';
 
 /**
@@ -375,36 +376,23 @@ export function buildParticles(ctx: GameSceneContext): void {
     allowGravity: false,
     immovable: true
   });
-  const assetMap: Record<ParticleType, string> = {
-    duplicate: 'blue',
-    speed: 'red',
-    lowGravity: 'green',
-    antiGravity: 'cyan',
-    tunnel: 'yellow',
-    pauli: 'red',
-    timeDilation: 'cyan',
-    condense: 'cyan'
-  };
 
   for (const part of ctx.levelData.particles) {
-    const textureKey = assetMap[part.type] || 'blue';
+    const textureKey = PARTICLE_TEXTURE_KEYS[part.type] || PARTICLE_TEXTURE_KEYS.duplicate;
     const sprite = ctx.physics.add.sprite(part.x, part.y, textureKey);
-    sprite.setScale(0.2, 0.2);
+    // 64x64 procedural glyph scaled to ~24px visual with ~20x20 hitbox parity
+    sprite.setScale(0.38, 0.38);
     sprite.setData('type', part.type);
     sprite.setData('startX', part.x);
     sprite.setData('startY', part.y);
     if (part.restoresEphemeral) {
       sprite.setData('restoresEphemeral', true);
     }
-    if (part.type === 'pauli') {
-      sprite.setTint(0xff6600);
-    } else if (part.type === 'timeDilation') {
-      sprite.setTint(0x9933ff);
-    }
     ctx.particles.add(sprite);
     const pBody = sprite.body as Phaser.Physics.Arcade.Body;
     pBody.setImmovable(true);
     pBody.setAllowGravity(false);
+    pBody.setSize?.(52, 52);
 
     ctx.tweens.add({
       targets: sprite,
@@ -420,13 +408,21 @@ export function buildParticles(ctx: GameSceneContext): void {
 export function buildPortalsGatesAndPlates(ctx: GameSceneContext): void {
   const portalX = ctx.levelData.door.x - 48;
   const portalY = ctx.levelData.door.y - 96;
-  ctx.portalSprite = ctx.physics.add.sprite(portalX, portalY, 'portal');
-  ctx.portalSprite.setScale(0.15, 0.2);
+  const antiHueColor = Phaser.Display.Color.HexStringToColor(ctx.levelData.antiHue).color;
+  ctx.portalSprite = ctx.physics.add.sprite(portalX, portalY, PORTAL_TEXTURE_KEY);
+  // 128x128 procedural singularity scaled to ~72x72 matching legacy portal hitbox
+  ctx.portalSprite.setScale(0.56, 0.56);
+  ctx.portalSprite.setTint?.(antiHueColor);
+  ctx.portalSprite.setDepth?.(13);
   const portalBody = ctx.portalSprite.body as Phaser.Physics.Arcade.Body;
   portalBody.setImmovable(true);
   portalBody.setAllowGravity(false);
   portalBody.moves = false;
-  ctx.portalSprite.play('spin');
+
+  if (typeof ctx.add.graphics === 'function') {
+    ctx.portalGraphics = ctx.add.graphics();
+    ctx.portalGraphics.setDepth?.(14);
+  }
 
   ctx.gatesGroup = ctx.physics.add.staticGroup();
   ctx.gatesMap.clear();
@@ -485,17 +481,17 @@ export function buildPortalsGatesAndPlates(ctx: GameSceneContext): void {
         entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity';
       const betaPortalX = betaDoorPos.x - 48;
       const betaPortalY = isBetaInverted ? betaDoorPos.y + 32 : betaDoorPos.y - 96;
-      ctx.betaPortalSprite = ctx.physics.add.sprite(betaPortalX, betaPortalY, 'portal');
-      ctx.betaPortalSprite.setScale(0.15, 0.2);
+      ctx.betaPortalSprite = ctx.physics.add.sprite(betaPortalX, betaPortalY, PORTAL_TEXTURE_KEY);
+      ctx.betaPortalSprite.setScale(0.56, 0.56);
       if (isBetaInverted) {
         ctx.betaPortalSprite.setFlipY(true);
       }
       ctx.betaPortalSprite.setTint(0xec4899);
+      ctx.betaPortalSprite.setDepth?.(13);
       const bpBody = ctx.betaPortalSprite.body as Phaser.Physics.Arcade.Body;
       bpBody.setImmovable(true);
       bpBody.setAllowGravity(false);
       bpBody.moves = false;
-      ctx.betaPortalSprite.play('spin');
     }
 
     ctx.entanglementGraphics = ctx.add.graphics();
