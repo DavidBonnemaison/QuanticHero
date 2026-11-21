@@ -61,7 +61,7 @@ export class HudController {
       }
       window.game = null;
       const rawId = String(ctx.levelData?.id ?? '');
-      const isQuantumModeLevel = /^(?:chrono|schrodinger)-\d+$/i.test(rawId);
+      const isQuantumModeLevel = /^(?:chrono|schrodinger|accelerator)-/i.test(rawId);
       push(isQuantumModeLevel ? '/modes' : '/');
     });
     ctx.hudContainer.add(backButton);

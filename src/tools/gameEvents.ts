@@ -57,6 +57,20 @@ export interface GameEventPayloads {
     x: number;
     y: number;
   };
+  'accelerator:room_cleared': {
+    elapsedMs: number;
+    jumps: number;
+    levelId: string;
+  };
+  'accelerator:life_lost': {
+    deathPos: { x: number; y: number };
+  };
+  'accelerator:shield_block': {
+    remainingCharges: number;
+  };
+  'accelerator:reflex_dilation': {
+    durationMs: number;
+  };
 }
 
 export type GameEventName = keyof GameEventPayloads;

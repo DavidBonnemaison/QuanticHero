@@ -15,6 +15,10 @@ import {
   createQuantumPinningState,
   findPinnablePlatformAtPoint
 } from '../physics/matterStates';
+import {
+  type AggregatedMutationModifiers,
+  DEFAULT_MUTATION_MODIFIERS
+} from '../roguelite/mutations';
 import { SessionSwarmBuffer } from '../services/GhostManager';
 import { useGameStore } from '../store';
 import { type GhostFrame, GhostRecorder } from '../tools/GhostRecorder';
@@ -201,6 +205,12 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public constellationGraphics: Phaser.GameObjects.Graphics | null = null;
   public periodicTableGraphics: Phaser.GameObjects.Graphics | null = null;
   public previousCompletedLevelId: number | null = null;
+  public acceleratorMode = false;
+  public acceleratorModifiers: AggregatedMutationModifiers = DEFAULT_MUTATION_MODIFIERS;
+  public acceleratorShieldCharges = 0;
+  public acceleratorTunnelTimerMs = 0;
+  public acceleratorReflexCooldownUntil = 0;
+  public acceleratorReflexDilationUntil = 0;
 
   public readonly levelBuilder: LevelBuilder;
   public readonly hudController: HudController;
@@ -313,8 +323,15 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
 
     if (store.sharedLevel) {
       this.levelData = store.sharedLevel;
+      this.acceleratorMode = /^accelerator-/i.test(String(this.levelData.id ?? ''));
+      if (!this.acceleratorMode) {
+        this.acceleratorModifiers = DEFAULT_MUTATION_MODIFIERS;
+      }
       return;
     }
+
+    this.acceleratorMode = false;
+    this.acceleratorModifiers = DEFAULT_MUTATION_MODIFIERS;
 
     const currentLevel = store.currentLevel || 1;
     const selected = this.resolveLevelData(currentLevel);
@@ -725,6 +742,18 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public tryCrystallizeBroglieTrail(): boolean {
     return this.quantumSystems.matterAndFields.tryCrystallizeBroglieTrail();
   }
+  public spawnBroglieWallWake(x: number, y: number, durationMs = 2000): void {
+    this.quantumSystems.matterAndFields.spawnBroglieWallWake(x, y, durationMs);
+  }
+  public loadAcceleratorChamber(
+    nextLevelData: LevelData,
+    modifiers: AggregatedMutationModifiers
+  ): void {
+    this.acceleratorMode = true;
+    this.acceleratorModifiers = modifiers;
+    useGameStore.getState().setSharedLevel(nextLevelData);
+    this.rebuildForLevel(nextLevelData);
+  }
   public tryCloneFusion(nowMs = this.time?.now ?? 0): boolean {
     return this.quantumSystems.tryCloneFusion(nowMs);
   }
@@ -789,9 +818,23 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       gameEvents.emit('time:dilation', { active: false, durationMs: 0 });
     }
     const isFocusBulletTime = time < this.focusBulletTimeUntil;
-    const timeDilationFactor = isFocusBulletTime ? 0.2 : this.isTimeDilationActive ? 0.25 : 1.0;
+    const isReflexDilation = time < this.acceleratorReflexDilationUntil;
+    const reflexScale = isReflexDilation
+      ? Math.max(0.2, this.acceleratorModifiers?.reflexDilationScale ?? 0.35)
+      : 1.0;
+    const timeDilationFactor = isFocusBulletTime
+      ? 0.2
+      : isReflexDilation
+        ? reflexScale
+        : this.isTimeDilationActive
+          ? 0.25
+          : 1.0;
     if (this.physics?.world) {
-      this.physics.world.timeScale = isFocusBulletTime ? 5.0 : 1.0;
+      this.physics.world.timeScale = isFocusBulletTime
+        ? 5.0
+        : isReflexDilation
+          ? 1 / reflexScale
+          : 1.0;
     }
 
     this.dilatedElapsedMs += delta * timeDilationFactor;
@@ -803,7 +846,8 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
         focusedHero.upsideDown === 1
           ? Boolean(focusedHero.body.touching.down || focusedHero.body.blocked.down)
           : Boolean(focusedHero.body.touching.up || focusedHero.body.blocked.up);
-      this.coherenceSystem.update(delta, focusedHero.body.velocity.x, isGrounded);
+      const coherenceMult = this.acceleratorModifiers?.coherenceGainMultiplier ?? 1;
+      this.coherenceSystem.update(delta * coherenceMult, focusedHero.body.velocity.x, isGrounded);
     }
 
     this.hudController.updateTimerAndIndicators();
@@ -820,7 +864,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       delta,
       this.heroes,
       this.portalSprite,
-      this.isTimeDilationActive,
+      this.isTimeDilationActive || isReflexDilation,
       this.coherenceSystem.getValue()
     );
     this.hudController.updateThumbRibbon();
@@ -844,6 +888,10 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
           !wrapAxes.vertical &&
           (hero.y > this.levelData.height + 20 || (hero.upsideDown === -1 && hero.y < -10))
         ) {
+          if (this.acceleratorMode) {
+            this.killHero(hero);
+            return;
+          }
           if (hero.isFocused || this.heroes.length <= 1) {
             gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: this.isEntangled });
             this.quickRespawn({ x: hero.x, y: hero.y });

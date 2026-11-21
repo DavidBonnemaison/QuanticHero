@@ -186,6 +186,26 @@ export class MatterAndFieldController {
     return true;
   }
 
+  public spawnBroglieWallWake(x: number, y: number, durationMs = 2000): void {
+    const ctx = this.ctx;
+    if (!ctx.add?.rectangle || !ctx.physics?.add || !ctx.platforms) return;
+    const clampedX = Phaser.Math.Clamp(x, 40, Math.max(40, ctx.levelData.width - 40));
+    const clampedY = Phaser.Math.Clamp(y, 40, Math.max(40, ctx.levelData.height - 20));
+    const crystalRect = ctx.add.rectangle(clampedX, clampedY, 72, 14, 0x00e5ff, 0.85);
+    crystalRect.setStrokeStyle?.(1.5, 0xffffff, 0.95);
+    crystalRect.setDepth?.(16);
+    ctx.physics.add.existing(crystalRect, true);
+    ctx.platforms.add(crystalRect);
+    ctx.broglieCrystals.push({
+      rect: crystalRect,
+      expiresAtMs: (ctx.time?.now ?? 0) + durationMs
+    });
+    gameEvents.emit('hero:broglie_crystallize', {
+      count: 1,
+      durationMs
+    });
+  }
+
   public updateBroglieCrystals(time: number): void {
     const ctx = this.ctx;
     if (ctx.broglieCrystals.length === 0) return;

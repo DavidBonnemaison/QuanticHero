@@ -276,6 +276,10 @@ export class RespawnTransitionController {
 
     if (ctx.isEntangled) {
       gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: true });
+      if (ctx.acceleratorMode) {
+        gameEvents.emit('accelerator:life_lost', { deathPos });
+        return;
+      }
       this.quickRespawn(deathPos);
       return;
     }
@@ -285,6 +289,10 @@ export class RespawnTransitionController {
     gameEvents.emit('hero:death', { remaining: ctx.heroes.length });
 
     if (ctx.heroes.length === 0) {
+      if (ctx.acceleratorMode) {
+        gameEvents.emit('accelerator:life_lost', { deathPos });
+        return;
+      }
       this.quickRespawn(deathPos);
     } else {
       const anyFocused = ctx.heroes.some((h) => h.isFocused);
@@ -304,6 +312,23 @@ export class RespawnTransitionController {
 
     const elapsedMs =
       ctx.dilatedElapsedMs > 0 ? ctx.dilatedElapsedMs : Math.max(0, ctx.time.now - ctx.startTime);
+
+    if (ctx.acceleratorMode) {
+      for (const hero of ctx.heroes) {
+        if (!hero.active) continue;
+        if (hero.body) {
+          (hero.body as Phaser.Physics.Arcade.Body).enable = false;
+          hero.setVelocity(0, 0);
+        }
+      }
+      gameEvents.emit('accelerator:room_cleared', {
+        elapsedMs,
+        jumps: ctx.jumpCount,
+        levelId: String(ctx.levelData?.id ?? 'accelerator-1')
+      });
+      return;
+    }
+
     const store = useGameStore.getState();
 
     const focusedHero = ctx.heroes.find((h) => h.isFocused) || ctx.heroes[0];

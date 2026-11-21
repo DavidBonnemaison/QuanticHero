@@ -527,10 +527,19 @@ export function setupLevelCollisions(ctx: GameSceneContext): void {
       }
 
       if (plat.getData('kind') === 'wall') {
+        const bounceDir = hero.x < plat.x ? -1 : 1;
         if (hero.x < plat.x) {
           hero.bounceOffRightWall(true);
         } else {
           hero.bounceOffLeftWall(true);
+        }
+        const wakeDuration = ctx.acceleratorModifiers?.broglieWallWakeDurationMs ?? 0;
+        if (wakeDuration > 0 && ctx.spawnBroglieWallWake) {
+          ctx.spawnBroglieWallWake(
+            hero.x - bounceDir * 14,
+            hero.y + 34 * hero.upsideDown,
+            wakeDuration
+          );
         }
         gameEvents.emit('hero:wall_bounce', { x: hero.x, y: hero.y });
       }
@@ -643,13 +652,25 @@ export function setupLevelCollisions(ctx: GameSceneContext): void {
     const type = bound.getData('boundary');
     if (type === 'left') {
       hero.bounceOffLeftWall();
+      const wakeDuration = ctx.acceleratorModifiers?.broglieWallWakeDurationMs ?? 0;
+      if (wakeDuration > 0 && ctx.spawnBroglieWallWake) {
+        ctx.spawnBroglieWallWake(hero.x + 12, hero.y + 34 * hero.upsideDown, wakeDuration);
+      }
     } else if (type === 'right') {
       hero.bounceOffRightWall();
+      const wakeDuration = ctx.acceleratorModifiers?.broglieWallWakeDurationMs ?? 0;
+      if (wakeDuration > 0 && ctx.spawnBroglieWallWake) {
+        ctx.spawnBroglieWallWake(hero.x - 12, hero.y + 34 * hero.upsideDown, wakeDuration);
+      }
     } else if (type === 'ceiling') {
       if (hero.upsideDown === -1) {
         if (hero.isFocused || ctx.heroes.length <= 1) {
-          gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: ctx.isEntangled });
-          ctx.quickRespawn({ x: hero.x, y: hero.y });
+          if (ctx.acceleratorMode) {
+            ctx.killHero(hero);
+          } else {
+            gameEvents.emit('hero:death', { remaining: 0, entangledCollapse: ctx.isEntangled });
+            ctx.quickRespawn({ x: hero.x, y: hero.y });
+          }
         } else {
           ctx.killHero(hero);
         }
@@ -664,7 +685,20 @@ export function setupLevelCollisions(ctx: GameSceneContext): void {
     const spikeRect = spikeObj as Phaser.GameObjects.Rectangle | undefined;
     const spikeBody = spikeRect?.body as Phaser.Physics.Arcade.StaticBody | null | undefined;
     if (spikeBody && (!spikeBody.enable || spikeBody.checkCollision?.none)) return;
-    ctx.killHero(_heroObj as Hero);
+    const hero = _heroObj as Hero;
+    if (typeof hero.isPhaseDashInvulnerable === 'function' && hero.isPhaseDashInvulnerable()) {
+      return;
+    }
+    if ((ctx.acceleratorShieldCharges ?? 0) > 0) {
+      ctx.acceleratorShieldCharges -= 1;
+      hero.grantTemporaryInvulnerability?.(550);
+      gameEvents.emit('accelerator:shield_block', {
+        remainingCharges: ctx.acceleratorShieldCharges
+      });
+      ctx.showRetroToast('QUANTUM SHIELD!');
+      return;
+    }
+    ctx.killHero(hero);
   });
 
   ctx.physics.add.overlap(ctx.heroGroup, ctx.particles, (_heroObj, _partObj) => {

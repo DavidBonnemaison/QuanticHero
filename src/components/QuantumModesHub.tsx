@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CHRONO_LOOP_LEVELS, type ChronoLoopEntry } from '../data/chronoLoopLevels';
 import { SCHRODINGER_LEVELS, type SchrodingerLabEntry } from '../data/schrodingerLevels';
 import { getStrings } from '../i18n/strings';
+import { resolveAcceleratorElement } from '../roguelite/AcceleratorRunManager';
 import { useGameStore } from '../store';
 import formatScore from '../tools/formatScore';
 import styles from './QuantumModesHub.module.css';
@@ -11,6 +12,7 @@ export default function QuantumModesHub(): React.ReactElement {
   const navigate = useNavigate();
   const locale = useGameStore((state) => state.locale ?? 'en');
   const customModeScores = useGameStore((state) => state.customModeScores ?? {});
+  const acceleratorBest = useGameStore((state) => state.acceleratorBest ?? null);
   const setSharedLevel = useGameStore((state) => state.setSharedLevel);
   const setActiveDuel = useGameStore((state) => state.setActiveDuel);
 
@@ -202,7 +204,15 @@ export default function QuantumModesHub(): React.ReactElement {
             </span>
           </div>
           <p className={styles.modeDesc}>{t.modes.acceleratorDesc}</p>
-          <div className={styles.statusLine}>{t.modes.acceleratorStatus}</div>
+          <div className={styles.statusLine} data-testid="accelerator-best-record">
+            {acceleratorBest
+              ? t.modes.acceleratorBestRecord(
+                  acceleratorBest.maxZ,
+                  resolveAcceleratorElement(acceleratorBest.maxZ).symbol,
+                  acceleratorBest.bestRooms ?? acceleratorBest.bestScore
+                )
+              : t.modes.acceleratorStatus}
+          </div>
           <button
             type="button"
             className={styles.actionButton}

@@ -207,6 +207,35 @@ export interface Strings {
     acceleratorDesc: string;
     acceleratorStatus: string;
     acceleratorAction: string;
+    acceleratorBestRecord: (maxZ: number, symbol: string, rooms: number) => string;
+  };
+  accelerator: {
+    backToModes: string;
+    hudTitle: string;
+    roomsLabel: (count: number) => string;
+    livesLabel: string;
+    mutationsLabel: (count: number) => string;
+    synergiesLabel: (count: number) => string;
+    fusionHeader: (z: number, symbol: string, name: string) => string;
+    fusionSurgeBadge: string;
+    chooseMutationTitle: string;
+    chooseMutationHint: string;
+    keyHint: (idx: number) => string;
+    synergyDetected: (name: string) => string;
+    runOverTitle: string;
+    newRecordBadge: string;
+    reachedZLabel: string;
+    roomsClearedLabel: string;
+    totalTimeLabel: string;
+    mutationsSection: string;
+    synergiesSection: string;
+    noMutations: string;
+    downloadCard: string;
+    copySummary: string;
+    summaryCopied: string;
+    newRun: string;
+    modesHub: string;
+    rarityLabel: (rarity: 'Common' | 'Rare' | 'Exotic') => string;
   };
   ghost: Record<GhostMode, string>;
   medals: {
@@ -452,8 +481,38 @@ export const STRINGS: Record<Locale, Strings> = {
       acceleratorTag: 'ENDLESS FUSION ROGUELITE',
       acceleratorDesc:
         'Chain rapid-fire micro-chambers from Z = 1 to 118+ with quantum mutations between rooms.',
-      acceleratorStatus: 'SYNCHROTRON CHARGING — SECTOR 03',
-      acceleratorAction: 'LAUNCH /ACCELERATOR'
+      acceleratorStatus: 'SECTOR 03 ONLINE — ENDLESS FUSION SYNCHROTRON',
+      acceleratorAction: 'LAUNCH /ACCELERATOR',
+      acceleratorBestRecord: (maxZ, symbol, rooms) =>
+        `BEST Z = ${maxZ} (${symbol}) • ${rooms} ${rooms === 1 ? 'ROOM' : 'ROOMS'}`
+    },
+    accelerator: {
+      backToModes: '◄ MODES',
+      hudTitle: 'ACCELERATOR',
+      roomsLabel: (count) => `ROOMS ${count}`,
+      livesLabel: 'QUANTA',
+      mutationsLabel: (count) => `MUT ${count}`,
+      synergiesLabel: (count) => `SYN ${count}`,
+      fusionHeader: (z, symbol, name) => `FUSION COMPLETE -> Z = ${z} (${symbol} · ${name})`,
+      fusionSurgeBadge: 'PERIOD SURGE +2 Z',
+      chooseMutationTitle: 'SELECT 1 QUANTUM MUTATION',
+      chooseMutationHint: 'PRESS [1] OR [2] / TAP A CARD FOR ZERO-CUT LAUNCH',
+      keyHint: (idx) => `[${idx}]`,
+      synergyDetected: (name) => `SYNERGY: ${name}`,
+      runOverTitle: 'BEAM COLLAPSED — RUN SUMMARY',
+      newRecordBadge: '★ NEW RECORD ★',
+      reachedZLabel: 'MAX ATOMIC NUMBER',
+      roomsClearedLabel: 'CHAMBERS CLEARED',
+      totalTimeLabel: 'TOTAL RUN TIME',
+      mutationsSection: 'ACTIVE MUTATIONS',
+      synergiesSection: 'UNLOCKED SYNERGIES',
+      noMutations: 'NO MUTATIONS ACQUIRED',
+      downloadCard: 'DOWNLOAD CARD',
+      copySummary: 'COPY SUMMARY',
+      summaryCopied: 'SUMMARY COPIED!',
+      newRun: 'NEW RUN',
+      modesHub: 'MODES',
+      rarityLabel: (rarity) => rarity.toUpperCase()
     },
     ghost: {
       off: '[GHOST: OFF]',
@@ -703,8 +762,39 @@ export const STRINGS: Record<Locale, Strings> = {
       acceleratorTag: 'ROGUELITE FUSION INFINI',
       acceleratorDesc:
         'Enchaîne des micro-salles nerveuses de Z = 1 à 118+ avec mutations quantiques entre chaque salle.',
-      acceleratorStatus: 'SYNCHROTRON EN CHARGE — SECTEUR 03',
-      acceleratorAction: 'OUVRIR /ACCELERATOR'
+      acceleratorStatus: 'SECTEUR 03 ACTIF — SYNCHROTRON DE FUSION INFINI',
+      acceleratorAction: 'OUVRIR /ACCELERATOR',
+      acceleratorBestRecord: (maxZ, symbol, rooms) =>
+        `RECORD Z = ${maxZ} (${symbol}) • ${rooms} ${rooms === 1 ? 'SALLE' : 'SALLES'}`
+    },
+    accelerator: {
+      backToModes: '◄ MODES',
+      hudTitle: 'ACCÉLÉRATEUR',
+      roomsLabel: (count) => `SALLES ${count}`,
+      livesLabel: 'QUANTA',
+      mutationsLabel: (count) => `MUT ${count}`,
+      synergiesLabel: (count) => `SYN ${count}`,
+      fusionHeader: (z, symbol, name) => `FUSION RÉUSSIE -> Z = ${z} (${symbol} · ${name})`,
+      fusionSurgeBadge: 'SAUT DE PÉRIODE +2 Z',
+      chooseMutationTitle: 'CHOISIS 1 MUTATION QUANTIQUE',
+      chooseMutationHint: 'TOUCHE [1] OU [2] / TAP CARTE POUR ENCHAÎNER ZERO-CUT',
+      keyHint: (idx) => `[${idx}]`,
+      synergyDetected: (name) => `SYNERGIE : ${name}`,
+      runOverTitle: 'FAISCEAU EFFONDRÉ — RÉSUMÉ DU RUN',
+      newRecordBadge: '★ NOUVEAU RECORD ★',
+      reachedZLabel: 'NUMÉRO ATOMIQUE ATTEINT',
+      roomsClearedLabel: 'SALLES FRANCHIES',
+      totalTimeLabel: 'TEMPS TOTAL',
+      mutationsSection: 'MUTATIONS ACTIVES',
+      synergiesSection: 'SYNERGIES DÉBLOQUÉES',
+      noMutations: 'AUCUNE MUTATION ACQUISE',
+      downloadCard: 'TÉLÉCHARGER CARTE',
+      copySummary: 'COPIER RÉSUMÉ',
+      summaryCopied: 'RÉSUMÉ COPIÉ !',
+      newRun: 'NOUVEAU RUN',
+      modesHub: 'MODES',
+      rarityLabel: (rarity) =>
+        rarity === 'Common' ? 'COMMUNE' : rarity === 'Rare' ? 'RARE' : 'EXOTIQUE'
     },
     ghost: {
       off: '[FANTÔME : OFF]',

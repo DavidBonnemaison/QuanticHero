@@ -10,6 +10,7 @@ import {
   isEntanglementLevelId
 } from '../tools/levelProgression';
 import type {
+  AcceleratorBestRecord,
   DailyScoreEntry,
   DailyStreakState,
   DuelChallenge,
@@ -21,7 +22,15 @@ import type {
 } from '../types';
 
 export { getNextLevelId, isEntanglementLevelId };
-export type { DailyScoreEntry, DailyStreakState, DuelChallenge, GhostMode, LastRunSummary, Locale };
+export type {
+  AcceleratorBestRecord,
+  DailyScoreEntry,
+  DailyStreakState,
+  DuelChallenge,
+  GhostMode,
+  LastRunSummary,
+  Locale
+};
 
 export interface PendingDuelShare {
   duel: DuelChallenge;
@@ -57,6 +66,7 @@ export interface GameStoreState {
   customModeScores: Record<string, ScoreItem>;
   dailyHistory: Record<string, DailyScoreEntry>;
   dailyStreak: DailyStreakState;
+  acceleratorBest: AcceleratorBestRecord | null;
 }
 
 export interface RecordScoreMeta {
@@ -126,6 +136,13 @@ export interface GameStoreActions {
   toggleLocale: () => void;
   unlockMolecule: (moleculeId: string) => void;
   unlockBellSync: (level: number) => void;
+  recordAcceleratorRun: (run: {
+    maxZ: number;
+    roomsCleared: number;
+    totalTimeMs: number;
+    mutations: string[];
+    dateIso?: string;
+  }) => boolean;
 }
 
 export type GameStore = GameStoreState & GameStoreActions;
@@ -255,6 +272,7 @@ export const useGameStore = create<GameStore>()(
         longest: 0,
         lastCompletedDate: null
       },
+      acceleratorBest: null,
 
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
       setMuted: (muted: boolean) => set({ isMuted: muted }),
@@ -353,8 +371,55 @@ export const useGameStore = create<GameStore>()(
             current: 0,
             longest: 0,
             lastCompletedDate: null
-          }
+          },
+          acceleratorBest: null
         }),
+
+      recordAcceleratorRun: ({ maxZ, roomsCleared, totalTimeMs, mutations, dateIso }) => {
+        let isNewRecord = false;
+        set((state) => {
+          const prev = state.acceleratorBest;
+          const sanitizedZ = Math.max(1, Math.floor(maxZ));
+          const sanitizedRooms = Math.max(0, Math.floor(roomsCleared));
+          const sanitizedTime = Math.max(0, Math.round(totalTimeMs));
+
+          const prevRooms = prev?.bestRooms ?? prev?.bestScore ?? 0;
+          const beatsPrev =
+            !prev ||
+            sanitizedZ > prev.maxZ ||
+            (sanitizedZ === prev.maxZ && sanitizedRooms > prevRooms) ||
+            (sanitizedZ === prev.maxZ &&
+              sanitizedRooms === prevRooms &&
+              sanitizedTime > 0 &&
+              (prev.bestTimeMs <= 0 || sanitizedTime < prev.bestTimeMs));
+
+          const sameRunWithMoreMutations =
+            Boolean(prev) &&
+            sanitizedZ === prev?.maxZ &&
+            sanitizedRooms === prevRooms &&
+            sanitizedTime === prev?.bestTimeMs &&
+            mutations.length > (prev?.mutations?.length ?? 0);
+
+          if (!beatsPrev && !sameRunWithMoreMutations) {
+            return state;
+          }
+
+          if (beatsPrev) {
+            isNewRecord = true;
+          }
+          return {
+            acceleratorBest: {
+              maxZ: sanitizedZ,
+              bestScore: sanitizedRooms,
+              bestRooms: sanitizedRooms,
+              bestTimeMs: sanitizedTime,
+              mutations: [...mutations],
+              dateIso: dateIso ?? prev?.dateIso ?? new Date().toISOString()
+            }
+          };
+        });
+        return isNewRecord;
+      },
 
       recordDailyScore: (
         dateKey: string,
@@ -979,7 +1044,8 @@ export const useGameStore = create<GameStore>()(
         moleculeScores: state.moleculeScores,
         customModeScores: state.customModeScores,
         dailyHistory: state.dailyHistory,
-        dailyStreak: state.dailyStreak
+        dailyStreak: state.dailyStreak,
+        acceleratorBest: state.acceleratorBest
       })
     }
   )

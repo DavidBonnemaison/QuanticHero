@@ -103,6 +103,24 @@ describe('QuantumModesHub component', () => {
     expect(screen.getByText('Accelerator Page')).toBeInTheDocument();
   });
 
+  it('displays Particle Accelerator best record from acceleratorBest', () => {
+    useGameStore.setState({
+      acceleratorBest: {
+        maxZ: 14,
+        bestScore: 11,
+        bestRooms: 11,
+        bestTimeMs: 92400,
+        mutations: ['hyper_spin', 'phase_dash'],
+        dateIso: '2026-11-21T00:00:00.000Z'
+      }
+    });
+
+    renderHub();
+    expect(screen.getByTestId('accelerator-best-record')).toHaveTextContent(
+      'BEST Z = 14 (Si) • 11 ROOMS'
+    );
+  });
+
   it('supports French localization', () => {
     useGameStore.setState({ locale: 'fr' });
     renderHub();

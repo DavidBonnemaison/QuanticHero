@@ -422,6 +422,7 @@ export class QuantumSystems {
     this.updateCoherenceParticleMagnetism(delta);
     this.updatePressurePlatesAndGates();
     this.updateTunneling();
+    this.updateAcceleratorMutations(time, delta);
     this.updatePauliRepulsion(time);
     this.updateDecayAndCollapse(delta, elapsedMs, timeDilationFactor);
     this.updateWavefunctionCollapse(time, delta, elapsedMs);
@@ -479,6 +480,91 @@ export class QuantumSystems {
         if (body && 'x' in body && 'y' in body) {
           body.x = part.x - (body.width || 0) / 2;
           body.y = part.y - (body.height || 0) / 2;
+        }
+      }
+    }
+  }
+
+  public updateAcceleratorMutations(time: number, delta: number): void {
+    const ctx = this.ctx;
+    const mods = ctx.acceleratorModifiers;
+    if (!mods) return;
+
+    const activeHeroes = ctx.heroes.filter((h) => h.active && h.body);
+    if (activeHeroes.length === 0) return;
+
+    // 1. Infinite Tunnel: regenerate 1 tunneling charge every tunnelRegenIntervalMs (default 4000 ms)
+    if (mods.tunnelRegenIntervalMs > 0) {
+      ctx.acceleratorTunnelTimerMs = (ctx.acceleratorTunnelTimerMs ?? 0) + delta;
+      if (ctx.acceleratorTunnelTimerMs >= mods.tunnelRegenIntervalMs) {
+        ctx.acceleratorTunnelTimerMs -= mods.tunnelRegenIntervalMs;
+        const focused = activeHeroes.find((h) => h.isFocused) ?? activeHeroes[0];
+        if (focused && focused.tunnelCharges < 2) {
+          focused.tunnelCharges += 1;
+        }
+      }
+    }
+
+    // 2. Reflex Dilation: slow time briefly when approaching a spike (< 40 px)
+    if (
+      mods.reflexDilationRadiusPx > 0 &&
+      mods.reflexDilationDurationMs > 0 &&
+      time >= (ctx.acceleratorReflexCooldownUntil ?? 0) &&
+      ctx.spikes?.getChildren
+    ) {
+      const spikeChildren = ctx.spikes.getChildren() as Phaser.GameObjects.Rectangle[];
+      let nearSpike = false;
+      for (const hero of activeHeroes) {
+        for (const spike of spikeChildren) {
+          if (!spike.active) continue;
+          const sBody = spike.body as Phaser.Physics.Arcade.StaticBody | null | undefined;
+          if (sBody && (!sBody.enable || sBody.checkCollision?.none)) continue;
+          const dist = Math.hypot(hero.x - spike.x, hero.y - spike.y);
+          if (dist < mods.reflexDilationRadiusPx) {
+            nearSpike = true;
+            break;
+          }
+        }
+        if (nearSpike) break;
+      }
+
+      if (nearSpike) {
+        ctx.acceleratorReflexDilationUntil = time + mods.reflexDilationDurationMs;
+        ctx.acceleratorReflexCooldownUntil = time + Math.max(1500, mods.reflexDilationCooldownMs);
+        gameEvents.emit('accelerator:reflex_dilation', {
+          durationMs: mods.reflexDilationDurationMs
+        });
+      }
+    }
+
+    // 3. Particle Magnet: attract active power-up particles within 120 px toward nearest hero
+    if (mods.particleMagnetRadiusPx > 0 && ctx.particles?.getChildren) {
+      const pullRadius = mods.particleMagnetRadiusPx;
+      const pullSpeed = 260 * (delta / 1000);
+      for (const child of ctx.particles.getChildren()) {
+        const sprite = child as Phaser.Physics.Arcade.Sprite;
+        if (!sprite.active || !sprite.visible) continue;
+        let nearestHero: Hero | null = null;
+        let minDist = pullRadius;
+        for (const hero of activeHeroes) {
+          const dist = Math.hypot(hero.x - sprite.x, hero.y - sprite.y);
+          if (dist < minDist && dist > 1) {
+            minDist = dist;
+            nearestHero = hero;
+          }
+        }
+        if (nearestHero) {
+          ctx.tweens?.killTweensOf?.(sprite);
+          const dx = nearestHero.x - sprite.x;
+          const dy = nearestHero.y - sprite.y;
+          const step = Math.min(minDist, pullSpeed);
+          sprite.x += (dx / minDist) * step;
+          sprite.y += (dy / minDist) * step;
+          const pBody = sprite.body as Phaser.Physics.Arcade.Body | null;
+          if (pBody) {
+            pBody.x = sprite.x - pBody.width / 2;
+            pBody.y = sprite.y - pBody.height / 2;
+          }
         }
       }
     }

@@ -25,6 +25,7 @@ export interface ObserverBeam {
 export interface AcceleratorBestRecord {
   maxZ: number;
   bestScore: number;
+  bestRooms?: number;
   bestTimeMs: number;
   mutations: string[];
   dateIso: string;

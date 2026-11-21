@@ -236,8 +236,15 @@ export class LevelBuilder {
     const startX = ctx.levelData.player.position.x;
     const startY = ctx.levelData.player.position.y;
     const initialHero = new Hero(ctx as unknown as Phaser.Scene, startX, startY, true);
+    initialHero.mutationModifiers = ctx.acceleratorModifiers;
     ctx.heroes.push(initialHero);
     ctx.heroGroup.add(initialHero);
+
+    // Reset per-room Accelerator mutation runtime counters
+    ctx.acceleratorShieldCharges = ctx.acceleratorModifiers?.shieldChargesPerRoom ?? 0;
+    ctx.acceleratorTunnelTimerMs = 0;
+    ctx.acceleratorReflexCooldownUntil = 0;
+    ctx.acceleratorReflexDilationUntil = 0;
 
     const entanglement = ctx.levelData.entanglement;
     ctx.isEntangled = Boolean(entanglement);
@@ -251,12 +258,24 @@ export class LevelBuilder {
       const betaY = entanglement.betaSpawn ? entanglement.betaSpawn.y : startY;
 
       ctx.betaHero = new Hero(ctx as unknown as Phaser.Scene, betaX, betaY, true);
+      ctx.betaHero.mutationModifiers = ctx.acceleratorModifiers;
       ctx.betaHero.setEntangled(true, entanglement.mode);
       ctx.heroes.push(ctx.betaHero);
       ctx.heroGroup.add(ctx.betaHero);
       if (entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity') {
         const bBody = ctx.betaHero.body as Phaser.Physics.Arcade.Body;
         bBody?.setGravityY?.(-2 * PHYSICS.GRAVITY_Y);
+      }
+    } else if ((ctx.acceleratorModifiers?.startingClones ?? 0) > 0) {
+      // Double Quantum mutation: start each chamber with active clone(s)
+      const clonesToSpawn = ctx.acceleratorModifiers.startingClones;
+      for (let i = 0; i < clonesToSpawn; i++) {
+        const cloneX = Phaser.Math.Clamp(startX - 42 * (i + 1), 32, ctx.levelData.width - 32);
+        const clone = new Hero(ctx as unknown as Phaser.Scene, cloneX, startY, false);
+        clone.mutationModifiers = ctx.acceleratorModifiers;
+        clone.setTint(0x38bdf8);
+        ctx.heroes.push(clone);
+        ctx.heroGroup.add(clone);
       }
     }
 

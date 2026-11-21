@@ -6,6 +6,7 @@ import type { CoherenceSystem } from '../../mechanics/coherenceSystem';
 import type { DecayPlatformState } from '../../mechanics/quantumMechanics';
 import type { SuperpositionRuntimeState } from '../../mechanics/wavefunctionCollapse';
 import type { PinnablePlatformRef, QuantumPinningState } from '../../physics/matterStates';
+import type { AggregatedMutationModifiers } from '../../roguelite/mutations';
 import type { SessionSwarmBuffer } from '../../services/GhostManager';
 import type { GhostFrame, GhostRecorder } from '../../tools/GhostRecorder';
 import type {
@@ -315,6 +316,14 @@ export interface GameSceneContext {
   periodicTableGraphics: Phaser.GameObjects.Graphics | null;
   previousCompletedLevelId: number | null;
 
+  // Spec-03 Particle Accelerator Roguelite state
+  acceleratorMode: boolean;
+  acceleratorModifiers: AggregatedMutationModifiers;
+  acceleratorShieldCharges: number;
+  acceleratorTunnelTimerMs: number;
+  acceleratorReflexCooldownUntil: number;
+  acceleratorReflexDilationUntil: number;
+
   // Cross-system scene methods
   resolveLevelData(levelNumber: number): LevelData | undefined;
   buildLevel(): void;
@@ -345,6 +354,8 @@ export interface GameSceneContext {
   handleResize(gameSize?: { width: number; height: number }): void;
   destroyBetaPipCamera(): void;
   tryCrystallizeBroglieTrail(): boolean;
+  spawnBroglieWallWake?(x: number, y: number, durationMs: number): void;
+  loadAcceleratorChamber?(nextLevelData: LevelData, modifiers: AggregatedMutationModifiers): void;
   triggerTimeLoopRewind?(): void;
   triggerActiveObservation?(targetWorldPoint?: { x: number; y: number }): number;
   quickRespawn(deathPosition?: { x: number; y: number }): void;
