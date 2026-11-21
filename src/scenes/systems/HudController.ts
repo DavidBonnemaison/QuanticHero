@@ -272,12 +272,15 @@ export class HudController {
       }
     });
 
+    const hideTopHud = Boolean(ctx.acceleratorMode);
+
     ctx.timerText = ctx.add.text(camW - 10, 3, '00:00:00', {
       fontFamily: 'VT323',
       fontSize: '22px',
       color: '#ffffff'
     });
     ctx.timerText.setOrigin(1, 0);
+    ctx.timerText.setVisible(!hideTopHud);
     ctx.hudContainer.add(ctx.timerText);
 
     ctx.splitDeltaText = ctx.add.text(camW - 10, 28, '--', {
@@ -287,12 +290,14 @@ export class HudController {
     });
     ctx.splitDeltaText.setOrigin(1, 0);
     ctx.splitDeltaText.setVisible(
-      (Boolean(initialActiveDuel?.ghostTrajectory) || currentMode !== 'off') &&
+      !hideTopHud &&
+        (Boolean(initialActiveDuel?.ghostTrajectory) || currentMode !== 'off') &&
         ctx.ghostFrames.length > 0
     );
     ctx.hudContainer.add(ctx.splitDeltaText);
 
     ctx.coherenceBarGraphics = ctx.add.graphics();
+    ctx.coherenceBarGraphics.setVisible(!hideTopHud);
     ctx.hudContainer.add(ctx.coherenceBarGraphics);
 
     const coherenceTierX = camW < 440 ? camW - 76 : camW - 110;
@@ -303,7 +308,21 @@ export class HudController {
     });
     ctx.coherenceTierText.setOrigin(1, 0);
     ctx.coherenceTierText.setAlpha(0.45);
+    ctx.coherenceTierText.setVisible(!hideTopHud);
     ctx.hudContainer.add(ctx.coherenceTierText);
+
+    if (hideTopHud) {
+      backButton.setVisible(false);
+      restartButton.setVisible(false);
+      soundButton.setVisible(false);
+      hapticButton.setVisible(false);
+      fxButton.setVisible(false);
+      ctx.ghostButton.setVisible(false);
+      ctx.duelBadgeText.setVisible(false);
+      ctx.phaseIndicatorText?.setVisible(false);
+      ctx.dilationIndicatorText?.setVisible(false);
+      ctx.timeLoopIndicatorText?.setVisible(false);
+    }
 
     const thumbRestartBg = ctx.add.rectangle(camW - 36, camH - 36, 48, 48, 0x0b0f19, 0.35);
     thumbRestartBg.setStrokeStyle(1.5, 0xfbbf24, 0.35);
@@ -486,8 +505,9 @@ export class HudController {
   public drawHudBar(camW: number): void {
     const hudBar = this.ctx.hudBarGraphics;
     if (!hudBar || !hudBar.active) return;
-    const hudHeight = 54;
     hudBar.clear();
+    if (this.ctx.acceleratorMode) return;
+    const hudHeight = 54;
     hudBar.fillStyle(0x0b0f19, 0.85);
     hudBar.fillRect(36, 0, Math.max(0, camW - 36), hudHeight);
     hudBar.fillStyle(0xe74c3c, 0.85);
@@ -599,6 +619,12 @@ export class HudController {
 
   public updateCoherenceGauge(force = false, widthOverride?: number): void {
     const ctx = this.ctx;
+    if (ctx.acceleratorMode) {
+      if (ctx.coherenceBarGraphics?.active) {
+        ctx.coherenceBarGraphics.clear();
+      }
+      return;
+    }
     const value = ctx.coherenceSystem?.getValue?.() ?? 0;
     const tier = ctx.coherenceSystem?.getTier?.() ?? 'x1';
 

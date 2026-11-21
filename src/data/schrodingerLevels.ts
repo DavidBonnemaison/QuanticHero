@@ -52,7 +52,7 @@ export const SCHRODINGER_LEVELS: readonly SchrodingerLabEntry[] = [
           height: 24,
           superposition: {
             altX: 340,
-            altY: 360,
+            altY: 420,
             periodMs: 3200,
             lockDurationMs: 3000
           }

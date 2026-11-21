@@ -127,7 +127,9 @@ describe('AcceleratorMode UI (Spec-03)', () => {
     }
 
     // Copy summary
-    fireEvent.click(screen.getByTestId('accelerator-copy-summary'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('accelerator-copy-summary'));
+    });
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(writeText.mock.calls[0][0]).toContain('PARTICLE ACCELERATOR');
 
