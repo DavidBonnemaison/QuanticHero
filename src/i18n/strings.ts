@@ -23,8 +23,11 @@ export interface Strings {
     fxLo: string;
     enableReducedEffects: string;
     enableFullEffects: string;
+    skinGameboy: string;
+    skinNeo: string;
     skinQuantum: string;
     skinClassic: string;
+    switchSkinLabel: string;
     switchToClassicSkin: string;
     switchToQuantumSkin: string;
     switchLanguageLabel: string;
@@ -152,6 +155,8 @@ export interface Strings {
     hapticsOff: string;
     fxHi: string;
     fxLo: string;
+    skinGameboy: string;
+    skinNeo: string;
     skinQuantum: string;
     skinClassic: string;
     phase: (phase: string) => string;
@@ -293,8 +298,11 @@ export const STRINGS: Record<Locale, Strings> = {
       fxLo: 'FX:LO',
       enableReducedEffects: 'Enable reduced visual effects',
       enableFullEffects: 'Enable full visual effects',
+      skinGameboy: 'SKIN: GAMEBOY',
+      skinNeo: 'SKIN: NEO',
       skinQuantum: 'SKIN: QUANTUM',
       skinClassic: 'SKIN: CLASSIC',
+      switchSkinLabel: 'Cycle hero skin (GameBoy / Neo / Quantum / Classic)',
       switchToClassicSkin: 'Switch to Classic Retro Sprite',
       switchToQuantumSkin: 'Switch to Procedural Quantum Hero',
       switchLanguageLabel: 'Switch language to French',
@@ -426,6 +434,8 @@ export const STRINGS: Record<Locale, Strings> = {
       hapticsOff: 'HAP:OFF',
       fxHi: 'FX:HI',
       fxLo: 'FX:LO',
+      skinGameboy: 'SKN:GB',
+      skinNeo: 'SKN:NEO',
       skinQuantum: 'SKN:QTM',
       skinClassic: 'SKN:RET',
       phase: (phase) => `[PHASE: ${phase.toUpperCase()}]`,
@@ -579,8 +589,11 @@ export const STRINGS: Record<Locale, Strings> = {
       fxLo: 'FX:BAS',
       enableReducedEffects: 'Activer les effets visuels réduits',
       enableFullEffects: 'Activer tous les effets visuels',
+      skinGameboy: 'SKIN: GAMEBOY',
+      skinNeo: 'SKIN: NEO',
       skinQuantum: 'SKIN: QUANTUM',
       skinClassic: 'SKIN: CLASSIC',
+      switchSkinLabel: 'Changer le skin du héros (GameBoy / Neo / Quantum / Classic)',
       switchToClassicSkin: 'Passer au sprite rétro Classic',
       switchToQuantumSkin: 'Passer au héros quantique procédural',
       switchLanguageLabel: 'Passer la langue en anglais',
@@ -713,6 +726,8 @@ export const STRINGS: Record<Locale, Strings> = {
       hapticsOff: 'VIB:OFF',
       fxHi: 'FX:MAX',
       fxLo: 'FX:BAS',
+      skinGameboy: 'SKN:GB',
+      skinNeo: 'SKN:NEO',
       skinQuantum: 'SKN:QTM',
       skinClassic: 'SKN:RET',
       phase: (phase) => `[PHASE : ${phase.toUpperCase()}]`,

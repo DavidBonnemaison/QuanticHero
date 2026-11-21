@@ -224,7 +224,9 @@ const customStorage = {
           isMuted: parsed.isMuted ?? false,
           hapticsEnabled: parsed.hapticsEnabled ?? true,
           reducedEffects: parsed.reducedEffects ?? false,
-          heroSkin: (parsed.heroSkin === 'classic' ? 'classic' : 'quantum') as HeroSkin,
+          heroSkin: (['gameboy', 'neo', 'quantum', 'classic'].includes(parsed.heroSkin)
+            ? parsed.heroSkin
+            : 'gameboy') as HeroSkin,
           ghostMode: (parsed.state?.ghostMode ??
             (parsed.state?.ghostEnabled === false ? 'off' : 'optimal')) as GhostMode,
           ghostEnabled:
@@ -266,7 +268,7 @@ export const useGameStore = create<GameStore>()(
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
-      heroSkin: 'quantum',
+      heroSkin: 'gameboy',
       ghostMode: 'optimal',
       ghostEnabled: true,
       locale: 'en',
@@ -292,7 +294,11 @@ export const useGameStore = create<GameStore>()(
 
       setHeroSkin: (skin: HeroSkin) => set({ heroSkin: skin }),
       toggleHeroSkin: () =>
-        set((state) => ({ heroSkin: state.heroSkin === 'quantum' ? 'classic' : 'quantum' })),
+        set((state) => {
+          const order: HeroSkin[] = ['gameboy', 'neo', 'quantum', 'classic'];
+          const idx = order.indexOf(state.heroSkin ?? 'gameboy');
+          return { heroSkin: order[(idx + 1) % order.length] };
+        }),
 
       setLocale: (locale: Locale) => set({ locale }),
       toggleLocale: () => set((state) => ({ locale: state.locale === 'en' ? 'fr' : 'en' })),

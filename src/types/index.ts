@@ -241,7 +241,7 @@ export interface RootState {
 }
 
 export type GhostMode = 'off' | 'optimal' | 'best' | 'swarm';
-export type HeroSkin = 'quantum' | 'classic';
+export type HeroSkin = 'gameboy' | 'neo' | 'quantum' | 'classic';
 
 export interface DuelChallengeBase {
   challengerName: string;

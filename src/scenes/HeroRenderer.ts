@@ -36,7 +36,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * Pure state-to-visuals mapper for the procedural neo-brutalist Quantum Hero.
+ * Pure state-to-visuals mapper for procedural hero skins (`gameboy`, `neo`, `quantum`).
  * Expresses all gameplay states visually without text.
  */
 export function computeHeroVisualState(
@@ -147,7 +147,58 @@ export function computeHeroVisualState(
 }
 
 /**
- * Draws a closed neo-brutalist polygon with thick crisp dark outline and optional hard drop shadow.
+ * Shared power-up & state status rings (Super-Quanta, Tunnel, Pauli) drawn across all procedural skins.
+ */
+function drawPowerupAuras(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  t: number,
+  state: HeroVisualState,
+  reducedEffects: boolean
+): void {
+  const maxS = Math.max(state.scaleX, state.scaleY);
+
+  // Super-Quanta golden orbital ring (fusionStack >= 2)
+  if (state.isSuperQuanta) {
+    const ringR = 26 * maxS;
+    g.lineStyle(2.8, 0xfbbf24, 0.96);
+    g.strokeCircle(x, y, ringR);
+    if (!reducedEffects) {
+      const orbAngle = t * 4.5;
+      g.fillStyle(0xfef08a, 0.98);
+      g.fillCircle(x + Math.cos(orbAngle) * ringR, y + Math.sin(orbAngle) * ringR, 3.2);
+      g.fillCircle(x - Math.cos(orbAngle) * ringR, y - Math.sin(orbAngle) * ringR, 3.2);
+    }
+  }
+
+  // Tunneling charge halo (tunnelCharges > 0)
+  if (state.hasTunnelCharge) {
+    const haloR = 29 * maxS;
+    const rot = t * 3.2;
+    g.lineStyle(2.2, 0xfacc15, 0.88);
+    if (typeof g.arc === 'function') {
+      g.beginPath();
+      g.arc(x, y, haloR, rot, rot + Math.PI * 0.65, false);
+      g.strokePath();
+      g.beginPath();
+      g.arc(x, y, haloR, rot + Math.PI, rot + Math.PI * 1.65, false);
+      g.strokePath();
+    } else {
+      g.strokeCircle(x, y, haloR);
+    }
+  }
+
+  // Pauli repulsion aura
+  if (state.hasPauliAura) {
+    const pauliR = (reducedEffects ? 27 : 31) * maxS;
+    g.lineStyle(2.4, 0xf97316, 0.88);
+    g.strokeCircle(x, y, pauliR);
+  }
+}
+
+/**
+ * Draws a closed neo-brutalist polygon with thick crisp dark outline.
  */
 function drawBrutalistPoly(
   g: Phaser.GameObjects.Graphics,
@@ -171,11 +222,178 @@ function drawBrutalistPoly(
   g.strokePath();
 }
 
+// 14x16 crisp GameBoy DMG pixel-art sprite frames:
+// '.' = transparent, 'O' = dark pixel outline, 'D' = shadow shade, 'M' = mid body, 'L' = bright highlight, 'A' = phase/neon accent, 'E' = eye
+const GB_SPRITE_IDLE = [
+  '.....OOOO.....',
+  '....OAAAOO....',
+  '...OLLLLLLO...',
+  '..OLLLOOLLLO..',
+  '..OLLOOELLLO..',
+  '..OLMOOMELMO..',
+  '..OMMMMMMMMO..',
+  '...OOOOOOOO...',
+  '..OOMMAAMMOO..',
+  '.OMOMMMMMMOMO.',
+  '.ODOMDDDDMODO.',
+  '..OOMMMMMMOO..',
+  '...OODDDDOO...',
+  '...OOM..MOO...',
+  '...OOD..DOO...',
+  '...OOO..OOO...'
+];
+
+const GB_SPRITE_RUN_A = [
+  '.....OOOO.....',
+  '....OAAAOO....',
+  '...OLLLLLLO...',
+  '..OLLLOOLLLO..',
+  '..OLLOOELLLO..',
+  '..OLMOOMELMO..',
+  '..OMMMMMMMMO..',
+  '...OOOOOOOO...',
+  '..OOMMAAMMOO..',
+  '.OMOMMMMMMOMO.',
+  '..OOMDDDDMODO.',
+  '...OMMMMMMOO..',
+  '..OODDDDOO....',
+  '.OOM....MOO...',
+  '.OOO....OOO...',
+  '..............'
+];
+
+const GB_SPRITE_RUN_B = [
+  '..............',
+  '.....OOOO.....',
+  '....OAAAOO....',
+  '...OLLLLLLO...',
+  '..OLLLOOLLLO..',
+  '..OLLOOELLLO..',
+  '..OLMOOMELMO..',
+  '..OMMMMMMMMO..',
+  '...OOOOOOOO...',
+  '..OOMMAAMMOO..',
+  '.ODOMMMMMMOMO.',
+  '..OOMDDDDMOO..',
+  '...OODDDDOO...',
+  '....OOMMOO....',
+  '...OOD..DOO...',
+  '...OOO..OOO...'
+];
+
+const GB_SPRITE_JUMP = [
+  '.....OOOO.....',
+  '....OAAAOO....',
+  '...OLLLLLLO...',
+  '..OLLLOOLLLO..',
+  '..OLLOOELLLO..',
+  '.OOLMOOMELMOO.',
+  '.OMOMMMMMMOMO.',
+  '..OOOOOOOOOO..',
+  '...OMMAAMMO...',
+  '...OMMMMMMO...',
+  '...OMDDDDMO...',
+  '..OODDDDOO....',
+  '..OOM..OOM....',
+  '..OOO..OOO....',
+  '..............',
+  '..............'
+];
+
 /**
- * Shared procedural renderer for the anthropomorphic neo-brutalist Quantum Hero.
- * Used by both `HeroRenderer` (active player/clones) and `GhostHero` (replay & swarm ghosts).
+ * Skin 1: GameBoy DMG / Pocket pixel-art hero (`gameboy`).
+ * Crisp integer pixel blocks with classic 4-shade GameBoy LCD charm + active quantum state accents.
  */
-export function drawQuantumHeroShape(
+export function drawGameboyHeroShape(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  timeMs: number,
+  state: HeroVisualState,
+  reducedEffects: boolean,
+  isGhost = false
+): void {
+  const t = timeMs * 0.001;
+  const a = state.alpha;
+  const dir = state.facingDir;
+  const pxW = 2.6 * state.scaleX;
+  const pxH = 2.6 * state.scaleY;
+
+  const sprite =
+    state.isAirborne || state.isDiving
+      ? GB_SPRITE_JUMP
+      : state.isRunning
+        ? Math.floor(timeMs / 110) % 2 === 0
+          ? GB_SPRITE_RUN_A
+          : GB_SPRITE_RUN_B
+        : GB_SPRITE_IDLE;
+
+  const rows = sprite.length;
+  const cols = sprite[0].length;
+  const originX = x - (cols * pxW) / 2;
+  const originY = y - (rows * pxH) / 2;
+
+  // Classic GameBoy DMG 4-shade LCD palette (tinted for ghosts)
+  const palette: Record<string, number> = isGhost
+    ? {
+        O: state.envelopeColor,
+        D: state.envelopeColor,
+        M: state.accentColor,
+        L: 0xf8fafc,
+        A: state.coreColor,
+        E: 0x050814
+      }
+    : {
+        O: 0x0f380f, // DMG darkest green-black outline
+        D: 0x306230, // DMG dark shade
+        M: 0x8bac0f, // DMG mid green
+        L: 0x9bbc0f, // DMG bright LCD green
+        A: state.envelopeColor, // Dynamic phase / quantum accent band & antenna
+        E: 0x0f380f // Crisp pixel eye
+      };
+
+  // Subtle LCD glow halo behind character in FX:HI
+  if (!isGhost && !reducedEffects) {
+    g.fillStyle(state.envelopeColor, 0.14 * a);
+    g.fillCircle(x, y, 24 * Math.max(state.scaleX, state.scaleY));
+  }
+
+  for (let r = 0; r < rows; r++) {
+    const rowStr = sprite[r];
+    const drawRow = state.upsideDown === -1 ? rows - 1 - r : r;
+    for (let c = 0; c < cols; c++) {
+      const ch = rowStr[c];
+      if (ch === '.') continue;
+      const drawCol = dir === -1 ? cols - 1 - c : c;
+      const color = palette[ch];
+      if (color === undefined) continue;
+      const cellAlpha = isGhost ? (ch === 'O' ? 0.72 * a : 0.48 * a) : a;
+      g.fillStyle(color, cellAlpha);
+      if (typeof g.fillRect === 'function') {
+        g.fillRect(originX + drawCol * pxW, originY + drawRow * pxH, pxW + 0.35, pxH + 0.35);
+      } else {
+        g.fillCircle(originX + (drawCol + 0.5) * pxW, originY + (drawRow + 0.5) * pxH, pxW * 0.6);
+      }
+    }
+  }
+
+  // Dive pixel chevron beneath feet
+  if (state.isDiving && !isGhost) {
+    const tipY = y + 26 * state.scaleY * state.upsideDown;
+    const baseY = y + 18 * state.scaleY * state.upsideDown;
+    g.fillStyle(state.accentColor, 0.9 * a);
+    g.fillTriangle?.(x - 8 * state.scaleX, baseY, x, tipY, x + 8 * state.scaleX, baseY);
+  }
+
+  if (!isGhost) {
+    drawPowerupAuras(g, x, y, t, state, reducedEffects);
+  }
+}
+
+/**
+ * Skin 2: Anthropomorphic Neo-Brutalist humanoid (`neo`).
+ */
+export function drawNeoHeroShape(
   g: Phaser.GameObjects.Graphics,
   x: number,
   y: number,
@@ -192,7 +410,6 @@ export function drawQuantumHeroShape(
   const sinL = Math.sin(state.leanRad);
   const a = state.alpha;
 
-  // Vertical idle breathing / running bounce
   const stridePhase = t * (state.isRunning ? 15 : 4.2);
   const bobY = state.isAirborne
     ? 0
@@ -225,7 +442,6 @@ export function drawQuantumHeroShape(
   const bodyDark = isGhost ? state.envelopeColor : 0x0f172a;
   const bodyFillAlpha = isGhost ? 0.38 * a : 0.96 * a;
 
-  // 1. Subtle neo-arcade neon aura behind character (reduced in FX:LO, lighter for ghosts)
   if (!isGhost) {
     for (let layer = state.glowLayers; layer >= 1; layer--) {
       const radius = (layer === 1 ? 22 : 28) * Math.max(sx, sy);
@@ -235,7 +451,7 @@ export function drawQuantumHeroShape(
     }
   }
 
-  // 2. Trailing neo-brutalist energy scarf / cape (reacts to running/jumping)
+  // Trailing energy scarf
   const scarfWave = Math.sin(t * 11) * (state.isRunning || state.isAirborne ? 3.2 : 1.2);
   const scarfLen = 10 + state.speedRatio * 7;
   const scarfPts = [
@@ -246,7 +462,7 @@ export function drawQuantumHeroShape(
   ];
   drawBrutalistPoly(g, scarfPts, state.accentColor, (isGhost ? 0.45 : 0.9) * a, outlineColor, a, 2);
 
-  // 3. Articulated legs & chunky arcade boots (procedural stride / jump / dive)
+  // Articulated legs & chunky boots
   const legSwing = state.isDiving
     ? 0
     : state.isAirborne
@@ -265,25 +481,18 @@ export function drawQuantumHeroShape(
       ? Math.max(0, Math.cos(stridePhase)) * 3.2
       : 0;
 
-  // Back leg
-  const backFootX = -dir * 4 - legSwing;
-  const backFootY = 17 - backLegLift;
   drawBrutalistPoly(
     g,
-    rectPts(backFootX, backFootY, 7, 10),
+    rectPts(-dir * 4 - legSwing, 17 - backLegLift, 7, 10),
     isGhost ? state.envelopeColor : 0x1e293b,
     bodyFillAlpha,
     outlineColor,
     a,
     outlineWidth
   );
-
-  // Front leg
-  const frontFootX = dir * 4 + legSwing;
-  const frontFootY = 17 - frontLegLift;
   drawBrutalistPoly(
     g,
-    rectPts(frontFootX, frontFootY, 7.5, 10),
+    rectPts(dir * 4 + legSwing, 17 - frontLegLift, 7.5, 10),
     state.envelopeColor,
     (isGhost ? 0.52 : 0.96) * a,
     outlineColor,
@@ -291,7 +500,7 @@ export function drawQuantumHeroShape(
     outlineWidth
   );
 
-  // 4. Chunky geometric torso (neo-brutalist hard shadow + jacket + glowing chest core)
+  // Torso + hard shadow + chest reactor
   if (!isGhost) {
     const shadowPts = rectPts(2.5, 5.5, 17, 15);
     g.fillStyle(0x020617, 0.55 * a);
@@ -310,8 +519,6 @@ export function drawQuantumHeroShape(
     a,
     outlineWidth
   );
-
-  // Glowing chest reactor strip
   const corePulse = 1 + 0.08 * Math.sin(t * 6.5);
   drawBrutalistPoly(
     g,
@@ -323,7 +530,7 @@ export function drawQuantumHeroShape(
     1.6
   );
 
-  // 5. Swinging front arm
+  // Front arm
   const armSwing = -legSwing * 0.65;
   drawBrutalistPoly(
     g,
@@ -335,7 +542,7 @@ export function drawQuantumHeroShape(
     2.2
   );
 
-  // 6. Anthropomorphic chunky neo-brutalist helmet / head
+  // Helmet + visor + glowing eyes + antenna
   const headPts = [
     toWorld(-10, -17),
     toWorld(10, -17),
@@ -355,27 +562,21 @@ export function drawQuantumHeroShape(
     a,
     outlineWidth
   );
-
-  // Hard geometric visor cavity + glowing arcade eyes
-  const visorH = state.isDiving ? 5 : 7;
   drawBrutalistPoly(
     g,
-    rectPts(dir * 2.5, -9.5, 14, visorH),
+    rectPts(dir * 2.5, -9.5, 14, state.isDiving ? 5 : 7),
     0x050814,
     (isGhost ? 0.65 : 0.95) * a,
     state.accentColor,
     0.75 * a,
     1.4
   );
-
-  // Expressive glowing pixel-eyes inside visor
   const eyeLeft = toWorld(dir * 0.5, -9.5);
   const eyeRight = toWorld(dir * 6.2, -9.5);
   g.fillStyle(state.coreColor, 0.98 * a);
   g.fillCircle(eyeLeft.wx, eyeLeft.wy, 1.9);
   g.fillCircle(eyeRight.wx, eyeRight.wy, 1.9);
 
-  // Quantum antenna / gravity crest on helmet (flips cleanly when upsideDown === -1)
   const crestBase = toWorld(-dir * 1, -17);
   const crestTip = toWorld(-dir * 3, -23);
   g.lineStyle(2.4, state.accentColor, 0.95 * a);
@@ -386,7 +587,6 @@ export function drawQuantumHeroShape(
   g.fillStyle(state.coreColor, 0.98 * a);
   g.fillCircle(crestTip.wx, crestTip.wy, 2.4);
 
-  // 7. Dive plasma spear tip
   if (state.isDiving) {
     const tip = toWorld(0, 29);
     const leftWing = toWorld(-9, 17);
@@ -395,47 +595,121 @@ export function drawQuantumHeroShape(
     g.fillTriangle?.(leftWing.wx, leftWing.wy, tip.wx, tip.wy, rightWing.wx, rightWing.wy);
   }
 
-  // 8. Super-Quanta golden orbital ring (fusionStack >= 2)
-  if (state.isSuperQuanta) {
-    const ringR = 26 * Math.max(sx, sy);
-    g.lineStyle(2.8, 0xfbbf24, 0.96);
-    g.strokeCircle(x, y, ringR);
-    if (!reducedEffects) {
-      const orbAngle = t * 4.5;
-      g.fillStyle(0xfef08a, 0.98);
-      g.fillCircle(x + Math.cos(orbAngle) * ringR, y + Math.sin(orbAngle) * ringR, 3.2);
-      g.fillCircle(x - Math.cos(orbAngle) * ringR, y - Math.sin(orbAngle) * ringR, 3.2);
-    }
-  }
-
-  // 9. Tunneling charge halo (tunnelCharges > 0)
-  if (state.hasTunnelCharge) {
-    const haloR = 29 * Math.max(sx, sy);
-    const rot = t * 3.2;
-    g.lineStyle(2.2, 0xfacc15, 0.88);
-    if (typeof g.arc === 'function') {
-      g.beginPath();
-      g.arc(x, y, haloR, rot, rot + Math.PI * 0.65, false);
-      g.strokePath();
-      g.beginPath();
-      g.arc(x, y, haloR, rot + Math.PI, rot + Math.PI * 1.65, false);
-      g.strokePath();
-    } else {
-      g.strokeCircle(x, y, haloR);
-    }
-  }
-
-  // 10. Pauli repulsion aura
-  if (state.hasPauliAura) {
-    const pauliR = (reducedEffects ? 27 : 31) * Math.max(sx, sy);
-    g.lineStyle(2.4, 0xf97316, 0.88);
-    g.strokeCircle(x, y, pauliR);
+  if (!isGhost) {
+    drawPowerupAuras(g, x, y, t, state, reducedEffects);
   }
 }
 
 /**
- * Procedural neo-brutalist Quantum Hero renderer with instant live switching to/from
- * the Classic retro spritesheet (`hero.png` / `disabled.png`).
+ * Skin 3: Luminous Quantum Orb / Wave Envelope (`quantum`).
+ */
+export function drawQuantumHeroShape(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  timeMs: number,
+  state: HeroVisualState,
+  reducedEffects: boolean,
+  isGhost = false
+): void {
+  const t = timeMs * 0.001;
+  const baseRx = 16 * state.scaleX;
+  const baseRy = 18 * state.scaleY;
+  const cosL = Math.cos(state.leanRad);
+  const sinL = Math.sin(state.leanRad);
+
+  const toWorld = (lx: number, ly: number): { wx: number; wy: number } => {
+    const fy = ly * state.upsideDown;
+    return {
+      wx: x + lx * cosL - fy * sinL,
+      wy: y + lx * sinL + fy * cosL
+    };
+  };
+
+  if (!isGhost) {
+    for (let layer = state.glowLayers; layer >= 1; layer--) {
+      const radius = Math.max(baseRx, baseRy) + layer * 6;
+      const glowAlpha = (layer === 1 ? 0.2 : 0.1) * state.alpha;
+      g.fillStyle(state.envelopeColor, glowAlpha);
+      g.fillCircle(x, y, radius);
+    }
+  }
+
+  g.fillStyle(state.envelopeColor, 0.34 * state.alpha);
+  g.lineStyle(2.4, state.envelopeColor, 0.96 * state.alpha);
+  g.beginPath();
+  for (let i = 0; i <= state.waveSegments; i++) {
+    const theta = (i / state.waveSegments) * Math.PI * 2;
+    const harmonic = 1 + 0.09 * Math.sin(theta * 3 + t * 7.5);
+    const lx = Math.cos(theta) * baseRx * harmonic;
+    const ly = Math.sin(theta) * baseRy * harmonic;
+    const { wx, wy } = toWorld(lx, ly);
+    if (i === 0) g.moveTo(wx, wy);
+    else g.lineTo(wx, wy);
+  }
+  g.closePath?.();
+  g.fillPath?.();
+  g.strokePath();
+
+  if (state.isDiving) {
+    const tip = toWorld(0, baseRy + 10);
+    const leftWing = toWorld(-7 * state.scaleX, baseRy - 3);
+    const rightWing = toWorld(7 * state.scaleX, baseRy - 3);
+    g.fillStyle(state.accentColor, 0.9 * state.alpha);
+    g.fillTriangle?.(leftWing.wx, leftWing.wy, tip.wx, tip.wy, rightWing.wx, rightWing.wy);
+  }
+
+  const corePulse = 1 + 0.08 * Math.sin(t * 6);
+  const coreRadius = 8.5 * Math.min(state.scaleX, state.scaleY) * corePulse;
+  g.fillStyle(state.coreColor, 0.95 * state.alpha);
+  g.fillCircle(x, y, coreRadius);
+
+  const eyePos = toWorld(state.facingDir * 5.5 * state.scaleX, -4 * state.scaleY);
+  g.fillStyle(0x050814, 0.9 * state.alpha);
+  g.fillCircle(eyePos.wx, eyePos.wy, 3.2);
+  g.fillStyle(0xffffff, 0.98 * state.alpha);
+  g.fillCircle(eyePos.wx + state.facingDir * 0.8, eyePos.wy - 0.6 * state.upsideDown, 1.4);
+
+  const crestL = toWorld(-5 * state.scaleX, -baseRy + 2);
+  const crestTip = toWorld(0, -baseRy - 4);
+  const crestR = toWorld(5 * state.scaleX, -baseRy + 2);
+  g.lineStyle(1.8, state.accentColor, 0.9 * state.alpha);
+  g.beginPath();
+  g.moveTo(crestL.wx, crestL.wy);
+  g.lineTo(crestTip.wx, crestTip.wy);
+  g.lineTo(crestR.wx, crestR.wy);
+  g.strokePath();
+
+  if (!isGhost) {
+    drawPowerupAuras(g, x, y, t, state, reducedEffects);
+  }
+}
+
+/**
+ * Dispatches procedural rendering for any non-classic skin (`gameboy`, `neo`, `quantum`).
+ */
+export function drawProceduralHeroForSkin(
+  g: Phaser.GameObjects.Graphics,
+  skin: Exclude<HeroSkin, 'classic'>,
+  x: number,
+  y: number,
+  timeMs: number,
+  state: HeroVisualState,
+  reducedEffects: boolean,
+  isGhost = false
+): void {
+  if (skin === 'gameboy') {
+    drawGameboyHeroShape(g, x, y, timeMs, state, reducedEffects, isGhost);
+  } else if (skin === 'neo') {
+    drawNeoHeroShape(g, x, y, timeMs, state, reducedEffects, isGhost);
+  } else {
+    drawQuantumHeroShape(g, x, y, timeMs, state, reducedEffects, isGhost);
+  }
+}
+
+/**
+ * Multi-skin procedural Hero renderer (`gameboy` / `neo` / `quantum`) with instant live switching
+ * to/from the Classic retro spritesheet (`hero.png` / `disabled.png`).
  * Never modifies Hero Arcade Physics bodies, hitboxes, or `stepHeroPhysics.ts`.
  */
 export class HeroRenderer {
@@ -454,10 +728,10 @@ export class HeroRenderer {
     g.clear();
 
     if (options.skin === 'classic') {
-      // Restore classic spritesheet visibility/alpha immediately when switching from quantum
+      // Restore classic spritesheet visibility/alpha immediately when switching from a procedural skin
       for (const hero of heroes) {
         if (!hero?.active) continue;
-        if (this.lastSkin === 'quantum' || hero.alpha === 0) {
+        if (this.lastSkin !== 'classic' || hero.alpha === 0) {
           const restoredAlpha = hero.tunnelCharges > 0 ? 0.5 + 0.25 * Math.sin(timeMs * 0.008) : 1;
           hero.setAlpha?.(restoredAlpha);
         }
@@ -466,7 +740,7 @@ export class HeroRenderer {
       return;
     }
 
-    this.lastSkin = 'quantum';
+    this.lastSkin = options.skin;
 
     for (const hero of heroes) {
       if (!hero?.active) continue;
@@ -477,7 +751,16 @@ export class HeroRenderer {
       }
 
       const state = computeHeroVisualState(hero, timeMs, options);
-      drawQuantumHeroShape(g, hero.x, hero.y, timeMs, state, options.reducedEffects, false);
+      drawProceduralHeroForSkin(
+        g,
+        options.skin,
+        hero.x,
+        hero.y,
+        timeMs,
+        state,
+        options.reducedEffects,
+        false
+      );
     }
   }
 

@@ -318,11 +318,19 @@ describe('Menu component', () => {
     }
   });
 
-  it('toggles hero skin between SKIN: QUANTUM and SKIN: CLASSIC', () => {
-    useGameStore.setState({ heroSkin: 'quantum', locale: 'en' });
+  it('cycles hero skin through GAMEBOY -> NEO -> QUANTUM -> CLASSIC -> GAMEBOY', () => {
+    useGameStore.setState({ heroSkin: 'gameboy', locale: 'en' });
     renderWithRouter();
 
     const skinBtn = screen.getByTestId('skin-toggle');
+    expect(skinBtn).toHaveTextContent('SKIN: GAMEBOY');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('neo');
+    expect(skinBtn).toHaveTextContent('SKIN: NEO');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('quantum');
     expect(skinBtn).toHaveTextContent('SKIN: QUANTUM');
 
     fireEvent.click(skinBtn);
@@ -330,7 +338,7 @@ describe('Menu component', () => {
     expect(skinBtn).toHaveTextContent('SKIN: CLASSIC');
 
     fireEvent.click(skinBtn);
-    expect(useGameStore.getState().heroSkin).toBe('quantum');
-    expect(skinBtn).toHaveTextContent('SKIN: QUANTUM');
+    expect(useGameStore.getState().heroSkin).toBe('gameboy');
+    expect(skinBtn).toHaveTextContent('SKIN: GAMEBOY');
   });
 });

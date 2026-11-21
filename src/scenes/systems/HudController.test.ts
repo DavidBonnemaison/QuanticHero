@@ -303,7 +303,7 @@ describe('HudController', () => {
     expect(ctx.condenseButtonZone?.visible).toBe(true);
 
     hud.repositionOnResize(390, 844);
-    expect(ctx.condenseButtonBg?.x).toBe(332);
+    expect(ctx.condenseButtonBg?.x).toBe(322);
     expect(ctx.condenseButtonBg?.y).toBe(748);
 
     const zone = ctx.condenseButtonZone as unknown as {

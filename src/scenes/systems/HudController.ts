@@ -21,6 +21,7 @@ import type { GameSceneContext } from './types';
  */
 export class HudController {
   private topHudButtons: Phaser.GameObjects.Text[] = [];
+  private lastRow2Signature = '';
 
   constructor(private readonly ctx: GameSceneContext) {}
 
@@ -55,6 +56,40 @@ export class HudController {
       }
 
       btn.setPosition(cursorX, cursorY);
+      cursorX += Math.ceil(measuredW) + gap;
+    }
+  }
+
+  private layoutRow2Indicators(camW: number, force = false): void {
+    const ctx = this.ctx;
+    const isCompact = camW < 460;
+    const fontSize = isCompact ? '11px' : '14px';
+    const charWidth = isCompact ? 6.8 : 8.6;
+    const gap = isCompact ? 6 : 12;
+    const row2Y = isCompact ? 30 : 29;
+    const items = [
+      ctx.duelBadgeText,
+      ctx.ghostButton,
+      ctx.phaseIndicatorText,
+      ctx.dilationIndicatorText,
+      ctx.timeLoopIndicatorText
+    ];
+
+    const sig = `${camW}|${items.map((el) => (el?.active && el.visible ? el.text : '')).join('|')}`;
+    if (!force && sig === this.lastRow2Signature) return;
+    this.lastRow2Signature = sig;
+
+    let cursorX = 40;
+    for (const el of items) {
+      if (!el?.active || !el.visible || !el.text) continue;
+      if (typeof el.setFontSize === 'function') {
+        el.setFontSize(fontSize);
+      }
+      el.setPosition(cursorX, row2Y);
+      const measuredW =
+        typeof el.width === 'number' && el.width > 0
+          ? el.width
+          : Math.ceil(el.text.length * charWidth);
       cursorX += Math.ceil(measuredW) + gap;
     }
   }
@@ -185,9 +220,11 @@ export class HudController {
 
     const getSkinLabel = () => {
       const s = getHudStrings().hud;
-      return (useGameStore.getState().heroSkin ?? 'quantum') === 'quantum'
-        ? s.skinQuantum
-        : s.skinClassic;
+      const skin = useGameStore.getState().heroSkin ?? 'gameboy';
+      if (skin === 'gameboy') return s.skinGameboy;
+      if (skin === 'neo') return s.skinNeo;
+      if (skin === 'quantum') return s.skinQuantum;
+      return s.skinClassic;
     };
     const skinButton = ctx.add.text(300, 6, getSkinLabel(), {
       fontFamily: "'JetBrains Mono', monospace",
@@ -305,6 +342,7 @@ export class HudController {
     }
 
     this.layoutTopHudButtons(camW);
+    this.layoutRow2Indicators(camW, true);
 
     if (ctx.unsubHudStore) {
       ctx.unsubHudStore();
@@ -324,7 +362,8 @@ export class HudController {
       if (skinButton.active) {
         skinButton.setText(getSkinLabel());
       }
-      this.layoutTopHudButtons(ctx.cameras?.main?.width ?? 800);
+      const w = ctx.cameras?.main?.width ?? 800;
+      this.layoutTopHudButtons(w);
       if (ctx.duelBadgeText?.active) {
         ctx.duelBadgeText.setText(getDuelBadgeLabel());
         ctx.duelBadgeText.setVisible(Boolean(duel));
@@ -347,6 +386,7 @@ export class HudController {
       if (ctx.ghostButton?.active) {
         ctx.applyGhostMode();
       }
+      this.layoutRow2Indicators(w, true);
     });
 
     const hideTopHud = Boolean(ctx.acceleratorMode);
@@ -426,17 +466,19 @@ export class HudController {
     ctx.hudContainer.add(thumbRestartLabel);
     ctx.hudContainer.add(thumbRestartZone);
 
-    const condenseX = camW - 58;
+    const actionBtnW = 116;
+    const actionBtnX = camW - Math.ceil(actionBtnW / 2) - 10;
+    const condenseX = actionBtnX;
     const condenseY = camH - 96;
-    const condenseBg = ctx.add.rectangle(condenseX, condenseY, 96, 44, 0x083344, 0.88);
+    const condenseBg = ctx.add.rectangle(condenseX, condenseY, actionBtnW, 42, 0x083344, 0.88);
     condenseBg.setStrokeStyle(2, 0x00e5ff, 0.95);
     const condenseLabel = ctx.add.text(condenseX, condenseY, initialStrings.hud.condenseButton, {
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: '20px',
+      fontSize: '15px',
       color: '#00e5ff'
     });
     condenseLabel.setOrigin(0.5);
-    const condenseZone = ctx.add.zone(condenseX, condenseY, 96, 44);
+    const condenseZone = ctx.add.zone(condenseX, condenseY, actionBtnW, 42);
     condenseZone.setInteractive({ useHandCursor: true });
     condenseZone.on('pointerdown', () => {
       ctx.uiPointerConsumed = true;
@@ -456,19 +498,19 @@ export class HudController {
     ctx.hudContainer.add(condenseZone);
 
     if (ctx.levelData?.timeLoop) {
-      const loopX = camW - 58;
+      const loopX = actionBtnX;
       const loopY = camH - 96;
-      const loopBg = ctx.add.rectangle(loopX, loopY, 96, 44, 0x1e1035, 0.88);
+      const loopBg = ctx.add.rectangle(loopX, loopY, actionBtnW, 42, 0x1e1035, 0.88);
       loopBg.setStrokeStyle(2, 0xa855f7, 0.95);
       loopBg.setScrollFactor?.(0);
       const loopLabel = ctx.add.text(loopX, loopY, initialStrings.hud.loopButton, {
         fontFamily: "'JetBrains Mono', monospace",
-        fontSize: '20px',
+        fontSize: '15px',
         color: '#00e5ff'
       });
       loopLabel.setOrigin(0.5);
       loopLabel.setScrollFactor?.(0);
-      const loopZone = ctx.add.zone(loopX, loopY, 96, 44);
+      const loopZone = ctx.add.zone(loopX, loopY, actionBtnW, 42);
       loopZone.setScrollFactor?.(0);
       loopZone.setInteractive({ useHandCursor: true });
       loopZone.on(
@@ -495,19 +537,19 @@ export class HudController {
         (ctx.levelData?.observerBeams && ctx.levelData.observerBeams.length > 0)
     );
     if (hasWavefunctionMechanics) {
-      const observeX = camW - 58;
+      const observeX = actionBtnX;
       const observeY = ctx.levelData?.timeLoop ? camH - 148 : camH - 96;
-      const observeBg = ctx.add.rectangle(observeX, observeY, 108, 44, 0x1e1035, 0.88);
+      const observeBg = ctx.add.rectangle(observeX, observeY, actionBtnW, 42, 0x1e1035, 0.88);
       observeBg.setStrokeStyle(2, 0xfbbf24, 0.95);
       observeBg.setScrollFactor?.(0);
       const observeLabel = ctx.add.text(observeX, observeY, initialStrings.hud.observeButton, {
         fontFamily: "'JetBrains Mono', monospace",
-        fontSize: '20px',
+        fontSize: '15px',
         color: '#fbbf24'
       });
       observeLabel.setOrigin(0.5);
       observeLabel.setScrollFactor?.(0);
-      const observeZone = ctx.add.zone(observeX, observeY, 108, 44);
+      const observeZone = ctx.add.zone(observeX, observeY, actionBtnW, 42);
       observeZone.setScrollFactor?.(0);
       observeZone.setInteractive({ useHandCursor: true });
       observeZone.on(
@@ -631,6 +673,7 @@ export class HudController {
     const isCompact = camW < 460;
     this.drawHudBar(camW);
     this.layoutTopHudButtons(camW);
+    this.layoutRow2Indicators(camW, true);
 
     if (ctx.timerText?.active) {
       ctx.timerText.setPosition(camW - 10, isCompact ? 5 : 3);
@@ -661,7 +704,8 @@ export class HudController {
       ctx.thumbRestartZone.setPosition(thumbX, thumbY);
     }
 
-    const condenseX = camW - 58;
+    const actionBtnX = camW - 68;
+    const condenseX = actionBtnX;
     const condenseY = camH - 96;
     if (ctx.condenseButtonBg?.active) {
       ctx.condenseButtonBg.setPosition(condenseX, condenseY);
@@ -673,7 +717,7 @@ export class HudController {
       ctx.condenseButtonZone.setPosition(condenseX, condenseY);
     }
 
-    const loopX = camW - 58;
+    const loopX = actionBtnX;
     const loopY = ctx.hasCondenseAbility ? camH - 148 : camH - 96;
     if (ctx.loopButtonBg?.active) {
       ctx.loopButtonBg.setPosition(loopX, loopY);
@@ -685,7 +729,7 @@ export class HudController {
       ctx.loopButtonZone.setPosition(loopX, loopY);
     }
 
-    const observeX = camW - 58;
+    const observeX = actionBtnX;
     const observeY = ctx.levelData?.timeLoop
       ? ctx.hasCondenseAbility
         ? camH - 200
@@ -820,6 +864,7 @@ export class HudController {
       );
       ctx.timeLoopIndicatorText.setColor(remMs <= 1000 ? '#f43f5e' : '#00e5ff');
     }
+    this.layoutRow2Indicators(ctx.cameras?.main?.width ?? 800);
     this.updateCoherenceGauge();
     if (ctx.coherenceTierText?.active && ctx.lastCoherenceTier === 'HYPER') {
       const nowMs = ctx.time?.now ?? Date.now();

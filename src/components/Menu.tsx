@@ -38,7 +38,7 @@ export default function Menu(): React.ReactElement {
   const toggleHaptics = useGameStore((state) => state.toggleHaptics);
   const reducedEffects = useGameStore((state) => state.reducedEffects);
   const toggleReducedEffects = useGameStore((state) => state.toggleReducedEffects);
-  const heroSkin = useGameStore((state) => state.heroSkin ?? 'quantum');
+  const heroSkin = useGameStore((state) => state.heroSkin ?? 'gameboy');
   const toggleHeroSkin = useGameStore((state) => state.toggleHeroSkin);
   const locale = useGameStore((state) => state.locale ?? 'en');
   const toggleLocale = useGameStore((state) => state.toggleLocale);
@@ -183,13 +183,17 @@ export default function Menu(): React.ReactElement {
           type="button"
           className={styles.soundButton}
           onClick={toggleHeroSkin}
-          aria-label={
-            heroSkin === 'quantum' ? t.menu.switchToClassicSkin : t.menu.switchToQuantumSkin
-          }
-          title={heroSkin === 'quantum' ? t.menu.switchToClassicSkin : t.menu.switchToQuantumSkin}
+          aria-label={t.menu.switchSkinLabel}
+          title={t.menu.switchSkinLabel}
           data-testid="skin-toggle"
         >
-          {heroSkin === 'quantum' ? t.menu.skinQuantum : t.menu.skinClassic}
+          {heroSkin === 'gameboy'
+            ? t.menu.skinGameboy
+            : heroSkin === 'neo'
+              ? t.menu.skinNeo
+              : heroSkin === 'quantum'
+                ? t.menu.skinQuantum
+                : t.menu.skinClassic}
         </button>
         <button
           type="button"

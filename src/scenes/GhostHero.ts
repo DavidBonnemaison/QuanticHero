@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { useGameStore } from '../store';
 import { type GhostFrame, sampleTrajectory } from '../tools/GhostRecorder';
-import { type HeroVisualState, drawQuantumHeroShape } from './HeroRenderer';
+import { type HeroVisualState, drawProceduralHeroForSkin } from './HeroRenderer';
 
 export interface GhostHeroOptions {
   alpha?: number;
@@ -84,11 +84,11 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
     const isFinished = this.totalDurationMs > 0 && elapsedMs >= this.totalDurationMs;
     const effectiveAlpha = isFinished ? this.finishedAlpha : this.baseAlpha;
     const storeState = useGameStore.getState();
-    const activeSkin = storeState.heroSkin ?? 'quantum';
+    const activeSkin = storeState.heroSkin ?? 'gameboy';
     const reducedEffects = Boolean(storeState.reducedEffects);
 
-    if (activeSkin === 'quantum' && this.quantumGraphics) {
-      // Hide classic spritesheet and render procedural neo-brutalist Quantum ghost
+    if (activeSkin !== 'classic' && this.quantumGraphics) {
+      // Hide classic spritesheet and render procedural ghost matching the active skin
       this.setAlpha(0);
       this.quantumGraphics.clear();
       if (this.visible) {
@@ -116,8 +116,9 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
           glowLayers: 0,
           waveSegments: 10
         };
-        drawQuantumHeroShape(
+        drawProceduralHeroForSkin(
           this.quantumGraphics,
+          activeSkin,
           interpolated.x,
           interpolated.y,
           elapsedMs,

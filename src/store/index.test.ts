@@ -676,8 +676,14 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().pendingDuelShare).toBeNull();
     });
 
-    it('defaults heroSkin to quantum, toggles & sets skin, and persists heroSkin to localStorage', () => {
-      useGameStore.setState({ heroSkin: 'quantum' });
+    it('defaults heroSkin to gameboy, rotates through gameboy -> neo -> quantum -> classic, and persists to localStorage', () => {
+      useGameStore.setState({ heroSkin: 'gameboy' });
+      expect(useGameStore.getState().heroSkin).toBe('gameboy');
+
+      useGameStore.getState().toggleHeroSkin();
+      expect(useGameStore.getState().heroSkin).toBe('neo');
+
+      useGameStore.getState().toggleHeroSkin();
       expect(useGameStore.getState().heroSkin).toBe('quantum');
 
       useGameStore.getState().toggleHeroSkin();
@@ -687,13 +693,13 @@ describe('useGameStore', () => {
       expect(persistedClassic.state.heroSkin).toBe('classic');
 
       useGameStore.getState().toggleHeroSkin();
-      expect(useGameStore.getState().heroSkin).toBe('quantum');
+      expect(useGameStore.getState().heroSkin).toBe('gameboy');
 
-      useGameStore.getState().setHeroSkin('classic');
-      expect(useGameStore.getState().heroSkin).toBe('classic');
+      useGameStore.getState().setHeroSkin('neo');
+      expect(useGameStore.getState().heroSkin).toBe('neo');
 
       const persistedExplicit = JSON.parse(localStorage.getItem('qtmhro') || '{}');
-      expect(persistedExplicit.state.heroSkin).toBe('classic');
+      expect(persistedExplicit.state.heroSkin).toBe('neo');
     });
   });
 });
