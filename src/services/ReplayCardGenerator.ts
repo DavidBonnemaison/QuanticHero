@@ -604,10 +604,13 @@ function drawFooter(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText('QUANTIC HERO', 56, 562);
+  const measuredBrandWidth =
+    typeof ctx.measureText === 'function' ? ctx.measureText('QUANTIC HERO').width : 240;
+  const subtitleX = Math.max(260, Math.ceil(56 + measuredBrandWidth + 24));
 
   ctx.fillStyle = '#94a3b8';
   ctx.font = '20px "VT323", "Courier New", monospace';
-  ctx.fillText('ISOTOPE RECORD CARD', 260, 564);
+  ctx.fillText('ISOTOPE RECORD CARD', subtitleX, 564);
 
   // Optional miniature QR code
   if (input.shareUrl) {
