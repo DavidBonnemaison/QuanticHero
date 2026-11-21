@@ -860,7 +860,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
       return;
     }
 
-    const isGhostActive = this.ghostController.updateActiveGhostsAndSplit(time, elapsedMs);
+    this.ghostController.updateActiveGhostsAndSplit(time, elapsedMs);
 
     this.quantumEffects?.update(
       time,
@@ -906,7 +906,6 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     }
     this.touchController.consumeFrameFlags();
 
-    this.ghostController.updateGhostSurfing(isGhostActive);
     this.timeLoopSystem.update(time, delta);
     this.quantumSystems.updateWorldMechanics(time, delta, elapsedMs, timeDilationFactor);
     this.renderHeroSkin(time);

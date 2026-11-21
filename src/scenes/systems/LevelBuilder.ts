@@ -496,7 +496,7 @@ export class LevelBuilder {
     ctx.muralObjects.push(metaText);
 
     const verseText = ctx.add.text(muralX, muralY + 62, verse, {
-      fontFamily: "'Space Grotesk', sans-serif",
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '18px',
       color: '#ffffff'
     });
@@ -560,7 +560,7 @@ export class LevelBuilder {
     if (typeof ctx.add.text === 'function') {
       const [step1, step2] = discovery.hintSteps;
       const t1 = ctx.add.text(anchorX - 96, anchorY - 6, `1. ${step1}`, {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '11px',
         color: colorHex,
         align: 'center'
@@ -571,7 +571,7 @@ export class LevelBuilder {
       ctx.discoveryBoxObjects.push(t1);
 
       const t2 = ctx.add.text(anchorX + 96, anchorY - 6, `2. ${step2}`, {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'JetBrains Mono', monospace",
         fontSize: '11px',
         color: colorHex,
         align: 'center'

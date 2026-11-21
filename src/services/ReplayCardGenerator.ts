@@ -600,12 +600,12 @@ function drawFooter(
 
   // Branding
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 34px "JetBrains Mono", monospace';
+  ctx.font = 'bold 32px "Silkscreen", "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText('QUANTIC HERO', 56, 562);
+  ctx.fillText('QUANTUM HERO', 56, 562);
   const measuredBrandWidth =
-    typeof ctx.measureText === 'function' ? ctx.measureText('QUANTIC HERO').width : 240;
+    typeof ctx.measureText === 'function' ? ctx.measureText('QUANTUM HERO').width : 260;
   const subtitleX = Math.max(260, Math.ceil(56 + measuredBrandWidth + 24));
 
   ctx.fillStyle = '#94a3b8';
@@ -692,7 +692,7 @@ function buildDefaultFilename(level: LevelData): string {
   const safeId = String(level.id || '0')
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, '-');
-  return `quantic-hero-${safeSymbol}-${safeId}.png`;
+  return `quantum-hero-${safeSymbol}-${safeId}.png`;
 }
 
 /**
@@ -726,7 +726,7 @@ export async function shareReplayCard(
   const t = getStrings(locale);
   const shareText =
     options.text ??
-    `QUANTIC HERO — ${input.level.symbol} ${input.level.atom} • ${formatCardTime(input.timeMs)} • ${Math.max(0, Math.round(input.jumps))}J (${getMedalDisplayInfo(input.medal, locale).shortLabel})`;
+    `QUANTUM HERO — ${input.level.symbol} ${input.level.atom} • ${formatCardTime(input.timeMs)} • ${Math.max(0, Math.round(input.jumps))}J (${getMedalDisplayInfo(input.medal, locale).shortLabel})`;
 
   if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     const canShareFiles =

@@ -24,16 +24,17 @@ describe('Epic 06 Spec 01 — Self-Hosted Typography & Design Tokens', () => {
     expect(viteConfig).toContain("background_color: '#050814'");
   });
 
-  it('imports self-hosted Space Grotesk, JetBrains Mono, and centralized tokens in src/main.tsx', () => {
+  it('imports self-hosted Silkscreen, JetBrains Mono, and centralized tokens in src/main.tsx', () => {
     const mainTsx = readRepoFile('src/main.tsx');
-    expect(mainTsx).toContain('@fontsource/space-grotesk/');
+    expect(mainTsx).toContain('@fontsource/silkscreen/');
     expect(mainTsx).toContain('@fontsource/jetbrains-mono/');
     expect(mainTsx).toContain('./styles/tokens.css');
   });
 
   it('defines dark-lab glassmorphism tokens and dynamic atom hue variables in src/styles/tokens.css', () => {
     const tokensCss = readRepoFile('src/styles/tokens.css');
-    expect(tokensCss).toMatch(/--font-ui:\s*['"]Space Grotesk['"]/);
+    expect(tokensCss).toMatch(/--font-display:\s*['"]Silkscreen['"]/);
+    expect(tokensCss).toMatch(/--font-ui:\s*['"]JetBrains Mono['"]/);
     expect(tokensCss).toMatch(/--font-mono:\s*['"]JetBrains Mono['"]/);
     expect(tokensCss).toContain('--bg-deep: #050814');
     expect(tokensCss).toContain('--surface-glass: rgba(15, 23, 42, 0.72)');

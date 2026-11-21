@@ -35,7 +35,7 @@ export function showLevelTitle(ctx: GameSceneContext): void {
     : `${ctx.levelData.id} - ${ctx.levelData.atom}`;
 
   const title = ctx.add.text(camW / 2, ctx.cameras.main.height / 2, titleText, {
-    fontFamily: "'Space Grotesk', sans-serif",
+    fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
     fontSize: camW < 480 ? '30px' : '46px',
     color: ctx.levelData.antiHue,
     align: 'center',
@@ -76,7 +76,7 @@ export function showRetroToast(ctx: GameSceneContext, message: string): void {
   const accentColor = Number.parseInt(accentHex.replace('#', ''), 16) || 0x38bdf8;
 
   const toast = ctx.add.text(startX, startY, message, {
-    fontFamily: "'Space Grotesk', sans-serif",
+    fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
     fontSize: '36px',
     fontStyle: 'bold',
     color: '#ffffff',
@@ -251,7 +251,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 182 : 148),
       isVictory ? t.duel.victoryBadge(deltaStr) : t.duel.defeatBadge(deltaStr),
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '30px' : '38px',
         color: isVictory ? '#34d399' : '#f87171',
         align: 'center',
@@ -272,7 +272,7 @@ export function showLevelCompleteOverlay(
             formatDuelSeconds(activeDuel.challengerTimeMs)
           ),
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '18px' : '24px',
         color: '#fbbf24',
         align: 'center',
@@ -305,7 +305,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 22 : 8),
       isVictory ? `⚔ ${t.duel.sendRevengeLink}` : `⚔ ${t.duel.challengeFriend.toUpperCase()}`,
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '22px' : '28px',
         color: '#050814',
         backgroundColor: '#fbbf24',
@@ -331,7 +331,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 54 : 58),
       `🖼 ${t.hud.shareCardButton}`,
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '19px' : '21px',
         color: '#00e5ff',
         backgroundColor: '#0c233c',
@@ -357,7 +357,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 132 : 124),
       `↻ ${t.duel.rematch.toUpperCase()}`,
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '20px' : '22px',
         color: '#00ffcc',
         backgroundColor: '#083344',
@@ -389,7 +389,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 132 : 124),
       t.hud.levelsButton,
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '20px' : '22px',
         color: '#cbd5e1',
         backgroundColor: '#1e293b',
@@ -427,7 +427,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 174 : 138),
       t.hud.elementSynthesized(symbol, atom.toUpperCase()),
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '20px' : '28px',
         color: '#00e5ff',
         align: 'center',
@@ -470,7 +470,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? 102 : 74),
       `${medalInfo.symbol} ${medalInfo.label.toUpperCase()}  •  ${t.hud.jumps(ctx.jumpCount)}`,
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '15px' : '19px',
         color: medalInfo.color,
         align: 'center',
@@ -489,7 +489,7 @@ export function showLevelCompleteOverlay(
         camH / 2 - (isCompact ? 76 : 48),
         coherentLabel,
         {
-          fontFamily: "'Space Grotesk', sans-serif",
+          fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
           fontSize: isCompact ? '16px' : '20px',
           color: '#fbbf24',
           align: 'center',
@@ -512,7 +512,7 @@ export function showLevelCompleteOverlay(
       camH / 2 - (isCompact ? (isCoherentRun ? 32 : 44) : isCoherentRun ? 12 : 24),
       narrativeLines.join('\n'),
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '16px' : '18px',
         color: '#cbd5e1',
         align: 'center',
@@ -545,7 +545,7 @@ export function showLevelCompleteOverlay(
         : t.hud.levelsButton;
 
     const nextBtn = ctx.add.text(camW / 2, camH / 2 + (isCompact ? 56 : 48), primaryLabel, {
-      fontFamily: "'Space Grotesk', sans-serif",
+      fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
       fontSize: isCompact ? '20px' : '22px',
       color: '#00ffcc',
       backgroundColor: '#083344',
@@ -585,7 +585,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 112 : 98),
       `⚔ ${t.duel.challengeFriend.toUpperCase()}`,
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '19px' : '21px',
         color: '#fbbf24',
         backgroundColor: '#422006',
@@ -611,7 +611,7 @@ export function showLevelCompleteOverlay(
       camH / 2 + (isCompact ? 166 : 146),
       `🖼 ${t.hud.shareCardButton}`,
       {
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
         fontSize: isCompact ? '19px' : '21px',
         color: '#00e5ff',
         backgroundColor: '#0c233c',

@@ -153,20 +153,20 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
   ctx.fillText(el.symbol, 82, 268);
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = 'bold 22px "Space Grotesk", sans-serif';
+  ctx.font = 'bold 22px "JetBrains Mono", monospace';
   ctx.fillText(el.name.toUpperCase(), 82, 326);
 
   // Core stats
   const statsX = 356;
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '24px "Space Grotesk", sans-serif';
+  ctx.font = '24px "JetBrains Mono", monospace';
   ctx.fillText(locale === 'fr' ? 'SALLES FRANCHIES' : 'ROOMS CLEARED', statsX, 156);
   ctx.fillStyle = '#00e5ff';
   ctx.font = 'bold 54px "JetBrains Mono", monospace';
   ctx.fillText(String(input.roomsCleared), statsX, 214);
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '24px "Space Grotesk", sans-serif';
+  ctx.font = '24px "JetBrains Mono", monospace';
   ctx.fillText(locale === 'fr' ? 'TEMPS TOTAL' : 'TOTAL TIME', statsX + 340, 156);
   ctx.fillStyle = '#f8fafc';
   ctx.font = 'bold 50px "JetBrains Mono", monospace';
@@ -174,7 +174,7 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
 
   // Mutations list
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '24px "Space Grotesk", sans-serif';
+  ctx.font = '24px "JetBrains Mono", monospace';
   ctx.fillText(
     locale === 'fr'
       ? `MUTATIONS ACTIVES (${input.mutations.length})`
@@ -189,7 +189,7 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
   for (const id of uniqueMutIds) {
     const def = getMutationById(id);
     const label = def ? `${def.icon} ${locale === 'fr' ? def.nameFr : def.nameEn}` : id;
-    ctx.font = '22px "Space Grotesk", sans-serif';
+    ctx.font = '22px "JetBrains Mono", monospace';
     const textW = ctx.measureText(label).width;
     const chipW = Math.min(360, textW + 24);
     if (chipX + chipW > REPLAY_CARD_WIDTH - 56) {
@@ -212,7 +212,7 @@ export async function generateAcceleratorCard(input: AcceleratorCardInput): Prom
   const synergies = detectActiveSynergies(input.mutations);
   if (synergies.length > 0) {
     ctx.fillStyle = '#fbbf24';
-    ctx.font = '24px "Space Grotesk", sans-serif';
+    ctx.font = '24px "JetBrains Mono", monospace';
     const synText = synergies
       .map((s) => `[SYN] ${locale === 'fr' ? s.nameFr : s.nameEn}`)
       .join('   ');
