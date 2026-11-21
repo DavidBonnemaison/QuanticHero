@@ -252,6 +252,12 @@ export class SoundManager {
       gameEvents.on('bubble:harvest', () => {
         this.playBubbleChime();
       }),
+      gameEvents.on('hero:dive', () => {
+        this.playDiveSound();
+      }),
+      gameEvents.on('hero:wavedash', () => {
+        this.playWaveDashSound();
+      }),
       gameEvents.on('coherence:changed', ({ value, tier, decoherence }) => {
         this.setCoherence(value, tier);
         if (decoherence) {
@@ -263,9 +269,22 @@ export class SoundManager {
     // Setup user gesture unlock in browser environments
     if (typeof window !== 'undefined') {
       const unlock = () => {
-        this.ensureContext();
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume().catch(() => {});
+        const ctx = this.ensureContext();
+        if (ctx && ctx.state === 'suspended') {
+          ctx
+            .resume()
+            .then(() => {
+              if (this.isBgmPlaying && this.ctx) {
+                this.nextNoteTime = Math.max(this.nextNoteTime, this.ctx.currentTime + 0.03);
+              }
+            })
+            .catch(() => {});
+        }
+        if (this.isBgmPlaying && ctx && !this.bgmTimer) {
+          this.nextNoteTime = ctx.currentTime + 0.05;
+          this.bgmTimer = setInterval(() => {
+            this.scheduleBgmTick();
+          }, 35);
         }
         window.removeEventListener('pointerdown', unlock);
         window.removeEventListener('keydown', unlock);
@@ -313,7 +332,7 @@ export class SoundManager {
     this.sfxGain.connect(this.masterGain);
 
     this.bgmGain = this.ctx.createGain();
-    this.bgmGain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    this.bgmGain.gain.setValueAtTime(this.getAdaptiveBgmGain(), this.ctx.currentTime);
     this.bgmGain.connect(this.masterGain);
 
     const profile = FAMILY_MUSICAL_PROFILES[this.currentFamily];
@@ -327,6 +346,23 @@ export class SoundManager {
     this.bgmBassFilter.connect(this.bgmGain);
 
     this.createNoiseBuffer();
+  }
+
+  private getAdaptiveBgmGain(): number {
+    return Number((0.26 + this.coherenceValue * 0.14).toFixed(4));
+  }
+
+  private getTierRank(tier: CoherenceTier): number {
+    switch (tier) {
+      case 'HYPER':
+        return 3;
+      case 'x3':
+        return 2;
+      case 'x2':
+        return 1;
+      default:
+        return 0;
+    }
   }
 
   private createNoiseBuffer(): void {
@@ -382,20 +418,37 @@ export class SoundManager {
   }
 
   public setCoherence(value: number, tier: CoherenceTier): void {
+    const prevTier = this.coherenceTier;
     const clamped = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
     this.coherenceValue = clamped;
     this.coherenceTier = tier;
 
-    if (this.bgmBassFilter && this.ctx) {
-      try {
-        const now = this.ctx.currentTime;
-        const targetCutoff = this.getBassCutoffFrequency();
-        this.bgmBassFilter.frequency.cancelScheduledValues(now);
-        this.bgmBassFilter.frequency.setValueAtTime(this.bgmBassFilter.frequency.value, now);
-        this.bgmBassFilter.frequency.linearRampToValueAtTime(targetCutoff, now + 0.08);
-      } catch {
-        // safe fallback
+    if (this.ctx) {
+      const now = this.ctx.currentTime;
+      if (this.bgmBassFilter) {
+        try {
+          const targetCutoff = this.getBassCutoffFrequency();
+          this.bgmBassFilter.frequency.cancelScheduledValues(now);
+          this.bgmBassFilter.frequency.setValueAtTime(this.bgmBassFilter.frequency.value, now);
+          this.bgmBassFilter.frequency.linearRampToValueAtTime(targetCutoff, now + 0.08);
+        } catch {
+          // safe fallback
+        }
       }
+      if (this.bgmGain) {
+        try {
+          const targetGain = this.getAdaptiveBgmGain();
+          this.bgmGain.gain.cancelScheduledValues(now);
+          this.bgmGain.gain.setValueAtTime(this.bgmGain.gain.value, now);
+          this.bgmGain.gain.linearRampToValueAtTime(targetGain, now + 0.1);
+        } catch {
+          // safe fallback
+        }
+      }
+    }
+
+    if (this.getTierRank(tier) > this.getTierRank(prevTier)) {
+      this.playCoherenceTierUp(tier);
     }
   }
 
@@ -1212,6 +1265,10 @@ export class SoundManager {
     if (!this.ctx || !this.bgmGain || !this.isBgmPlaying) return;
 
     const scheduleAheadTime = 0.12;
+    if (this.nextNoteTime < this.ctx.currentTime - 2.0) {
+      this.nextNoteTime = this.ctx.currentTime + 0.02;
+    }
+
     const profile = FAMILY_MUSICAL_PROFILES[this.currentFamily];
     // Tempo scales slightly when clones are present around the family base BPM
     const cloneBoost = this.clonesCount >= 3 ? 14 : this.clonesCount >= 2 ? 7 : 0;
@@ -1236,12 +1293,14 @@ export class SoundManager {
       gameEvents.emit('bgm:beat', { step, bpm });
     }
 
+    const tierRank = this.getTierRank(this.coherenceTier);
+
     // 1. Bassline (with family-specific oscillator & adaptive coherence lowpass filter)
     const chordOffset = profile.progressionSemitones[chordIndex];
     const bassNote = semitonesToHz(profile.rootHz / 2, chordOffset);
     const shouldPlayBass =
       step % 4 === 0 ||
-      (this.clonesCount >= 2 && step % 4 === 2) ||
+      ((this.clonesCount >= 2 || tierRank >= 1) && step % 4 === 2) ||
       (profile.family === 'alkali_alkaline_earth' && (step === 6 || step === 14));
 
     if (shouldPlayBass) {
@@ -1251,9 +1310,10 @@ export class SoundManager {
         bassOsc.type = profile.bassOscType;
         bassOsc.frequency.setValueAtTime(bassNote, time);
 
-        const bassDur = stepDuration * 1.6;
+        const bassDur = stepDuration * 1.65;
+        const bassPeak = 0.22 + this.coherenceValue * 0.08;
         bassGain.gain.setValueAtTime(0.001, time);
-        bassGain.gain.linearRampToValueAtTime(0.18, time + 0.01);
+        bassGain.gain.linearRampToValueAtTime(bassPeak, time + 0.01);
         bassGain.gain.exponentialRampToValueAtTime(0.001, time + bassDur);
 
         if (this.bgmBassFilter) {
@@ -1277,18 +1337,41 @@ export class SoundManager {
       }
     }
 
+    // 1b. Driving rhythmic kick/pulse on quarter-notes from tier x2+
+    if (tierRank >= 1 && step % 4 === 0) {
+      try {
+        const kickOsc = this.ctx.createOscillator();
+        const kickGain = this.ctx.createGain();
+        kickOsc.type = 'sine';
+        kickOsc.frequency.setValueAtTime(125, time);
+        kickOsc.frequency.exponentialRampToValueAtTime(42, time + 0.085);
+
+        const kickPeak = tierRank >= 3 ? 0.2 : tierRank >= 2 ? 0.16 : 0.12;
+        kickGain.gain.setValueAtTime(0.001, time);
+        kickGain.gain.linearRampToValueAtTime(kickPeak, time + 0.004);
+        kickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.095);
+
+        kickOsc.connect(kickGain);
+        kickGain.connect(this.bgmGain);
+        kickOsc.start(time);
+        kickOsc.stop(time + 0.1);
+      } catch {
+        // safe
+      }
+    }
+
     // 2. Arpeggiator (mode-accurate scale & family timbre)
     const scaleNotes = profile.scaleSemitones.map((st) => semitonesToHz(profile.rootHz * 2, st));
     const shouldPlayArp = profile.syncopated
-      ? step % 3 === 0 || (this.clonesCount > 1 && step % 2 === 1)
-      : this.clonesCount > 1
+      ? step % 3 === 0 || ((this.clonesCount > 1 || tierRank >= 2) && step % 2 === 1)
+      : this.clonesCount > 1 || tierRank >= 2
         ? true
         : step % 2 === 0;
 
     if (shouldPlayArp && scaleNotes.length > 0) {
       try {
         let noteIndex = (step * 2 + (this.clonesCount - 1)) % scaleNotes.length;
-        if (this.clonesCount >= 3 && step % 4 === 3) {
+        if ((this.clonesCount >= 3 || tierRank >= 2) && step % 4 === 3) {
           noteIndex = (noteIndex + 3) % scaleNotes.length;
         }
         const freq = scaleNotes[noteIndex];
@@ -1312,10 +1395,11 @@ export class SoundManager {
 
         const arpFilter = this.ctx.createBiquadFilter();
         arpFilter.type = 'lowpass';
-        arpFilter.frequency.setValueAtTime(this.clonesCount >= 2 ? 2000 : 1400, time);
+        const baseArpCutoff = this.clonesCount >= 2 ? 2100 : 1500;
+        arpFilter.frequency.setValueAtTime(baseArpCutoff + this.coherenceValue * 1600, time);
 
         const arpDur = stepDuration * 0.85;
-        const peakGain = this.clonesCount >= 2 ? 0.08 : 0.06;
+        const peakGain = (this.clonesCount >= 2 ? 0.095 : 0.075) + this.coherenceValue * 0.035;
 
         arpGain.gain.setValueAtTime(0.001, time);
         arpGain.gain.linearRampToValueAtTime(peakGain, time + 0.005);
@@ -1332,7 +1416,7 @@ export class SoundManager {
         arpOsc.start(time);
         arpOsc.stop(time + arpDur + 0.01);
 
-        // 2b. HYPER tier: upper-octave (+12 semitones) harmonic arpeggio synced to family scale
+        // 2b. HYPER tier: bright upper-octave (+12 semitones) harmonic arpeggio synced to family scale
         if (this.coherenceTier === 'HYPER') {
           const hyperFreq = semitonesToHz(freq, 12);
           const hyperOsc = this.ctx.createOscillator();
@@ -1341,7 +1425,7 @@ export class SoundManager {
           hyperOsc.frequency.setValueAtTime(hyperFreq, time);
 
           hyperGain.gain.setValueAtTime(0.001, time);
-          hyperGain.gain.linearRampToValueAtTime(0.04, time + 0.008);
+          hyperGain.gain.linearRampToValueAtTime(0.11, time + 0.006);
           hyperGain.gain.exponentialRampToValueAtTime(0.001, time + arpDur);
 
           hyperOsc.connect(hyperGain);
@@ -1355,28 +1439,47 @@ export class SoundManager {
       }
     }
 
+    // 2c. Rich harmonic chord layer in x3 and HYPER tiers on beat accents
+    if (tierRank >= 2 && step % 4 === 0 && this.activeChordFrequencies.length >= 3) {
+      try {
+        const chordDegrees = [this.activeChordFrequencies[1], this.activeChordFrequencies[2]];
+        const padDur = stepDuration * 2.2;
+        const padPeak = tierRank >= 3 ? 0.065 : 0.048;
+        for (const chordFreq of chordDegrees) {
+          const padOsc = this.ctx.createOscillator();
+          const padGain = this.ctx.createGain();
+          padOsc.type = 'triangle';
+          padOsc.frequency.setValueAtTime(chordFreq * 2, time);
+
+          padGain.gain.setValueAtTime(0.001, time);
+          padGain.gain.linearRampToValueAtTime(padPeak, time + 0.015);
+          padGain.gain.exponentialRampToValueAtTime(0.001, time + padDur);
+
+          padOsc.connect(padGain);
+          padGain.connect(this.bgmGain);
+          padOsc.start(time);
+          padOsc.stop(time + padDur + 0.01);
+        }
+      } catch {
+        // safe
+      }
+    }
+
     // 3. Adaptive Coherence Hi-Hat / synthetic percussion layer (tier x2 and above)
-    if (
-      (this.coherenceTier === 'x2' ||
-        this.coherenceTier === 'x3' ||
-        this.coherenceTier === 'HYPER') &&
-      step % 2 === 1 &&
-      this.noiseBuffer
-    ) {
+    if (tierRank >= 1 && step % 2 === 1 && this.noiseBuffer) {
       try {
         const hiHatSource = this.ctx.createBufferSource();
         hiHatSource.buffer = this.noiseBuffer;
 
         const hiHatFilter = this.ctx.createBiquadFilter();
         hiHatFilter.type = 'highpass';
-        hiHatFilter.frequency.setValueAtTime(7500, time);
+        hiHatFilter.frequency.setValueAtTime(6500, time);
 
         const hiHatGain = this.ctx.createGain();
         const isAccent = step % 4 === 3;
-        const basePeak =
-          this.coherenceTier === 'HYPER' ? 0.055 : this.coherenceTier === 'x3' ? 0.045 : 0.032;
+        const basePeak = tierRank >= 3 ? 0.11 : tierRank >= 2 ? 0.085 : 0.06;
         const peak = isAccent ? basePeak * 1.25 : basePeak;
-        const hatDur = isAccent ? 0.045 : 0.03;
+        const hatDur = isAccent ? 0.05 : 0.032;
 
         hiHatGain.gain.setValueAtTime(0.001, time);
         hiHatGain.gain.linearRampToValueAtTime(peak, time + 0.003);
@@ -1414,6 +1517,159 @@ export class SoundManager {
       } catch {
         // safe
       }
+    }
+  }
+
+  /**
+   * SFX: Ascending musical stinger when crossing into a higher coherence tier (x2, x3, HYPER).
+   */
+  public playCoherenceTierUp(tier: CoherenceTier): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const notes =
+        tier === 'HYPER'
+          ? [
+              this.getQuantizedFrequency(0, 1),
+              this.getQuantizedFrequency(2, 1),
+              this.getQuantizedFrequency(4, 1),
+              this.getQuantizedFrequency(0, 2)
+            ]
+          : tier === 'x3'
+            ? [
+                this.getQuantizedFrequency(0, 1),
+                this.getQuantizedFrequency(1, 1),
+                this.getQuantizedFrequency(2, 1)
+              ]
+            : [this.getQuantizedFrequency(0, 1), this.getQuantizedFrequency(2, 1)];
+
+      const spacing = 0.045;
+      notes.forEach((freq, idx) => {
+        const start = now + idx * spacing;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = tier === 'HYPER' ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(freq, start);
+
+        const peak = tier === 'HYPER' ? 0.24 : 0.18;
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(peak, start + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.18);
+
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(start);
+        osc.stop(start + 0.2);
+      });
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Gravitational Dive (punchy downward whoosh)
+   */
+  public playDiveSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.15;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + duration);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2200, now);
+      filter.frequency.exponentialRampToValueAtTime(320, now + duration);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.24, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + duration + 0.01);
+
+      if (this.noiseBuffer) {
+        const noise = ctx.createBufferSource();
+        noise.buffer = this.noiseBuffer;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.setValueAtTime(1600, now);
+        bp.frequency.exponentialRampToValueAtTime(400, now + duration);
+        const nGain = ctx.createGain();
+        nGain.gain.setValueAtTime(0.001, now);
+        nGain.gain.linearRampToValueAtTime(0.16, now + 0.01);
+        nGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        noise.connect(bp);
+        bp.connect(nGain);
+        nGain.connect(this.sfxGain);
+        noise.start(now);
+        noise.stop(now + duration + 0.01);
+      }
+    } catch {
+      // safe fallback
+    }
+  }
+
+  /**
+   * SFX: Quantum Wave-Dash (energetic rebound impulse on landing jump)
+   */
+  public playWaveDashSound(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const duration = 0.16;
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      const root = this.getQuantizedFrequency(0, 1);
+      const fifth = this.getQuantizedFrequency(2, 1);
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(root * 0.75, now);
+      osc1.frequency.exponentialRampToValueAtTime(fifth * 1.5, now + duration);
+
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(root, now);
+      osc2.frequency.exponentialRampToValueAtTime(fifth * 2, now + duration);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.24, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + duration + 0.01);
+      osc2.stop(now + duration + 0.01);
+    } catch {
+      // safe fallback
     }
   }
 

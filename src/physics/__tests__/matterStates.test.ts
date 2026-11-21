@@ -21,14 +21,14 @@ import { stepHeroControl } from '../stepHeroPhysics';
 
 describe('Spec-09: Matter States, Quantum Pinning, Wormholes, Broglie & Ghost Surfing', () => {
   describe('4 Matter States (liquid, gas, cryo, plasma)', () => {
-    it('liquid: floats at surface for normal arrival, plunges on dive or vy > 520', () => {
+    it('liquid: floats at surface for normal arrival, plunges on dive or vy > 420', () => {
       expect(shouldPlungeIntoLiquid(200, 1, false, false)).toBe(false);
-      expect(shouldPlungeIntoLiquid(520, 1, false, false)).toBe(false);
-      expect(shouldPlungeIntoLiquid(521, 1, false, false)).toBe(true);
+      expect(shouldPlungeIntoLiquid(420, 1, false, false)).toBe(false);
+      expect(shouldPlungeIntoLiquid(421, 1, false, false)).toBe(true);
       expect(shouldPlungeIntoLiquid(100, 1, true, false)).toBe(true);
       expect(shouldPlungeIntoLiquid(100, 1, false, true)).toBe(true);
       // Inverted gravity
-      expect(shouldPlungeIntoLiquid(-530, -1, false, false)).toBe(true);
+      expect(shouldPlungeIntoLiquid(-430, -1, false, false)).toBe(true);
     });
 
     it('liquid: applies Archimedes buoyancy (vy -= 1650 * dt) and dolphin emerge (vy = -520)', () => {

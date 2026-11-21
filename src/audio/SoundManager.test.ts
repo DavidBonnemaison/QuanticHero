@@ -471,6 +471,32 @@ describe('SoundManager', () => {
       });
       expect(decohereSpy).toHaveBeenCalledTimes(2);
     });
+
+    it('plays ascending musical stinger when crossing into higher coherence tiers and plays dive/wavedash SFX', () => {
+      const tierUpSpy = vi.spyOn(soundManager, 'playCoherenceTierUp');
+      const diveSpy = vi.spyOn(soundManager, 'playDiveSound');
+      const waveDashSpy = vi.spyOn(soundManager, 'playWaveDashSound');
+
+      soundManager.setCoherence(0.3, 'x2');
+      expect(tierUpSpy).toHaveBeenCalledWith('x2');
+
+      soundManager.setCoherence(0.6, 'x3');
+      expect(tierUpSpy).toHaveBeenCalledWith('x3');
+
+      soundManager.setCoherence(0.9, 'HYPER');
+      expect(tierUpSpy).toHaveBeenCalledWith('HYPER');
+
+      // Dropping tier must NOT trigger tier-up stinger
+      tierUpSpy.mockClear();
+      soundManager.setCoherence(0.1, 'x1');
+      expect(tierUpSpy).not.toHaveBeenCalled();
+
+      gameEvents.emit('hero:dive', { x: 100, y: 200 });
+      expect(diveSpy).toHaveBeenCalledTimes(1);
+
+      gameEvents.emit('hero:wavedash', { x: 100, y: 220 });
+      expect(waveDashSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Alchemy SFX (Epic 03 Spec-02)', () => {

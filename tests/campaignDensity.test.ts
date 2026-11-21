@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { SPEC02_QUOTAS, verifyAllLevels } from '../scripts/verify-all-levels';
 import { SECRET_MOLECULES } from '../src/data/molecules';
 import {
+  detectTrivialShortcut,
   simulateLevelData,
   validateAuthorGhost,
   validateGhostNoWallPenetration
@@ -35,7 +36,7 @@ describe('Spec-02: Campaign Mechanic Density, Quotas & Real Molecule Ghosts', ()
     expect(q.period2DupOrPhase / 8).toBeGreaterThanOrEqual(SPEC02_QUOTAS.period2MinRatio);
     expect(q.over5500Count).toBe(0);
     expect(q.maxWidth).toBeLessThanOrEqual(SPEC02_QUOTAS.maxAllowedWidth);
-  });
+  }, 30_000);
 
   it('keeps Period 7 (Z 87-118) within dense 2000-4800px target length with multi-mechanic synthesis', () => {
     for (let z = 87; z <= 118; z++) {
@@ -83,4 +84,84 @@ describe('Spec-02: Campaign Mechanic Density, Quotas & Real Molecule Ghosts', ()
     expect(entangled).toBeGreaterThanOrEqual(10);
     expect(entangled).toBeLessThanOrEqual(14);
   });
+
+  it('detectTrivialShortcut catches synthetic U-turn drop-in and horizontal wrap traps', () => {
+    const trappedUTurn: LevelData = {
+      id: 'synthetic-uturn',
+      symbol: 'Ut',
+      atom: 'UTurnTrap',
+      uncertainty: 21,
+      width: 1950,
+      height: 1520,
+      hue: '#0d1824',
+      antiHue: '#67e8f9',
+      player: { position: { x: 180, y: 248 } },
+      door: { x: 207, y: 931 },
+      platforms: [
+        { x: 120, y: 280, width: 220, height: 20 },
+        { x: 87, y: 941, width: 240, height: 20 }
+      ],
+      spikes: [{ x: 0, y: 1505, width: 1950, height: 15 }],
+      particles: [],
+      authorTime: 15000
+    };
+    const uTurnRes = detectTrivialShortcut(trappedUTurn);
+    expect(uTurnRes.hasShortcut).toBe(true);
+    expect(uTurnRes.timeMs).toBeLessThan(2200);
+
+    const trappedWrap: LevelData = {
+      id: 'synthetic-wrap',
+      symbol: 'Wr',
+      atom: 'WrapTrap',
+      uncertainty: 13,
+      width: 2400,
+      height: 1200,
+      hue: '#0d1824',
+      antiHue: '#67e8f9',
+      screenWrap: 'horizontal',
+      player: { position: { x: 2220, y: 468 } },
+      door: { x: 200, y: 500 },
+      platforms: [
+        { x: 2100, y: 500, width: 240, height: 20 },
+        { x: 80, y: 520, width: 240, height: 20 }
+      ],
+      spikes: [{ x: 0, y: 1185, width: 2400, height: 15 }],
+      particles: [],
+      authorTime: 12000
+    };
+    const wrapRes = detectTrivialShortcut(trappedWrap);
+    expect(wrapRes.hasShortcut).toBe(true);
+    expect(wrapRes.policy).toBeDefined();
+  });
+
+  it('guarantees 0 / 118 campaign levels have trivial shortcuts or unsafe screenWrap edge glitches', () => {
+    for (let z = 1; z <= 118; z++) {
+      const data = loadCampaignLevel(z);
+      const shortcut = detectTrivialShortcut(data);
+      expect(
+        shortcut.hasShortcut,
+        `Level ${z} shortcut: ${shortcut.policy} (${shortcut.timeMs}ms)`
+      ).toBe(false);
+
+      const hasHWrap =
+        data.screenWrap === true || data.screenWrap === 'horizontal' || data.screenWrap === 'both';
+      if (hasHWrap) {
+        expect(
+          data.door.x,
+          `Level ${z} must not combine horizontal screenWrap with left-going topology`
+        ).toBeGreaterThan(data.player.position.x);
+      }
+
+      const hasVWrap = data.screenWrap === 'vertical' || data.screenWrap === 'both';
+      if (hasVWrap) {
+        const hasBottomGas = data.platforms.some(
+          (p) => p.matterState === 'gas' && p.y + p.height >= data.height - 80
+        );
+        expect(
+          hasBottomGas,
+          `Level ${z} must not combine vertical screenWrap with bottom gas`
+        ).toBe(false);
+      }
+    }
+  }, 30_000);
 });

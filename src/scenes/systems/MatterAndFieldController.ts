@@ -236,12 +236,33 @@ export class MatterAndFieldController {
             hero.upsideDown === 1
               ? Math.min(hero.body.velocity.y, 280)
               : Math.max(hero.body.velocity.y, -280);
-          const nextVy = stepLiquidBuoyancy(dampedVy, hero.upsideDown, dt);
-          hero.setVelocityY(nextVy);
+          let nextVy = stepLiquidBuoyancy(dampedVy, hero.upsideDown, dt);
           hero.isDiving = false;
 
           const topSurface = overlappingLiquid.rect.y - overlappingLiquid.rect.height / 2;
           const bottomSurface = overlappingLiquid.rect.y + overlappingLiquid.rect.height / 2;
+
+          // Never fall through the bottom of a liquid basin
+          if (hero.upsideDown === 1) {
+            const maxDepthY = bottomSurface - 6;
+            if (hero.y > maxDepthY) {
+              hero.y = maxDepthY;
+              if (nextVy > 0) {
+                nextVy = -Math.max(140, Math.abs(nextVy));
+              }
+            }
+          } else {
+            const minDepthY = topSurface + 6;
+            if (hero.y < minDepthY) {
+              hero.y = minDepthY;
+              if (nextVy < 0) {
+                nextVy = Math.max(140, Math.abs(nextVy));
+              }
+            }
+          }
+
+          hero.setVelocityY(nextVy);
+
           const emerging =
             hero.upsideDown === 1
               ? nextVy < 0 && hero.y <= topSurface + 8

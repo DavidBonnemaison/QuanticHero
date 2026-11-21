@@ -18,7 +18,9 @@ export class CameraDirector {
     private readonly hudController: HudController
   ) {}
 
-  private static readonly MIN_DUAL_READABLE_ZOOM = 0.42;
+  private static readonly ENTER_PIP_ZOOM = 0.42;
+  private static readonly EXIT_PIP_ZOOM = 0.48;
+  private static readonly MIN_DUAL_READABLE_ZOOM = CameraDirector.ENTER_PIP_ZOOM;
   private static readonly BETA_PIP_WIDTH = 124;
   private static readonly BETA_PIP_HEIGHT = 96;
   private static readonly BETA_PIP_MARGIN_X = 10;
@@ -130,7 +132,7 @@ export class CameraDirector {
         const initZoomY = ctx.cameras.main.height / (dy + 200);
         const rawZoom = Math.min(initZoomX, initZoomY);
 
-        if (rawZoom >= CameraDirector.MIN_DUAL_READABLE_ZOOM) {
+        if (rawZoom >= CameraDirector.ENTER_PIP_ZOOM) {
           this.destroyBetaPipCamera();
           const cx = (initialHero.x + ctx.betaHero.x) / 2;
           const cy = (initialHero.y + ctx.betaHero.y) / 2;
@@ -203,31 +205,46 @@ export class CameraDirector {
         const requiredZoomY = viewH / (dy + 200);
         const rawZoom = Math.min(requiredZoomX, requiredZoomY);
 
-        let targetZoom: number;
-        let targetX: number;
-        let targetY: number;
+        const wasPipActive = Boolean(ctx.betaPipCamera);
+        const shouldUsePip = wasPipActive
+          ? rawZoom < CameraDirector.EXIT_PIP_ZOOM
+          : rawZoom < CameraDirector.ENTER_PIP_ZOOM;
 
-        if (rawZoom >= CameraDirector.MIN_DUAL_READABLE_ZOOM) {
+        if (!shouldUsePip) {
           this.destroyBetaPipCamera();
-          targetZoom = Phaser.Math.Clamp(rawZoom, CameraDirector.MIN_DUAL_READABLE_ZOOM, 1.0);
-          targetX = (alpha.x + beta.x) / 2;
-          targetY = (alpha.y + beta.y) / 2;
+          const targetZoom = Phaser.Math.Clamp(rawZoom, CameraDirector.MIN_DUAL_READABLE_ZOOM, 1.0);
+          const targetX = (alpha.x + beta.x) / 2;
+          const targetY = (alpha.y + beta.y) / 2;
+
+          const newZoom = Phaser.Math.Linear(currentZoom, targetZoom, 0.08);
+          ctx.cameras.main.setZoom(newZoom);
+          ctx.syncHudTransform();
+
+          const newCamX = Phaser.Math.Linear(currentMid.x, targetX, 0.12);
+          const newCamY = Phaser.Math.Linear(currentMid.y, targetY, 0.12);
+          ctx.cameras.main.centerOn(newCamX, newCamY);
         } else {
-          // Keep Alpha clearly visible when both heroes cannot fit on a narrow screen,
+          // Keep Alpha firmly centered when both heroes cannot fit on screen,
           // and track Beta in the top-right Picture-in-Picture camera.
-          targetZoom = this.getSingleHeroZoom(viewW);
-          targetX = alpha.x;
-          targetY = alpha.y;
+          const targetZoom = this.getSingleHeroZoom(viewW);
           this.ensureBetaPipCamera(beta, viewW);
+
+          const newZoom = Phaser.Math.Linear(currentZoom, targetZoom, wasPipActive ? 0.12 : 0.25);
+          ctx.cameras.main.setZoom(newZoom);
+          ctx.syncHudTransform();
+
+          const followLerp = wasPipActive ? 1 - Math.exp(-18 * Math.max(0.016, delta / 1000)) : 1;
+          const lerpedX = Phaser.Math.Linear(currentMid.x, alpha.x, followLerp);
+          const lerpedY = Phaser.Math.Linear(currentMid.y, alpha.y, followLerp);
+
+          // Guarantee Alpha stays inside the central third of the visible viewport
+          const safeZoom = Math.max(0.1, newZoom);
+          const maxOffsetX = viewW / safeZoom / 6;
+          const maxOffsetY = viewH / safeZoom / 6;
+          const newCamX = Phaser.Math.Clamp(lerpedX, alpha.x - maxOffsetX, alpha.x + maxOffsetX);
+          const newCamY = Phaser.Math.Clamp(lerpedY, alpha.y - maxOffsetY, alpha.y + maxOffsetY);
+          ctx.cameras.main.centerOn(newCamX, newCamY);
         }
-
-        const newZoom = Phaser.Math.Linear(currentZoom, targetZoom, 0.08);
-        ctx.cameras.main.setZoom(newZoom);
-        ctx.syncHudTransform();
-
-        const newCamX = Phaser.Math.Linear(currentMid.x, targetX, 0.12);
-        const newCamY = Phaser.Math.Linear(currentMid.y, targetY, 0.12);
-        ctx.cameras.main.centerOn(newCamX, newCamY);
       }
     } else {
       this.destroyBetaPipCamera();
@@ -319,7 +336,11 @@ export class CameraDirector {
           const zoomX = camW / (dx + 240);
           const zoomY = camH / (dy + 200);
           const rawZoom = Math.min(zoomX, zoomY);
-          if (rawZoom >= CameraDirector.MIN_DUAL_READABLE_ZOOM) {
+          const wasPipActive = Boolean(ctx.betaPipCamera);
+          const shouldUsePip = wasPipActive
+            ? rawZoom < CameraDirector.EXIT_PIP_ZOOM
+            : rawZoom < CameraDirector.ENTER_PIP_ZOOM;
+          if (!shouldUsePip) {
             this.destroyBetaPipCamera();
             const targetZoom = Phaser.Math.Clamp(
               rawZoom,

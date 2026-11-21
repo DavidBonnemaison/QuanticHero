@@ -74,8 +74,9 @@ export class MobileTouchController {
     x: number,
     y: number,
     timeMs: number,
-    touchingGround = false,
-    pointerId?: number
+    _touchingGround = false,
+    pointerId?: number,
+    upsideDown = 1
   ): TouchInputState {
     if (!this.isPointerDown) return this.state;
     if (
@@ -100,34 +101,31 @@ export class MobileTouchController {
     this.state.right = dx > DEADZONE_X;
     this.state.left = dx < -DEADZONE_X;
 
-    // 2. Impulse Flick-Jump & Flick-Down
+    // 2. Impulse Flick-Jump & Flick-Down (inverted when upsideDown === -1)
+    const dir = upsideDown < 0 ? -1 : 1;
     if (!this.jumpActive) {
-      const dy = y - this.anchorY;
+      const dy = (y - this.anchorY) * dir;
       if (dy < -FLICK_JUMP_THRESHOLD_Y) {
         this.jumpActive = true;
         this.minPointerY = y;
         this.state.jump = true;
         this.state.jumpJustPressed = true;
         this.state.jumpHeld = true;
-      } else if (
-        !touchingGround &&
-        dy > FLICK_DOWN_THRESHOLD_Y &&
-        timeMs - this.anchorTimeMs < FLICK_DOWN_WINDOW_MS
-      ) {
+      } else if (dy > FLICK_DOWN_THRESHOLD_Y && timeMs - this.anchorTimeMs < FLICK_DOWN_WINDOW_MS) {
         this.state.diveRequested = true;
         this.anchorY = y;
         this.anchorTimeMs = timeMs;
         this.minPointerY = y;
-      } else if (y > this.anchorY && timeMs - this.anchorTimeMs >= FLICK_DOWN_WINDOW_MS) {
-        // Slowly re-center vertical anchor on slow downward drift
+      } else if (dy > 0 && timeMs - this.anchorTimeMs >= FLICK_DOWN_WINDOW_MS) {
+        // Slowly re-center vertical anchor on slow drift toward dive direction
         this.anchorY = y;
         this.anchorTimeMs = timeMs;
       }
     } else {
-      if (y < this.minPointerY) {
+      if ((y - this.minPointerY) * dir < 0) {
         this.minPointerY = y;
       }
-      if (y - this.minPointerY >= JUMP_REARM_DROP_Y) {
+      if ((y - this.minPointerY) * dir >= JUMP_REARM_DROP_Y) {
         this.state.jump = false;
         this.state.jumpHeld = false;
         this.jumpActive = false;

@@ -408,7 +408,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
         return;
       }
       if (this.isLevelCompleted) {
-        if (this.canAdvanceLevel) this.advanceToNextLevel();
+        if (this.canAdvanceLevel && !useGameStore.getState().activeDuel) {
+          this.advanceToNextLevel();
+        }
         return;
       }
       if (pointer.y <= 54) return;
@@ -487,7 +489,8 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
         pointer.y,
         this.time.now,
         touchingGround,
-        pointer.id
+        pointer.id,
+        focused?.upsideDown ?? 1
       );
     });
 
@@ -755,9 +758,20 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
     );
     this.hudController.updateThumbRibbon();
 
+    const coherenceTier = this.coherenceSystem.getTier();
+    const flowSpeedBoost =
+      coherenceTier === 'HYPER'
+        ? 1.15
+        : coherenceTier === 'x3'
+          ? 1.1
+          : coherenceTier === 'x2'
+            ? 1.05
+            : 1.0;
+
     const wrapAxes = getScreenWrapAxes(this.levelData.screenWrap);
     for (const hero of [...this.heroes]) {
       if (hero.active) {
+        hero.coherenceSpeedMultiplier = flowSpeedBoost;
         hero.updateControl(this.cursors, this.wasd, this.touchController.state, delta);
         if (
           !wrapAxes.vertical &&

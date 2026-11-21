@@ -316,4 +316,81 @@ describe('HudController', () => {
     expect(ctx.uiPointerConsumed).toBe(true);
     expect(ctx.tryCrystallizeBroglieTrail).toHaveBeenCalledTimes(1);
   });
+
+  it('sets scrollFactor(0) on all overlay buttons, compensates camera zoom, stops propagation, and blocks advanceToNextLevel on Share Card / Challenge a Friend', async () => {
+    const ReplayCardGenerator = await import('../../services/ReplayCardGenerator');
+    const shareSpy = vi
+      .spyOn(ReplayCardGenerator, 'shareReplayCard')
+      .mockResolvedValue('downloaded');
+
+    const ctx = makeHudContext();
+    ctx.canAdvanceLevel = true;
+    ctx.cameras.main.zoom = 0.5;
+
+    const hud = new HudController(ctx);
+    hud.showLevelCompleteOverlay(2500, 2500, 0, 2, 'gold');
+
+    // Overlay container compensates zoom (1 / 0.5 = 2)
+    expect(ctx.levelCompleteOverlay?.setScale).toHaveBeenCalledWith(2);
+    expect(ctx.levelCompleteOverlay?.setPosition).toHaveBeenCalledWith(-400, -300);
+
+    const rectResults = (ctx.add.rectangle as ReturnType<typeof vi.fn>).mock.results
+      .map((r) => r.value)
+      .filter(Boolean);
+    const [backdrop, cardBg] = rectResults;
+    expect(backdrop.setScrollFactor).toHaveBeenCalledWith(0);
+    expect(cardBg.setScrollFactor).toHaveBeenCalledWith(0);
+    expect(cardBg.setInteractive).toHaveBeenCalled();
+
+    const textResults = (ctx.add.text as ReturnType<typeof vi.fn>).mock.results
+      .map((r) => r.value)
+      .filter(Boolean);
+    const shareCardBtn = textResults.find(
+      (obj: { text?: string }) => typeof obj.text === 'string' && obj.text.includes('SHARE CARD')
+    );
+    const challengeBtn = textResults.find(
+      (obj: { text?: string }) => typeof obj.text === 'string' && obj.text.includes('CHALLENGE')
+    );
+    const nextBtn = textResults.find(
+      (obj: { text?: string }) => typeof obj.text === 'string' && obj.text.includes('NEXT')
+    );
+
+    expect(shareCardBtn).toBeDefined();
+    expect(challengeBtn).toBeDefined();
+    expect(nextBtn).toBeDefined();
+
+    for (const btn of [shareCardBtn, challengeBtn, nextBtn]) {
+      expect(btn.setScrollFactor).toHaveBeenCalledWith(0);
+    }
+
+    // Clicking Share Card stops propagation and does NOT advance level even if backdrop handler runs
+    const stopPropShare = vi.fn();
+    ctx.uiPointerConsumed = false;
+    shareCardBtn.listeners.get('pointerdown')[0](null, 0, 0, { stopPropagation: stopPropShare });
+    backdrop.listeners.get('pointerdown')[0]();
+    expect(stopPropShare).toHaveBeenCalledTimes(1);
+    expect(ctx.uiPointerConsumed).toBe(true);
+    expect(ctx.advanceToNextLevel).not.toHaveBeenCalled();
+
+    // Clicking Challenge a Friend stops propagation and does NOT advance level
+    const stopPropChallenge = vi.fn();
+    ctx.uiPointerConsumed = false;
+    challengeBtn.listeners.get('pointerdown')[0](null, 0, 0, {
+      stopPropagation: stopPropChallenge
+    });
+    backdrop.listeners.get('pointerdown')[0]();
+    expect(stopPropChallenge).toHaveBeenCalledTimes(1);
+    expect(ctx.uiPointerConsumed).toBe(true);
+    expect(ctx.advanceToNextLevel).not.toHaveBeenCalled();
+
+    // Clicking cardBg stops propagation and does NOT advance level
+    const stopPropCard = vi.fn();
+    ctx.uiPointerConsumed = false;
+    cardBg.listeners.get('pointerdown')[0](null, 0, 0, { stopPropagation: stopPropCard });
+    backdrop.listeners.get('pointerdown')[0]();
+    expect(stopPropCard).toHaveBeenCalledTimes(1);
+    expect(ctx.advanceToNextLevel).not.toHaveBeenCalled();
+
+    shareSpy.mockRestore();
+  });
 });

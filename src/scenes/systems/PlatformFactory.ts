@@ -501,7 +501,11 @@ export function setupLevelCollisions(ctx: GameSceneContext): void {
       }
 
       if (touchingTop && matterState === 'cryo') {
-        hero.onCryo = true;
+        hero.onCryo = !hero.onPressurePlate;
+      }
+
+      if (touchingTop) {
+        hero.onLiquidSurface = matterState === 'liquid';
       }
 
       if (touchingTop && (!hero.wasTouchingGround || hero.lastLandedPlatform !== plat)) {
@@ -542,7 +546,10 @@ export function setupLevelCollisions(ctx: GameSceneContext): void {
         ) {
           if (!hero.inLiquid) {
             hero.inLiquid = true;
-            if (hero.upsideDown === 1 && vy > 280) {
+            hero.onLiquidSurface = false;
+            if (diveInput && vy * hero.upsideDown < 320) {
+              hero.setVelocityY(320 * hero.upsideDown);
+            } else if (hero.upsideDown === 1 && vy > 280) {
               hero.setVelocityY(280);
             } else if (hero.upsideDown === -1 && vy < -280) {
               hero.setVelocityY(-280);

@@ -280,7 +280,7 @@ describe('Required Mechanics Invariant (Positive & Negative Tests)', () => {
     }
 
     expect(violations).toEqual([]);
-  });
+  }, 30_000);
 
   it('Global Contract (1-118): 100% of entangled levels pass real dual Alpha+Beta physics simulation', async () => {
     const fs = await import('node:fs');

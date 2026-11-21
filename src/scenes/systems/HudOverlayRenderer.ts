@@ -142,11 +142,23 @@ export function showLevelCompleteOverlay(
   overlay.setScrollFactor(0);
   overlay.setDepth(200);
   overlay.setAlpha(0);
+  const camZoom = ctx.cameras.main.zoom ?? 1;
+  if (camZoom > 0) {
+    const inv = 1 / camZoom;
+    overlay.setScale?.(inv);
+    overlay.setPosition?.((camW / 2) * (1 - inv), (camH / 2) * (1 - inv));
+  }
+  ctx.betaPipCamera?.ignore?.(overlay);
   ctx.levelCompleteOverlay = overlay;
 
+  type PhaserPointerEvent = { stopPropagation?: () => void } | undefined;
+
   const backdrop = ctx.add.rectangle(camW / 2, camH / 2, camW, camH, 0x050814, 0.72);
+  backdrop.setScrollFactor?.(0);
   backdrop.setInteractive();
   backdrop.on('pointerdown', () => {
+    if (ctx.uiPointerConsumed) return;
+    ctx.uiPointerConsumed = true;
     if (!activeDuel && ctx.canAdvanceLevel && nextLevelNumber !== null) {
       ctx.advanceToNextLevel();
     }
@@ -157,7 +169,13 @@ export function showLevelCompleteOverlay(
   const isCompact = cardW < 520;
   const cardH = activeDuel ? (isCompact ? 452 : 384) : isCompact ? 428 : 362;
   const cardBg = ctx.add.rectangle(camW / 2, camH / 2, cardW, cardH, 0x0b0f19, 0.94);
+  cardBg.setScrollFactor?.(0);
   cardBg.setStrokeStyle(2, activeDuel ? 0xfbbf24 : 0x00e5ff, 0.9);
+  cardBg.setInteractive();
+  cardBg.on('pointerdown', (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
+    ctx.uiPointerConsumed = true;
+    ev?.stopPropagation?.();
+  });
   overlay.add(cardBg);
 
   const buildCurrentDuelPayload = () => {
@@ -239,6 +257,7 @@ export function showLevelCompleteOverlay(
       }
     );
     verdictText.setOrigin(0.5);
+    verdictText.setScrollFactor?.(0);
     overlay.add(verdictText);
 
     const subtitleText = ctx.add.text(
@@ -259,6 +278,7 @@ export function showLevelCompleteOverlay(
       }
     );
     subtitleText.setOrigin(0.5);
+    subtitleText.setScrollFactor?.(0);
     overlay.add(subtitleText);
 
     const medalInfo = getMedalDisplayInfo(medal, locale);
@@ -275,6 +295,7 @@ export function showLevelCompleteOverlay(
       }
     );
     statsText.setOrigin(0.5);
+    statsText.setScrollFactor?.(0);
     overlay.add(statsText);
 
     const revengeBtn = ctx.add.text(
@@ -291,11 +312,16 @@ export function showLevelCompleteOverlay(
       }
     );
     revengeBtn.setOrigin(0.5);
+    revengeBtn.setScrollFactor?.(0);
     revengeBtn.setInteractive({ useHandCursor: true });
-    revengeBtn.on('pointerdown', () => {
-      ctx.uiPointerConsumed = true;
-      openDuelShare(isVictory);
-    });
+    revengeBtn.on(
+      'pointerdown',
+      (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
+        ctx.uiPointerConsumed = true;
+        ev?.stopPropagation?.();
+        openDuelShare(isVictory);
+      }
+    );
     overlay.add(revengeBtn);
 
     const duelShareCardBtn = ctx.add.text(
@@ -312,11 +338,16 @@ export function showLevelCompleteOverlay(
       }
     );
     duelShareCardBtn.setOrigin(0.5);
+    duelShareCardBtn.setScrollFactor?.(0);
     duelShareCardBtn.setInteractive({ useHandCursor: true });
-    duelShareCardBtn.on('pointerdown', () => {
-      ctx.uiPointerConsumed = true;
-      triggerShareCard();
-    });
+    duelShareCardBtn.on(
+      'pointerdown',
+      (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
+        ctx.uiPointerConsumed = true;
+        ev?.stopPropagation?.();
+        triggerShareCard();
+      }
+    );
     overlay.add(duelShareCardBtn);
 
     const rematchBtn = ctx.add.text(
@@ -332,18 +363,23 @@ export function showLevelCompleteOverlay(
       }
     );
     rematchBtn.setOrigin(0.5);
+    rematchBtn.setScrollFactor?.(0);
     rematchBtn.setInteractive({ useHandCursor: true });
-    rematchBtn.on('pointerdown', () => {
-      ctx.uiPointerConsumed = true;
-      useGameStore.getState().setPendingDuelShare(null);
-      if (ctx.levelCompleteOverlay) {
-        ctx.levelCompleteOverlay.destroy();
-        ctx.levelCompleteOverlay = null;
+    rematchBtn.on(
+      'pointerdown',
+      (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
+        ctx.uiPointerConsumed = true;
+        ev?.stopPropagation?.();
+        useGameStore.getState().setPendingDuelShare(null);
+        if (ctx.levelCompleteOverlay) {
+          ctx.levelCompleteOverlay.destroy();
+          ctx.levelCompleteOverlay = null;
+        }
+        ctx.isLevelCompleted = false;
+        ctx.canAdvanceLevel = false;
+        ctx.quickRespawn();
       }
-      ctx.isLevelCompleted = false;
-      ctx.canAdvanceLevel = false;
-      ctx.quickRespawn();
-    });
+    );
     overlay.add(rematchBtn);
 
     const exitBtn = ctx.add.text(
@@ -359,22 +395,27 @@ export function showLevelCompleteOverlay(
       }
     );
     exitBtn.setOrigin(0.5);
+    exitBtn.setScrollFactor?.(0);
     exitBtn.setInteractive({ useHandCursor: true });
-    exitBtn.on('pointerdown', () => {
-      ctx.uiPointerConsumed = true;
-      soundManager.stopBgm();
-      const s = useGameStore.getState();
-      s.setSharedLevel(null);
-      s.setActiveDuel(null);
-      s.setPendingDuelShare(null);
-      try {
-        ctx.game.destroy(true);
-      } catch {
-        // safe
+    exitBtn.on(
+      'pointerdown',
+      (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
+        ctx.uiPointerConsumed = true;
+        ev?.stopPropagation?.();
+        soundManager.stopBgm();
+        const s = useGameStore.getState();
+        s.setSharedLevel(null);
+        s.setActiveDuel(null);
+        s.setPendingDuelShare(null);
+        try {
+          ctx.game.destroy(true);
+        } catch {
+          // safe
+        }
+        window.game = null;
+        push('/levels');
       }
-      window.game = null;
-      push('/levels');
-    });
+    );
     overlay.add(exitBtn);
   } else {
     const symbol = ctx.levelData.symbol || '?';
@@ -392,6 +433,7 @@ export function showLevelCompleteOverlay(
       }
     );
     headerText.setOrigin(0.5);
+    headerText.setScrollFactor?.(0);
     overlay.add(headerText);
 
     let deltaLabel = t.hud.newRecord;
@@ -415,6 +457,7 @@ export function showLevelCompleteOverlay(
       }
     );
     statsText.setOrigin(0.5);
+    statsText.setScrollFactor?.(0);
     overlay.add(statsText);
 
     const isCoherentRun = ctx.coherenceSystem?.isCoherentRun?.() ?? false;
@@ -433,6 +476,7 @@ export function showLevelCompleteOverlay(
       }
     );
     medalText.setOrigin(0.5);
+    medalText.setScrollFactor?.(0);
     overlay.add(medalText);
 
     if (isCoherentRun) {
@@ -451,6 +495,7 @@ export function showLevelCompleteOverlay(
         }
       );
       coherentBadge.setOrigin(0.5);
+      coherentBadge.setScrollFactor?.(0);
       overlay.add(coherentBadge);
     }
 
@@ -473,6 +518,7 @@ export function showLevelCompleteOverlay(
       }
     );
     narrativeText.setOrigin(0.5);
+    narrativeText.setScrollFactor?.(0);
     overlay.add(narrativeText);
 
     const nextLevelData =
@@ -492,26 +538,31 @@ export function showLevelCompleteOverlay(
       wordWrap: { width: cardW - 32 }
     });
     nextBtn.setOrigin(0.5);
+    nextBtn.setScrollFactor?.(0);
     nextBtn.setInteractive({ useHandCursor: true });
-    nextBtn.on('pointerdown', () => {
-      ctx.uiPointerConsumed = true;
-      if (nextLevelNumber !== null) {
-        ctx.advanceToNextLevel();
-      } else {
-        soundManager.stopBgm();
-        const s = useGameStore.getState();
-        s.setSharedLevel(null);
-        s.setActiveDuel(null);
-        s.setPendingDuelShare(null);
-        try {
-          ctx.game.destroy(true);
-        } catch {
-          // safe
+    nextBtn.on(
+      'pointerdown',
+      (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
+        ctx.uiPointerConsumed = true;
+        ev?.stopPropagation?.();
+        if (nextLevelNumber !== null) {
+          ctx.advanceToNextLevel();
+        } else {
+          soundManager.stopBgm();
+          const s = useGameStore.getState();
+          s.setSharedLevel(null);
+          s.setActiveDuel(null);
+          s.setPendingDuelShare(null);
+          try {
+            ctx.game.destroy(true);
+          } catch {
+            // safe
+          }
+          window.game = null;
+          push('/levels');
         }
-        window.game = null;
-        push('/levels');
       }
-    });
+    );
     overlay.add(nextBtn);
 
     const challengeBtn = ctx.add.text(
@@ -528,11 +579,16 @@ export function showLevelCompleteOverlay(
       }
     );
     challengeBtn.setOrigin(0.5);
+    challengeBtn.setScrollFactor?.(0);
     challengeBtn.setInteractive({ useHandCursor: true });
-    challengeBtn.on('pointerdown', () => {
-      ctx.uiPointerConsumed = true;
-      openDuelShare(false);
-    });
+    challengeBtn.on(
+      'pointerdown',
+      (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
+        ctx.uiPointerConsumed = true;
+        ev?.stopPropagation?.();
+        openDuelShare(false);
+      }
+    );
     overlay.add(challengeBtn);
 
     const shareCardBtn = ctx.add.text(
@@ -549,11 +605,16 @@ export function showLevelCompleteOverlay(
       }
     );
     shareCardBtn.setOrigin(0.5);
+    shareCardBtn.setScrollFactor?.(0);
     shareCardBtn.setInteractive({ useHandCursor: true });
-    shareCardBtn.on('pointerdown', () => {
-      ctx.uiPointerConsumed = true;
-      triggerShareCard();
-    });
+    shareCardBtn.on(
+      'pointerdown',
+      (_p: unknown, _lx: unknown, _ly: unknown, ev?: PhaserPointerEvent) => {
+        ctx.uiPointerConsumed = true;
+        ev?.stopPropagation?.();
+        triggerShareCard();
+      }
+    );
     overlay.add(shareCardBtn);
   }
 

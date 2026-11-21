@@ -158,14 +158,14 @@ describe('Spec-04 Toy Factor Physics', () => {
     expect(getAsymmetricGravityMultiplier(200, 1, false)).toBe(1.35);
     expect(getAsymmetricGravityMultiplier(-200, -1, false)).toBe(1.35);
 
-    // Terminal velocity clamp (680 px/s normal, MAX_DIVE_VY = 560 px/s when diving)
+    // Terminal velocity clamp (680 px/s normal, MAX_DIVE_VY = 780 px/s when diving)
     expect(clampFallVelocity(800, 1, false)).toBe(PHYSICS.MAX_FALL_VY);
     expect(clampFallVelocity(-800, -1, false)).toBe(-PHYSICS.MAX_FALL_VY);
-    expect(clampFallVelocity(720, 1, true)).toBe(PHYSICS.MAX_DIVE_VY);
-    expect(clampFallVelocity(-720, -1, true)).toBe(-PHYSICS.MAX_DIVE_VY);
+    expect(clampFallVelocity(850, 1, true)).toBe(PHYSICS.MAX_DIVE_VY);
+    expect(clampFallVelocity(-850, -1, true)).toBe(-PHYSICS.MAX_DIVE_VY);
   });
 
-  it('Quantum Wave-Dash: jumping within 70 ms after a dive grants 1.04x speed for 260 ms', () => {
+  it('Quantum Wave-Dash: jumping within 90 ms after a dive grants 1.12x speed for 260 ms', () => {
     let hero = createInitialHeroState(200, 300);
     hero.touchingGround = false;
 
