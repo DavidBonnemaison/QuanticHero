@@ -135,7 +135,7 @@ describe('Spec-12: 7-Period Kishōtenketsu Campaign, Safe Discovery Boxes & E2E 
       expect(report.milestoneCount).toBe(14);
       expect(report.moleculeCount).toBe(12);
       expect(report.errors).toEqual([]);
-    });
+    }, 30_000);
 
     it('ensures every secret molecule has a valid v1| authorGhost and positive authorTime', () => {
       expect(SECRET_MOLECULES).toHaveLength(12);

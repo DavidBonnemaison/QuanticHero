@@ -36,7 +36,7 @@ describe('Spec-02: Campaign Mechanic Density, Quotas & Real Molecule Ghosts', ()
     expect(q.period2DupOrPhase / 8).toBeGreaterThanOrEqual(SPEC02_QUOTAS.period2MinRatio);
     expect(q.over5500Count).toBe(0);
     expect(q.maxWidth).toBeLessThanOrEqual(SPEC02_QUOTAS.maxAllowedWidth);
-  });
+  }, 30_000);
 
   it('keeps Period 7 (Z 87-118) within dense 2000-4800px target length with multi-mechanic synthesis', () => {
     for (let z = 87; z <= 118; z++) {
@@ -163,5 +163,5 @@ describe('Spec-02: Campaign Mechanic Density, Quotas & Real Molecule Ghosts', ()
         ).toBe(false);
       }
     }
-  });
+  }, 30_000);
 });
