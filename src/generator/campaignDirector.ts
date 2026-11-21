@@ -395,8 +395,22 @@ export function applyCampaignDirectives(levelData: LevelData, z: number): LevelD
       noblePlayground: true,
       spikes: [],
       platforms,
-      ...(z === 18 ? { screenWrap: result.screenWrap ?? 'both' } : {})
+      ...(z === 18 ? { screenWrap: 'horizontal' as const } : {})
     };
+  }
+
+  // Safety guard: never allow vertical screenWrap when a gas platform sits near the bottom edge
+  // (prevents infinite y=height/0 oscillation & sky-drop shortcuts).
+  const hasBottomGas = result.platforms.some(
+    (p) => p.matterState === 'gas' && p.y + p.height >= result.height - 80
+  );
+  if (hasBottomGas && (result.screenWrap === 'both' || result.screenWrap === 'vertical')) {
+    if (result.screenWrap === 'both') {
+      result = { ...result, screenWrap: 'horizontal' };
+    } else {
+      const { screenWrap: _removed, ...rest } = result;
+      result = rest;
+    }
   }
 
   return result;
@@ -565,7 +579,7 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
           screenWrap: 'horizontal'
         };
       default:
-        return { level: z, period, primary: 'wall', screenWrap: 'both', matterState: 'gas' };
+        return { level: z, period, primary: 'wall', screenWrap: 'horizontal', matterState: 'gas' };
     }
   }
 

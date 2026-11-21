@@ -108,6 +108,13 @@
       "y": 612,
       "width": 260,
       "height": 20
+    },
+    {
+      "x": 3553,
+      "y": 0,
+      "width": 24,
+      "height": 1160,
+      "kind": "wall"
     }
   ],
   "door": {

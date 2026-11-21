@@ -100,14 +100,17 @@ describe('Spec-01: Milestone Integrity & DiscoveryBox Contract Tests', () => {
               .sort((a, b) => a.x - b.x);
             let maxGap = 0;
             for (let i = 1; i < mainPlats.length; i++) {
-              maxGap = Math.max(maxGap, mainPlats[i].x - (mainPlats[i - 1].x + mainPlats[i - 1].width));
+              maxGap = Math.max(
+                maxGap,
+                mainPlats[i].x - (mainPlats[i - 1].x + mainPlats[i - 1].width)
+              );
             }
             expect(maxGap).toBeGreaterThanOrEqual(350);
             break;
           }
 
           case 'screen_wrap': {
-            expect(levelData.screenWrap).toBe('both');
+            expect(levelData.screenWrap).toBe('horizontal');
             break;
           }
 

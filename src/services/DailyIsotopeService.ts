@@ -186,7 +186,7 @@ export async function generateDailyIsotope(dateKey?: string): Promise<LevelData>
   const [
     { generateQuantumLevel },
     { ALL_LEVEL_TOPOLOGIES },
-    { simulateLevelData },
+    { detectTrivialShortcut, simulateLevelData },
     { countJumpsInTrajectory },
     { decompressTrajectory }
   ] = await Promise.all([
@@ -220,7 +220,10 @@ export async function generateDailyIsotope(dateKey?: string): Promise<LevelData>
       fallbackLevel = result.levelData;
     }
 
-    const isVerified = result.simulation.success || simulateLevelData(result.levelData).success;
+    const shortcut = detectTrivialShortcut(result.levelData);
+    const isVerified =
+      !shortcut.hasShortcut &&
+      (result.simulation.success || simulateLevelData(result.levelData).success);
 
     if (isVerified) {
       chosenLevel = result.levelData;

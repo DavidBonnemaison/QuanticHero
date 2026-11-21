@@ -11,6 +11,7 @@ import {
   isNobleGasLevel
 } from '../src/generator/campaignDirector';
 import {
+  detectTrivialShortcut,
   simulateLevelData,
   validateAuthorGhost,
   validateGhostNoWallPenetration
@@ -247,9 +248,40 @@ export function verifyAllLevels(): VerificationReport {
         errors.push('Level 6 (C): missing Super-Quanta duplicate particle or cracked platform');
       }
     }
-    if (z === 18 && levelData.screenWrap !== 'both') {
-      errors.push(`Level 18 (Ar): expected screenWrap === 'both', got ${levelData.screenWrap}`);
+    if (z === 18 && levelData.screenWrap !== 'horizontal') {
+      errors.push(
+        `Level 18 (Ar): expected screenWrap === 'horizontal', got ${levelData.screenWrap}`
+      );
     }
+
+    // Automated trivial-shortcut & screenWrap safety checks
+    const shortcutCheck = detectTrivialShortcut(levelData);
+    if (shortcutCheck.hasShortcut) {
+      errors.push(
+        `Level ${z}: trivial shortcut detected (${shortcutCheck.policy} in ${shortcutCheck.timeMs}ms)`
+      );
+    }
+    const hasHWrap =
+      levelData.screenWrap === true ||
+      levelData.screenWrap === 'horizontal' ||
+      levelData.screenWrap === 'both';
+    if (hasHWrap && levelData.door.x < levelData.player.position.x - 150) {
+      errors.push(
+        `Level ${z}: horizontal screenWrap must not be enabled on a left-going level (P.x=${levelData.player.position.x}, D.x=${levelData.door.x})`
+      );
+    }
+    const hasVWrap = levelData.screenWrap === 'vertical' || levelData.screenWrap === 'both';
+    if (
+      hasVWrap &&
+      levelData.platforms.some(
+        (p) => p.matterState === 'gas' && p.y + p.height >= levelData.height - 80
+      )
+    ) {
+      errors.push(
+        `Level ${z}: vertical screenWrap must not be combined with a gas platform near the bottom edge`
+      );
+    }
+
     if ((z === 19 || z === 110) && levelData.entanglement?.revealAtX === undefined) {
       errors.push(`Level ${z}: missing entanglement.revealAtX (WOW #1)`);
     }

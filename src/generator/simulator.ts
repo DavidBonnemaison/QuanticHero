@@ -6,6 +6,7 @@ import {
   updateDecayPlatform
 } from '../mechanics/quantumMechanics';
 import { PHYSICS } from '../physics/constants';
+import { applyToroidalScreenWrap, getScreenWrapAxes } from '../physics/entanglementTether';
 import {
   computeWormholeExit,
   getPlasmaBounceVelocity,
@@ -309,9 +310,10 @@ export function stepSimulation(
   // 3. Scene Boundary collisions (walls and ceiling)
   const halfW = PHYSICS.HERO_WIDTH / 2;
   const halfH = PHYSICS.HERO_HEIGHT / 2;
+  const wrapAxes = getScreenWrapAxes(world.screenWrap);
 
   // Left wall (x = 0)
-  if (newX - halfW <= 0) {
+  if (!wrapAxes.horizontal && newX - halfW <= 0) {
     newX = halfW;
     if (world.bounceWalls !== false) {
       if (next.recoilVx <= 0) {
@@ -329,7 +331,7 @@ export function stepSimulation(
   }
 
   // Right wall (x = world.width)
-  if (newX + halfW >= world.width) {
+  if (!wrapAxes.horizontal && newX + halfW >= world.width) {
     newX = world.width - halfW;
     if (world.bounceWalls !== false) {
       if (next.recoilVx >= 0) {
@@ -371,7 +373,7 @@ export function stepSimulation(
   }
 
   // Ceiling (y = 0)
-  if (newY - halfH <= 0) {
+  if (!wrapAxes.vertical && newY - halfH <= 0) {
     newY = halfH;
     if (next.upsideDown === 1 && next.vy < 50) {
       next.vy = PHYSICS.CEILING_BOUNCE_VY;
@@ -754,6 +756,18 @@ export function stepSimulation(
         break;
       }
     }
+  }
+
+  // 6f. Toroidal screen-wrap
+  if (wrapAxes.horizontal || wrapAxes.vertical) {
+    const wrapped = applyToroidalScreenWrap(
+      { x: newX, y: newY },
+      world.width,
+      world.height,
+      world.screenWrap
+    );
+    newX = wrapped.x;
+    newY = wrapped.y;
   }
 
   next.x = newX;
@@ -1498,7 +1512,8 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
       p.kind !== 'wall' &&
       p.matterState !== 'gas' &&
       !p.ephemeral &&
-      !(p.width <= 80 && p.height >= 100)
+      !(p.width <= 80 && p.height >= 100) &&
+      !(p.height === 28 && p.width >= 500)
   );
   const startX = levelData.player.position.x;
   const startY = levelData.player.position.y;
@@ -1695,4 +1710,180 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
   }
 
   return jsonOrderAttempt;
+}
+
+export interface TrivialShortcutResult {
+  hasShortcut: boolean;
+  policy?: string;
+  timeMs?: number;
+}
+
+interface TrivialPolicy {
+  name: string;
+  getInput: (frame: number, hero: SimHeroState, startY: number, door: Door) => SimInput;
+}
+
+const TRIVIAL_SHORTCUT_POLICIES: readonly TrivialPolicy[] = [
+  {
+    name: 'idle',
+    getInput: () => ({ left: false, right: false, jump: false })
+  },
+  {
+    name: 'hold_left',
+    getInput: () => ({ left: true, right: false, jump: false })
+  },
+  {
+    name: 'hold_right',
+    getInput: () => ({ left: false, right: true, jump: false })
+  },
+  {
+    name: 'jump_left',
+    getInput: (frame) => ({ left: true, right: false, jump: frame < 10 })
+  },
+  {
+    name: 'jump_right',
+    getInput: (frame) => ({ left: false, right: true, jump: frame < 10 })
+  },
+  {
+    name: 'walk_left_dive',
+    getInput: (_frame, hero) => ({
+      left: true,
+      right: false,
+      jump: false,
+      dive: !hero.touchingGround
+    })
+  },
+  {
+    name: 'walk_right_dive',
+    getInput: (_frame, hero) => ({
+      left: false,
+      right: true,
+      jump: false,
+      dive: !hero.touchingGround
+    })
+  },
+  {
+    name: 'step_left_drop',
+    getInput: (_frame, hero, startY, door) => {
+      const belowSpawn = hero.y > startY + 48;
+      if (!belowSpawn) {
+        return { left: true, right: false, jump: false };
+      }
+      return {
+        left: hero.x > door.x + 12,
+        right: hero.x < door.x - 12,
+        jump: false,
+        dive: !hero.touchingGround && hero.y < door.y - 40
+      };
+    }
+  },
+  {
+    name: 'step_right_drop',
+    getInput: (_frame, hero, startY, door) => {
+      const belowSpawn = hero.y > startY + 48;
+      if (!belowSpawn) {
+        return { left: false, right: true, jump: false };
+      }
+      return {
+        left: hero.x > door.x + 12,
+        right: hero.x < door.x - 12,
+        jump: false,
+        dive: !hero.touchingGround && hero.y < door.y - 40
+      };
+    }
+  }
+];
+
+/**
+ * Rapidly simulates trivial input policies at 60 Hz (idle, hold left/right,
+ * jump left/right, walk+dive left/right, and step-off drop-ins) to catch
+ * accidental drop-in or screen-wrap shortcuts that bypass the intended level layout.
+ */
+export function detectTrivialShortcut(level: LevelData): TrivialShortcutResult {
+  const world: SimWorld = {
+    width: level.width,
+    height: level.height,
+    gravityY: PHYSICS.GRAVITY_Y,
+    platforms: level.platforms,
+    spikes: level.spikes,
+    particles: level.particles,
+    gates: level.gates,
+    pressurePlates: level.pressurePlates,
+    collapse: level.collapse,
+    wormholes: level.wormholes,
+    screenWrap: level.screenWrap,
+    entanglement: level.entanglement,
+    tetherPylons: level.tetherPylons,
+    bounceWalls: true
+  };
+
+  const authorTime = level.authorTime ?? 0;
+  const maxSimMs =
+    authorTime > 0 ? Math.min(3000, Math.max(2500, Math.round(authorTime * 0.35))) : 2500;
+  const shortcutThresholdMs =
+    authorTime > 4000
+      ? Math.max(2200, Math.min(maxSimMs, Math.round(authorTime * 0.28)))
+      : authorTime > 0 && authorTime <= 2800
+        ? Math.round(authorTime * 0.5)
+        : 2200;
+
+  const dt = PHYSICS.DELTA_FIXED_MS;
+  const maxFrames = Math.ceil(maxSimMs / dt);
+  const entanglement = level.entanglement;
+  const isDualPortal = Boolean(
+    entanglement && entanglement.portalMode !== 'single' && entanglement.betaDoor
+  );
+  const betaDoor: Door = entanglement?.betaDoor ?? level.door;
+  const betaUpsideDown =
+    entanglement &&
+    (entanglement.mode === 'inverted_gravity' || entanglement.mode === 'mirror_and_gravity')
+      ? -1
+      : 1;
+  const startY = level.player.position.y;
+
+  for (const policy of TRIVIAL_SHORTCUT_POLICIES) {
+    let hero = createInitialHeroState(level.player.position.x, level.player.position.y);
+    let beta: SimHeroState | null = entanglement
+      ? createInitialHeroState(
+          entanglement.betaSpawn?.x ?? level.player.position.x,
+          entanglement.betaSpawn?.y ?? level.player.position.y,
+          1,
+          betaUpsideDown
+        )
+      : null;
+    let betaReached = false;
+
+    for (let frame = 0; frame < maxFrames; frame++) {
+      const input = policy.getInput(frame, hero, startY, level.door);
+      hero = stepSimulation(hero, input, world, dt);
+
+      if (checkHeroHazards(hero, world)) {
+        break;
+      }
+
+      if (beta && entanglement) {
+        const betaInput = transformInputForBeta(input, entanglement.mode);
+        beta = stepSimulation(beta, betaInput, world, dt);
+        if (checkHeroHazards(beta, world)) {
+          break;
+        }
+        if (isHeroAtPortal(beta, betaDoor)) {
+          betaReached = true;
+        }
+      }
+
+      const alphaReached = isHeroAtPortal(hero, level.door);
+      const completed = isDualPortal ? alphaReached && betaReached : alphaReached;
+
+      if (completed && hero.timeMs < shortcutThresholdMs) {
+        return {
+          hasShortcut: true,
+          policy: policy.name,
+          timeMs: Math.round(hero.timeMs)
+        };
+      }
+    }
+  }
+
+  return { hasShortcut: false };
 }

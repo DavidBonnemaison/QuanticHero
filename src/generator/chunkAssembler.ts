@@ -38,7 +38,12 @@ import {
 } from './chunks';
 import { SeededRandom, getAlphaForDifficulty } from './dagGenerator';
 import { isReachable, x_reach } from './kinematics';
-import { type SimulationResult, simulateFullLevel, simulateLevelData } from './simulator';
+import {
+  type SimulationResult,
+  detectTrivialShortcut,
+  simulateFullLevel,
+  simulateLevelData
+} from './simulator';
 
 export type LevelTopology =
   | 'right'
@@ -471,6 +476,24 @@ function buildMultiTierChunks(opts: MultiTierBuildOptions): MultiTierBuildResult
       prev = plat;
     }
 
+    // Solid tier-divider floor sealing Tier 1 from Tier 2 (leaving only the right drop shaft open)
+    const vdDiv1Width = Math.max(520, prev.x + prev.width + 10);
+    const vdDiv1Y = prev.y + 165;
+    accelPlatforms.push({
+      x: 0,
+      y: vdDiv1Y,
+      width: vdDiv1Width,
+      height: 28
+    });
+    if (allowSpikes) {
+      extraSpikes.push({
+        x: 0,
+        y: vdDiv1Y - 16,
+        width: vdDiv1Width,
+        height: 16
+      });
+    }
+
     const dropR1: Platform = {
       x: prev.x + prev.width + 90,
       y: prev.y + 110,
@@ -516,6 +539,8 @@ function buildMultiTierChunks(opts: MultiTierBuildOptions): MultiTierBuildResult
       prev = plat;
     }
 
+    const tier2Last = prev;
+
     // Staggered outward left drop for >= 195px head clearance
     const dropL1: Platform = {
       x: Math.max(90, prev.x - 95 - 190),
@@ -526,6 +551,25 @@ function buildMultiTierChunks(opts: MultiTierBuildOptions): MultiTierBuildResult
     climaxPlatforms.push(dropL1);
     climaxPath.push(dropL1);
     prev = dropL1;
+
+    // Solid tier-divider floor sealing Tier 2 from Tier 3 (leaving only the left drop shaft open)
+    const vdDiv2StartX = Math.max(dropL1.x + dropL1.width + 55, tier2Last.x - 10);
+    const vdDiv2Y = tier2Last.y + 115;
+    const vdDiv2Width = Math.max(520, width - vdDiv2StartX);
+    climaxPlatforms.push({
+      x: vdDiv2StartX,
+      y: vdDiv2Y,
+      width: vdDiv2Width,
+      height: 28
+    });
+    if (allowSpikes) {
+      climaxSpikes.push({
+        x: vdDiv2StartX,
+        y: vdDiv2Y - 16,
+        width: vdDiv2Width,
+        height: 16
+      });
+    }
 
     // Outer neon shaft wall on left
     if (prev.x >= 72) {
@@ -680,6 +724,25 @@ function buildMultiTierChunks(opts: MultiTierBuildOptions): MultiTierBuildResult
         accelPlatforms.push(plat);
         accelPath.push(plat);
         prev = plat;
+      }
+
+      // Solid tier-divider floor sealing Floor 1 (spawn) from Floor 2 (portal),
+      // leaving only the far-right drop-chute open
+      const serpDivWidth = Math.max(520, prev.x + prev.width + 10);
+      const serpDivY = prev.y + 165;
+      accelPlatforms.push({
+        x: 0,
+        y: serpDivY,
+        width: serpDivWidth,
+        height: 28
+      });
+      if (allowSpikes) {
+        extraSpikes.push({
+          x: 0,
+          y: serpDivY - 16,
+          width: serpDivWidth,
+          height: 16
+        });
       }
 
       // Staggered right drop chute turning LEFT
@@ -1244,6 +1307,14 @@ export function assemblePacedLevel(options: PacedAssemblerOptions = {}): PacedLe
     levelData.meta.path = simulation.path;
   }
 
+  if (simulation.success) {
+    const shortcut = detectTrivialShortcut(levelData);
+    if (shortcut.hasShortcut) {
+      simulation.success = false;
+      simulation.failureReason = `Trivial shortcut detected (${shortcut.policy} in ${shortcut.timeMs}ms)`;
+    }
+  }
+
   return {
     levelData,
     chunks,
@@ -1463,7 +1534,7 @@ export function selectCampaignTopology(level: number, seed = 42): LevelTopology 
     return 'right';
   }
   const plan = getPeriodMechanicPlan(level);
-  if (plan.entanglement) {
+  if (plan.entanglement || plan.screenWrap) {
     return 'right';
   }
 
@@ -2264,8 +2335,12 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         );
         const blockingValid =
           !hasBlocking || !simulateLevelData({ ...probeDirected, particles: [] }).success;
+        const probeShortcut = detectTrivialShortcut({
+          ...probeDirected,
+          authorTime: probeSim.authorTime
+        });
 
-        if (probeSim.success && blockingValid) {
+        if (probeSim.success && blockingValid && !probeShortcut.hasShortcut) {
           width = built.width;
           height = built.height;
           awakeningChunk = built.awakeningChunk;
@@ -2279,7 +2354,11 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
           break;
         }
         // Fallback deterministically to 'left' or 'right' if multi-tier verification fails
-        selectedCampaignTopology = (level + seed) % 2 === 0 ? 'left' : 'right';
+        selectedCampaignTopology = plan.screenWrap
+          ? 'right'
+          : (level + seed) % 2 === 0
+            ? 'left'
+            : 'right';
       }
 
       const isEntangledDualLane =
@@ -4043,17 +4122,50 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
   let directedLevelData = applyCampaignDirectives(baseLevelData, level);
   let activePlatformPath = fullPlatformPath;
 
-  // Apply 'left' horizontal mirror topology on non-milestone, non-entangled levels when selected
+  const hasHorizontalWrap =
+    directedLevelData.screenWrap === true ||
+    directedLevelData.screenWrap === 'horizontal' ||
+    directedLevelData.screenWrap === 'both';
+
+  // Apply 'left' horizontal mirror topology on non-milestone, non-entangled, non-horizontal-wrap levels when selected
   const shouldMirrorLeft =
     !isMilestoneLevel(level) &&
     level > 2 &&
     !directedLevelData.entanglement &&
+    !hasHorizontalWrap &&
     selectedCampaignTopology === 'left';
 
   if (shouldMirrorLeft) {
     const mirrored = mirrorLevelDataHorizontally(directedLevelData, activePlatformPath);
     directedLevelData = mirrored.levelData;
     activePlatformPath = mirrored.fullPlatformPath;
+  }
+
+  // On horizontal screenWrap levels, seal the rear of the exit portal with a neon bounce wall
+  // so walking left off x=0 -> x=width cannot immediately cheese the portal from behind.
+  if (hasHorizontalWrap && directedLevelData.door.x > directedLevelData.player.position.x) {
+    const resPlat = activePlatformPath[activePlatformPath.length - 1];
+    const guardX = resPlat
+      ? Math.min(directedLevelData.width - 36, resPlat.x + resPlat.width + 24)
+      : Math.min(directedLevelData.width - 36, directedLevelData.door.x + 150);
+    const alreadyGuarded = directedLevelData.platforms.some(
+      (p) => p.kind === 'wall' && p.x >= directedLevelData.door.x + 60 && p.height >= 400
+    );
+    if (!alreadyGuarded && guardX > directedLevelData.door.x + 60) {
+      directedLevelData = {
+        ...directedLevelData,
+        platforms: [
+          ...directedLevelData.platforms,
+          {
+            x: guardX,
+            y: 0,
+            width: 24,
+            height: directedLevelData.height - 40,
+            kind: 'wall'
+          }
+        ]
+      };
+    }
   }
 
   const world = {
@@ -4090,6 +4202,14 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
       path: simulation.path
     }
   };
+
+  if (simulation.success) {
+    const shortcut = detectTrivialShortcut(levelData);
+    if (shortcut.hasShortcut) {
+      simulation.success = false;
+      simulation.failureReason = `Trivial shortcut detected (${shortcut.policy} in ${shortcut.timeMs}ms)`;
+    }
+  }
 
   return {
     levelData,

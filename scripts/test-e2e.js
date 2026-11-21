@@ -361,13 +361,17 @@ async function run() {
       '✓ Dedicated scene boundary walls verified (left/right/ceiling present, hero bounce=0 for clean platform landings)'
     );
 
-    // REGRESSION TEST: Verify boundary bounce mechanics on left, right, and ceiling
+    // REGRESSION TEST: Verify boundary bounce mechanics on left, right, and ceiling (airborne)
     const sideBounceResult = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('Game');
       if (!gs) return null;
       const hero = gs.heroes[0];
+      const prevTouchingDown = hero.body.touching.down;
+      const prevBlockedDown = hero.body.blocked.down;
+      hero.body.touching.down = false;
+      hero.body.blocked.down = false;
 
-      // Test Left Boundary Bounce:
+      // Test Left Boundary Bounce (airborne):
       hero.bounceOffLeftWall();
       const leftBounceVx = hero.recoilVx;
       const leftRecoilTimer = hero.recoilTimer;
@@ -389,8 +393,10 @@ async function run() {
       // Reset
       hero.recoilTimer = 0;
       hero.recoilVx = 0;
+      hero.body.touching.down = false;
+      hero.body.blocked.down = false;
 
-      // Test Right Boundary Bounce:
+      // Test Right Boundary Bounce (airborne):
       hero.bounceOffRightWall();
       const rightBounceVx = hero.recoilVx;
       const rightRecoilTimer = hero.recoilTimer;
@@ -419,6 +425,8 @@ async function run() {
       // Reset hero state
       hero.recoilTimer = 0;
       hero.recoilVx = 0;
+      hero.body.touching.down = prevTouchingDown;
+      hero.body.blocked.down = prevBlockedDown;
 
       return {
         leftBounceVx,
