@@ -21,22 +21,22 @@ import { stepHeroControl } from '../stepHeroPhysics';
 
 describe('Spec-09: Matter States, Quantum Pinning, Wormholes, Broglie & Ghost Surfing', () => {
   describe('4 Matter States (liquid, gas, cryo, plasma)', () => {
-    it('liquid: floats at surface for normal arrival, plunges on dive or vy > 380', () => {
+    it('liquid: floats at surface for normal arrival, plunges on dive or vy > 520', () => {
       expect(shouldPlungeIntoLiquid(200, 1, false, false)).toBe(false);
-      expect(shouldPlungeIntoLiquid(380, 1, false, false)).toBe(false);
-      expect(shouldPlungeIntoLiquid(381, 1, false, false)).toBe(true);
+      expect(shouldPlungeIntoLiquid(520, 1, false, false)).toBe(false);
+      expect(shouldPlungeIntoLiquid(521, 1, false, false)).toBe(true);
       expect(shouldPlungeIntoLiquid(100, 1, true, false)).toBe(true);
       expect(shouldPlungeIntoLiquid(100, 1, false, true)).toBe(true);
       // Inverted gravity
-      expect(shouldPlungeIntoLiquid(-400, -1, false, false)).toBe(true);
+      expect(shouldPlungeIntoLiquid(-530, -1, false, false)).toBe(true);
     });
 
-    it('liquid: applies Archimedes buoyancy (vy -= 900 * dt) and dolphin emerge (vy = -520)', () => {
+    it('liquid: applies Archimedes buoyancy (vy -= 1650 * dt) and dolphin emerge (vy = -520)', () => {
       const vyAfter = stepLiquidBuoyancy(400, 1, 0.1);
-      expect(vyAfter).toBeCloseTo(310, 5);
+      expect(vyAfter).toBeCloseTo(235, 5);
 
       const vyInverted = stepLiquidBuoyancy(-400, -1, 0.1);
-      expect(vyInverted).toBeCloseTo(-310, 5);
+      expect(vyInverted).toBeCloseTo(-235, 5);
 
       expect(getLiquidEmergeVelocity(1)).toBe(-520);
       expect(getLiquidEmergeVelocity(-1)).toBe(520);

@@ -257,4 +257,38 @@ describe('HudController', () => {
     expect(cardInput.ghostTrajectory).toBe('v1|0,100,400,0,i;2500,700,400,0,r');
     shareSpy.mockRestore();
   });
+
+  it('shows dedicated [CONDENSE] HUD button when hasCondenseAbility is true and triggers tryCrystallizeBroglieTrail on tap', () => {
+    const ctx = makeHudContext();
+    ctx.hasCondenseAbility = false;
+    ctx.tryCrystallizeBroglieTrail = vi.fn(() => true);
+
+    const hud = new HudController(ctx);
+    hud.createHUD();
+
+    expect(ctx.condenseButtonBg?.visible).toBe(false);
+    expect(ctx.condenseButtonLabel?.visible).toBe(false);
+    expect(ctx.condenseButtonZone?.visible).toBe(false);
+
+    ctx.hasCondenseAbility = true;
+    hud.updateTimerAndIndicators();
+
+    expect(ctx.condenseButtonBg?.visible).toBe(true);
+    expect(ctx.condenseButtonLabel?.visible).toBe(true);
+    expect(ctx.condenseButtonZone?.visible).toBe(true);
+
+    hud.repositionOnResize(390, 844);
+    expect(ctx.condenseButtonBg?.x).toBe(332);
+    expect(ctx.condenseButtonBg?.y).toBe(748);
+
+    const zone = ctx.condenseButtonZone as unknown as {
+      listeners: Map<string, Array<() => void>>;
+    };
+    const handlers = zone.listeners.get('pointerdown') ?? [];
+    expect(handlers.length).toBeGreaterThan(0);
+    handlers[0]();
+
+    expect(ctx.uiPointerConsumed).toBe(true);
+    expect(ctx.tryCrystallizeBroglieTrail).toHaveBeenCalledTimes(1);
+  });
 });

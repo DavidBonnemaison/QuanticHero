@@ -150,7 +150,7 @@ export const MILESTONE_DEFINITIONS: Readonly<Record<number, MilestoneDefinition>
     symbol: 'Si',
     mechanic: 'de_broglie_wave',
     label: 'Échafaudage d’Onde de Broglie solidifiée',
-    hintSteps: ['AIR SPACE / [C]', 'SOLIDIFY TRAIL']
+    hintSteps: ['[CONDENSE] / [C] / SPACE', 'SOLIDIFY UNDER FEET']
   },
   18: {
     level: 18,
@@ -178,7 +178,7 @@ export const MILESTONE_DEFINITIONS: Readonly<Record<number, MilestoneDefinition>
     symbol: 'Br',
     mechanic: 'liquid_platforms',
     label: 'Plateformes Liquides',
-    hintSteps: ['ENTER LIQUID', 'BUOYANT JUMP']
+    hintSteps: ['WALK ON LIQUID', 'DIVE (↓) TO BOUNCE HIGH']
   },
   40: {
     level: 40,
@@ -206,7 +206,7 @@ export const MILESTONE_DEFINITIONS: Readonly<Record<number, MilestoneDefinition>
     symbol: 'Hg',
     mechanic: 'mercury_bath',
     label: 'Bains de Mercure Liquide',
-    hintSteps: ['SINK IN MERCURY', 'HIGH BUOYANCY']
+    hintSteps: ['WALK ON MERCURY', 'DIVE (↓) FOR SUPER BOUNCE']
   },
   87: {
     level: 87,
@@ -485,7 +485,13 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       case 3:
         return { level: z, period, primary: 'pure' };
       case 4:
-        return { level: z, period, primary: 'duplicate_gate', addDuplicate: true, addGatePlate: true };
+        return {
+          level: z,
+          period,
+          primary: 'duplicate_gate',
+          addDuplicate: true,
+          addGatePlate: true
+        };
       case 5:
         return { level: z, period, primary: 'speed', addPhaseClimax: true };
       case 6:
@@ -510,7 +516,6 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
         return { level: z, period, primary: 'phase', addPhaseClimax: true };
       case 9:
         return { level: z, period, primary: 'lowGravity', addPhaseClimax: true };
-      case 10:
       default:
         return {
           level: z,
@@ -532,16 +537,33 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       case 12:
         return { level: z, period, primary: 'speed', addTunnelBarrier: true, addPhaseClimax: true };
       case 13:
-        return { level: z, period, primary: 'tunnel', addPhaseClimax: true, screenWrap: 'horizontal' };
+        return {
+          level: z,
+          period,
+          primary: 'tunnel',
+          addPhaseClimax: true,
+          screenWrap: 'horizontal'
+        };
       case 14:
         return { level: z, period, primary: 'condense', addPhaseClimax: true };
       case 15:
         return { level: z, period, primary: 'condense', addPhaseClimax: true };
       case 16:
-        return { level: z, period, primary: 'condense', addPhaseClimax: true, screenWrap: 'horizontal' };
+        return {
+          level: z,
+          period,
+          primary: 'condense',
+          addPhaseClimax: true,
+          screenWrap: 'horizontal'
+        };
       case 17:
-        return { level: z, period, primary: 'tunnel', addPhaseClimax: true, screenWrap: 'horizontal' };
-      case 18:
+        return {
+          level: z,
+          period,
+          primary: 'tunnel',
+          addPhaseClimax: true,
+          screenWrap: 'horizontal'
+        };
       default:
         return { level: z, period, primary: 'wall', screenWrap: 'both', matterState: 'gas' };
     }
@@ -615,9 +637,7 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
               ? 'liquid_basin'
               : 'phase',
       matterState: matter,
-      ...(hasEnt
-        ? { entanglement: { mode: 'mirror_x' as const, tetherPhysical: hasTether } }
-        : {}),
+      ...(hasEnt ? { entanglement: { mode: 'mirror_x' as const, tetherPhysical: hasTether } } : {}),
       ...(isGate ? { addDuplicate: true, addGatePlate: true } : {}),
       addPhaseClimax: !isGate && idx % 2 === 1
     };
@@ -804,9 +824,7 @@ export function getPeriodMechanicPlan(z: number): CampaignMechanicPlan {
       addWormhole: hasWormhole,
       addTimeDilation: idx % 2 === 0,
       addDecayClimax: true,
-      ...(hasEnt
-        ? { entanglement: { mode: 'mirror_x' as const, tetherPhysical: hasTether } }
-        : {}),
+      ...(hasEnt ? { entanglement: { mode: 'mirror_x' as const, tetherPhysical: hasTether } } : {}),
       ...(isGate ? { addDuplicate: true, addGatePlate: true } : {})
     };
   }

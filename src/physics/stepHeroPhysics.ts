@@ -81,11 +81,13 @@ export function getAsymmetricGravityMultiplier(
 }
 
 /**
- * Clamps downward vertical velocity to PHYSICS.MAX_FALL_VY (680 px/s) unless diving.
+ * Clamps downward vertical velocity to PHYSICS.MAX_FALL_VY (680 px/s),
+ * or PHYSICS.MAX_DIVE_VY (560 px/s) when diving to prevent platform tunneling.
  */
 export function clampFallVelocity(vy: number, upsideDown: number, isDiving: boolean): number {
-  if (!isDiving && vy * upsideDown > PHYSICS.MAX_FALL_VY) {
-    return PHYSICS.MAX_FALL_VY * upsideDown;
+  const maxVy = isDiving ? PHYSICS.MAX_DIVE_VY : PHYSICS.MAX_FALL_VY;
+  if (vy * upsideDown > maxVy) {
+    return maxVy * upsideDown;
   }
   return vy;
 }

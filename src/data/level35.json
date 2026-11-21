@@ -155,8 +155,8 @@
     "enabled": true,
     "mechanic": "liquid_platforms",
     "hintSteps": [
-      "ENTER LIQUID",
-      "BUOYANT JUMP"
+      "WALK ON LIQUID",
+      "DIVE (↓) TO BOUNCE HIGH"
     ],
     "safeZoneRatio": 0.35
   },

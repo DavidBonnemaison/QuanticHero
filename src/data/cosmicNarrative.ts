@@ -59,6 +59,10 @@ export const LEVEL_NARRATIVES: Record<number, string[]> = {
   26: ['The iron core burns.', 'Weightless and inverted, two laws collide.'],
   27: ['Beyond iron, the star shatters.', 'Echoes and thin walls drift in the blast.'],
   29: ['Solid stone, yet mostly empty space.', 'What passes through without breaking?'],
+  35: [
+    'Bromine pools shimmer beneath your feet.',
+    'Walk across the liquid surface, or dive (↓) to bounce high.'
+  ],
   36: ['Cyan and magenta take turns existing.', 'Every leap trades one ground for the other.'],
   46: ['The supernova reaches its crest.', 'Speed, passage, and shifting ground.'],
   47: ['Two neutron stars collide in silence.', 'Fragile footholds linger in the afterglow.'],
@@ -68,6 +72,10 @@ export const LEVEL_NARRATIVES: Record<number, string[]> = {
   68: ['Fleeting steps over the kilonova abyss.', 'Repulsion and decay share a narrow path.'],
   69: ['The relativistic crucible begins.', 'Shorter orbits, sharper turns.'],
   74: ['The walls are closing in.', 'Outrun what never stops.'],
+  80: [
+    'Dense liquid mercury carries a spring-loaded tide.',
+    'Step lightly on the surface, or dive (↓) for a buoyant super-bounce.'
+  ],
   84: ['Three trials, one unstable core.', 'Swift, light, and unbroken through the wall.'],
   88: ['The transuranic threshold.', 'Inverted skies, shifting phases, hollow stone.'],
   89: ['The Island of Stability.', 'Every law you learned returns at once.'],

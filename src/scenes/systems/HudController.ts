@@ -239,6 +239,9 @@ export class HudController {
       if (ctx.dilationIndicatorText?.active) {
         ctx.dilationIndicatorText.setText(s.hud.timeDilation);
       }
+      if (ctx.condenseButtonLabel?.active) {
+        ctx.condenseButtonLabel.setText(s.hud.condenseButton);
+      }
       if (ctx.ghostButton?.active) {
         ctx.applyGhostMode();
       }
@@ -300,6 +303,45 @@ export class HudController {
     ctx.hudContainer.add(thumbRestartBg);
     ctx.hudContainer.add(thumbRestartLabel);
     ctx.hudContainer.add(thumbRestartZone);
+
+    const condenseX = camW - 58;
+    const condenseY = camH - 96;
+    const condenseBg = ctx.add.rectangle(condenseX, condenseY, 96, 44, 0x083344, 0.88);
+    condenseBg.setStrokeStyle(2, 0x00e5ff, 0.95);
+    const condenseLabel = ctx.add.text(condenseX, condenseY, initialStrings.hud.condenseButton, {
+      fontFamily: 'VT323',
+      fontSize: '20px',
+      color: '#00e5ff'
+    });
+    condenseLabel.setOrigin(0.5);
+    const condenseZone = ctx.add.zone(condenseX, condenseY, 96, 44);
+    condenseZone.setInteractive({ useHandCursor: true });
+    condenseZone.on('pointerdown', () => {
+      ctx.uiPointerConsumed = true;
+      if (!ctx.isLevelCompleted && !ctx.isTransitioningLevel) {
+        ctx.tryCrystallizeBroglieTrail();
+      }
+    });
+    const showCondense = Boolean(ctx.hasCondenseAbility);
+    condenseBg.setVisible(showCondense);
+    condenseLabel.setVisible(showCondense);
+    condenseZone.setVisible(showCondense);
+    ctx.condenseButtonBg = condenseBg;
+    ctx.condenseButtonLabel = condenseLabel;
+    ctx.condenseButtonZone = condenseZone;
+    ctx.hudContainer.add(condenseBg);
+    ctx.hudContainer.add(condenseLabel);
+    ctx.hudContainer.add(condenseZone);
+
+    if (ctx.betaPipCamera) {
+      ctx.betaPipCamera.ignore?.(ctx.hudContainer);
+      if (ctx.betaPipFrame) {
+        ctx.hudContainer.add(ctx.betaPipFrame);
+      }
+      if (ctx.betaPipLabel) {
+        ctx.hudContainer.add(ctx.betaPipLabel);
+      }
+    }
 
     this.updateCoherenceGauge(true);
     this.updateEdgePips();
@@ -413,6 +455,18 @@ export class HudController {
       ctx.thumbRestartZone.setPosition(thumbX, thumbY);
     }
 
+    const condenseX = camW - 58;
+    const condenseY = camH - 96;
+    if (ctx.condenseButtonBg?.active) {
+      ctx.condenseButtonBg.setPosition(condenseX, condenseY);
+    }
+    if (ctx.condenseButtonLabel?.active) {
+      ctx.condenseButtonLabel.setPosition(condenseX, condenseY);
+    }
+    if (ctx.condenseButtonZone?.active) {
+      ctx.condenseButtonZone.setPosition(condenseX, condenseY);
+    }
+
     const pipY = camH - 70;
     ctx.edgePips.forEach((pip, index) => {
       const pipX = 40 + index * 70;
@@ -492,6 +546,16 @@ export class HudController {
     }
     if (ctx.dilationIndicatorText?.active) {
       ctx.dilationIndicatorText.setVisible(ctx.isTimeDilationActive);
+    }
+    const showCondense = Boolean(ctx.hasCondenseAbility);
+    if (ctx.condenseButtonBg?.active) {
+      ctx.condenseButtonBg.setVisible(showCondense);
+    }
+    if (ctx.condenseButtonLabel?.active) {
+      ctx.condenseButtonLabel.setVisible(showCondense);
+    }
+    if (ctx.condenseButtonZone?.active) {
+      ctx.condenseButtonZone.setVisible(showCondense);
     }
     this.updateCoherenceGauge();
   }

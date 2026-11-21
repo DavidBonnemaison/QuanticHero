@@ -211,8 +211,8 @@
       "enabled": true,
       "mechanic": "de_broglie_wave",
       "hintSteps": [
-        "AIR SPACE / [C]",
-        "SOLIDIFY TRAIL"
+        "[CONDENSE] / [C] / SPACE",
+        "SOLIDIFY UNDER FEET"
       ],
       "safeZoneRatio": 0.35
     },
@@ -494,8 +494,8 @@
       "enabled": true,
       "mechanic": "liquid_platforms",
       "hintSteps": [
-        "ENTER LIQUID",
-        "BUOYANT JUMP"
+        "WALK ON LIQUID",
+        "DIVE (↓) TO BOUNCE HIGH"
       ],
       "safeZoneRatio": 0.35
     },
@@ -1054,8 +1054,8 @@
       "enabled": true,
       "mechanic": "mercury_bath",
       "hintSteps": [
-        "SINK IN MERCURY",
-        "HIGH BUOYANCY"
+        "WALK ON MERCURY",
+        "DIVE (↓) FOR SUPER BOUNCE"
       ],
       "safeZoneRatio": 0.35
     },

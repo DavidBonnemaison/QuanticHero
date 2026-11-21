@@ -93,6 +93,10 @@ export class LevelBuilder {
     ctx.thumbRestartBg = null;
     ctx.thumbRestartLabel = null;
     ctx.thumbRestartZone = null;
+    ctx.condenseButtonBg = null;
+    ctx.condenseButtonLabel = null;
+    ctx.condenseButtonZone = null;
+    ctx.destroyBetaPipCamera?.();
     ctx.levelCompleteOverlay = null;
     ctx.phaseIndicatorText = null;
     ctx.dilationIndicatorText = null;
@@ -280,6 +284,9 @@ export class LevelBuilder {
       crystal.rect.destroy();
     }
     ctx.broglieCrystals = [];
+    for (const lp of ctx.liquidPlatforms) {
+      lp.waveGfx?.destroy();
+    }
     ctx.liquidPlatforms = [];
     ctx.gasPlatforms = [];
     ctx.pinnablePlatforms = [];
@@ -309,6 +316,8 @@ export class LevelBuilder {
     }
     ctx.edgePips = [];
 
+    ctx.destroyBetaPipCamera?.();
+
     if (ctx.hudContainer) {
       ctx.hudContainer.destroy(true);
       ctx.hudContainer = null;
@@ -317,6 +326,9 @@ export class LevelBuilder {
     ctx.thumbRestartBg = null;
     ctx.thumbRestartLabel = null;
     ctx.thumbRestartZone = null;
+    ctx.condenseButtonBg = null;
+    ctx.condenseButtonLabel = null;
+    ctx.condenseButtonZone = null;
     if (ctx.levelCompleteOverlay) {
       ctx.levelCompleteOverlay.destroy(true);
       ctx.levelCompleteOverlay = null;

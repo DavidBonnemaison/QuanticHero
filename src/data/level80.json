@@ -129,8 +129,8 @@
     "enabled": true,
     "mechanic": "mercury_bath",
     "hintSteps": [
-      "SINK IN MERCURY",
-      "HIGH BUOYANCY"
+      "WALK ON MERCURY",
+      "DIVE (↓) FOR SUPER BOUNCE"
     ],
     "safeZoneRatio": 0.35
   },

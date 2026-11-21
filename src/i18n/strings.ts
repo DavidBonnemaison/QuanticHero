@@ -149,6 +149,7 @@ export interface Strings {
     fxLo: string;
     phase: (phase: string) => string;
     timeDilation: string;
+    condenseButton: string;
     elementSynthesized: (symbol: string, atomUpper: string) => string;
     newRecord: string;
     rec: string;
@@ -358,6 +359,7 @@ export const STRINGS: Record<Locale, Strings> = {
       fxLo: 'FX:LO',
       phase: (phase) => `[PHASE: ${phase.toUpperCase()}]`,
       timeDilation: '[TIME: 0.25x]',
+      condenseButton: '[CONDENSE]',
       elementSynthesized: (symbol, atomUpper) => `ELEMENT SYNTHESIZED — ${symbol} ${atomUpper}`,
       newRecord: 'NEW RECORD',
       rec: 'REC',
@@ -383,7 +385,7 @@ export const STRINGS: Record<Locale, Strings> = {
           tunnel: 'TUNNELING CHARGE !',
           pauli: 'PAULI BLAST !',
           timeDilation: 'TIME DILATION !',
-          condense: 'BROGLIE CONDENSE !'
+          condense: 'BROGLIE CONDENSE ! ([CONDENSE] / [C] / SPACE)'
         }
       }
     },
@@ -571,6 +573,7 @@ export const STRINGS: Record<Locale, Strings> = {
       fxLo: 'FX:BAS',
       phase: (phase) => `[PHASE : ${phase.toUpperCase()}]`,
       timeDilation: '[TEMPS : 0.25x]',
+      condenseButton: '[CONDENSE]',
       elementSynthesized: (symbol, atomUpper) => `ÉLÉMENT SYNTHÉTISÉ — ${symbol} ${atomUpper}`,
       newRecord: 'NOUVEAU RECORD',
       rec: 'REC',
@@ -596,7 +599,7 @@ export const STRINGS: Record<Locale, Strings> = {
           tunnel: 'CHARGE TUNNEL !',
           pauli: 'ONDE DE PAULI !',
           timeDilation: 'DILATATION TEMPORELLE !',
-          condense: 'CONDENSATION BROGLIE !'
+          condense: 'CONDENSATION BROGLIE ! ([CONDENSE] / [C] / ESPACE)'
         }
       }
     },

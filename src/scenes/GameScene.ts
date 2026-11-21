@@ -130,6 +130,12 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public thumbRestartBg: Phaser.GameObjects.Rectangle | null = null;
   public thumbRestartLabel: Phaser.GameObjects.Text | null = null;
   public thumbRestartZone: Phaser.GameObjects.Zone | null = null;
+  public condenseButtonBg: Phaser.GameObjects.Rectangle | null = null;
+  public condenseButtonLabel: Phaser.GameObjects.Text | null = null;
+  public condenseButtonZone: Phaser.GameObjects.Zone | null = null;
+  public betaPipCamera: Phaser.Cameras.Scene2D.Camera | null = null;
+  public betaPipFrame: Phaser.GameObjects.Rectangle | null = null;
+  public betaPipLabel: Phaser.GameObjects.Text | null = null;
   public lastTimerString = '';
   public lastTimerColor = '';
   public lastSplitString = '';
@@ -578,6 +584,9 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   }
   public handleResize(gameSize?: { width: number; height: number }): void {
     this.cameraDirector.handleResize(gameSize);
+  }
+  public destroyBetaPipCamera(): void {
+    this.cameraDirector.destroyBetaPipCamera();
   }
 
   // --- RespawnTransitionController delegations ---

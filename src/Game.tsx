@@ -130,6 +130,9 @@ export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false })
           default: 'arcade',
           arcade: {
             gravity: { x: 0, y: 700 },
+            tileBias: 32,
+            fps: 120,
+            fixedStep: true,
             debug: false
           }
         },

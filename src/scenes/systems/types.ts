@@ -88,6 +88,7 @@ export interface EdgePip {
 export interface LiquidPlatformEntry {
   rect: Phaser.GameObjects.Rectangle;
   startY: number;
+  waveGfx?: Phaser.GameObjects.Graphics;
 }
 
 export type PinnablePlatformEntry = PinnablePlatformRef & {
@@ -212,6 +213,12 @@ export interface GameSceneContext {
   thumbRestartBg: Phaser.GameObjects.Rectangle | null;
   thumbRestartLabel: Phaser.GameObjects.Text | null;
   thumbRestartZone: Phaser.GameObjects.Zone | null;
+  condenseButtonBg: Phaser.GameObjects.Rectangle | null;
+  condenseButtonLabel: Phaser.GameObjects.Text | null;
+  condenseButtonZone: Phaser.GameObjects.Zone | null;
+  betaPipCamera: Phaser.Cameras.Scene2D.Camera | null;
+  betaPipFrame: Phaser.GameObjects.Rectangle | null;
+  betaPipLabel: Phaser.GameObjects.Text | null;
   lastTimerString: string;
   lastTimerColor: string;
   lastSplitString: string;
@@ -292,6 +299,8 @@ export interface GameSceneContext {
   cycleFocusNext(): void;
   switchFocusByIndex(index: number): void;
   handleResize(gameSize?: { width: number; height: number }): void;
+  destroyBetaPipCamera(): void;
+  tryCrystallizeBroglieTrail(): boolean;
   quickRespawn(deathPosition?: { x: number; y: number }): void;
   killHero(hero: Hero): void;
   completeLevel(): void;
