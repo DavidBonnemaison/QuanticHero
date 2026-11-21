@@ -27,6 +27,12 @@ export interface Strings {
     confirmResetMessage: string;
     confirmResetAction: string;
     cancel: string;
+    dailyIsotopeTitle: (symbol: string, atom: string) => string;
+    dailyStreak: (days: number) => string;
+    dailyCompleted: string;
+    dailyBestTime: (formattedTime: string) => string;
+    dailyNextIn: (countdown: string) => string;
+    dailyDifficulty: (difficulty: 'medium' | 'hard') => string;
   };
   levelSelection: {
     backToMenu: string;
@@ -200,7 +206,13 @@ export const STRINGS: Record<Locale, Strings> = {
       confirmResetTitle: 'New Game',
       confirmResetMessage: 'Reset all progress, medals and unlocked molecules?',
       confirmResetAction: 'Reset & Start',
-      cancel: 'Cancel'
+      cancel: 'Cancel',
+      dailyIsotopeTitle: (symbol, atom) => `DAILY ISOTOPE — ${symbol} ${atom}`,
+      dailyStreak: (days) => `🔥 ${days} ${days === 1 ? 'day' : 'days'}`,
+      dailyCompleted: 'Completed ✓',
+      dailyBestTime: (formattedTime) => `Best ${formattedTime}`,
+      dailyNextIn: (countdown) => `Next in ${countdown} UTC`,
+      dailyDifficulty: (difficulty) => (difficulty === 'hard' ? 'HARD' : 'MEDIUM')
     },
     levelSelection: {
       backToMenu: '◄ MENU',
@@ -382,7 +394,13 @@ export const STRINGS: Record<Locale, Strings> = {
       confirmResetMessage:
         'Réinitialiser toute la progression, les médailles et les molécules débloquées ?',
       confirmResetAction: 'Réinitialiser',
-      cancel: 'Annuler'
+      cancel: 'Annuler',
+      dailyIsotopeTitle: (symbol, atom) => `DAILY ISOTOPE — ${symbol} ${atom}`,
+      dailyStreak: (days) => `🔥 ${days} ${days === 1 ? 'jour' : 'jours'}`,
+      dailyCompleted: 'Complété ✓',
+      dailyBestTime: (formattedTime) => `Record ${formattedTime}`,
+      dailyNextIn: (countdown) => `Prochain dans ${countdown} UTC`,
+      dailyDifficulty: (difficulty) => (difficulty === 'hard' ? 'DIFFICILE' : 'MOYEN')
     },
     levelSelection: {
       backToMenu: '◄ MENU',

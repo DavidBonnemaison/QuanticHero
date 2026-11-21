@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { soundManager } from '../audio/SoundManager';
 import { getLevelMetadata } from '../data/levels';
 import { getStrings } from '../i18n/strings';
+import { getDailyIsotopePreview, getTimeUntilNextDailyUtc } from '../services/DailyIsotopeService';
 import { useGameStore } from '../store';
 import { hapticFeedback } from '../tools/HapticFeedback';
+import formatScore from '../tools/formatScore';
 import { MAX_CLASSIC_LEVEL } from '../tools/levelProgression';
 import styles from './Menu.module.css';
 import QuantumOrbitalBackground from './QuantumOrbitalBackground';
@@ -20,6 +22,10 @@ export default function Menu(): React.ReactElement {
   const currentLevel = useGameStore((state) => state.currentLevel);
   const maxLevel = useGameStore((state) => state.maxLevel);
   const scores = useGameStore((state) => state.scores);
+  const dailyHistory = useGameStore((state) => state.dailyHistory ?? {});
+  const dailyStreak = useGameStore(
+    (state) => state.dailyStreak ?? { current: 0, longest: 0, lastCompletedDate: null }
+  );
   const updateCurrentLevel = useGameStore((state) => state.updateCurrentLevel);
   const setSharedLevel = useGameStore((state) => state.setSharedLevel);
   const isMuted = useGameStore((state) => state.isMuted);
@@ -32,8 +38,11 @@ export default function Menu(): React.ReactElement {
   const toggleLocale = useGameStore((state) => state.toggleLocale);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [dailyCountdown, setDailyCountdown] = useState(() => getTimeUntilNextDailyUtc());
 
   const t = getStrings(locale);
+  const dailyPreview = getDailyIsotopePreview();
+  const todayDailyEntry = dailyHistory[dailyPreview.dateKey];
   const hasProgress = maxLevel > 1 || Object.keys(scores).length > 0;
   const resumeLevel =
     currentLevel >= 1 && currentLevel <= MAX_CLASSIC_LEVEL
@@ -41,6 +50,13 @@ export default function Menu(): React.ReactElement {
       : Math.min(Math.max(maxLevel, 1), MAX_CLASSIC_LEVEL);
   const resumeMeta = getLevelMetadata(resumeLevel);
   const resumeSymbol = resumeMeta?.symbol ?? '?';
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setDailyCountdown(getTimeUntilNextDailyUtc());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     hapticFeedback.init();
@@ -74,6 +90,10 @@ export default function Menu(): React.ReactElement {
     setSharedLevel(null);
     updateCurrentLevel(resumeLevel);
     navigate('/game');
+  };
+
+  const handleDailyIsotope = () => {
+    navigate('/daily');
   };
 
   const handleNewGameClick = () => {
@@ -159,6 +179,37 @@ export default function Menu(): React.ReactElement {
       </div>
       <QuantumOrbitalBackground />
       <h1 className={styles.title}>{t.menu.title}</h1>
+      <button
+        type="button"
+        className={styles.dailyCard}
+        onClick={handleDailyIsotope}
+        data-testid="daily-isotope-card"
+      >
+        <div className={styles.dailyCardHeader}>
+          <span className={styles.dailyCardTitle}>
+            {t.menu.dailyIsotopeTitle(dailyPreview.symbol, dailyPreview.atom)}
+          </span>
+          {dailyStreak.current > 0 && (
+            <span className={styles.dailyStreakBadge} data-testid="daily-streak-badge">
+              {t.menu.dailyStreak(dailyStreak.current)}
+            </span>
+          )}
+        </div>
+        <div className={styles.dailyCardMeta}>
+          {todayDailyEntry ? (
+            <span className={styles.dailyCompletedBadge} data-testid="daily-completed-status">
+              {t.menu.dailyCompleted} · {t.menu.dailyBestTime(formatScore(todayDailyEntry.bestMs))}
+            </span>
+          ) : (
+            <span className={styles.dailyDifficultyTag}>
+              #{dailyPreview.z} · {t.menu.dailyDifficulty(dailyPreview.difficulty)}
+            </span>
+          )}
+          <span className={styles.dailyCountdown} data-testid="daily-countdown">
+            {t.menu.dailyNextIn(dailyCountdown.formatted)}
+          </span>
+        </div>
+      </button>
       {hasProgress && (
         <button
           type="button"

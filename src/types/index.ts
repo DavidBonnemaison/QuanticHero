@@ -187,6 +187,19 @@ export interface ScoreItem {
 
 export type ScoreState = Record<number, ScoreItem>;
 
+export interface DailyScoreEntry {
+  bestMs: number;
+  bestJumps: number;
+  medal: IsotopeMedal;
+  ghostTrajectory?: string;
+}
+
+export interface DailyStreakState {
+  current: number;
+  longest: number;
+  lastCompletedDate: string | null;
+}
+
 export interface RootState {
   game: GameState;
   levels: LevelsMap | null;

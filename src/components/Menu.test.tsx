@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDailyIsotopePreview } from '../services/DailyIsotopeService';
 import { useGameStore } from '../store';
 import Menu from './Menu';
 
@@ -16,7 +17,9 @@ describe('Menu component', () => {
       hapticsEnabled: true,
       reducedEffects: false,
       locale: 'en',
-      unlockedMolecules: []
+      unlockedMolecules: [],
+      dailyHistory: {},
+      dailyStreak: { current: 0, longest: 0, lastCompletedDate: null }
     });
   });
 
@@ -27,6 +30,7 @@ describe('Menu component', () => {
           <Route path="/" element={<Menu />} />
           <Route path="/explanation" element={<div>Explanation Page</div>} />
           <Route path="/game" element={<div>Game Page</div>} />
+          <Route path="/daily" element={<div>Daily Isotope Page</div>} />
           <Route path="/levels" element={<div>Levels Page</div>} />
           <Route path="/editor" element={<div>Editor Page</div>} />
         </Routes>
@@ -203,5 +207,58 @@ describe('Menu component', () => {
     expect(
       screen.getByRole('button', { name: /enable reduced visual effects/i })
     ).toHaveTextContent('FX:HI');
+  });
+
+  it('renders the Daily Isotope card with atom preview, countdown, and navigates to /daily on click', () => {
+    const preview = getDailyIsotopePreview();
+    renderWithRouter();
+
+    const dailyCard = screen.getByTestId('daily-isotope-card');
+    expect(dailyCard).toHaveTextContent(`DAILY ISOTOPE — ${preview.symbol} ${preview.atom}`);
+    expect(screen.getByTestId('daily-countdown')).toHaveTextContent(
+      /next in \d{2}:\d{2}:\d{2} utc/i
+    );
+    expect(screen.queryByTestId('daily-streak-badge')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('daily-completed-status')).not.toBeInTheDocument();
+
+    // Verify no E2E forbidden emojis appear anywhere on the Menu
+    const forbiddenEmojis = ['🔊', '🔇', '📳', '📴', '✨', '⚡', '👻', '📤', '✏️', '📱'];
+    const bodyText = document.body.textContent ?? '';
+    for (const emoji of forbiddenEmojis) {
+      expect(bodyText).not.toContain(emoji);
+    }
+
+    fireEvent.click(dailyCard);
+    expect(screen.getByText('Daily Isotope Page')).toBeInTheDocument();
+  });
+
+  it('shows streak badge and completed status with best time in EN and FR', () => {
+    const preview = getDailyIsotopePreview();
+    useGameStore.setState({
+      dailyStreak: {
+        current: 5,
+        longest: 7,
+        lastCompletedDate: preview.dateKey
+      },
+      dailyHistory: {
+        [preview.dateKey]: {
+          bestMs: 12340,
+          bestJumps: 4,
+          medal: 'gold'
+        }
+      }
+    });
+    renderWithRouter();
+
+    expect(screen.getByTestId('daily-streak-badge')).toHaveTextContent('🔥 5 days');
+    expect(screen.getByTestId('daily-completed-status')).toHaveTextContent('Completed ✓');
+    expect(screen.getByTestId('daily-completed-status')).toHaveTextContent('00:12:34');
+
+    fireEvent.click(screen.getByTestId('locale-toggle'));
+    expect(screen.getByTestId('daily-streak-badge')).toHaveTextContent('🔥 5 jours');
+    expect(screen.getByTestId('daily-completed-status')).toHaveTextContent('Complété ✓');
+    expect(screen.getByTestId('daily-countdown')).toHaveTextContent(
+      /prochain dans \d{2}:\d{2}:\d{2} utc/i
+    );
   });
 });

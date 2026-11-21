@@ -176,4 +176,36 @@ describe('RespawnTransitionController', () => {
     expect(ctx.buildLevel).toHaveBeenCalledTimes(1);
     expect(ctx.levelData.id).toBe('2');
   });
+
+  it('completeLevel on a daily:YYYY-MM-DD level records daily score & streak without incrementing maxLevel', () => {
+    const ctx = makeRespawnContext();
+    ctx.levelData = {
+      ...ctx.levelData,
+      id: 'daily:2026-11-21',
+      symbol: 'Fe',
+      atom: 'Iron',
+      parTimeMs: 5000,
+      parJumps: 3
+    };
+    useGameStore.getState().setSharedLevel(ctx.levelData);
+    useGameStore.setState({ maxLevel: 4 });
+
+    const controller = new RespawnTransitionController(ctx);
+    controller.completeLevel();
+
+    const state = useGameStore.getState();
+    expect(state.maxLevel).toBe(4);
+    expect(state.dailyStreak).toEqual({
+      current: 1,
+      longest: 1,
+      lastCompletedDate: '2026-11-21'
+    });
+    expect(state.dailyHistory['2026-11-21']).toMatchObject({
+      bestMs: 3200,
+      bestJumps: 2,
+      medal: 'gold'
+    });
+    expect(ctx.nextLevelNumberPending).toBeNull();
+    expect(ctx.showLevelCompleteOverlay).toHaveBeenCalledWith(3200, 3200, 0, null, 'gold');
+  });
 });

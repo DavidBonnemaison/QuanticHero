@@ -9,6 +9,7 @@ import { getMoleculeById } from './data/molecules';
 import BootScene from './scenes/BootScene';
 import GameScene from './scenes/GameScene';
 import PreloadScene from './scenes/PreloadScene';
+import { generateDailyIsotope } from './services/DailyIsotopeService';
 import { useGameStore } from './store';
 import { decodeLevelFromUrl } from './tools/levelCodec';
 
@@ -18,7 +19,11 @@ declare global {
   }
 }
 
-export const GameContainer: React.FC = () => {
+export interface GameContainerProps {
+  isDaily?: boolean;
+}
+
+export const GameContainer: React.FC<GameContainerProps> = ({ isDaily = false }) => {
   const gameRef = useRef<Phaser.Game | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const { moleculeId } = useParams<{ moleculeId?: string }>();
@@ -31,7 +36,7 @@ export const GameContainer: React.FC = () => {
       if (recipe) {
         useGameStore.getState().setSharedLevel(recipe.levelData);
       }
-    } else if (typeof window !== 'undefined') {
+    } else if (!isDaily && typeof window !== 'undefined') {
       const hash = window.location.hash;
       const search = window.location.search;
       if (hash.includes('custom=') || search.includes('custom=')) {
@@ -65,9 +70,15 @@ export const GameContainer: React.FC = () => {
     };
 
     const startPhaser = async () => {
-      const currentLevel = useGameStore.getState().currentLevel || 1;
-      await Promise.all([loadLevel(1), loadLevel(currentLevel)]);
-      preloadLevel(currentLevel + 1);
+      if (isDaily) {
+        const dailyLevel = await generateDailyIsotope();
+        if (cancelled) return;
+        useGameStore.getState().setSharedLevel(dailyLevel);
+      } else {
+        const currentLevel = useGameStore.getState().currentLevel || 1;
+        await Promise.all([loadLevel(1), loadLevel(currentLevel)]);
+        preloadLevel(currentLevel + 1);
+      }
 
       if (cancelled) return;
 
@@ -118,7 +129,7 @@ export const GameContainer: React.FC = () => {
       resizeObserver?.disconnect();
       window.removeEventListener('resize', handleViewportResize);
       window.removeEventListener('orientationchange', handleViewportResize);
-      if (moleculeId) {
+      if (moleculeId || isDaily) {
         useGameStore.getState().setSharedLevel(null);
       }
       if (gameRef.current) {
@@ -131,7 +142,7 @@ export const GameContainer: React.FC = () => {
         window.game = null;
       }
     };
-  }, [moleculeId]);
+  }, [moleculeId, isDaily]);
 
   return (
     <div className={styles.viewport}>
