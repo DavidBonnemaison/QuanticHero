@@ -268,7 +268,7 @@ export const useGameStore = create<GameStore>()(
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
-      heroSkin: 'pico',
+      heroSkin: 'hazmat',
       ghostMode: 'optimal',
       ghostEnabled: true,
       locale: 'en',
@@ -296,12 +296,12 @@ export const useGameStore = create<GameStore>()(
       toggleHeroSkin: () =>
         set((state) => {
           const order: HeroSkin[] = [
+            'hazmat',
             'pico',
             'gameboy',
             'megabit',
             'astronaut',
             'cybercat',
-            'hazmat',
             'samurai',
             'bot',
             'wizard',
@@ -310,7 +310,7 @@ export const useGameStore = create<GameStore>()(
             'quantum',
             'classic'
           ];
-          const idx = order.indexOf(state.heroSkin ?? 'pico');
+          const idx = order.indexOf(state.heroSkin ?? 'hazmat');
           return { heroSkin: order[(idx + 1) % order.length] };
         }),
 

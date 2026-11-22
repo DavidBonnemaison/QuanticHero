@@ -28,12 +28,12 @@ export const PIXEL_HERO_SKIN_IDS: readonly PixelHeroSkinId[] = [
 ] as const;
 
 export const ALL_HERO_SKINS: readonly HeroSkin[] = [
+  'hazmat',
   'pico',
   'gameboy',
   'megabit',
   'astronaut',
   'cybercat',
-  'hazmat',
   'samurai',
   'bot',
   'wizard',
@@ -931,6 +931,19 @@ export const PIXEL_SKIN_SPECS: Record<PixelHeroSkinId, PixelSkinSpec> = {
   }
 };
 
+/**
+ * Natural double-blink cadence with a ~3.5s relaxed pause between double-blinks:
+ * - 0..3400 ms: open
+ * - 3400..3530 ms: blink 1
+ * - 3530..3700 ms: brief open
+ * - 3700..3830 ms: blink 2
+ * - 3830..4200 ms: open
+ */
+function isDoubleBlinkClosed(timeMs: number): boolean {
+  const cycle = ((timeMs % 4200) + 4200) % 4200;
+  return (cycle >= 3400 && cycle < 3530) || (cycle >= 3700 && cycle < 3830);
+}
+
 function selectCompositeFrame(
   spec: PixelSkinSpec,
   timeMs: number,
@@ -948,17 +961,19 @@ function selectCompositeFrame(
     return [...upper, ...buildLegs(LEGS_RUN_FRAMES[rf], spec.legKey, spec.bootKey)];
   }
 
-  // 4-frame idle @ 10 fps (exact parity with hero.png; subtle blink on frame 2, constant 16-row height!)
+  // 4-frame idle @ 10 fps with natural double-blink (paused between pairs) and constant 16-row height
   const idf =
     Math.floor((timeMs / 1000) * PIXEL_ANIM_CONFIG.idleFps) % PIXEL_ANIM_CONFIG.idleFrames;
   const idleLegs = [LEGS_IDLE_0, LEGS_IDLE_1, LEGS_IDLE_2, LEGS_IDLE_3][idf];
-  const upper = idf === 2 ? spec.upperBlink : spec.upperNormal;
+  const upper = isDoubleBlinkClosed(timeMs) ? spec.upperBlink : spec.upperNormal;
   return [...upper, ...buildLegs(idleLegs, spec.legKey, spec.bootKey)];
 }
 
 /**
  * Renders any of the 10 grounded pixel-art skins with:
  * - Exact `hero.png` animation cadence (4-frame idle @ 10fps, 6-frame run @ 30fps, 3-frame jump @ 3fps)
+ * - Subtle idle upper-body sway & breathing while feet stay locked to the platform
+ * - Natural double-blink with long pause between pairs
  * - Constant 16-row height (zero vertical squashing when running!)
  * - Crisp asymmetric 3/4-profile that flips cleanly left <-> right via `facingDir`
  * - Feet planted flush on the platform (`y + 32` upright, `y - 32` inverted), zero floating bubble
@@ -987,11 +1002,23 @@ export function drawPixelArtHero(
   // Lock bottom row (row 15) flush with the platform surface (y + 32)
   const originY = state.upsideDown === 1 ? y + footEdgeOffset - rows * pxH : y - footEdgeOffset;
 
+  // Subtle idle sway on upper body (rows 0..10) so standing heroes feel alive while feet remain planted
+  const isIdle = !state.isRunning && !state.isAirborne && !state.isDiving && !isGhost;
+  const tSec = timeMs * 0.001;
+  const idleSwayX = isIdle ? Math.sin(tSec * 2.8) * 1.15 * state.scaleX : 0;
+  const idleBreatheY = isIdle
+    ? Math.sin(tSec * 2.8 + Math.PI * 0.35) * 0.65 * state.scaleY * state.upsideDown
+    : 0;
+
   const accentColor = state.isSuperQuanta ? 0xfbbf24 : state.envelopeColor;
 
   for (let r = 0; r < rows; r++) {
     const rowStr = sprite[r];
     const drawRow = state.upsideDown === -1 ? rows - 1 - r : r;
+    const isUpperBody = r < 11;
+    const rowShiftX = isUpperBody ? idleSwayX : 0;
+    const rowShiftY = isUpperBody ? idleBreatheY : 0;
+
     for (let c = 0; c < cols; c++) {
       const ch = rowStr[c];
       if (ch === '.') continue;
@@ -1010,9 +1037,18 @@ export function drawPixelArtHero(
       const cellAlpha = isGhost ? (ch === 'O' ? 0.7 * a : 0.44 * a) : a;
       g.fillStyle(color, cellAlpha);
       if (typeof g.fillRect === 'function') {
-        g.fillRect(originX + drawCol * pxW, originY + drawRow * pxH, pxW + 0.3, pxH + 0.3);
+        g.fillRect(
+          originX + drawCol * pxW + rowShiftX,
+          originY + drawRow * pxH + rowShiftY,
+          pxW + 0.3,
+          pxH + 0.3
+        );
       } else {
-        g.fillCircle(originX + (drawCol + 0.5) * pxW, originY + (drawRow + 0.5) * pxH, pxW * 0.55);
+        g.fillCircle(
+          originX + (drawCol + 0.5) * pxW + rowShiftX,
+          originY + (drawRow + 0.5) * pxH + rowShiftY,
+          pxW * 0.55
+        );
       }
     }
   }

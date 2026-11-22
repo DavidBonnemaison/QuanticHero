@@ -272,7 +272,7 @@ export interface GameSceneContext {
   canAdvanceLevel: boolean;
   nextLevelNumberPending: number | null;
   lastShownLevelId: string | null;
-  deathEchoes: Phaser.GameObjects.Sprite[];
+  deathEchoes: Array<Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics>;
   levelCompleteOverlay: Phaser.GameObjects.Container | null;
   quantumEffects: QuantumEffectsManager | null;
 

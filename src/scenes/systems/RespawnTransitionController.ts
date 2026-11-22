@@ -12,6 +12,7 @@ import { gameEvents } from '../../tools/gameEvents';
 import { getNextLevelId, isEntanglementLevelId } from '../../tools/levelProgression';
 import type { LevelData } from '../../types';
 import type Hero from '../Hero';
+import { type HeroVisualState, drawProceduralHeroForSkin } from '../HeroRenderer';
 import type { GameSceneContext } from './types';
 
 /**
@@ -24,9 +25,44 @@ export class RespawnTransitionController {
 
   public spawnDeathEcho(x: number, y: number): void {
     const ctx = this.ctx;
-    if (!ctx.add?.sprite) return;
     const antiHueColor = Phaser.Display.Color.HexStringToColor(ctx.levelData.antiHue).color;
     const clampedY = Phaser.Math.Clamp(y, 16, Math.max(16, ctx.levelData.height - 16));
+    const activeSkin = useGameStore.getState().heroSkin ?? 'hazmat';
+
+    if (activeSkin !== 'classic' && typeof ctx.add?.graphics === 'function') {
+      const echoGfx = ctx.add.graphics();
+      echoGfx.setPosition?.(x, clampedY);
+      echoGfx.x = x;
+      echoGfx.y = clampedY;
+      echoGfx.setAlpha?.(0.16);
+      echoGfx.alpha = 0.16;
+      echoGfx.setDepth?.(8);
+      const echoState: HeroVisualState = {
+        coreColor: 0xf8fafc,
+        envelopeColor: antiHueColor,
+        accentColor: antiHueColor,
+        alpha: 1,
+        scaleX: 1,
+        scaleY: 1,
+        leanRad: 0,
+        facingDir: 1,
+        upsideDown: 1,
+        isDiving: false,
+        isRunning: false,
+        isAirborne: false,
+        speedRatio: 0,
+        isSuperQuanta: false,
+        hasTunnelCharge: false,
+        hasPauliAura: false,
+        glowLayers: 0,
+        waveSegments: 10
+      };
+      drawProceduralHeroForSkin(echoGfx, activeSkin, 0, 0, 0, echoState, true, true);
+      ctx.deathEchoes.push(echoGfx);
+      return;
+    }
+
+    if (!ctx.add?.sprite) return;
     const echo = ctx.add.sprite(x, clampedY, 'hero', 0);
     echo.setAlpha(0.16);
     echo.setTint(antiHueColor);

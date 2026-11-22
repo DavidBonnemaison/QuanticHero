@@ -177,7 +177,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   public canAdvanceLevel = false;
   public nextLevelNumberPending: number | null = null;
   public lastShownLevelId: string | null = null;
-  public deathEchoes: Phaser.GameObjects.Sprite[] = [];
+  public deathEchoes: Array<Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics> = [];
   public levelCompleteOverlay: Phaser.GameObjects.Container | null = null;
   public quantumEffects: QuantumEffectsManager | null = null;
   public crackedPlatforms: Phaser.GameObjects.Rectangle[] = [];
@@ -785,7 +785,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   private renderHeroSkin(time: number): void {
     const storeState = useGameStore.getState();
     this.heroRenderer?.render(time, this.heroes, {
-      skin: storeState.heroSkin ?? 'pico',
+      skin: storeState.heroSkin ?? 'hazmat',
       reducedEffects: storeState.reducedEffects ?? false,
       activePhase: this.currentPhase,
       hasPhasePlatforms: this.hasPhasePlatforms,

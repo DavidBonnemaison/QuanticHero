@@ -636,6 +636,21 @@ export function showLevelCompleteOverlay(
     overlay.add(challengeBtn);
     stacked.push({ obj: challengeBtn, fallbackH: 36, gapAfter: 12 });
 
+    // Quantum Trajectory Minimap directly above the Share Card button
+    const mapW = Math.max(180, wrapW);
+    const mapH = isCompact ? 76 : 92;
+    let mapGfx: Phaser.GameObjects.Graphics | null = null;
+    if (typeof ctx.add.graphics === 'function') {
+      mapGfx = ctx.add.graphics();
+      mapGfx.setScrollFactor?.(0);
+      overlay.add(mapGfx);
+      stacked.push({
+        obj: mapGfx as unknown as Phaser.GameObjects.Text,
+        fallbackH: mapH,
+        gapAfter: 10
+      });
+    }
+
     const shareCardBtn = ctx.add.text(camW / 2, camH / 2 + 146, `🖼 ${t.hud.shareCardButton}`, {
       fontFamily: "'Silkscreen', 'JetBrains Mono', monospace",
       fontSize: isCompact ? '13px' : '16px',
@@ -664,15 +679,95 @@ export function showLevelCompleteOverlay(
       typeof s.obj.height === 'number' && s.obj.height > 0 ? s.obj.height : s.fallbackH
     );
     const totalContentH = heights.reduce((sum, h, i) => sum + h + stacked[i].gapAfter, 0);
-    const finalCardH = Math.min(camH - 96, Math.max(cardH, Math.ceil(totalContentH + 40)));
+    const finalCardH = Math.min(camH - 80, Math.max(cardH, Math.ceil(totalContentH + 36)));
     if (typeof cardBg.setSize === 'function') {
       cardBg.setSize(cardW, finalCardH);
     }
     let cursorY = camH / 2 - totalContentH / 2;
+    let mapCenterY = camH / 2;
     for (let i = 0; i < stacked.length; i++) {
       const h = heights[i];
-      stacked[i].obj.setPosition?.(camW / 2, Math.round(cursorY + h / 2));
+      const itemCenterY = Math.round(cursorY + h / 2);
+      if (mapGfx && stacked[i].obj === (mapGfx as unknown)) {
+        mapCenterY = itemCenterY;
+      } else {
+        stacked[i].obj.setPosition?.(camW / 2, itemCenterY);
+      }
       cursorY += h + stacked[i].gapAfter;
+    }
+
+    // Draw the Quantum Trajectory Minimap at its resolved vertical slot
+    if (mapGfx) {
+      const left = Math.round(camW / 2 - mapW / 2);
+      const top = Math.round(mapCenterY - mapH / 2);
+      const accentHex = ctx.levelData.antiHue || '#00e5ff';
+      const accentColor = Number.parseInt(accentHex.replace('#', ''), 16) || 0x00e5ff;
+
+      mapGfx.fillStyle(0x050814, 0.92);
+      mapGfx.fillRect(left, top, mapW, mapH);
+      mapGfx.lineStyle(1.5, accentColor, 0.65);
+      mapGfx.strokeRect?.(left, top, mapW, mapH);
+
+      const lvlW = Math.max(1, ctx.levelData.width || 800);
+      const lvlH = Math.max(1, ctx.levelData.height || 600);
+      const pad = 10;
+      const scale = Math.min((mapW - pad * 2) / lvlW, (mapH - pad * 2) / lvlH);
+      const offX = left + (mapW - lvlW * scale) / 2;
+      const offY = top + (mapH - lvlH * scale) / 2;
+      const mx = (wx: number) => offX + wx * scale;
+      const my = (wy: number) => offY + wy * scale;
+
+      // Platforms
+      for (const p of ctx.levelData.platforms ?? []) {
+        const pColor =
+          p.phase === 'cyan' ? 0x00e5ff : p.phase === 'magenta' ? 0xec4899 : accentColor;
+        mapGfx.fillStyle(pColor, 0.45);
+        mapGfx.fillRect(
+          mx(p.x),
+          my(p.y),
+          Math.max(2, p.width * scale),
+          Math.max(1.5, p.height * scale)
+        );
+      }
+
+      // Past-attempt swarm trails (subtle)
+      const attempts = ctx.swarmBuffer?.getAttempts?.() ?? [];
+      for (const att of attempts) {
+        if (att.isVictory || !att.frames || att.frames.length < 2) continue;
+        mapGfx.lineStyle(1, accentColor, 0.22);
+        mapGfx.beginPath();
+        mapGfx.moveTo(mx(att.frames[0].x), my(att.frames[0].y));
+        for (let i = 1; i < att.frames.length; i++) {
+          mapGfx.lineTo(mx(att.frames[i].x), my(att.frames[i].y));
+        }
+        mapGfx.strokePath();
+      }
+
+      // Winning player trajectory (neon glow)
+      const frames = ctx.ghostRecorder?.getFrames?.() ?? [];
+      if (frames.length >= 2) {
+        mapGfx.lineStyle(2.2, accentColor, 0.96);
+        mapGfx.beginPath();
+        mapGfx.moveTo(mx(frames[0].x), my(frames[0].y));
+        for (let i = 1; i < frames.length; i++) {
+          mapGfx.lineTo(mx(frames[i].x), my(frames[i].y));
+        }
+        mapGfx.strokePath();
+      }
+
+      // Start point & exit portal marker
+      const startPos = ctx.levelData.player?.position;
+      if (startPos) {
+        mapGfx.fillStyle(0x38bdf8, 0.95);
+        mapGfx.fillCircle(mx(startPos.x), my(startPos.y), 3);
+      }
+      const doorPos = ctx.levelData.door;
+      if (doorPos) {
+        mapGfx.lineStyle(1.8, 0xfbbf24, 0.95);
+        mapGfx.strokeCircle(mx(doorPos.x - 48), my(doorPos.y - 64), 4.5);
+        mapGfx.fillStyle(0xfbbf24, 0.9);
+        mapGfx.fillCircle(mx(doorPos.x - 48), my(doorPos.y - 64), 2);
+      }
     }
   }
 

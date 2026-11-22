@@ -38,7 +38,7 @@ export default function Menu(): React.ReactElement {
   const toggleHaptics = useGameStore((state) => state.toggleHaptics);
   const reducedEffects = useGameStore((state) => state.reducedEffects);
   const toggleReducedEffects = useGameStore((state) => state.toggleReducedEffects);
-  const heroSkin = useGameStore((state) => state.heroSkin ?? 'pico');
+  const heroSkin = useGameStore((state) => state.heroSkin ?? 'hazmat');
   const toggleHeroSkin = useGameStore((state) => state.toggleHeroSkin);
   const locale = useGameStore((state) => state.locale ?? 'en');
   const toggleLocale = useGameStore((state) => state.toggleLocale);

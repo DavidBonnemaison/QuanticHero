@@ -220,7 +220,7 @@ export class HudController {
 
     const getSkinLabel = () => {
       const s = getHudStrings().hud;
-      const skin = useGameStore.getState().heroSkin ?? 'pico';
+      const skin = useGameStore.getState().heroSkin ?? 'hazmat';
       const labels: Record<string, string> = {
         pico: 'SKN:PIC',
         gameboy: s.skinGameboy,

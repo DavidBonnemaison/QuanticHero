@@ -84,7 +84,7 @@ export class GhostHero extends Phaser.GameObjects.Sprite {
     const isFinished = this.totalDurationMs > 0 && elapsedMs >= this.totalDurationMs;
     const effectiveAlpha = isFinished ? this.finishedAlpha : this.baseAlpha;
     const storeState = useGameStore.getState();
-    const activeSkin = storeState.heroSkin ?? 'pico';
+    const activeSkin = storeState.heroSkin ?? 'hazmat';
     const reducedEffects = Boolean(storeState.reducedEffects);
 
     if (activeSkin !== 'classic' && this.quantumGraphics) {

@@ -676,14 +676,14 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().pendingDuelShare).toBeNull();
     });
 
-    it('defaults heroSkin to pico, rotates through all 13 skins, and persists to localStorage', () => {
+    it('defaults heroSkin to hazmat, rotates through all 13 skins, and persists to localStorage', () => {
       const expectedOrder = [
+        'hazmat',
         'pico',
         'gameboy',
         'megabit',
         'astronaut',
         'cybercat',
-        'hazmat',
         'samurai',
         'bot',
         'wizard',
@@ -692,8 +692,8 @@ describe('useGameStore', () => {
         'quantum',
         'classic'
       ] as const;
-      useGameStore.setState({ heroSkin: 'pico' });
-      expect(useGameStore.getState().heroSkin).toBe('pico');
+      useGameStore.setState({ heroSkin: 'hazmat' });
+      expect(useGameStore.getState().heroSkin).toBe('hazmat');
 
       for (let i = 1; i <= expectedOrder.length; i++) {
         useGameStore.getState().toggleHeroSkin();

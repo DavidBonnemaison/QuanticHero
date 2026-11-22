@@ -313,9 +313,9 @@ function drawElementAndMetrics(
 
   // Key metrics row: Time + Jumps + Coherence Tier
   const metricHeight = 96;
-  const timeBoxW = 248;
-  const jumpsBoxW = 112;
-  const gap = 14;
+  const timeBoxW = 228;
+  const jumpsBoxW = 104;
+  const gap = 12;
 
   // Time box
   drawRoundedRectPath(ctx, leftX, currentY, timeBoxW, metricHeight, 12);
@@ -326,14 +326,14 @@ function drawElementAndMetrics(
   ctx.stroke();
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = 'bold 16px "JetBrains Mono", monospace';
+  ctx.font = 'bold 15px "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.fillText(locale === 'fr' ? 'TEMPS' : 'TIME', leftX + 16, currentY + 12);
+  ctx.fillText(locale === 'fr' ? 'TEMPS' : 'TIME', leftX + 14, currentY + 12);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 46px "JetBrains Mono", monospace';
-  ctx.fillText(formatCardTime(input.timeMs), leftX + 16, currentY + 34);
+  ctx.font = 'bold 40px "JetBrains Mono", monospace';
+  ctx.fillText(formatCardTime(input.timeMs), leftX + 14, currentY + 38);
 
   // Jumps box
   const jumpsX = leftX + timeBoxW + gap;
@@ -345,17 +345,17 @@ function drawElementAndMetrics(
   ctx.stroke();
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = 'bold 16px "JetBrains Mono", monospace';
-  ctx.fillText(locale === 'fr' ? 'SAUTS' : 'JUMPS', jumpsX + 14, currentY + 12);
+  ctx.font = 'bold 15px "JetBrains Mono", monospace';
+  ctx.fillText(locale === 'fr' ? 'SAUTS' : 'JUMPS', jumpsX + 12, currentY + 12);
 
   ctx.fillStyle = '#38bdf8';
-  ctx.font = 'bold 44px "JetBrains Mono", monospace';
-  ctx.fillText(`${Math.max(0, Math.round(input.jumps))}J`, jumpsX + 14, currentY + 34);
+  ctx.font = 'bold 38px "JetBrains Mono", monospace';
+  ctx.fillText(`${Math.max(0, Math.round(input.jumps))}J`, jumpsX + 12, currentY + 39);
 
   // Coherence Tier box (optional)
   if (input.coherenceTier) {
     const cohX = jumpsX + jumpsBoxW + gap;
-    const cohW = 112;
+    const cohW = 148;
     const cohStyle = getCoherenceStyle(input.coherenceTier);
 
     drawRoundedRectPath(ctx, cohX, currentY, cohW, metricHeight, 12);
@@ -370,8 +370,8 @@ function drawElementAndMetrics(
     ctx.fillText(locale === 'fr' ? 'FLUX' : 'FLOW', cohX + 12, currentY + 12);
 
     ctx.fillStyle = cohStyle.color;
-    ctx.font = 'bold 28px "JetBrains Mono", monospace';
-    ctx.fillText(cohStyle.label, cohX + 12, currentY + 42);
+    ctx.font = 'bold 24px "JetBrains Mono", monospace';
+    ctx.fillText(cohStyle.label, cohX + 12, currentY + 44);
   }
 }
 
