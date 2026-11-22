@@ -712,7 +712,8 @@ describe('GameScene Spec-06: Swarm Replay & Isotope Medals', () => {
     expect(ty).toBe(88);
     expect(msg).toBe('QUANTUM SPEED !');
     const fontSizePx = Number.parseInt(String(style.fontSize), 10);
-    expect(fontSizePx).toBeGreaterThanOrEqual(34);
+    expect(fontSizePx).toBeGreaterThanOrEqual(15);
+    expect(style.wordWrap?.width).toBeGreaterThan(0);
     const tweenConfig = (scene as any).tweens.add.mock.calls[0]?.[0];
     expect(tweenConfig?.delay).toBeGreaterThanOrEqual(1500);
     expect(tweenConfig?.duration).toBeGreaterThanOrEqual(500);

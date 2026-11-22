@@ -169,7 +169,7 @@ describe('ReplayCardGenerator', () => {
     expect(drawnTexts.some((txt) => txt === '00:07.42')).toBe(true);
     expect(drawnTexts.some((txt) => txt === '6J')).toBe(true);
     expect(drawnTexts.some((txt) => txt.includes('HYPER'))).toBe(true);
-    expect(drawnTexts.some((txt) => txt === 'QUANTIC HERO')).toBe(true);
+    expect(drawnTexts.some((txt) => txt === 'QUANTUM HERO')).toBe(true);
   });
 
   it('renders DUEL VICTORY badge cleanly', async () => {
@@ -294,7 +294,7 @@ describe('ReplayCardGenerator', () => {
     expect(blob.type).toBe('image/png');
     expect(file).toBeInstanceOf(File);
     expect(file.type).toBe('image/png');
-    expect(file.name).toBe('quantic-hero-c-6.png');
+    expect(file.name).toBe('quantum-hero-c-6.png');
     expect(elapsedMs).toBeLessThan(100);
   });
 

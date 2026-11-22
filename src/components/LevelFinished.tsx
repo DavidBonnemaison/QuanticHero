@@ -2,6 +2,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCachedLevel, getLevelMetadata, loadLevel } from '../data/levels';
+import { getSpectralLineColors } from '../data/spectroscopy';
 import { getStrings } from '../i18n/strings';
 import { getMedalDisplayInfo } from '../services/MedalService';
 import { shareReplayCard } from '../services/ReplayCardGenerator';
@@ -40,6 +41,7 @@ export default function LevelFinished(): React.ReactElement {
   const lastRun = useGameStore((state) => state.lastRun);
   const saveSharedLevelToCustom = useGameStore((state) => state.saveSharedLevelToCustom);
   const locale = useGameStore((state) => state.locale ?? 'en');
+  const reducedEffects = useGameStore((state) => state.reducedEffects);
   const t = getStrings(locale);
 
   const isShared = Boolean(sharedLevel);
@@ -71,6 +73,12 @@ export default function LevelFinished(): React.ReactElement {
     currentLevelScore;
   const medalInfo = getMedalDisplayInfo(medal ?? (best > 0 ? 'bronze' : 'none'), locale);
   const displayStyleScore = lastStyleScore ?? bestStyleScore;
+  const isNewPB = best === last && best > 0;
+  const isGoldMedal = medal === 'gold';
+  const showCelebration = (isNewPB || isGoldMedal) && !reducedEffects;
+  const spectralColors = showCelebration
+    ? getSpectralLineColors(Math.max(1, Math.min(118, levelIndex || 1)))
+    : [];
 
   const duelElapsedMs = lastRun?.elapsedMs ?? last;
   const duelDeltaMs = activeDuel ? duelElapsedMs - activeDuel.challengerTimeMs : 0;
@@ -271,6 +279,43 @@ export default function LevelFinished(): React.ReactElement {
 
   return (
     <div className={styles.container}>
+      {showCelebration && (
+        <>
+          <div
+            data-testid="celebration-flash"
+            className={styles.celebrationFlash}
+            aria-hidden="true"
+          />
+          <div
+            data-testid="spectral-particles"
+            className={styles.spectralParticles}
+            aria-hidden="true"
+          >
+            {Array.from({ length: 12 }, (_, idx) => {
+              const angle = (Math.PI * 2 * idx) / 12;
+              const radius = 110 + (idx % 3) * 42;
+              const dx = `${Math.round(Math.cos(angle) * radius)}px`;
+              const dy = `${Math.round(Math.sin(angle) * radius)}px`;
+              const color = spectralColors[idx % spectralColors.length] || '#00e5ff';
+              return (
+                <span
+                  key={idx}
+                  className={styles.spectralParticle}
+                  style={
+                    {
+                      backgroundColor: color,
+                      boxShadow: `0 0 12px ${color}`,
+                      '--dx': dx,
+                      '--dy': dy,
+                      animationDelay: `${(idx % 4) * 35}ms`
+                    } as React.CSSProperties
+                  }
+                />
+              );
+            })}
+          </div>
+        </>
+      )}
       {activeDuel && (
         <div
           data-testid="duel-verdict"

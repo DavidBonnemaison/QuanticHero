@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { generateProceduralTextures } from './ProceduralTextures';
 
 export default class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -6,15 +7,7 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Images
-    this.load.image('spike', '/assets/images/spike.png');
-    this.load.image('red', '/assets/images/red.png');
-    this.load.image('cyan', '/assets/images/cyan.png');
-    this.load.image('blue', '/assets/images/blue.png');
-    this.load.image('yellow', '/assets/images/yellow.png');
-    this.load.image('green', '/assets/images/green.png');
-
-    // Spritesheets
+    // Classic retro hero spritesheets (preserved for 'classic' skin toggle)
     this.load.spritesheet('hero', '/assets/images/hero.png', {
       frameWidth: 64,
       frameHeight: 64
@@ -23,14 +16,13 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: 64,
       frameHeight: 64
     });
-    this.load.spritesheet('portal', '/assets/images/portal.png', {
-      frameWidth: 480,
-      frameHeight: 312
-    });
   }
 
   create(): void {
-    // Hero animations
+    // Generate all procedural vector textures (portal, spike, 8 particle glyphs)
+    generateProceduralTextures(this);
+
+    // Hero animations (classic skin)
     if (!this.anims.exists('left')) {
       this.anims.create({
         key: 'left',
@@ -67,7 +59,7 @@ export default class PreloadScene extends Phaser.Scene {
       });
     }
 
-    // Disabled hero animations
+    // Disabled hero animations (classic skin)
     if (!this.anims.exists('disabled-left')) {
       this.anims.create({
         key: 'disabled-left',
@@ -100,16 +92,6 @@ export default class PreloadScene extends Phaser.Scene {
         key: 'disabled-jump',
         frames: this.anims.generateFrameNumbers('disabled', { frames: [13, 14, 15] }),
         frameRate: 3,
-        repeat: -1
-      });
-    }
-
-    // Portal animation
-    if (!this.anims.exists('spin')) {
-      this.anims.create({
-        key: 'spin',
-        frames: this.anims.generateFrameNumbers('portal', { frames: [0, 1, 2, 3] }),
-        frameRate: 10,
         repeat: -1
       });
     }

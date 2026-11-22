@@ -251,7 +251,7 @@ function drawElementAndMetrics(
     ctx.stroke();
 
     ctx.fillStyle = style.color;
-    ctx.font = 'bold 20px "VT323", "Courier New", monospace';
+    ctx.font = 'bold 20px "JetBrains Mono", monospace';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     ctx.fillText(`★ ${badgeText}`, leftX + 16, currentY + pillH / 2 + 1);
@@ -270,14 +270,14 @@ function drawElementAndMetrics(
   // Atomic number Z
   const zLabel = resolveAtomicZLabel(input.level);
   ctx.fillStyle = rgba(antiRgb, 0.95);
-  ctx.font = 'bold 22px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 22px "JetBrains Mono", monospace';
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   ctx.fillText(zLabel, leftX + 14, currentY + 12);
 
   // Element symbol
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 74px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 74px "JetBrains Mono", monospace';
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
   ctx.fillText(input.level.symbol || '?', leftX + tileSize / 2, currentY + tileSize / 2 + 10);
@@ -287,7 +287,7 @@ function drawElementAndMetrics(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillStyle = rgba(antiRgb, 0.9);
-  ctx.font = 'bold 18px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 18px "JetBrains Mono", monospace';
   ctx.fillText(
     locale === 'fr' ? 'ISOTOPE SYNTHÉTISÉ' : 'ELEMENT SYNTHESIZED',
     nameX,
@@ -298,14 +298,14 @@ function drawElementAndMetrics(
   const atomName = (input.level.atom || 'Unknown').toUpperCase();
   ctx.font =
     atomName.length > 12
-      ? 'bold 40px "VT323", "Courier New", monospace'
-      : 'bold 50px "VT323", "Courier New", monospace';
+      ? 'bold 40px "JetBrains Mono", monospace'
+      : 'bold 50px "JetBrains Mono", monospace';
   ctx.fillText(atomName, nameX, currentY + 46);
 
   // Medal line under atom name
   if (medalInfo.medal !== 'none') {
     ctx.fillStyle = medalInfo.color;
-    ctx.font = 'bold 24px "VT323", "Courier New", monospace';
+    ctx.font = 'bold 24px "JetBrains Mono", monospace';
     ctx.fillText(`${medalInfo.symbol} ${medalInfo.label}`, nameX, currentY + 108);
   }
 
@@ -313,9 +313,9 @@ function drawElementAndMetrics(
 
   // Key metrics row: Time + Jumps + Coherence Tier
   const metricHeight = 96;
-  const timeBoxW = 248;
-  const jumpsBoxW = 112;
-  const gap = 14;
+  const timeBoxW = 228;
+  const jumpsBoxW = 104;
+  const gap = 12;
 
   // Time box
   drawRoundedRectPath(ctx, leftX, currentY, timeBoxW, metricHeight, 12);
@@ -326,14 +326,14 @@ function drawElementAndMetrics(
   ctx.stroke();
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = 'bold 16px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 15px "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.fillText(locale === 'fr' ? 'TEMPS' : 'TIME', leftX + 16, currentY + 12);
+  ctx.fillText(locale === 'fr' ? 'TEMPS' : 'TIME', leftX + 14, currentY + 12);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 46px "VT323", "Courier New", monospace';
-  ctx.fillText(formatCardTime(input.timeMs), leftX + 16, currentY + 34);
+  ctx.font = 'bold 40px "JetBrains Mono", monospace';
+  ctx.fillText(formatCardTime(input.timeMs), leftX + 14, currentY + 38);
 
   // Jumps box
   const jumpsX = leftX + timeBoxW + gap;
@@ -345,17 +345,17 @@ function drawElementAndMetrics(
   ctx.stroke();
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = 'bold 16px "VT323", "Courier New", monospace';
-  ctx.fillText(locale === 'fr' ? 'SAUTS' : 'JUMPS', jumpsX + 14, currentY + 12);
+  ctx.font = 'bold 15px "JetBrains Mono", monospace';
+  ctx.fillText(locale === 'fr' ? 'SAUTS' : 'JUMPS', jumpsX + 12, currentY + 12);
 
   ctx.fillStyle = '#38bdf8';
-  ctx.font = 'bold 44px "VT323", "Courier New", monospace';
-  ctx.fillText(`${Math.max(0, Math.round(input.jumps))}J`, jumpsX + 14, currentY + 34);
+  ctx.font = 'bold 38px "JetBrains Mono", monospace';
+  ctx.fillText(`${Math.max(0, Math.round(input.jumps))}J`, jumpsX + 12, currentY + 39);
 
   // Coherence Tier box (optional)
   if (input.coherenceTier) {
     const cohX = jumpsX + jumpsBoxW + gap;
-    const cohW = 112;
+    const cohW = 148;
     const cohStyle = getCoherenceStyle(input.coherenceTier);
 
     drawRoundedRectPath(ctx, cohX, currentY, cohW, metricHeight, 12);
@@ -366,12 +366,12 @@ function drawElementAndMetrics(
     ctx.stroke();
 
     ctx.fillStyle = '#cbd5e1';
-    ctx.font = 'bold 15px "VT323", "Courier New", monospace';
+    ctx.font = 'bold 15px "JetBrains Mono", monospace';
     ctx.fillText(locale === 'fr' ? 'FLUX' : 'FLOW', cohX + 12, currentY + 12);
 
     ctx.fillStyle = cohStyle.color;
-    ctx.font = 'bold 28px "VT323", "Courier New", monospace';
-    ctx.fillText(cohStyle.label, cohX + 12, currentY + 42);
+    ctx.font = 'bold 24px "JetBrains Mono", monospace';
+    ctx.fillText(cohStyle.label, cohX + 12, currentY + 44);
   }
 }
 
@@ -396,7 +396,7 @@ function drawMinimapAndTrajectory(
 
   // Header label
   ctx.fillStyle = rgba(antiRgb, 0.85);
-  ctx.font = 'bold 18px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 18px "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillText(
@@ -600,16 +600,16 @@ function drawFooter(
 
   // Branding
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 34px "VT323", "Courier New", monospace';
+  ctx.font = 'bold 32px "Silkscreen", "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText('QUANTIC HERO', 56, 562);
+  ctx.fillText('QUANTUM HERO', 56, 562);
   const measuredBrandWidth =
-    typeof ctx.measureText === 'function' ? ctx.measureText('QUANTIC HERO').width : 240;
+    typeof ctx.measureText === 'function' ? ctx.measureText('QUANTUM HERO').width : 260;
   const subtitleX = Math.max(260, Math.ceil(56 + measuredBrandWidth + 24));
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '20px "VT323", "Courier New", monospace';
+  ctx.font = '20px "JetBrains Mono", monospace';
   ctx.fillText('ISOTOPE RECORD CARD', subtitleX, 564);
 
   // Optional miniature QR code
@@ -692,7 +692,7 @@ function buildDefaultFilename(level: LevelData): string {
   const safeId = String(level.id || '0')
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, '-');
-  return `quantic-hero-${safeSymbol}-${safeId}.png`;
+  return `quantum-hero-${safeSymbol}-${safeId}.png`;
 }
 
 /**
@@ -726,7 +726,7 @@ export async function shareReplayCard(
   const t = getStrings(locale);
   const shareText =
     options.text ??
-    `QUANTIC HERO — ${input.level.symbol} ${input.level.atom} • ${formatCardTime(input.timeMs)} • ${Math.max(0, Math.round(input.jumps))}J (${getMedalDisplayInfo(input.medal, locale).shortLabel})`;
+    `QUANTUM HERO — ${input.level.symbol} ${input.level.atom} • ${formatCardTime(input.timeMs)} • ${Math.max(0, Math.round(input.jumps))}J (${getMedalDisplayInfo(input.medal, locale).shortLabel})`;
 
   if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     const canShareFiles =

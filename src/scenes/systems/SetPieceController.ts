@@ -136,6 +136,11 @@ export class SetPieceController {
         });
       }
     }
+    if (ctx.shakeCamera) {
+      ctx.shakeCamera(280, 0.014);
+    } else if (!useGameStore.getState().reducedEffects) {
+      ctx.cameras?.main?.shake?.(280, 0.014);
+    }
     gameEvents.emit('wow:supernova_shockwave', { level: 27 });
   }
 

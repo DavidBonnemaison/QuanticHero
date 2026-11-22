@@ -675,5 +675,36 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().lastRun).toBeNull();
       expect(useGameStore.getState().pendingDuelShare).toBeNull();
     });
+
+    it('defaults heroSkin to hazmat, rotates through all 13 skins, and persists to localStorage', () => {
+      const expectedOrder = [
+        'hazmat',
+        'pico',
+        'gameboy',
+        'megabit',
+        'astronaut',
+        'cybercat',
+        'samurai',
+        'bot',
+        'wizard',
+        'ninja',
+        'neo',
+        'quantum',
+        'classic'
+      ] as const;
+      useGameStore.setState({ heroSkin: 'hazmat' });
+      expect(useGameStore.getState().heroSkin).toBe('hazmat');
+
+      for (let i = 1; i <= expectedOrder.length; i++) {
+        useGameStore.getState().toggleHeroSkin();
+        expect(useGameStore.getState().heroSkin).toBe(expectedOrder[i % expectedOrder.length]);
+      }
+
+      useGameStore.getState().setHeroSkin('cybercat');
+      expect(useGameStore.getState().heroSkin).toBe('cybercat');
+
+      const persistedExplicit = JSON.parse(localStorage.getItem('qtmhro') || '{}');
+      expect(persistedExplicit.state.heroSkin).toBe('cybercat');
+    });
   });
 });

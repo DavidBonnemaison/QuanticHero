@@ -20,6 +20,7 @@ import type {
 } from '../../types';
 import type { GhostHero } from '../GhostHero';
 import type Hero from '../Hero';
+import type { HeroRenderer } from '../HeroRenderer';
 import type { TimeLoopSystem } from './TimeLoopSystem';
 
 export interface Gate {
@@ -195,6 +196,8 @@ export interface GameSceneContext {
   collapseConfig?: CollapseConfig;
   pauliGraphics: Phaser.GameObjects.Graphics | null;
   spikeGfx: Phaser.GameObjects.Graphics | null;
+  portalGraphics?: Phaser.GameObjects.Graphics | null;
+  heroRenderer?: HeroRenderer | null;
   unsubJump: (() => void) | null;
   unsubHudStore: (() => void) | null;
   entanglementGraphics: Phaser.GameObjects.Graphics | null;
@@ -269,7 +272,7 @@ export interface GameSceneContext {
   canAdvanceLevel: boolean;
   nextLevelNumberPending: number | null;
   lastShownLevelId: string | null;
-  deathEchoes: Phaser.GameObjects.Sprite[];
+  deathEchoes: Array<Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics>;
   levelCompleteOverlay: Phaser.GameObjects.Container | null;
   quantumEffects: QuantumEffectsManager | null;
 
@@ -336,6 +339,7 @@ export interface GameSceneContext {
   switchFocusByIndex(index: number): void;
   handleResize(gameSize?: { width: number; height: number }): void;
   destroyBetaPipCamera(): void;
+  shakeCamera?(duration: number, intensity?: number): void;
   tryCrystallizeBroglieTrail(): boolean;
   spawnBroglieWallWake?(x: number, y: number, durationMs: number): void;
   loadAcceleratorChamber?(nextLevelData: LevelData, modifiers: AggregatedMutationModifiers): void;

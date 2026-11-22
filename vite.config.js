@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'Quantum Hero - The Quantum Platformer',
         short_name: 'Quantum Hero',
         description: 'A teeny-tiny game in the quantum world',
-        theme_color: '#000000',
-        background_color: '#000000',
+        theme_color: '#050814',
+        background_color: '#050814',
         display: 'standalone',
         orientation: 'any',
         start_url: '/',
@@ -40,34 +40,6 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
           {
             urlPattern: /\/assets\/images\/.*/i,
             handler: 'CacheFirst',

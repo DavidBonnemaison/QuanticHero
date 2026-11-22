@@ -303,7 +303,7 @@ describe('HudController', () => {
     expect(ctx.condenseButtonZone?.visible).toBe(true);
 
     hud.repositionOnResize(390, 844);
-    expect(ctx.condenseButtonBg?.x).toBe(332);
+    expect(ctx.condenseButtonBg?.x).toBe(322);
     expect(ctx.condenseButtonBg?.y).toBe(748);
 
     const zone = ctx.condenseButtonZone as unknown as {
@@ -392,5 +392,56 @@ describe('HudController', () => {
     expect(ctx.advanceToNextLevel).not.toHaveBeenCalled();
 
     shareSpy.mockRestore();
+  });
+
+  it('lays out top HUD buttons without horizontal overlap on desktop and mobile viewports', () => {
+    const ctx = makeHudContext();
+    (ctx.add.text as ReturnType<typeof vi.fn>).mockImplementation(
+      (x: number, y: number, txt: string) => {
+        const obj = makeDisplayObj(x, y, txt) as ReturnType<typeof makeDisplayObj> & {
+          width: number;
+          setFontSize: ReturnType<typeof vi.fn>;
+        };
+        obj.width = txt.length * 10;
+        obj.setFontSize = vi.fn((size: string) => {
+          const px = Number.parseInt(size, 10) || 15;
+          obj.width = Math.ceil(obj.text.length * px * 0.62);
+        });
+        return obj;
+      }
+    );
+
+    const hud = new HudController(ctx);
+    hud.createHUD();
+
+    const textObjs = (ctx.add.text as ReturnType<typeof vi.fn>).mock.results.map(
+      (r) => r.value as { x: number; y: number; width: number; text: string }
+    );
+    const topLabels = ['[RST]', 'SND:', 'HAP:', 'FX:', 'SKN:'];
+    const buttons = topLabels.map((prefix) =>
+      textObjs.find((o) => o.text.startsWith(prefix))
+    ) as Array<{ x: number; y: number; width: number; text: string }>;
+
+    expect(buttons.every(Boolean)).toBe(true);
+
+    // Desktop (800px): strictly increasing non-overlapping X on row 1, well left of timer
+    for (let i = 1; i < buttons.length; i++) {
+      expect(buttons[i].y).toBe(buttons[i - 1].y);
+      expect(buttons[i].x).toBeGreaterThanOrEqual(buttons[i - 1].x + buttons[i - 1].width);
+    }
+    const lastDesktop = buttons[buttons.length - 1];
+    expect(lastDesktop.x + lastDesktop.width).toBeLessThan(ctx.timerText.x - 100);
+
+    // Mobile (390px): no button overlaps its neighbor on the same row and none collides with timer
+    ctx.cameras.main.width = 390;
+    hud.repositionOnResize(390, 844);
+    for (let i = 1; i < buttons.length; i++) {
+      if (buttons[i].y === buttons[i - 1].y) {
+        expect(buttons[i].x).toBeGreaterThanOrEqual(buttons[i - 1].x + buttons[i - 1].width);
+      }
+    }
+    const row1Mobile = buttons.filter((b) => b.y < 20);
+    const lastRow1Mobile = row1Mobile[row1Mobile.length - 1];
+    expect(lastRow1Mobile.x + lastRow1Mobile.width).toBeLessThan(ctx.timerText.x - 85);
   });
 });

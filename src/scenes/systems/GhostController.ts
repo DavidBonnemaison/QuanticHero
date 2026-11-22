@@ -1,6 +1,5 @@
 import type Phaser from 'phaser';
 import { getStrings } from '../../i18n/strings';
-import { canGhostSurf, getGhostSurfVelocity } from '../../physics/matterStates';
 import { getSwarmSpectrumTint } from '../../services/GhostManager';
 import { useGameStore } from '../../store';
 import {
@@ -8,7 +7,6 @@ import {
   decompressTrajectory,
   formatSplitDelta
 } from '../../tools/GhostRecorder';
-import { gameEvents } from '../../tools/gameEvents';
 import { GhostHero } from '../GhostHero';
 import type { GameSceneContext } from './types';
 
@@ -235,42 +233,11 @@ export class GhostController {
     return isGhostActive;
   }
 
-  public updateGhostSurfing(isGhostActive: boolean): void {
-    const ctx = this.ctx;
-    if (!isGhostActive || !ctx.ghostHero || !ctx.ghostHero.visible || !ctx.ghostHero.active) {
-      return;
-    }
-
-    for (const hero of ctx.heroes) {
-      if (!hero.active || !hero.body) continue;
-      const surfOk = canGhostSurf(
-        {
-          x: hero.x,
-          y: hero.y,
-          vy: hero.body.velocity.y,
-          upsideDown: hero.upsideDown,
-          hasSurfedThisJump: hero.hasSurfedThisJump
-        },
-        ctx.ghostHero
-      );
-      if (surfOk) {
-        hero.setVelocityY(getGhostSurfVelocity(hero.upsideDown));
-        hero.hasSurfedThisJump = true;
-        hero.isDiving = false;
-        gameEvents.emit('hero:ghost_surf', { x: hero.x, y: hero.y });
-        if (ctx.add?.circle && ctx.tweens?.add) {
-          const ring = ctx.add.circle(hero.x, hero.y + 12 * hero.upsideDown, 10, 0xfbbf24, 0.75);
-          ring.setDepth(22);
-          ctx.tweens.add({
-            targets: ring,
-            scale: 2.6,
-            alpha: 0,
-            duration: 240,
-            ease: 'Sine.easeOut',
-            onComplete: () => ring.destroy()
-          });
-        }
-      }
-    }
+  /**
+   * Ghosts (replay, duel, and swarm) are strictly non-interactive visual overlays.
+   * No physical collision, bounce, or surfing interaction is applied to the player hero.
+   */
+  public updateGhostSurfing(_isGhostActive: boolean): void {
+    // Intentionally a no-op: player hero never physically interacts with ghosts.
   }
 }

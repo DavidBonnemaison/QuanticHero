@@ -317,4 +317,27 @@ describe('Menu component', () => {
       window.history.replaceState({}, '', '/');
     }
   });
+
+  it('cycles hero skin through all 13 skins starting from SKIN: HAZMAT', () => {
+    useGameStore.setState({ heroSkin: 'hazmat', locale: 'en' });
+    renderWithRouter();
+
+    const skinBtn = screen.getByTestId('skin-toggle');
+    expect(skinBtn).toHaveTextContent('SKIN: HAZMAT');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('pico');
+    expect(skinBtn).toHaveTextContent('SKIN: PICO');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('gameboy');
+    expect(skinBtn).toHaveTextContent('SKIN: GAMEBOY');
+
+    // Cycle remaining 11 clicks back to HAZMAT
+    for (let i = 0; i < 11; i++) {
+      fireEvent.click(skinBtn);
+    }
+    expect(useGameStore.getState().heroSkin).toBe('hazmat');
+    expect(skinBtn).toHaveTextContent('SKIN: HAZMAT');
+  });
 });

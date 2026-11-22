@@ -4,9 +4,11 @@ import type { CoherenceTier } from '../types';
 export type { CoherenceTier };
 
 export const COHERENCE_MAX = 100;
-export const COHERENCE_IDLE_THRESHOLD_MS = 600;
+export const COHERENCE_IDLE_THRESHOLD_MS = 350;
 export const COHERENCE_IDLE_VELOCITY_THRESHOLD = 20;
-export const COHERENCE_DECAY_PER_SEC = 25;
+export const COHERENCE_DECAY_PER_SEC = 42;
+export const COHERENCE_PASSIVE_DECAY_PER_SEC = 7;
+export const COHERENCE_HYPER_DECAY_PER_SEC = 13;
 
 export const COHERENCE_TIER_THRESHOLDS = {
   x1: 0,
@@ -16,14 +18,14 @@ export const COHERENCE_TIER_THRESHOLDS = {
 } as const;
 
 export const COHERENCE_GAINS = {
-  wavedash: 25,
-  wallBounce: 15,
-  phaseShift: 20,
-  tunnel: 20,
-  particleCollect: 20,
-  wormhole: 20,
-  ghostSurf: 25,
-  pauliBlast: 25
+  wavedash: 20,
+  wallBounce: 13,
+  phaseShift: 15,
+  tunnel: 17,
+  particleCollect: 15,
+  wormhole: 17,
+  ghostSurf: 15,
+  pauliBlast: 20
 } as const;
 
 export interface CoherenceSnapshot {
@@ -143,35 +145,50 @@ export class CoherenceSystem {
   }
 
   /**
-   * Advances idle decay timer.
-   * When grounded with |vx| < 20 for more than 600 ms, coherence decays at -25 / s.
+   * Advances coherence decay timers.
+   * Coherence continuously drains passively (-8 / s, or -14 / s in HYPER) so the player must
+   * keep chaining stylish moves, and drains rapidly (-45 / s) when grounded and idle > 350 ms.
    */
   public update(deltaMs: number, vx: number, isGrounded: boolean): void {
     if (deltaMs <= 0) return;
+
+    const passiveRate =
+      this.tier === 'HYPER' ? COHERENCE_HYPER_DECAY_PER_SEC : COHERENCE_PASSIVE_DECAY_PER_SEC;
+    let decayAmount = 0;
 
     if (isGrounded && Math.abs(vx) < COHERENCE_IDLE_VELOCITY_THRESHOLD) {
       const prevIdle = this.idleGroundedMs;
       this.idleGroundedMs += deltaMs;
 
       if (this.idleGroundedMs > COHERENCE_IDLE_THRESHOLD_MS && this.raw > 0) {
-        const decayMs =
+        const idleDecayMs =
           prevIdle >= COHERENCE_IDLE_THRESHOLD_MS
             ? deltaMs
             : this.idleGroundedMs - COHERENCE_IDLE_THRESHOLD_MS;
-        const decayAmount = (decayMs / 1000) * COHERENCE_DECAY_PER_SEC;
-        this.raw = Math.max(0, this.raw - decayAmount);
-        this.tier = getCoherenceTier(this.raw);
-
-        if (
-          Math.abs(this.raw - this.lastEmittedRaw) >= 1 ||
-          this.tier !== this.lastEmittedTier ||
-          (this.raw === 0 && this.lastEmittedRaw > 0)
-        ) {
-          this.emitChange(false);
-        }
+        const preIdleMs = Math.max(0, deltaMs - idleDecayMs);
+        decayAmount =
+          (preIdleMs / 1000) * passiveRate + (idleDecayMs / 1000) * COHERENCE_DECAY_PER_SEC;
+      } else if (this.raw > 0) {
+        decayAmount = (deltaMs / 1000) * passiveRate;
       }
     } else {
       this.idleGroundedMs = 0;
+      if (this.raw > 0) {
+        decayAmount = (deltaMs / 1000) * passiveRate;
+      }
+    }
+
+    if (decayAmount > 0 && this.raw > 0) {
+      this.raw = Math.max(0, this.raw - decayAmount);
+      this.tier = getCoherenceTier(this.raw);
+
+      if (
+        Math.abs(this.raw - this.lastEmittedRaw) >= 1 ||
+        this.tier !== this.lastEmittedTier ||
+        (this.raw === 0 && this.lastEmittedRaw > 0)
+      ) {
+        this.emitChange(false);
+      }
     }
   }
 

@@ -171,7 +171,7 @@ describe('GhostController', () => {
     expect(ctx.swarmGhosts).toHaveLength(0);
   });
 
-  it('updates live split delta and triggers Ghost Surfing boost when landing on ghost', () => {
+  it('updates live split delta and enforces zero physical interaction between hero and ghosts', () => {
     const ctx = makeGhostContext();
     const traj = compressTrajectory([
       { timeMs: 0, x: 200, y: 300, flipX: false, animState: 'idle' },
@@ -194,9 +194,9 @@ describe('GhostController', () => {
     controller.updateGhostSurfing(true);
     unsub();
 
-    expect(surfEvents).toHaveLength(1);
-    expect(ctx.heroes[0].setVelocityY).toHaveBeenCalled();
-    expect(ctx.heroes[0].hasSurfedThisJump).toBe(true);
+    expect(surfEvents).toHaveLength(0);
+    expect(ctx.heroes[0].setVelocityY).not.toHaveBeenCalled();
+    expect(ctx.heroes[0].hasSurfedThisJump).toBe(false);
   });
 
   it('loads activeDuel challenger ghost with golden tint (0xfbbf24), alpha 0.55, and live split delta even on first attempt with ghostMode off', () => {
@@ -243,5 +243,48 @@ describe('GhostController', () => {
     const isActive = controller.updateActiveGhostsAndSplit(300, 300);
     expect(isActive).toBe(true);
     expect(ctx.splitDeltaText?.setText).toHaveBeenCalled();
+  });
+
+  it('matches GhostHero rendering to the selected heroSkin (quantum procedural vs classic)', () => {
+    const gfx = {
+      clear: vi.fn(),
+      setDepth: vi.fn(),
+      fillStyle: vi.fn(),
+      lineStyle: vi.fn(),
+      fillCircle: vi.fn(),
+      strokeCircle: vi.fn(),
+      fillTriangle: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fillPath: vi.fn(),
+      strokePath: vi.fn(),
+      destroy: vi.fn()
+    };
+    const ctx = makeGhostContext();
+    (ctx.add as unknown as { graphics: ReturnType<typeof vi.fn> }).graphics = vi.fn(() => gfx);
+    ctx.authorTrajectory = compressTrajectory([
+      { timeMs: 0, x: 100, y: 400, flipX: false, animState: 'idle' },
+      { timeMs: 500, x: 240, y: 360, flipX: false, animState: 'right' }
+    ]);
+
+    useGameStore.setState({ ghostMode: 'optimal', heroSkin: 'quantum' });
+    const controller = new GhostController(ctx);
+    controller.applyGhostMode();
+    expect(ctx.ghostHero).not.toBeNull();
+
+    // Quantum mode: hides classic spritesheet (alpha 0) and draws procedural neo-brutalist ghost
+    ctx.ghostHero?.updateReplay(250);
+    expect(ctx.ghostHero?.alpha).toBe(0);
+    expect(gfx.fillPath).toHaveBeenCalled();
+    expect(gfx.strokePath).toHaveBeenCalled();
+
+    // Live switch to Classic mode: clears procedural graphics and restores classic sprite alpha
+    gfx.fillPath.mockClear();
+    useGameStore.setState({ heroSkin: 'classic' });
+    ctx.ghostHero?.updateReplay(300);
+    expect(ctx.ghostHero?.alpha).toBe(0.4);
+    expect(gfx.fillPath).not.toHaveBeenCalled();
   });
 });

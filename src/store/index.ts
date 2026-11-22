@@ -15,6 +15,7 @@ import type {
   DailyStreakState,
   DuelChallenge,
   GhostMode,
+  HeroSkin,
   IsotopeMedal,
   LastRunSummary,
   LevelData,
@@ -28,6 +29,7 @@ export type {
   DailyStreakState,
   DuelChallenge,
   GhostMode,
+  HeroSkin,
   LastRunSummary,
   Locale
 };
@@ -54,6 +56,7 @@ export interface GameStoreState {
   isMuted: boolean;
   hapticsEnabled: boolean;
   reducedEffects: boolean;
+  heroSkin: HeroSkin;
   ghostMode: GhostMode;
   ghostEnabled: boolean;
   locale: Locale;
@@ -129,6 +132,8 @@ export interface GameStoreActions {
   setHapticsEnabled: (enabled: boolean) => void;
   toggleReducedEffects: () => void;
   setReducedEffects: (reduced: boolean) => void;
+  setHeroSkin: (skin: HeroSkin) => void;
+  toggleHeroSkin: () => void;
   toggleGhost: (hasPersonalBest?: boolean, hasSwarm?: boolean) => void;
   setGhostMode: (mode: GhostMode) => void;
   setGhostEnabled: (enabled: boolean) => void;
@@ -219,6 +224,9 @@ const customStorage = {
           isMuted: parsed.isMuted ?? false,
           hapticsEnabled: parsed.hapticsEnabled ?? true,
           reducedEffects: parsed.reducedEffects ?? false,
+          heroSkin: (['gameboy', 'neo', 'quantum', 'classic'].includes(parsed.heroSkin)
+            ? parsed.heroSkin
+            : 'gameboy') as HeroSkin,
           ghostMode: (parsed.state?.ghostMode ??
             (parsed.state?.ghostEnabled === false ? 'off' : 'optimal')) as GhostMode,
           ghostEnabled:
@@ -260,6 +268,7 @@ export const useGameStore = create<GameStore>()(
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
+      heroSkin: 'hazmat',
       ghostMode: 'optimal',
       ghostEnabled: true,
       locale: 'en',
@@ -282,6 +291,28 @@ export const useGameStore = create<GameStore>()(
 
       toggleReducedEffects: () => set((state) => ({ reducedEffects: !state.reducedEffects })),
       setReducedEffects: (reduced: boolean) => set({ reducedEffects: reduced }),
+
+      setHeroSkin: (skin: HeroSkin) => set({ heroSkin: skin }),
+      toggleHeroSkin: () =>
+        set((state) => {
+          const order: HeroSkin[] = [
+            'hazmat',
+            'pico',
+            'gameboy',
+            'megabit',
+            'astronaut',
+            'cybercat',
+            'samurai',
+            'bot',
+            'wizard',
+            'ninja',
+            'neo',
+            'quantum',
+            'classic'
+          ];
+          const idx = order.indexOf(state.heroSkin ?? 'hazmat');
+          return { heroSkin: order[(idx + 1) % order.length] };
+        }),
 
       setLocale: (locale: Locale) => set({ locale }),
       toggleLocale: () => set((state) => ({ locale: state.locale === 'en' ? 'fr' : 'en' })),
@@ -1037,6 +1068,7 @@ export const useGameStore = create<GameStore>()(
         isMuted: state.isMuted,
         hapticsEnabled: state.hapticsEnabled,
         reducedEffects: state.reducedEffects,
+        heroSkin: state.heroSkin,
         ghostMode: state.ghostMode,
         ghostEnabled: state.ghostEnabled,
         locale: state.locale,
