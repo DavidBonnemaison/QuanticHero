@@ -47,16 +47,13 @@ describe('CoherenceSystem', () => {
   });
 
   describe('coherence gains from gameplay events', () => {
-    it('awards balanced gains for Wave-Dash and Wall-Bounce (requiring chained flow to climb)', () => {
+    it('awards balanced gains for Wave-Dash and Wall-Bounce (brisk enough for short levels)', () => {
       gameEvents.emit('hero:wavedash', { x: 100, y: 200 });
       expect(system.getRaw()).toBe(COHERENCE_GAINS.wavedash);
       expect(system.getTier()).toBe('x1');
 
       gameEvents.emit('hero:wall_bounce', { x: 50, y: 120 });
       expect(system.getRaw()).toBe(COHERENCE_GAINS.wavedash + COHERENCE_GAINS.wallBounce);
-      expect(system.getTier()).toBe('x1');
-
-      gameEvents.emit('hero:wavedash', { x: 120, y: 200 });
       expect(system.getTier()).toBe('x2');
     });
 
@@ -79,11 +76,11 @@ describe('CoherenceSystem', () => {
         COHERENCE_GAINS.wormhole +
         COHERENCE_GAINS.pauliBlast;
       expect(system.getRaw()).toBe(expected);
-      expect(system.getTier()).toBe('x3');
+      expect(system.getTier()).toBe('HYPER');
     });
 
     it('clamps raw coherence at 100 (normalized 1.0) and reaches HYPER tier after sustained chain', () => {
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 6; i++) {
         gameEvents.emit('hero:wavedash', { x: i * 10, y: 0 });
       }
       expect(system.getRaw()).toBe(COHERENCE_MAX);
@@ -123,7 +120,7 @@ describe('CoherenceSystem', () => {
         80 - (COHERENCE_IDLE_THRESHOLD_MS / 1000) * COHERENCE_PASSIVE_DECAY_PER_SEC;
       expect(system.getRaw()).toBeCloseTo(afterGrace, 5);
 
-      // Next 1000 ms grounded & stationary: rapid idle decay (-45 / s)
+      // Next 1000 ms grounded & stationary: rapid idle decay (-42 / s)
       system.update(1000, 5, true);
       expect(system.getRaw()).toBeCloseTo(afterGrace - COHERENCE_DECAY_PER_SEC, 5);
     });
@@ -155,27 +152,27 @@ describe('CoherenceSystem', () => {
 
   describe('styleScore, COHERENT RUN, and lifecycle', () => {
     it('accumulates styleScore scaled by tier and exposes coherentRun snapshot', () => {
-      // +8 -> raw 8 (x1, mult 1) -> +8
+      // +13 -> raw 13 (x1, mult 1) -> +13
       gameEvents.emit('hero:wall_bounce', { x: 0, y: 0 });
-      expect(system.getStyleScore()).toBe(8);
+      expect(system.getStyleScore()).toBe(13);
       expect(system.isCoherentRun()).toBe(false);
 
-      // +14 -> raw 22 (x1, mult 1) -> +14 => 22
+      // +20 -> raw 33 (x2, mult 2) -> +40 => 53
       gameEvents.emit('hero:wavedash', { x: 0, y: 0 });
-      expect(system.getStyleScore()).toBe(22);
+      expect(system.getStyleScore()).toBe(53);
 
-      // +10 -> raw 32 (x2, mult 2) -> +20 => 42
+      // +15 -> raw 48 (x2, mult 2) -> +30 => 83
       gameEvents.emit('particle:collect', { type: 'speed' });
-      expect(system.getStyleScore()).toBe(42);
+      expect(system.getStyleScore()).toBe(83);
 
       // Reach HYPER (85+)
-      system.addCoherence(53); // raw 85 (HYPER, mult 4) -> +212 => 254
+      system.addCoherence(37); // raw 85 (HYPER, mult 4) -> +148 => 231
       expect(system.isCoherentRun()).toBe(true);
       expect(system.getSnapshot()).toEqual({
         value: 0.85,
         raw: 85,
         tier: 'HYPER',
-        styleScore: 254,
+        styleScore: 231,
         coherentRun: true
       });
     });

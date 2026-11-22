@@ -6,9 +6,9 @@ export type { CoherenceTier };
 export const COHERENCE_MAX = 100;
 export const COHERENCE_IDLE_THRESHOLD_MS = 350;
 export const COHERENCE_IDLE_VELOCITY_THRESHOLD = 20;
-export const COHERENCE_DECAY_PER_SEC = 45;
-export const COHERENCE_PASSIVE_DECAY_PER_SEC = 8;
-export const COHERENCE_HYPER_DECAY_PER_SEC = 14;
+export const COHERENCE_DECAY_PER_SEC = 42;
+export const COHERENCE_PASSIVE_DECAY_PER_SEC = 7;
+export const COHERENCE_HYPER_DECAY_PER_SEC = 13;
 
 export const COHERENCE_TIER_THRESHOLDS = {
   x1: 0,
@@ -18,14 +18,14 @@ export const COHERENCE_TIER_THRESHOLDS = {
 } as const;
 
 export const COHERENCE_GAINS = {
-  wavedash: 14,
-  wallBounce: 8,
-  phaseShift: 10,
-  tunnel: 12,
-  particleCollect: 10,
-  wormhole: 12,
-  ghostSurf: 12,
-  pauliBlast: 14
+  wavedash: 20,
+  wallBounce: 13,
+  phaseShift: 15,
+  tunnel: 17,
+  particleCollect: 15,
+  wormhole: 17,
+  ghostSurf: 15,
+  pauliBlast: 20
 } as const;
 
 export interface CoherenceSnapshot {
