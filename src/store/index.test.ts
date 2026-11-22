@@ -676,30 +676,35 @@ describe('useGameStore', () => {
       expect(useGameStore.getState().pendingDuelShare).toBeNull();
     });
 
-    it('defaults heroSkin to gameboy, rotates through gameboy -> neo -> quantum -> classic, and persists to localStorage', () => {
-      useGameStore.setState({ heroSkin: 'gameboy' });
-      expect(useGameStore.getState().heroSkin).toBe('gameboy');
+    it('defaults heroSkin to pico, rotates through all 13 skins, and persists to localStorage', () => {
+      const expectedOrder = [
+        'pico',
+        'gameboy',
+        'megabit',
+        'astronaut',
+        'cybercat',
+        'hazmat',
+        'samurai',
+        'bot',
+        'wizard',
+        'ninja',
+        'neo',
+        'quantum',
+        'classic'
+      ] as const;
+      useGameStore.setState({ heroSkin: 'pico' });
+      expect(useGameStore.getState().heroSkin).toBe('pico');
 
-      useGameStore.getState().toggleHeroSkin();
-      expect(useGameStore.getState().heroSkin).toBe('neo');
+      for (let i = 1; i <= expectedOrder.length; i++) {
+        useGameStore.getState().toggleHeroSkin();
+        expect(useGameStore.getState().heroSkin).toBe(expectedOrder[i % expectedOrder.length]);
+      }
 
-      useGameStore.getState().toggleHeroSkin();
-      expect(useGameStore.getState().heroSkin).toBe('quantum');
-
-      useGameStore.getState().toggleHeroSkin();
-      expect(useGameStore.getState().heroSkin).toBe('classic');
-
-      const persistedClassic = JSON.parse(localStorage.getItem('qtmhro') || '{}');
-      expect(persistedClassic.state.heroSkin).toBe('classic');
-
-      useGameStore.getState().toggleHeroSkin();
-      expect(useGameStore.getState().heroSkin).toBe('gameboy');
-
-      useGameStore.getState().setHeroSkin('neo');
-      expect(useGameStore.getState().heroSkin).toBe('neo');
+      useGameStore.getState().setHeroSkin('cybercat');
+      expect(useGameStore.getState().heroSkin).toBe('cybercat');
 
       const persistedExplicit = JSON.parse(localStorage.getItem('qtmhro') || '{}');
-      expect(persistedExplicit.state.heroSkin).toBe('neo');
+      expect(persistedExplicit.state.heroSkin).toBe('cybercat');
     });
   });
 });

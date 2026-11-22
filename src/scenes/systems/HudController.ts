@@ -220,11 +220,23 @@ export class HudController {
 
     const getSkinLabel = () => {
       const s = getHudStrings().hud;
-      const skin = useGameStore.getState().heroSkin ?? 'gameboy';
-      if (skin === 'gameboy') return s.skinGameboy;
-      if (skin === 'neo') return s.skinNeo;
-      if (skin === 'quantum') return s.skinQuantum;
-      return s.skinClassic;
+      const skin = useGameStore.getState().heroSkin ?? 'pico';
+      const labels: Record<string, string> = {
+        pico: 'SKN:PIC',
+        gameboy: s.skinGameboy,
+        megabit: 'SKN:MEG',
+        astronaut: 'SKN:AST',
+        cybercat: 'SKN:CAT',
+        hazmat: 'SKN:HAZ',
+        samurai: 'SKN:SAM',
+        bot: 'SKN:BOT',
+        wizard: 'SKN:WIZ',
+        ninja: 'SKN:NIN',
+        neo: s.skinNeo,
+        quantum: s.skinQuantum,
+        classic: s.skinClassic
+      };
+      return labels[skin] ?? 'SKN:PIC';
     };
     const skinButton = ctx.add.text(300, 6, getSkinLabel(), {
       fontFamily: "'JetBrains Mono', monospace",

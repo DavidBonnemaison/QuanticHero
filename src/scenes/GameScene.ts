@@ -785,7 +785,7 @@ export default class GameScene extends Phaser.Scene implements GameSceneContext 
   private renderHeroSkin(time: number): void {
     const storeState = useGameStore.getState();
     this.heroRenderer?.render(time, this.heroes, {
-      skin: storeState.heroSkin ?? 'gameboy',
+      skin: storeState.heroSkin ?? 'pico',
       reducedEffects: storeState.reducedEffects ?? false,
       activePhase: this.currentPhase,
       hasPhasePlatforms: this.hasPhasePlatforms,

@@ -38,7 +38,7 @@ export default function Menu(): React.ReactElement {
   const toggleHaptics = useGameStore((state) => state.toggleHaptics);
   const reducedEffects = useGameStore((state) => state.reducedEffects);
   const toggleReducedEffects = useGameStore((state) => state.toggleReducedEffects);
-  const heroSkin = useGameStore((state) => state.heroSkin ?? 'gameboy');
+  const heroSkin = useGameStore((state) => state.heroSkin ?? 'pico');
   const toggleHeroSkin = useGameStore((state) => state.toggleHeroSkin);
   const locale = useGameStore((state) => state.locale ?? 'en');
   const toggleLocale = useGameStore((state) => state.toggleLocale);
@@ -187,13 +187,23 @@ export default function Menu(): React.ReactElement {
           title={t.menu.switchSkinLabel}
           data-testid="skin-toggle"
         >
-          {heroSkin === 'gameboy'
-            ? t.menu.skinGameboy
-            : heroSkin === 'neo'
-              ? t.menu.skinNeo
-              : heroSkin === 'quantum'
-                ? t.menu.skinQuantum
-                : t.menu.skinClassic}
+          {(
+            {
+              pico: 'SKIN: PICO',
+              gameboy: t.menu.skinGameboy,
+              megabit: 'SKIN: MEGABIT',
+              astronaut: 'SKIN: ASTRO',
+              cybercat: 'SKIN: CAT',
+              hazmat: 'SKIN: HAZMAT',
+              samurai: 'SKIN: RONIN',
+              bot: 'SKIN: BOT',
+              wizard: 'SKIN: WIZARD',
+              ninja: 'SKIN: NINJA',
+              neo: t.menu.skinNeo,
+              quantum: t.menu.skinQuantum,
+              classic: t.menu.skinClassic
+            } as Record<string, string>
+          )[heroSkin] ?? 'SKIN: PICO'}
         </button>
         <button
           type="button"

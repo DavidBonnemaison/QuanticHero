@@ -318,27 +318,26 @@ describe('Menu component', () => {
     }
   });
 
-  it('cycles hero skin through GAMEBOY -> NEO -> QUANTUM -> CLASSIC -> GAMEBOY', () => {
-    useGameStore.setState({ heroSkin: 'gameboy', locale: 'en' });
+  it('cycles hero skin through all 13 skins starting from SKIN: PICO', () => {
+    useGameStore.setState({ heroSkin: 'pico', locale: 'en' });
     renderWithRouter();
 
     const skinBtn = screen.getByTestId('skin-toggle');
-    expect(skinBtn).toHaveTextContent('SKIN: GAMEBOY');
-
-    fireEvent.click(skinBtn);
-    expect(useGameStore.getState().heroSkin).toBe('neo');
-    expect(skinBtn).toHaveTextContent('SKIN: NEO');
-
-    fireEvent.click(skinBtn);
-    expect(useGameStore.getState().heroSkin).toBe('quantum');
-    expect(skinBtn).toHaveTextContent('SKIN: QUANTUM');
-
-    fireEvent.click(skinBtn);
-    expect(useGameStore.getState().heroSkin).toBe('classic');
-    expect(skinBtn).toHaveTextContent('SKIN: CLASSIC');
+    expect(skinBtn).toHaveTextContent('SKIN: PICO');
 
     fireEvent.click(skinBtn);
     expect(useGameStore.getState().heroSkin).toBe('gameboy');
     expect(skinBtn).toHaveTextContent('SKIN: GAMEBOY');
+
+    fireEvent.click(skinBtn);
+    expect(useGameStore.getState().heroSkin).toBe('megabit');
+    expect(skinBtn).toHaveTextContent('SKIN: MEGABIT');
+
+    // Cycle remaining 11 clicks back to PICO
+    for (let i = 0; i < 11; i++) {
+      fireEvent.click(skinBtn);
+    }
+    expect(useGameStore.getState().heroSkin).toBe('pico');
+    expect(skinBtn).toHaveTextContent('SKIN: PICO');
   });
 });

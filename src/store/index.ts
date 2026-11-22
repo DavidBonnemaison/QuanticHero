@@ -268,7 +268,7 @@ export const useGameStore = create<GameStore>()(
       isMuted: false,
       hapticsEnabled: true,
       reducedEffects: false,
-      heroSkin: 'gameboy',
+      heroSkin: 'pico',
       ghostMode: 'optimal',
       ghostEnabled: true,
       locale: 'en',
@@ -295,8 +295,22 @@ export const useGameStore = create<GameStore>()(
       setHeroSkin: (skin: HeroSkin) => set({ heroSkin: skin }),
       toggleHeroSkin: () =>
         set((state) => {
-          const order: HeroSkin[] = ['gameboy', 'neo', 'quantum', 'classic'];
-          const idx = order.indexOf(state.heroSkin ?? 'gameboy');
+          const order: HeroSkin[] = [
+            'pico',
+            'gameboy',
+            'megabit',
+            'astronaut',
+            'cybercat',
+            'hazmat',
+            'samurai',
+            'bot',
+            'wizard',
+            'ninja',
+            'neo',
+            'quantum',
+            'classic'
+          ];
+          const idx = order.indexOf(state.heroSkin ?? 'pico');
           return { heroSkin: order[(idx + 1) % order.length] };
         }),
 

@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { HeroSkin, PlatformPhase } from '../types';
 import type Hero from './Hero';
+import { drawPixelArtHero, isPixelHeroSkin } from './PixelHeroSkins';
 
 export interface HeroRenderOptions {
   skin: HeroSkin;
@@ -698,8 +699,11 @@ export function drawProceduralHeroForSkin(
   reducedEffects: boolean,
   isGhost = false
 ): void {
-  if (skin === 'gameboy') {
-    drawGameboyHeroShape(g, x, y, timeMs, state, reducedEffects, isGhost);
+  if (isPixelHeroSkin(skin)) {
+    drawPixelArtHero(g, skin, x, y, timeMs, state, isGhost);
+    if (!isGhost) {
+      drawPowerupAuras(g, x, y, timeMs * 0.001, state, reducedEffects);
+    }
   } else if (skin === 'neo') {
     drawNeoHeroShape(g, x, y, timeMs, state, reducedEffects, isGhost);
   } else {
