@@ -45,10 +45,12 @@ export class MatterAndFieldController {
     const points =
       focused.trailPoints.length > 0 ? focused.trailPoints : [{ x: focused.x, y: focused.y }];
     const segments = buildBroglieScaffoldSegments(points, yOffset);
+    const vx = focused.body?.velocity.x ?? 0;
+    const forwardLead = vx > 20 ? 18 : vx < -20 ? -18 : 0;
     segments.push({
-      x: focused.x,
+      x: focused.x + forwardLead,
       y: focused.y + yOffset,
-      width: 88,
+      width: 112,
       height: 16
     });
     if (segments.length === 0) return false;

@@ -489,8 +489,21 @@ export function stepSimulation(
         if (!next.triggeredPlates?.includes(pl.id)) {
           next.triggeredPlates = [...(next.triggeredPlates ?? []), pl.id];
         }
-      } else if (pl.requireLock && !next.hasClone) {
-        next.activeGates = (next.activeGates ?? []).filter((id) => id !== pl.targetGateId);
+      } else if (pl.requireLock) {
+        const platIdx = world.platforms.findIndex(
+          (p) =>
+            pl.x + pl.width > p.x && pl.x < p.x + p.width && Math.abs(pl.y + pl.height - p.y) <= 10
+        );
+        const platUnder = platIdx >= 0 ? world.platforms[platIdx] : undefined;
+        const platIntangible =
+          Boolean(platUnder?.phase && next.currentPhase && platUnder.phase !== next.currentPhase) ||
+          Boolean(
+            platUnder?.decayMs && platUnder.decayMs > 0 && nextDecayStates[platIdx]?.collapsed
+          ) ||
+          Boolean(platUnder?.decayMs && platUnder.decayMs > 0);
+        if (!next.hasClone || platIntangible) {
+          next.activeGates = (next.activeGates ?? []).filter((id) => id !== pl.targetGateId);
+        }
       }
     }
   }
@@ -688,40 +701,6 @@ export function stepSimulation(
           landed = true;
           break;
         }
-      }
-    }
-  }
-
-  // 6c. Living Floor (inverted_gravity + allowHeroCollision): Alpha & Beta meet sole-to-sole over open chasms
-  if (
-    !landed &&
-    world.entanglement?.mode === 'inverted_gravity' &&
-    world.entanglement?.allowHeroCollision
-  ) {
-    const hasPlatformInColumn = world.platforms.some((p) => {
-      if (p.kind === 'wall' || p.matterState === 'gas' || p.ephemeral) return false;
-      if (newX + halfW <= p.x || newX - halfW >= p.x + p.width) return false;
-      return next.upsideDown === 1
-        ? p.y >= newY + halfH && p.y <= world.height - 60
-        : p.y + p.height <= newY - halfH && p.y + p.height >= 60;
-    });
-    if (!hasPlatformInColumn) {
-      if (
-        next.upsideDown === 1 &&
-        next.vy >= 0 &&
-        newY >= world.height * 0.45 &&
-        newY <= world.height - 60
-      ) {
-        next.vy = 0;
-        landed = true;
-      } else if (
-        next.upsideDown === -1 &&
-        next.vy <= 0 &&
-        newY <= world.height * 0.55 &&
-        newY >= 60
-      ) {
-        next.vy = 0;
-        landed = true;
       }
     }
   }
@@ -1555,11 +1534,16 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
   const ent = levelData.entanglement;
   const betaSpawnY = ent?.betaSpawn?.y ?? startY;
   const isSinglePortal = ent?.portalMode === 'single' && !ent.betaDoor;
-  const isDualVerticalLane =
+  const isDualBottomAlpha =
     Boolean(ent) &&
     !isSinglePortal &&
     startPlat.y > levelData.height * 0.48 &&
     betaSpawnY < levelData.height * 0.48;
+  const isDualTopAlpha =
+    Boolean(ent) &&
+    !isSinglePortal &&
+    startPlat.y < levelData.height * 0.48 &&
+    betaSpawnY > levelData.height * 0.48;
 
   const isBetaLane = (p: Platform) => {
     if (p === startPlat || p === doorPlat || !ent) return false;
@@ -1568,8 +1552,11 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
         ? p.x >= doorPlat.x + doorPlat.width - 8
         : p.x + p.width <= doorPlat.x + 8;
     }
-    if (isDualVerticalLane) {
+    if (isDualBottomAlpha) {
       return p.y < levelData.height * 0.48;
+    }
+    if (isDualTopAlpha) {
+      return p.y > levelData.height * 0.48;
     }
     return false;
   };
@@ -1588,7 +1575,16 @@ export function simulateLevelData(levelData: LevelData): SimulationResult {
         p.x + p.width <= other.x + other.width + 10 &&
         p.width <= 120
     );
-    return !isUpperPerch;
+    const isTunnelCeiling =
+      p.width >= 350 &&
+      candidates.some(
+        (other) =>
+          other !== p &&
+          other.y > p.y + 120 &&
+          other.x < p.x + p.width &&
+          other.x + other.width > p.x
+      );
+    return !isUpperPerch && !isTunnelCeiling;
   });
 
   // 1. Fast path: preserve JSON author order / X-sorted order for standard horizontal levels

@@ -2681,8 +2681,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             x: p1.x + p1.width + Math.round(68 + rng.next() * 24),
             y: y2,
             width: 190 + jitter(16),
-            height: 20,
-            phase: 'cyan'
+            height: 20
           };
           const y3 = clampY(y2 + stepDy(2, 4, 0.7));
           const p3: Platform = {
@@ -2758,8 +2757,7 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             x: p1.x + p1.width + Math.round(70 + rng.next() * 24),
             y: y2,
             width: 220 + jitter(16),
-            height: 20,
-            decayMs: 650
+            height: 20
           };
           const wallL: Platform = {
             x: p2.x - 28,
@@ -2787,7 +2785,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
             x: p3.x + p3.width + Math.round(74 + rng.next() * 24),
             y: y4,
             width: 205 + jitter(16),
-            height: 20
+            height: 20,
+            decayMs: 650
           };
           const plats = [p1, wallL, p2, wallR, p3, p4];
           accelerationChunk = {
@@ -2819,7 +2818,8 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
               width: 90,
               height: 12,
               targetGateId: `gate_met_${level}`,
-              requireLock: true
+              requireLock: true,
+              autoSwitchOnTrigger: true
             }
           ];
           climaxChunk = buildDenseClimax(
@@ -3502,6 +3502,10 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         const hasDupBeforeOrOnPlate = accelerationChunk.particles.some(
           (p) => p.type === 'duplicate' && p.x <= platePlat.x + platePlat.width
         );
+        if (hasDupBeforeOrOnPlate) {
+          platePlat.phase = undefined;
+          platePlat.decayMs = undefined;
+        }
         gates = [
           {
             id: `gate_sec_${level}`,
@@ -3969,6 +3973,21 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
         }
       };
 
+      if (entanglementConfig.allowHeroCollision) {
+        const origAlphaY = player.position.y;
+        const origDoorY = door.y;
+        player.position.y = Math.round(height - origAlphaY - 84);
+        entanglementConfig.betaSpawn = {
+          x: player.position.x,
+          y: Math.round(origAlphaY + 84)
+        };
+        door.y = Math.round(height - origDoorY - 40);
+        entanglementConfig.betaDoor = {
+          x: door.x,
+          y: Math.round(origDoorY + 40)
+        };
+      }
+
       if (entanglementConfig.tetherPhysical) {
         const safeMaxX = Math.floor(width * 0.32);
         const maxLen = entanglementConfig.tetherMaxLength ?? 540;
@@ -4139,6 +4158,19 @@ export function assembleCampaignLevel(level: number, seed = 42): PacedLevelAssem
     const mirrored = mirrorLevelDataHorizontally(directedLevelData, activePlatformPath);
     directedLevelData = mirrored.levelData;
     activePlatformPath = mirrored.fullPlatformPath;
+  }
+
+  // Ensure requireLock pressure plates always sit on solid, non-decaying, non-phasing platforms
+  for (const pl of directedLevelData.pressurePlates ?? []) {
+    if (!pl.requireLock) continue;
+    pl.autoSwitchOnTrigger = true;
+    const platUnder = directedLevelData.platforms.find(
+      (p) => pl.x + pl.width > p.x && pl.x < p.x + p.width && Math.abs(pl.y + pl.height - p.y) <= 10
+    );
+    if (platUnder) {
+      platUnder.phase = undefined;
+      platUnder.decayMs = undefined;
+    }
   }
 
   // On horizontal screenWrap levels, seal the rear of the exit portal with a neon bounce wall

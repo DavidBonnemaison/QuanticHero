@@ -41,7 +41,8 @@
       "x": 2617,
       "y": 657,
       "width": 213,
-      "height": 20
+      "height": 20,
+      "decayMs": 650
     },
     {
       "x": 2306,
@@ -60,8 +61,7 @@
       "x": 1994,
       "y": 648,
       "width": 219,
-      "height": 20,
-      "decayMs": 650
+      "height": 20
     },
     {
       "x": 1966,
@@ -129,7 +129,8 @@
       "width": 90,
       "height": 12,
       "targetGateId": "gate_met_44",
-      "requireLock": true
+      "requireLock": true,
+      "autoSwitchOnTrigger": true
     }
   ],
   "door": {

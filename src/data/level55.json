@@ -68,8 +68,7 @@
       "x": 738,
       "y": 437,
       "width": 213,
-      "height": 20,
-      "decayMs": 650
+      "height": 20
     },
     {
       "x": 957,
@@ -88,7 +87,8 @@
       "x": 1396,
       "y": 489,
       "width": 210,
-      "height": 20
+      "height": 20,
+      "decayMs": 650
     },
     {
       "x": 1716,
@@ -147,7 +147,8 @@
       "width": 90,
       "height": 12,
       "targetGateId": "gate_met_55",
-      "requireLock": true
+      "requireLock": true,
+      "autoSwitchOnTrigger": true
     }
   ],
   "wormholes": [

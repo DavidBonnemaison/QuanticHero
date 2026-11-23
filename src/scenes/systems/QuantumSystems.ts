@@ -210,6 +210,10 @@ export class QuantumSystems {
       (h) =>
         h !== focused &&
         h.active &&
+        !h.onPressurePlate &&
+        !(ctx.levelData.pressurePlates ?? []).some(
+          (pl) => pl.requireLock && isHeroOnPressurePlate(h.x, h.y, pl)
+        ) &&
         canFuseClones(focused, h, nowMs, {
           isEntangled: ctx.isEntangled,
           isPauliActive: ctx.isPauliActive,
@@ -380,7 +384,17 @@ export class QuantumSystems {
       this.updateScreenWrap(time);
     }
 
-    if (ctx.heroes.length >= 2 && !ctx.isEntangled && !ctx.isPauliActive) {
+    const hasRequireLockPlate =
+      ctx.pressurePlatesList.some((p) => p.data.requireLock) ||
+      Boolean(ctx.levelData.pressurePlates?.some((p) => p.requireLock));
+    const holdingLockPlate = ctx.heroes.some((h) => h.active && h.onPressurePlate);
+    if (
+      ctx.heroes.length >= 2 &&
+      !ctx.isEntangled &&
+      !ctx.isPauliActive &&
+      !(hasRequireLockPlate && ctx.heroes.length <= 2) &&
+      !holdingLockPlate
+    ) {
       this.tryCloneFusion(time);
     }
 
@@ -705,12 +719,17 @@ export class QuantumSystems {
       const dir = rawLeft ? 'left' : rawRight ? 'right' : null;
       if (!dir) continue;
 
+      const heroW = hero.body.width || PHYSICS.HERO_WIDTH;
+      const heroH = hero.body.height || PHYSICS.HERO_HEIGHT;
       let tunneled = false;
       for (const p of ctx.levelData.platforms) {
-        const result = checkTunnelObstacle(hero.x, hero.y, 40, 40, dir, p);
+        const result = checkTunnelObstacle(hero.x, hero.y, heroW, heroH, dir, p);
         if (result?.canTunnel) {
           hero.x = result.exitX;
           hero.body.x = hero.x - hero.body.width / 2;
+          if (hero.body.prev) {
+            hero.body.prev.x = hero.body.x;
+          }
           hero.tunnelCharges--;
           gameEvents.emit('tunnel:use', { remaining: hero.tunnelCharges });
           ctx.showRetroToast(
@@ -726,8 +745,8 @@ export class QuantumSystems {
         const edgeResult = checkTunnelObstacle(
           hero.x,
           hero.y,
-          40,
-          40,
+          heroW,
+          heroH,
           dir,
           null,
           ctx.levelData.width
@@ -735,6 +754,9 @@ export class QuantumSystems {
         if (edgeResult?.canTunnel) {
           hero.x = edgeResult.exitX;
           hero.body.x = hero.x - hero.body.width / 2;
+          if (hero.body.prev) {
+            hero.body.prev.x = hero.body.x;
+          }
           hero.tunnelCharges--;
           gameEvents.emit('tunnel:use', { remaining: hero.tunnelCharges, screenEdge: true });
           ctx.showRetroToast(

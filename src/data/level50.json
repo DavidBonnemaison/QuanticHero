@@ -68,7 +68,6 @@
       "y": 695,
       "width": 222,
       "height": 20,
-      "decayMs": 650,
       "matterState": "cryo"
     },
     {
@@ -88,7 +87,8 @@
       "x": 1350,
       "y": 712,
       "width": 206,
-      "height": 20
+      "height": 20,
+      "decayMs": 650
     },
     {
       "x": 1666,
@@ -147,7 +147,8 @@
       "width": 90,
       "height": 12,
       "targetGateId": "gate_met_50",
-      "requireLock": true
+      "requireLock": true,
+      "autoSwitchOnTrigger": true
     }
   ],
   "door": {
