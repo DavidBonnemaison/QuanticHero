@@ -466,14 +466,7 @@ export function stepSimulation(
     if (dir) {
       for (let idx = 0; idx < world.platforms.length; idx++) {
         const effP = getEffectivePlatform(world.platforms[idx], idx);
-        const result = checkTunnelObstacle(
-          newX,
-          newY,
-          PHYSICS.HERO_WIDTH,
-          PHYSICS.HERO_HEIGHT,
-          dir,
-          effP
-        );
+        const result = checkTunnelObstacle(newX, newY, 40, 40, dir, effP);
         if (result?.canTunnel) {
           newX = result.exitX;
           next.tunnelCharges--;
