@@ -304,16 +304,70 @@ describe('QuantumSystems', () => {
     const qs = new QuantumSystems(ctx);
     expect(qs.matterAndFields.tryCrystallizeBroglieTrail()).toBe(true);
 
-    // Main catch crystal (last segment) must be strictly below feet: y = 300 + (32 + 10) = 342, size 88x16
+    // Main catch crystal (last segment) must be strictly below feet: y = 300 + (32 + 10) = 342, size 112x16
     const mainCrystal = rectCalls[rectCalls.length - 1];
     expect(mainCrystal.x).toBe(200);
     expect(mainCrystal.y).toBe(342);
-    expect(mainCrystal.w).toBe(88);
+    expect(mainCrystal.w).toBe(112);
     expect(mainCrystal.h).toBe(16);
     // Top of crystal (342 - 8 = 334) is strictly below hero feet (300 + 32 = 332)
     expect(mainCrystal.y - mainCrystal.h / 2).toBeGreaterThan(hero.y + 32);
 
     // Fast downward fall velocity must be damped to 60 * upsideDown
     expect(hero.body?.velocity.y).toBe(60);
+  });
+
+  it('does not fuse a clone that is holding down a requireLock pressure plate', () => {
+    const ctx = makeQuantumContext();
+    ctx.levelData.pressurePlates = [
+      {
+        id: 'p1',
+        x: 180,
+        y: 320,
+        width: 80,
+        height: 12,
+        targetGateId: 'g1',
+        requireLock: true
+      }
+    ];
+    const clone = new Hero(ctx as never, 210, 300, false);
+    clone.createdAtMs = 100;
+    ctx.heroes.push(clone);
+
+    const qs = new QuantumSystems(ctx);
+    expect(qs.tryCloneFusion(900)).toBe(false);
+    expect(ctx.heroes).toHaveLength(2);
+  });
+
+  it('tunnels past a 32px wall with full 64px hero clearance and syncs body.prev.x', () => {
+    const ctx = makeQuantumContext();
+    ctx.levelData.platforms = [{ x: 675, y: 0, width: 32, height: 1200 }];
+    const hero = ctx.heroes[0];
+    hero.tunnelCharges = 1;
+    hero.x = 643;
+    hero.y = 400;
+    (hero.body as unknown as { x: number; width: number; height: number; prev: { x: number } }).x =
+      611;
+    (hero.body as unknown as { width: number }).width = 64;
+    (hero.body as unknown as { height: number }).height = 64;
+    (hero.body as unknown as { prev: { x: number } }).prev = { x: 605 };
+
+    (
+      ctx as unknown as {
+        touchController: {
+          state: { left: boolean; right: boolean; jump: boolean; diveRequested: boolean };
+        };
+      }
+    ).touchController = {
+      state: { left: false, right: true, jump: false, diveRequested: false }
+    };
+    const qs = new QuantumSystems(ctx);
+    (qs as unknown as { updateTunneling: () => void }).updateTunneling();
+    ctx.touchController.state.right = false;
+
+    // Wall ends at 707 -> exitX = 707 + 32 + 4 = 743 (left edge 711 > 707, zero wall overlap)
+    expect(hero.x).toBe(743);
+    expect((hero.body as unknown as { prev: { x: number } }).prev.x).toBe(743 - 32);
+    expect(hero.tunnelCharges).toBe(0);
   });
 });
